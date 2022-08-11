@@ -1,5 +1,6 @@
 use bevy::prelude::shape::Circle;
 use bevy::prelude::*;
+use bevy::sprite::Mesh2dHandle;
 
 use crate::position::Position;
 use crate::units::f32::meter;
@@ -11,14 +12,14 @@ pub struct VisualizationPlugin;
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(setup_camera_system)
-            .add_startup_system_to_stage(StartupStage::PostStartup, spawn_sprites_system)
+            .add_system(spawn_sprites_system)
             .add_system(position_to_translation_system);
     }
 }
 
 pub fn spawn_sprites_system(
     mut commands: Commands,
-    cells: Query<(Entity, &Position)>,
+    cells: Query<(Entity, &Position), Without<Mesh2dHandle>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     for (entity, pos) in cells.iter() {

@@ -2,6 +2,7 @@ use std::ops::Add;
 use std::ops::AddAssign;
 use std::ops::Div;
 use std::ops::Mul;
+use std::ops::Neg;
 use std::ops::Sub;
 
 use super::dimension::Dimension;
@@ -43,6 +44,17 @@ where
     }
 }
 
+impl<S, const D: Dimension> Neg for Quantity<S, D>
+where
+    S: Neg<Output = S>,
+{
+    type Output = Quantity<S, D>;
+
+    fn neg(self) -> Self::Output {
+        Quantity::<S, D>(-self.0)
+    }
+}
+
 impl<S, const D: Dimension> AddAssign for Quantity<S, D>
 where
     S: AddAssign<S>,
@@ -63,20 +75,20 @@ where
     }
 }
 
-impl<S, const D: Dimension> Mul<f64> for Quantity<S, D>
+impl<S, const D: Dimension> Mul<f32> for Quantity<S, D>
 where
-    S: Mul<f64, Output = S>,
+    S: Mul<f32, Output = S>,
 {
     type Output = Quantity<S, D>;
 
-    fn mul(self, rhs: f64) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         Quantity(self.0 * rhs)
     }
 }
 
-impl<S, const D: Dimension> Mul<Quantity<S, D>> for f64
+impl<S, const D: Dimension> Mul<Quantity<S, D>> for f32
 where
-    f64: Mul<S, Output = S>,
+    f32: Mul<S, Output = S>,
 {
     type Output = Quantity<S, D>;
 

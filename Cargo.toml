@@ -15,6 +15,7 @@ glam = "0.21.3"
 # since it is trying to invoke cc -V which my gcc doesnt support (and hasnt since 2013?)
 libffi = { version = "3.0.0", features = ["system"] }
 mpi = { git = "https://github.com/rsmpi/rsmpi", features = ["derive"] }
+once_cell = "1.13.0"
 
 # Optimize dependencies even in a debug build
 [profile.dev.package."*"]
