@@ -8,9 +8,9 @@ pub use quantities_and_units::*;
 #[cfg(test)]
 mod tests {
     use super::dimension::Dimension;
-    use super::dimensionless;
-    use super::kilometer;
-    use super::meter;
+    use super::f64::dimensionless;
+    use super::f64::kilometer;
+    use super::f64::meter;
     use super::quantity::Quantity;
 
     fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64, U>) {

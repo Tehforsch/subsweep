@@ -19,7 +19,7 @@ unsafe impl<const D: Dimension> Equivalence for Quantity<f64, D> {
 mod tests {
     use mpi::traits::Communicator;
 
-    use crate::units::meter;
+    use crate::units::f64::meter;
 
     #[test]
     fn pack_unpack_quantity() {

@@ -4,8 +4,8 @@ use bevy::prelude::Res;
 use mpi::traits::Equivalence;
 
 use crate::position::Position;
-use crate::units::second;
-use crate::units::Time;
+use crate::units::f64::second;
+use crate::units::f64::Time;
 use crate::velocity::Velocity;
 
 #[derive(Equivalence)]

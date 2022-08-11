@@ -1,5 +1,8 @@
+use std::ops::Mul;
+
 pub use self::f64::*;
 use super::dimension::Dimension;
+use super::quantity::Quantity;
 
 pub(super) const NONE: Dimension = Dimension {
     length: 0,
@@ -14,36 +17,69 @@ const VELOCITY: Dimension = Dimension {
     ..NONE
 };
 
-mod f64 {
-    use super::super::quantity::Quantity;
-    use super::*;
+type Dimensionless<S> = Quantity<S, NONE>;
+fn dimensionless<S>(v: S) -> Dimensionless<S>
+where
+    S: Mul<f64, Output = S>,
+{
+    Quantity::<S, NONE>(v * 1.0)
+}
 
-    pub type Dimensionless = Quantity<f64, NONE>;
-    pub fn dimensionless(v: f64) -> Dimensionless {
-        Quantity::<f64, NONE>(1.0 * v)
+type Length<S> = Quantity<S, LENGTH>;
+fn meter<S>(v: S) -> Length<S>
+where
+    S: Mul<f64, Output = S>,
+{
+    Quantity::<S, LENGTH>(v * 1.0)
+}
+fn kilometer<S>(v: S) -> Length<S>
+where
+    S: Mul<f64, Output = S>,
+{
+    Quantity::<S, LENGTH>(v * 1e3)
+}
+
+type Time<S> = Quantity<S, TIME>;
+fn second<S>(v: S) -> Time<S>
+where
+    S: Mul<f64, Output = S>,
+{
+    Quantity::<S, TIME>(v * 1.0)
+}
+
+type Velocity<S> = Quantity<S, VELOCITY>;
+fn meters_per_second<S>(v: S) -> Velocity<S>
+where
+    S: Mul<f64, Output = S>,
+{
+    Quantity::<S, VELOCITY>(v * 1.0)
+}
+
+impl<const D: Dimension> Quantity<f64, D> {
+    pub fn abs(&self) -> Self {
+        Self(self.0.abs())
     }
+}
 
-    pub type Length = Quantity<f64, LENGTH>;
+pub mod f64 {
+    pub type Dimensionless = super::Dimensionless<f64>;
+    pub type Length = super::Length<f64>;
+    pub type Time = super::Time<f64>;
+    pub type Velocity = super::Velocity<f64>;
+
+    pub fn dimensionless(v: f64) -> Dimensionless {
+        super::dimensionless(v)
+    }
     pub fn meter(v: f64) -> Length {
-        Quantity::<f64, LENGTH>(1.0 * v)
+        super::meter(v)
     }
     pub fn kilometer(v: f64) -> Length {
-        Quantity::<f64, LENGTH>(1e3 * v)
+        super::kilometer(v)
     }
-
-    pub type Time = Quantity<f64, TIME>;
     pub fn second(v: f64) -> Time {
-        Quantity::<f64, TIME>(1.0 * v)
+        super::second(v)
     }
-
-    pub type Velocity = Quantity<f64, VELOCITY>;
     pub fn meters_per_second(v: f64) -> Velocity {
-        Quantity::<f64, VELOCITY>(1.0 * v)
-    }
-
-    impl<const D: Dimension> Quantity<f64, D> {
-        pub fn abs(&self) -> Self {
-            Self(self.0.abs())
-        }
+        super::meters_per_second(v)
     }
 }

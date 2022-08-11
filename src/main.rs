@@ -22,8 +22,8 @@ use bevy::prelude::MinimalPlugins;
 use mpi_world::initialize_mpi_and_add_world_resource;
 use physics::PhysicsPlugin;
 use position::Position;
-use units::meter;
-use units::meters_per_second;
+use units::f64::meter;
+use units::f64::meters_per_second;
 use velocity::Velocity;
 use visualization::VisualizationPlugin;
 
