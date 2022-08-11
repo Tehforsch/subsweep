@@ -1,4 +1,5 @@
 use std::ops::Add;
+use std::ops::AddAssign;
 use std::ops::Div;
 use std::ops::Mul;
 use std::ops::Sub;
@@ -40,6 +41,12 @@ impl<const D: Dimension> Add for Quantity<D> {
 
     fn add(self, rhs: Self) -> Self::Output {
         Quantity::<D>(self.0 + rhs.0)
+    }
+}
+
+impl<const D: Dimension> AddAssign for Quantity<D> {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
     }
 }
 

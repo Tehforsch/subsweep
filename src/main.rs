@@ -9,6 +9,7 @@
 
 mod config;
 mod mpi_world;
+mod physics;
 mod position;
 pub mod units;
 mod velocity;
@@ -18,22 +19,14 @@ use bevy::prelude::App;
 use bevy::prelude::Commands;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
-use bevy::prelude::StartupStage;
 use mpi::topology::Rank;
-use mpi::traits::Equivalence;
 use mpi_world::MpiWorld;
+use physics::PhysicsPlugin;
 use position::Position;
 use units::meter;
 use units::meters_per_second;
 use velocity::Velocity;
-use visualization::setup_camera_system;
-use visualization::spawn_sprites_system;
-
-use crate::units::second;
-use crate::units::Time;
-
-#[derive(Equivalence)]
-struct Timestep(Time);
+use visualization::VisualizationPlugin;
 
 fn initialize_mpi_and_add_world_resource(app: &mut App) -> Rank {
     let mpi_world = MpiWorld::new();
@@ -49,8 +42,8 @@ fn spawn_particles_system(mut commands: Commands) {
                 .spawn()
                 .insert(Position(meter(i as f64), meter(j as f64)))
                 .insert(Velocity(
-                    meters_per_second(i as f64),
-                    meters_per_second(-j as f64),
+                    meters_per_second(j as f64),
+                    meters_per_second(-i as f64),
                 ));
         }
     }
@@ -61,11 +54,10 @@ fn main() {
     let rank = initialize_mpi_and_add_world_resource(&mut app);
     if rank == 0 {
         app.add_plugins(DefaultPlugins)
-            .add_startup_system(spawn_particles_system)
-            .add_startup_system(setup_camera_system)
-            .add_startup_system_to_stage(StartupStage::PostStartup, spawn_sprites_system);
+            .add_plugin(VisualizationPlugin)
+            .add_plugin(PhysicsPlugin);
     } else {
         app.add_plugins(MinimalPlugins);
     }
-    app.insert_resource(Timestep(second(1.0))).run();
+    app.add_startup_system(spawn_particles_system).run();
 }
