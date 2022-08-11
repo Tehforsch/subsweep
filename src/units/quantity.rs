@@ -1,3 +1,5 @@
+use mpi::traits::Equivalence;
+
 use super::dimension::Dimension;
 use crate::units::NONE;
 use std::ops::{Add, Div, Mul, Sub};

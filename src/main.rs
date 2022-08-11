@@ -1,3 +1,4 @@
+#![allow(incomplete_features)]
 #![feature(generic_const_exprs, adt_const_params)]
 // Some or our '*_system' functions have a large number of arguments.
 // That is not necessarily a bad thing, as they are auto-provided by bevy.

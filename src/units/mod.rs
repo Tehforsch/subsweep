@@ -1,4 +1,5 @@
 mod dimension;
+mod mpi;
 mod quantities_and_units;
 mod quantity;
 
