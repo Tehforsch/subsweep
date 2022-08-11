@@ -8,90 +8,103 @@ use super::dimension::Dimension;
 use crate::units::NONE;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Quantity<const D: Dimension>(pub(super) f64);
+pub struct Quantity<S, const D: Dimension>(pub(super) S);
 
-impl<const D: Dimension> Quantity<D> {
-    pub fn new(value: f64) -> Self {
+impl<S, const D: Dimension> Quantity<S, D> {
+    pub fn new(value: S) -> Self {
         Self(value)
     }
-
-    pub fn abs(&self) -> Self {
-        Self(self.0.abs())
-    }
 }
 
-impl Quantity<{ NONE }> {
+impl<S> Quantity<S, { NONE }> {
     /// Get the value of a dimensionless quantity
-    pub fn value(&self) -> f64 {
-        self.0
+    pub fn value(&self) -> &S {
+        &self.0
     }
 }
 
-impl<const D: Dimension> Quantity<D> {
+impl<S, const D: Dimension> Quantity<S, D> {
     /// Unwrap the value of a quantity, regardless of whether
     /// it is dimensionless or not. Use this carefully, since the
     /// result depends on the underlying base units
-    pub fn unwrap_value(&self) -> f64 {
-        self.0
+    pub fn unwrap_value(&self) -> &S {
+        &self.0
     }
 }
 
-impl<const D: Dimension> Add for Quantity<D> {
-    type Output = Quantity<D>;
+impl<S, const D: Dimension> Add for Quantity<S, D>
+where
+    S: Add<Output = S>,
+{
+    type Output = Quantity<S, D>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Quantity::<D>(self.0 + rhs.0)
+        Quantity::<S, D>(self.0 + rhs.0)
     }
 }
 
-impl<const D: Dimension> AddAssign for Quantity<D> {
+impl<S, const D: Dimension> AddAssign for Quantity<S, D>
+where
+    S: AddAssign<S>,
+{
     fn add_assign(&mut self, rhs: Self) {
         self.0 += rhs.0;
     }
 }
 
-impl<const D: Dimension> Sub for Quantity<D> {
-    type Output = Quantity<D>;
+impl<S, const D: Dimension> Sub for Quantity<S, D>
+where
+    S: Sub<Output = S>,
+{
+    type Output = Quantity<S, D>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Quantity::<D>(self.0 - rhs.0)
+        Quantity::<S, D>(self.0 - rhs.0)
     }
 }
 
-impl<const D: Dimension> Mul<f64> for Quantity<D> {
-    type Output = Quantity<D>;
+impl<S, const D: Dimension> Mul<f64> for Quantity<S, D>
+where
+    S: Mul<f64, Output = S>,
+{
+    type Output = Quantity<S, D>;
 
     fn mul(self, rhs: f64) -> Self::Output {
         Quantity(self.0 * rhs)
     }
 }
 
-impl<const D: Dimension> Mul<Quantity<D>> for f64 {
-    type Output = Quantity<D>;
+impl<S, const D: Dimension> Mul<Quantity<S, D>> for f64
+where
+    f64: Mul<S, Output = S>,
+{
+    type Output = Quantity<S, D>;
 
-    fn mul(self, rhs: Quantity<D>) -> Self::Output {
+    fn mul(self, rhs: Quantity<S, D>) -> Self::Output {
         Quantity(self * rhs.0)
     }
 }
 
-impl<const DL: Dimension, const DR: Dimension> Mul<Quantity<DR>> for Quantity<DL>
+impl<S, const DL: Dimension, const DR: Dimension> Mul<Quantity<S, DR>> for Quantity<S, DL>
 where
-    Quantity<{ DL.dimension_mul(DR) }>:,
+    Quantity<S, { DL.dimension_mul(DR) }>:,
+    S: Mul<S, Output = S>,
 {
-    type Output = Quantity<{ DL.dimension_mul(DR) }>;
+    type Output = Quantity<S, { DL.dimension_mul(DR) }>;
 
-    fn mul(self, rhs: Quantity<DR>) -> Self::Output {
+    fn mul(self, rhs: Quantity<S, DR>) -> Self::Output {
         Quantity(self.0 * rhs.0)
     }
 }
 
-impl<const DL: Dimension, const DR: Dimension> Div<Quantity<DR>> for Quantity<DL>
+impl<S, const DL: Dimension, const DR: Dimension> Div<Quantity<S, DR>> for Quantity<S, DL>
 where
-    Quantity<{ DL.dimension_div(DR) }>:,
+    Quantity<S, { DL.dimension_div(DR) }>:,
+    S: Div<S, Output = S>,
 {
-    type Output = Quantity<{ DL.dimension_div(DR) }>;
+    type Output = Quantity<S, { DL.dimension_div(DR) }>;
 
-    fn div(self, rhs: Quantity<DR>) -> Self::Output {
+    fn div(self, rhs: Quantity<S, DR>) -> Self::Output {
         Quantity(self.0 / rhs.0)
     }
 }

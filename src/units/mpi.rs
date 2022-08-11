@@ -7,7 +7,7 @@ use mpi::traits::FromRaw;
 use super::dimension::Dimension;
 use super::quantity::Quantity;
 
-unsafe impl<const D: Dimension> Equivalence for Quantity<D> {
+unsafe impl<const D: Dimension> Equivalence for Quantity<f64, D> {
     type Out = SystemDatatype;
 
     fn equivalent_datatype() -> Self::Out {

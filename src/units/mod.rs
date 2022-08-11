@@ -13,9 +13,9 @@ mod tests {
     use super::meter;
     use super::quantity::Quantity;
 
-    fn assert_is_close<const U: Dimension>(x: Quantity<U>, y: Quantity<U>) {
+    fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64, U>) {
         const EPSILON: f64 = 1e-20;
-        assert!((x - y).abs().unwrap_value() < EPSILON)
+        assert!(*(x - y).abs().unwrap_value() < EPSILON)
     }
 
     #[test]
