@@ -7,18 +7,41 @@ pub use quantities_and_units::*;
 #[cfg(test)]
 mod tests {
     use super::dimension::Dimension;
+    use super::dimensionless;
+    use super::kilometer;
     use super::meter;
     use super::quantity::Quantity;
 
     fn assert_is_close<const U: Dimension>(x: Quantity<U>, y: Quantity<U>) {
-        const EPSILON: f64 = 1e-10;
+        const EPSILON: f64 = 1e-20;
         assert!((x - y).abs().unwrap_value() < EPSILON)
     }
 
     #[test]
-    fn add_units() {
+    fn add_same_unit() {
         let x = meter(1.0);
         let y = meter(10.0);
         assert_is_close(x + y, meter(11.0));
+    }
+
+    #[test]
+    fn add_different_units() {
+        let x = meter(1.0);
+        let y = kilometer(10.0);
+        assert_is_close(x + y, meter(10001.0));
+    }
+
+    #[test]
+    fn sub_different_units() {
+        let x = meter(1.0);
+        let y = kilometer(10.0);
+        assert_is_close(x - y, meter(-9999.0));
+    }
+
+    #[test]
+    fn div_same_unit() {
+        let x = meter(1.0);
+        let y = meter(10.0);
+        assert_is_close(x / y, dimensionless(0.1));
     }
 }
