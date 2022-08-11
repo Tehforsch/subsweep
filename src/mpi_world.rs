@@ -7,6 +7,7 @@ use mpi::topology::SystemCommunicator;
 use mpi::traits::Destination;
 use mpi::traits::Equivalence;
 use mpi::traits::Source;
+use mpi::Threading;
 
 pub fn initialize_mpi_and_add_world_resource(app: &mut App) -> Rank {
     let mpi_world = MpiWorld::new();
@@ -21,7 +22,7 @@ pub struct MpiWorld {
 
 impl MpiWorld {
     pub fn new() -> Self {
-        let universe = mpi::initialize().unwrap();
+        let (universe, _) = mpi::initialize_with_threading(Threading::Multiple).unwrap();
         Self { universe }
     }
 

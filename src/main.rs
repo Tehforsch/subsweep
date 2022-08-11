@@ -22,6 +22,7 @@ use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use glam::Vec2;
 use mpi_world::initialize_mpi_and_add_world_resource;
+use mpi_world::MpiWorld;
 use physics::Domain;
 use physics::DomainDistribution;
 use physics::PhysicsPlugin;
@@ -32,8 +33,11 @@ use units::vec2::meters_per_second;
 use velocity::Velocity;
 use visualization::VisualizationPlugin;
 
-fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>) {
-    for i in [0.1, 0.3, 0.5, 0.7, 0.9] {
+fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, world: Res<MpiWorld>) {
+    if world.rank() != 0 {
+        return;
+    }
+    for i in [0.5] {
         let pos = domain.upper_left + (domain.lower_right - domain.upper_left) * i;
         commands
             .spawn()

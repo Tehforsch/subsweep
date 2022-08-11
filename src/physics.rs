@@ -64,31 +64,65 @@ fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timeste
     }
 }
 
+#[derive(Equivalence)]
+struct ParticleExchangeData {
+    vel: Velocity,
+    pos: Position,
+}
+
 fn exchange_particles_system(
     mut commands: Commands,
-    particles: Query<(Entity, &mut Position)>,
+    particles: Query<(Entity, &Position, &Velocity)>,
     world: Res<MpiWorld>,
     domain: Res<DomainDistribution>,
 ) {
     let mut positions = vec![];
     let this_rank = world.rank();
-    for (entity, pos) in particles.iter() {
+    for (entity, pos, vel) in particles.iter() {
         let target_rank = domain.target_rank(pos);
         if target_rank != this_rank {
             commands.entity(entity).despawn();
-            positions.push((target_rank, pos.clone()));
+            positions.push((
+                target_rank,
+                ParticleExchangeData {
+                    pos: pos.clone(),
+                    vel: vel.clone(),
+                },
+            ));
         }
     }
-    for (rank, pos) in positions.into_iter() {
-        dbg!("leaving", rank, &pos);
-        world.send(rank, pos);
+    for rank in world.other_ranks() {
+        let num = positions
+            .iter()
+            .filter(|(new_rank, _)| *new_rank == rank)
+            .count();
+        world.send(rank, num);
+        if num > 0 {
+            println!(
+                "{} coming from {} to {}",
+                positions.len(),
+                world.rank(),
+                rank
+            );
+        }
+    }
+    for (rank, data) in positions.into_iter() {
+        world.send(rank, data);
     }
     for rank in world.other_ranks() {
-        let (moved_to_own_domain, status): (Vec<Position>, Status) =
-            world.world().process_at_rank(rank).receive_vec();
-        for pos in moved_to_own_domain.into_iter() {
-            dbg!("receiving", &pos);
-            commands.spawn().insert(pos);
+        let (num_incoming, status): (usize, Status) = world.world().process_at_rank(rank).receive();
+        if num_incoming > 0 {
+            println!(
+                "{} incoming from {} to {}",
+                num_incoming,
+                rank,
+                world.rank()
+            );
+            let (moved_to_own_domain, status): (Vec<ParticleExchangeData>, Status) =
+                world.world().process_at_rank(rank).receive_vec();
+            for data in moved_to_own_domain.into_iter() {
+                commands.spawn().insert(data.pos).insert(data.vel);
+            }
         }
     }
 }
