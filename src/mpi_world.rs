@@ -1,3 +1,4 @@
+use bevy::prelude::App;
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
 use mpi::topology::Communicator;
@@ -6,6 +7,13 @@ use mpi::topology::SystemCommunicator;
 use mpi::traits::Destination;
 use mpi::traits::Equivalence;
 use mpi::traits::Source;
+
+pub fn initialize_mpi_and_add_world_resource(app: &mut App) -> Rank {
+    let mpi_world = MpiWorld::new();
+    let rank = mpi_world.rank();
+    app.insert_non_send_resource(mpi_world);
+    rank
+}
 
 pub struct MpiWorld {
     universe: Universe,

@@ -19,21 +19,13 @@ use bevy::prelude::App;
 use bevy::prelude::Commands;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
-use mpi::topology::Rank;
-use mpi_world::MpiWorld;
+use mpi_world::initialize_mpi_and_add_world_resource;
 use physics::PhysicsPlugin;
 use position::Position;
 use units::meter;
 use units::meters_per_second;
 use velocity::Velocity;
 use visualization::VisualizationPlugin;
-
-fn initialize_mpi_and_add_world_resource(app: &mut App) -> Rank {
-    let mpi_world = MpiWorld::new();
-    let rank = mpi_world.rank();
-    app.insert_non_send_resource(mpi_world);
-    rank
-}
 
 fn spawn_particles_system(mut commands: Commands) {
     for i in -5..5 {
@@ -54,10 +46,11 @@ fn main() {
     let rank = initialize_mpi_and_add_world_resource(&mut app);
     if rank == 0 {
         app.add_plugins(DefaultPlugins)
-            .add_plugin(VisualizationPlugin)
-            .add_plugin(PhysicsPlugin);
+            .add_plugin(VisualizationPlugin);
     } else {
         app.add_plugins(MinimalPlugins);
     }
-    app.add_startup_system(spawn_particles_system).run();
+    app.add_plugin(PhysicsPlugin)
+        .add_startup_system(spawn_particles_system)
+        .run();
 }
