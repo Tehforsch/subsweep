@@ -1,0 +1,19 @@
+[package]
+name = "tenet"
+version = "0.1.0"
+edition = "2021"
+resolver="2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = { version = "0.8.0", default-features = false, features = ["render", "x11", "bevy_winit", "dynamic"]}
+# Use the system feature which uses the system library.
+# This is because the autoconfigure/build script of libffi (the C project, not the crate) seems to be bugged on my machine
+# since it is trying to invoke cc -V which my gcc doesnt support (and hasnt since 2013?)
+libffi = { version = "3.0.0", features = ["system"] }
+mpi = { git = "https://github.com/rsmpi/rsmpi", features = ["derive"] }
+
+# Optimize dependencies even in a debug build
+[profile.dev.package."*"]
+opt-level = 3
