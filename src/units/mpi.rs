@@ -1,12 +1,16 @@
-use mpi::{datatype::UserDatatype, traits::Equivalence};
+use mpi::{
+    datatype::{DatatypeRef, SystemDatatype, UserDatatype},
+    ffi,
+    traits::{Equivalence, FromRaw},
+};
 
 use super::{dimension::Dimension, quantity::Quantity};
 
 unsafe impl<const D: Dimension> Equivalence for Quantity<D> {
-    type Out = UserDatatype;
+    type Out = SystemDatatype;
 
     fn equivalent_datatype() -> Self::Out {
-        UserDatatype::contiguous(1, &f64::equivalent_datatype())
+        unsafe { DatatypeRef::from_raw(ffi::RSMPI_DOUBLE) }
     }
 }
 

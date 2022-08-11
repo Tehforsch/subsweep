@@ -17,6 +17,7 @@ use crate::units::second;
 use crate::units::Time;
 use bevy::prelude::{App, DefaultPlugins, MinimalPlugins, StartupStage};
 use mpi::topology::Rank;
+use mpi::traits::Equivalence;
 use mpi_world::MpiWorld;
 use visualization::setup_camera_system;
 use visualization::spawn_sprites_system;
