@@ -1,6 +1,6 @@
 use bevy::prelude::Component;
 
-use crate::units::f64;
+use crate::units::f32;
 
 #[derive(Component, Debug)]
-pub struct Velocity(pub f64::Velocity, pub f64::Velocity);
+pub struct Velocity(pub f32::Velocity, pub f32::Velocity);

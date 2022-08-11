@@ -22,8 +22,8 @@ use bevy::prelude::MinimalPlugins;
 use mpi_world::initialize_mpi_and_add_world_resource;
 use physics::PhysicsPlugin;
 use position::Position;
-use units::f64::meter;
-use units::f64::meters_per_second;
+use units::f32::meter;
+use units::f32::meters_per_second;
 use velocity::Velocity;
 use visualization::VisualizationPlugin;
 
@@ -32,10 +32,10 @@ fn spawn_particles_system(mut commands: Commands) {
         for j in -5..5 {
             commands
                 .spawn()
-                .insert(Position(meter(i as f64), meter(j as f64)))
+                .insert(Position(meter(i as f32), meter(j as f32)))
                 .insert(Velocity(
-                    meters_per_second(j as f64),
-                    meters_per_second(-i as f64),
+                    meters_per_second(j as f32),
+                    meters_per_second(-i as f32),
                 ));
         }
     }

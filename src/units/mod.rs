@@ -8,13 +8,13 @@ pub use quantities_and_units::*;
 #[cfg(test)]
 mod tests {
     use super::dimension::Dimension;
-    use super::f64::dimensionless;
-    use super::f64::kilometer;
-    use super::f64::meter;
+    use super::f32::dimensionless;
+    use super::f32::kilometer;
+    use super::f32::meter;
     use super::quantity::Quantity;
 
-    fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64, U>) {
-        const EPSILON: f64 = 1e-20;
+    fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
+        const EPSILON: f32 = 1e-20;
         assert!(*(x - y).abs().unwrap_value() < EPSILON)
     }
 

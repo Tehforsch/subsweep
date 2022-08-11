@@ -1,6 +1,6 @@
 use std::ops::Mul;
 
-pub use self::f64::*;
+pub use self::f32::*;
 use super::dimension::Dimension;
 use super::quantity::Quantity;
 
@@ -20,7 +20,7 @@ const VELOCITY: Dimension = Dimension {
 type Dimensionless<S> = Quantity<S, NONE>;
 fn dimensionless<S>(v: S) -> Dimensionless<S>
 where
-    S: Mul<f64, Output = S>,
+    S: Mul<f32, Output = S>,
 {
     Quantity::<S, NONE>(v * 1.0)
 }
@@ -28,13 +28,13 @@ where
 type Length<S> = Quantity<S, LENGTH>;
 fn meter<S>(v: S) -> Length<S>
 where
-    S: Mul<f64, Output = S>,
+    S: Mul<f32, Output = S>,
 {
     Quantity::<S, LENGTH>(v * 1.0)
 }
 fn kilometer<S>(v: S) -> Length<S>
 where
-    S: Mul<f64, Output = S>,
+    S: Mul<f32, Output = S>,
 {
     Quantity::<S, LENGTH>(v * 1e3)
 }
@@ -42,7 +42,7 @@ where
 type Time<S> = Quantity<S, TIME>;
 fn second<S>(v: S) -> Time<S>
 where
-    S: Mul<f64, Output = S>,
+    S: Mul<f32, Output = S>,
 {
     Quantity::<S, TIME>(v * 1.0)
 }
@@ -50,36 +50,61 @@ where
 type Velocity<S> = Quantity<S, VELOCITY>;
 fn meters_per_second<S>(v: S) -> Velocity<S>
 where
-    S: Mul<f64, Output = S>,
+    S: Mul<f32, Output = S>,
 {
     Quantity::<S, VELOCITY>(v * 1.0)
 }
 
-impl<const D: Dimension> Quantity<f64, D> {
+impl<const D: Dimension> Quantity<f32, D> {
     pub fn abs(&self) -> Self {
         Self(self.0.abs())
     }
 }
 
-pub mod f64 {
-    pub type Dimensionless = super::Dimensionless<f64>;
-    pub type Length = super::Length<f64>;
-    pub type Time = super::Time<f64>;
-    pub type Velocity = super::Velocity<f64>;
+pub mod f32 {
+    pub type Dimensionless = super::Dimensionless<f32>;
+    pub type Length = super::Length<f32>;
+    pub type Time = super::Time<f32>;
+    pub type Velocity = super::Velocity<f32>;
 
-    pub fn dimensionless(v: f64) -> Dimensionless {
+    pub fn dimensionless(v: f32) -> Dimensionless {
         super::dimensionless(v)
     }
-    pub fn meter(v: f64) -> Length {
+    pub fn meter(v: f32) -> Length {
         super::meter(v)
     }
-    pub fn kilometer(v: f64) -> Length {
+    pub fn kilometer(v: f32) -> Length {
         super::kilometer(v)
     }
-    pub fn second(v: f64) -> Time {
+    pub fn second(v: f32) -> Time {
         super::second(v)
     }
-    pub fn meters_per_second(v: f64) -> Velocity {
+    pub fn meters_per_second(v: f32) -> Velocity {
+        super::meters_per_second(v)
+    }
+}
+
+pub mod vec2 {
+    use glam::Vec2;
+
+    pub type Dimensionless = super::Dimensionless<Vec2>;
+    pub type Length = super::Length<Vec2>;
+    pub type Time = super::Time<Vec2>;
+    pub type Velocity = super::Velocity<Vec2>;
+
+    pub fn dimensionless(v: Vec2) -> Dimensionless {
+        super::dimensionless(v)
+    }
+    pub fn meter(v: Vec2) -> Length {
+        super::meter(v)
+    }
+    pub fn kilometer(v: Vec2) -> Length {
+        super::kilometer(v)
+    }
+    pub fn second(v: Vec2) -> Time {
+        super::second(v)
+    }
+    pub fn meters_per_second(v: Vec2) -> Velocity {
         super::meters_per_second(v)
     }
 }

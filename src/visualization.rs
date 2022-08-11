@@ -2,7 +2,7 @@ use bevy::prelude::shape::Circle;
 use bevy::prelude::*;
 
 use crate::position::Position;
-use crate::units::f64::meter;
+use crate::units::f32::meter;
 
 const CIRCLE_SIZE: f32 = 5.0;
 

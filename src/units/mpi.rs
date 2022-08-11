@@ -7,6 +7,14 @@ use mpi::traits::FromRaw;
 use super::dimension::Dimension;
 use super::quantity::Quantity;
 
+unsafe impl<const D: Dimension> Equivalence for Quantity<f32, D> {
+    type Out = SystemDatatype;
+
+    fn equivalent_datatype() -> Self::Out {
+        unsafe { DatatypeRef::from_raw(ffi::RSMPI_FLOAT) }
+    }
+}
+
 unsafe impl<const D: Dimension> Equivalence for Quantity<f64, D> {
     type Out = SystemDatatype;
 
@@ -19,7 +27,7 @@ unsafe impl<const D: Dimension> Equivalence for Quantity<f64, D> {
 mod tests {
     use mpi::traits::Communicator;
 
-    use crate::units::f64::meter;
+    use crate::units::f32::meter;
 
     #[test]
     fn pack_unpack_quantity() {
