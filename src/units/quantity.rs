@@ -1,8 +1,10 @@
-use mpi::traits::Equivalence;
+use std::ops::Add;
+use std::ops::Div;
+use std::ops::Mul;
+use std::ops::Sub;
 
 use super::dimension::Dimension;
 use crate::units::NONE;
-use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Quantity<const D: Dimension>(pub(super) f64);

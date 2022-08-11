@@ -1,8 +1,8 @@
 #[derive(PartialEq, Eq, Debug)]
 pub struct Dimension {
-    pub length: usize,
-    pub time: usize,
-    pub mass: usize,
+    pub length: i8,
+    pub time: i8,
+    pub mass: i8,
 }
 
 impl Dimension {

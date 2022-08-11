@@ -1,10 +1,11 @@
-use mpi::{
-    datatype::{DatatypeRef, SystemDatatype, UserDatatype},
-    ffi,
-    traits::{Equivalence, FromRaw},
-};
+use mpi::datatype::DatatypeRef;
+use mpi::datatype::SystemDatatype;
+use mpi::ffi;
+use mpi::traits::Equivalence;
+use mpi::traits::FromRaw;
 
-use super::{dimension::Dimension, quantity::Quantity};
+use super::dimension::Dimension;
+use super::quantity::Quantity;
 
 unsafe impl<const D: Dimension> Equivalence for Quantity<D> {
     type Out = SystemDatatype;
@@ -16,8 +17,9 @@ unsafe impl<const D: Dimension> Equivalence for Quantity<D> {
 
 #[cfg(test)]
 mod tests {
-    use crate::units::meter;
     use mpi::traits::Communicator;
+
+    use crate::units::meter;
 
     #[test]
     fn pack_unpack_quantity() {

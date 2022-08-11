@@ -25,3 +25,13 @@ pub type Time = Quantity<TIME>;
 pub fn second(v: f64) -> Time {
     Quantity::<TIME>(1.0 * v)
 }
+
+const VELOCITY: Dimension = Dimension {
+    length: 1,
+    time: -1,
+    ..NONE
+};
+pub type Velocity = Quantity<VELOCITY>;
+pub fn meters_per_second(v: f64) -> Velocity {
+    Quantity::<VELOCITY>(1.0 * v)
+}
