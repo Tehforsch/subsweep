@@ -85,26 +85,26 @@ where
     }
 }
 
-impl<S, const DL: Dimension, const DR: Dimension> Mul<Quantity<S, DR>> for Quantity<S, DL>
+impl<SL, SR, const DL: Dimension, const DR: Dimension> Mul<Quantity<SR, DR>> for Quantity<SL, DL>
 where
-    Quantity<S, { DL.dimension_mul(DR) }>:,
-    S: Mul<S, Output = S>,
+    Quantity<SL, { DL.dimension_mul(DR) }>:,
+    SL: Mul<SR, Output = SL>,
 {
-    type Output = Quantity<S, { DL.dimension_mul(DR) }>;
+    type Output = Quantity<SL, { DL.dimension_mul(DR) }>;
 
-    fn mul(self, rhs: Quantity<S, DR>) -> Self::Output {
+    fn mul(self, rhs: Quantity<SR, DR>) -> Self::Output {
         Quantity(self.0 * rhs.0)
     }
 }
 
-impl<S, const DL: Dimension, const DR: Dimension> Div<Quantity<S, DR>> for Quantity<S, DL>
+impl<SL, SR, const DL: Dimension, const DR: Dimension> Div<Quantity<SR, DR>> for Quantity<SL, DL>
 where
-    Quantity<S, { DL.dimension_div(DR) }>:,
-    S: Div<S, Output = S>,
+    Quantity<SL, { DL.dimension_div(DR) }>:,
+    SL: Div<SR, Output = SL>,
 {
-    type Output = Quantity<S, { DL.dimension_div(DR) }>;
+    type Output = Quantity<SL, { DL.dimension_div(DR) }>;
 
-    fn div(self, rhs: Quantity<S, DR>) -> Self::Output {
+    fn div(self, rhs: Quantity<SR, DR>) -> Self::Output {
         Quantity(self.0 / rhs.0)
     }
 }

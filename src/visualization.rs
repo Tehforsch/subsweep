@@ -34,9 +34,8 @@ pub fn spawn_sprites_system(
 
 fn position_to_translation(position: &Position) -> Vec3 {
     let camera_zoom = meter(0.01);
-    let x = position.0 / camera_zoom;
-    let y = position.1 / camera_zoom;
-    Vec3::new(*x.value() as f32, *y.value() as f32, 0.0)
+    let pos = *(position.0 / camera_zoom).value();
+    Vec3::new(pos.x, pos.y, 0.0)
 }
 
 pub fn setup_camera_system(mut commands: Commands) {

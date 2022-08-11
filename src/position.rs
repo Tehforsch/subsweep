@@ -1,6 +1,6 @@
 use bevy::prelude::Component;
 
-use crate::units::f32::Length;
+use crate::units::vec2::Length;
 
 #[derive(Component, Debug)]
-pub struct Position(pub Length, pub Length);
+pub struct Position(pub Length);

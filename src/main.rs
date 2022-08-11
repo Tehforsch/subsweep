@@ -19,11 +19,12 @@ use bevy::prelude::App;
 use bevy::prelude::Commands;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
+use glam::Vec2;
 use mpi_world::initialize_mpi_and_add_world_resource;
 use physics::PhysicsPlugin;
 use position::Position;
-use units::f32::meter;
-use units::f32::meters_per_second;
+use units::vec2::meter;
+use units::vec2::meters_per_second;
 use velocity::Velocity;
 use visualization::VisualizationPlugin;
 
@@ -32,11 +33,8 @@ fn spawn_particles_system(mut commands: Commands) {
         for j in -5..5 {
             commands
                 .spawn()
-                .insert(Position(meter(i as f32), meter(j as f32)))
-                .insert(Velocity(
-                    meters_per_second(j as f32),
-                    meters_per_second(-i as f32),
-                ));
+                .insert(Position(meter(Vec2::new(i as f32, j as f32))))
+                .insert(Velocity(meters_per_second(Vec2::new(j as f32, -i as f32))));
         }
     }
 }

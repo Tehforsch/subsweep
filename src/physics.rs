@@ -23,6 +23,5 @@ impl Plugin for PhysicsPlugin {
 fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timestep: Res<Timestep>) {
     for (mut pos, velocity) in query.iter_mut() {
         pos.0 += velocity.0 * timestep.0;
-        pos.1 += velocity.1 * timestep.0;
     }
 }
