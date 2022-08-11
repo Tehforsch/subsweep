@@ -61,50 +61,66 @@ impl<const D: Dimension> Quantity<f32, D> {
     }
 }
 
-pub mod f32 {
-    pub type Dimensionless = super::Dimensionless<f32>;
-    pub type Length = super::Length<f32>;
-    pub type Time = super::Time<f32>;
-    pub type Velocity = super::Velocity<f32>;
+macro_rules! quantity_definitions {
+    ($storage_type:ty, $($name:ident, $dimension:ty, $factor:literal),+) => {
+        $(
+        pub fn $name(v: $storage_type) -> $dimension {
+            super::$name(v)
+        }
+        )*
+    }
+}
 
-    pub fn dimensionless(v: f32) -> Dimensionless {
-        super::dimensionless(v)
+macro_rules! unit_functions {
+    ($storage_type:ty, $($name:ident, $dimension:ty, $factor:literal),+) => {
+        $(
+        pub fn $name(v: $storage_type) -> $dimension {
+            super::$name(v)
+        }
+        )*
     }
-    pub fn meter(v: f32) -> Length {
-        super::meter(v)
-    }
-    pub fn kilometer(v: f32) -> Length {
-        super::kilometer(v)
-    }
-    pub fn second(v: f32) -> Time {
-        super::second(v)
-    }
-    pub fn meters_per_second(v: f32) -> Velocity {
-        super::meters_per_second(v)
-    }
+}
+
+macro_rules! implement_storage_type {
+    ($type:ty) => {
+        pub type Dimensionless = super::Dimensionless<$type>;
+        pub type Length = super::Length<$type>;
+        pub type Time = super::Time<$type>;
+        pub type Velocity = super::Velocity<$type>;
+
+        // quantities!(&type,
+        //             Dimensionless, DIMENSIONLESS, { ..NONE },
+        //             Length, LENGTH, { length: 1, ..NONE },
+        //             Time, TIME, { time: 1, ..NONE },
+        //             Velocity, VELOCITY, { length: 1, time: -1, ..NONE
+        //             )
+
+        unit_functions!(
+            $type,
+            dimensionless,
+            Dimensionless,
+            1.0,
+            meter,
+            Length,
+            1.0,
+            kilometer,
+            Length,
+            1000.0,
+            second,
+            Time,
+            1.0,
+            meters_per_second,
+            Velocity,
+            1.0
+        );
+    };
 }
 
 pub mod vec2 {
     use glam::Vec2;
+    implement_storage_type!(Vec2);
+}
 
-    pub type Dimensionless = super::Dimensionless<Vec2>;
-    pub type Length = super::Length<Vec2>;
-    pub type Time = super::Time<Vec2>;
-    pub type Velocity = super::Velocity<Vec2>;
-
-    pub fn dimensionless(v: Vec2) -> Dimensionless {
-        super::dimensionless(v)
-    }
-    pub fn meter(v: Vec2) -> Length {
-        super::meter(v)
-    }
-    pub fn kilometer(v: Vec2) -> Length {
-        super::kilometer(v)
-    }
-    pub fn second(v: Vec2) -> Time {
-        super::second(v)
-    }
-    pub fn meters_per_second(v: Vec2) -> Velocity {
-        super::meters_per_second(v)
-    }
+pub mod f32 {
+    implement_storage_type!(f32);
 }
