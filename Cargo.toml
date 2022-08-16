@@ -8,6 +8,7 @@ resolver="2"
 
 [dependencies]
 bevy = { version = "0.8.0", default-features = false, features = ["render", "x11", "bevy_winit", "serialize", "filesystem_watcher"]}
+clap = {version = "3.2.17", features = ["derive"]}
 glam = "0.21.3"
 
 # Use the system feature which uses the system library.

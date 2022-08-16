@@ -7,6 +7,7 @@
 // perfectly readable.
 #![allow(clippy::type_complexity)]
 
+mod args;
 mod communication;
 mod config;
 mod mpi_world;
@@ -16,12 +17,16 @@ pub mod units;
 mod velocity;
 mod visualization;
 
+use args::CommandLineOptions;
+use args::RunType;
 use bevy::prelude::App;
 use bevy::prelude::Commands;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
+use clap::Parser;
 use glam::Vec2;
+use mpi::Rank;
 use mpi_world::initialize_mpi_and_add_world_resource;
 use mpi_world::MpiWorld;
 use physics::Domain;
@@ -46,9 +51,7 @@ fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, world: Re
     }
 }
 
-fn main() {
-    let mut app = App::new();
-    let rank = initialize_mpi_and_add_world_resource(&mut app);
+fn build_app(app: &mut App, rank: Rank) {
     let domain_distribution = get_domain_distribution();
     let domain = domain_distribution.domains[&rank].clone();
     if rank == 0 {
@@ -59,8 +62,18 @@ fn main() {
     }
     app.insert_resource(domain)
         .add_plugin(PhysicsPlugin(domain_distribution))
-        .add_startup_system(spawn_particles_system)
-        .run();
+        .add_startup_system(spawn_particles_system);
+}
+
+fn main() {
+    let opts = CommandLineOptions::parse();
+    let mut app = App::new();
+    let rank = match opts.run_type {
+        RunType::Mpi => initialize_mpi_and_add_world_resource(&mut app),
+        RunType::Local => todo!(),
+    };
+    build_app(&mut app, rank);
+    app.run();
 }
 
 fn get_domain_distribution() -> DomainDistribution {
