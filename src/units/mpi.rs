@@ -38,17 +38,26 @@ unsafe impl<const D: Dimension> Equivalence for Quantity<Vec2, D> {
 
 #[cfg(test)]
 mod tests {
+    use glam::Vec2;
     use mpi::traits::Communicator;
 
-    use crate::units::f32::meter;
+    use crate::units::f32;
+    use crate::units::vec2;
 
     #[test]
     fn pack_unpack_quantity() {
-        let q1 = meter(1.0);
-        let mut q2 = meter(2.0);
-
         let universe = mpi::initialize().unwrap();
         let world = universe.world();
+
+        let q1 = f32::meter(1.0);
+        let mut q2 = f32::meter(2.0);
+        let a = world.pack(&q1);
+        unsafe {
+            world.unpack_into(&a, &mut q2, 0);
+        }
+
+        let q1 = vec2::meter(Vec2::new(1.0, 2.0));
+        let mut q2 = vec2::meter(Vec2::new(3.0, 4.0));
         let a = world.pack(&q1);
         unsafe {
             world.unpack_into(&a, &mut q2, 0);
