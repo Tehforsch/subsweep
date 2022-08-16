@@ -10,12 +10,15 @@
 mod args;
 mod communication;
 mod config;
+mod domain;
 mod mpi_world;
 mod physics;
 mod position;
 pub mod units;
 mod velocity;
 mod visualization;
+
+use std::thread;
 
 use args::CommandLineOptions;
 use args::RunType;
@@ -25,12 +28,14 @@ use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use clap::Parser;
+use communication::Communicator;
+use communication::ExchangeCommunicator;
+use domain::Domain;
+use domain::DomainDistribution;
 use glam::Vec2;
 use mpi::Rank;
-use mpi_world::initialize_mpi_and_add_world_resource;
 use mpi_world::MpiWorld;
-use physics::Domain;
-use physics::DomainDistribution;
+use physics::ParticleExchangeData;
 use physics::PhysicsPlugin;
 use position::Position;
 use units::vec2::meter;
@@ -38,8 +43,8 @@ use units::vec2::meters_per_second;
 use velocity::Velocity;
 use visualization::VisualizationPlugin;
 
-fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, world: Res<MpiWorld>) {
-    if world.rank() != 0 {
+fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res<Rank>) {
+    if *rank != 0 {
         return;
     }
     for i in [0.5] {
@@ -51,7 +56,11 @@ fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, world: Re
     }
 }
 
-fn build_app(app: &mut App, rank: Rank) {
+fn build_and_run_app<C: Communicator<ParticleExchangeData> + Clone + 'static>(
+    app: &mut App,
+    communicator: C,
+) {
+    let rank = communicator.rank();
     let domain_distribution = get_domain_distribution();
     let domain = domain_distribution.domains[&rank].clone();
     if rank == 0 {
@@ -60,20 +69,38 @@ fn build_app(app: &mut App, rank: Rank) {
     } else {
         app.add_plugins(MinimalPlugins);
     }
+    PhysicsPlugin::add_to_app(
+        app,
+        domain_distribution,
+        ExchangeCommunicator::new(communicator),
+    );
     app.insert_resource(domain)
-        .add_plugin(PhysicsPlugin(domain_distribution))
+        .insert_resource(rank)
         .add_startup_system(spawn_particles_system);
+    app.run();
 }
 
 fn main() {
     let opts = CommandLineOptions::parse();
-    let mut app = App::new();
-    let rank = match opts.run_type {
-        RunType::Mpi => initialize_mpi_and_add_world_resource(&mut app),
-        RunType::Local => todo!(),
+    match opts.run_type {
+        RunType::Mpi => {
+            let (_universe, world) = MpiWorld::initialize();
+            let mut app = App::new();
+            build_and_run_app(&mut app, world);
+        }
+        RunType::Local(op) => {
+            for rank in 1..op.num_threads {
+                thread::spawn(move || {
+                    let mut app = App::new();
+                    todo!()
+                    // build_and_run_app(&mut app, todo!());
+                });
+            }
+            let mut app = App::new();
+            todo!()
+            // build_and_run_app(&mut app, todo!());
+        }
     };
-    build_app(&mut app, rank);
-    app.run();
 }
 
 fn get_domain_distribution() -> DomainDistribution {

@@ -1,58 +1,28 @@
-use std::collections::HashMap;
-
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
-use mpi::Rank;
 
-use crate::communication::BufferedCommunicator;
-use crate::mpi_world::MpiCommunicator;
-use crate::mpi_world::MpiWorld;
+use crate::communication::Communicator;
+use crate::communication::ExchangeCommunicator;
+use crate::domain::DomainDistribution;
 use crate::position::Position;
 use crate::units::f32::second;
-use crate::units::vec2::Length;
 use crate::velocity::Velocity;
 
 #[derive(Equivalence)]
 struct Timestep(crate::units::f32::Time);
 
-#[derive(Clone)]
-pub struct Domain {
-    pub upper_left: Length,
-    pub lower_right: Length,
-}
+pub struct PhysicsPlugin;
 
-impl Domain {
-    fn contains(&self, pos: &Position) -> bool {
-        let ul = self.upper_left.unwrap_value();
-        let lr = self.lower_right.unwrap_value();
-        let pos = pos.0.unwrap_value();
-        ul.x <= pos.x && pos.x < lr.x && ul.y <= pos.y && pos.y < lr.y
-    }
-}
-
-#[derive(Clone)]
-pub struct DomainDistribution {
-    pub domains: HashMap<Rank, Domain>,
-}
-
-pub struct PhysicsPlugin(pub DomainDistribution);
-
-impl DomainDistribution {
-    pub fn target_rank(&self, pos: &Position) -> Rank {
-        *self
-            .domains
-            .iter()
-            .find(|(_, domain)| domain.contains(pos))
-            .map(|(rank, _)| rank)
-            .unwrap_or(&0)
-    }
-}
-
-impl Plugin for PhysicsPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
+impl PhysicsPlugin {
+    pub fn add_to_app<C: Communicator<ParticleExchangeData> + Clone + 'static>(
+        app: &mut App,
+        domain_distribution: DomainDistribution,
+        communicator: ExchangeCommunicator<C, ParticleExchangeData>,
+    ) {
         app.insert_resource(Timestep(second(0.01)))
-            .insert_resource(self.0.clone())
-            .add_system(exchange_particles_system)
+            .insert_resource(domain_distribution.clone())
+            .insert_non_send_resource(communicator.clone())
+            .add_system(exchange_particles_system::<C>)
             .add_system(integrate_motion_system);
     }
 }
@@ -63,23 +33,23 @@ fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timeste
     }
 }
 
-#[derive(Equivalence)]
-struct ParticleExchangeData {
+#[derive(Equivalence, Clone)]
+pub struct ParticleExchangeData {
     vel: Velocity,
     pos: Position,
 }
 
-fn exchange_particles_system(
+fn exchange_particles_system<C>(
     mut commands: Commands,
     particles: Query<(Entity, &Position, &Velocity)>,
-    world: Res<MpiWorld>,
+    mut communicator: NonSendMut<ExchangeCommunicator<C, ParticleExchangeData>>,
     domain: Res<DomainDistribution>,
-) {
-    let mut communicator = MpiCommunicator::new(&world);
-    let this_rank = world.rank();
+) where
+    C: Communicator<ParticleExchangeData>,
+{
     for (entity, pos, vel) in particles.iter() {
         let target_rank = domain.target_rank(pos);
-        if target_rank != this_rank {
+        if target_rank != communicator.rank() {
             commands.entity(entity).despawn();
             communicator.send(
                 target_rank,
