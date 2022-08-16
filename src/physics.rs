@@ -14,14 +14,14 @@ struct Timestep(crate::units::f32::Time);
 pub struct PhysicsPlugin;
 
 impl PhysicsPlugin {
-    pub fn add_to_app<C: Communicator<ParticleExchangeData> + Clone + 'static>(
+    pub fn add_to_app<C: Communicator<ParticleExchangeData> + 'static>(
         app: &mut App,
         domain_distribution: DomainDistribution,
         communicator: ExchangeCommunicator<C, ParticleExchangeData>,
     ) {
         app.insert_resource(Timestep(second(0.01)))
             .insert_resource(domain_distribution.clone())
-            .insert_non_send_resource(communicator.clone())
+            .insert_non_send_resource(communicator)
             .add_system(exchange_particles_system::<C>)
             .add_system(integrate_motion_system);
     }

@@ -18,6 +18,8 @@ pub mod units;
 mod velocity;
 mod visualization;
 
+use std::iter::once;
+use std::sync::mpsc::channel;
 use std::thread;
 
 use args::CommandLineOptions;
@@ -29,7 +31,9 @@ use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use clap::Parser;
 use communication::Communicator;
+use communication::DataByRank;
 use communication::ExchangeCommunicator;
+use communication::LocalCommunicator;
 use domain::Domain;
 use domain::DomainDistribution;
 use glam::Vec2;
@@ -56,10 +60,8 @@ fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res
     }
 }
 
-fn build_and_run_app<C: Communicator<ParticleExchangeData> + Clone + 'static>(
-    app: &mut App,
-    communicator: C,
-) {
+fn build_and_run_app<C: Communicator<ParticleExchangeData> + 'static>(communicator: C) {
+    let mut app = App::new();
     let rank = communicator.rank();
     let domain_distribution = get_domain_distribution();
     let domain = domain_distribution.domains[&rank].clone();
@@ -70,7 +72,7 @@ fn build_and_run_app<C: Communicator<ParticleExchangeData> + Clone + 'static>(
         app.add_plugins(MinimalPlugins);
     }
     PhysicsPlugin::add_to_app(
-        app,
+        &mut app,
         domain_distribution,
         ExchangeCommunicator::new(communicator),
     );
@@ -85,20 +87,45 @@ fn main() {
     match opts.run_type {
         RunType::Mpi => {
             let (_universe, world) = MpiWorld::initialize();
-            let mut app = App::new();
-            build_and_run_app(&mut app, world);
+            build_and_run_app(world);
         }
         RunType::Local(op) => {
-            for rank in 1..op.num_threads {
-                thread::spawn(move || {
-                    let mut app = App::new();
-                    todo!()
-                    // build_and_run_app(&mut app, todo!());
-                });
+            let mut senders_and_receivers: Vec<Vec<_>> = (0..op.num_threads)
+                .map(|_| {
+                    (0..op.num_threads)
+                        .map(|_| {
+                            let (sender, receiver) = channel();
+                            (Some(sender), Some(receiver))
+                        })
+                        .collect()
+                })
+                .collect();
+            for rank in (1..op.num_threads).chain(once(0)) {
+                let mut senders = DataByRank::empty();
+                let mut receivers = DataByRank::empty();
+                for rank2 in 0..op.num_threads {
+                    if rank == rank2 {
+                        continue;
+                    }
+                    senders.insert(
+                        rank2 as Rank,
+                        senders_and_receivers[rank][rank2].0.take().unwrap(),
+                    );
+                    receivers.insert(
+                        rank2 as Rank,
+                        senders_and_receivers[rank2][rank].1.take().unwrap(),
+                    );
+                }
+                let local_communicator =
+                    LocalCommunicator::new(rank as Rank, op.num_threads, senders, receivers);
+                if rank == 0 {
+                    build_and_run_app(local_communicator);
+                } else {
+                    thread::spawn(move || {
+                        build_and_run_app(local_communicator);
+                    });
+                }
             }
-            let mut app = App::new();
-            todo!()
-            // build_and_run_app(&mut app, todo!());
         }
     };
 }

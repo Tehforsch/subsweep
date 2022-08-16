@@ -14,6 +14,12 @@ where
     }
 }
 
+impl<T> DataByRank<T> {
+    pub fn empty() -> Self {
+        Self(HashMap::new())
+    }
+}
+
 impl<T> DataByRank<T>
 where
     T: Default,
@@ -39,6 +45,10 @@ impl<T> DataByRank<Vec<T>> {
 }
 
 impl<T> DataByRank<T> {
+    pub fn get(&self, rank: &Rank) -> Option<&T> {
+        self.0.get(rank)
+    }
+
     pub fn insert(&mut self, rank: Rank, data: T) {
         self.0.insert(rank, data);
     }
