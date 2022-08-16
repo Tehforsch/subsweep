@@ -7,6 +7,7 @@
 // perfectly readable.
 #![allow(clippy::type_complexity)]
 
+mod communication;
 mod config;
 mod mpi_world;
 mod physics;
@@ -27,7 +28,6 @@ use physics::Domain;
 use physics::DomainDistribution;
 use physics::PhysicsPlugin;
 use position::Position;
-use units::f32::second;
 use units::vec2::meter;
 use units::vec2::meters_per_second;
 use velocity::Velocity;
