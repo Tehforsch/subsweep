@@ -20,6 +20,7 @@ mod visualization;
 
 use args::CommandLineOptions;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
+use bevy::log::Level;
 use bevy::log::LogPlugin;
 use bevy::log::LogSettings;
 use bevy::prelude::App;
@@ -60,6 +61,24 @@ fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res
     }
 }
 
+fn log_setup(verbosity: usize) -> LogSettings {
+    match verbosity {
+        0 => LogSettings {
+            level: Level::INFO,
+            ..Default::default()
+        },
+        1 => LogSettings {
+            level: Level::DEBUG,
+            filter: "winit=error,bevy_render=error,naga=error,wgpu=error,symphonia_format_ogg=error,symphonia_core=error".to_string(),
+        },
+        2 => LogSettings {
+            level: Level::DEBUG,
+            filter: "winit=error,bevy_render=error,naga=error,wgpu=error,symphonia_format_ogg=error,symphonia_core=error".to_string(),
+        },
+        v => unimplemented!("Unsupported verbosity level: {}", v)
+    }
+}
+
 fn build_and_run_app(
     opts: &CommandLineOptions,
     communicator1: Communicator<ParticleExchangeData>,
@@ -70,6 +89,7 @@ fn build_and_run_app(
     let domain_distribution = get_domain_distribution();
     let domain = domain_distribution.domains[&rank].clone();
     if rank == 0 {
+        app.insert_resource(log_setup(opts.verbosity));
         if opts.visualize {
             app.add_plugins(DefaultPlugins);
         } else {
@@ -82,9 +102,11 @@ fn build_and_run_app(
         app.add_plugin(VisualizationPlugin {
             main_rank: rank == 0,
         });
+    } else {
+        // Only show execution order ambiguities when running without render plugins
+        app.insert_resource(ReportExecutionOrderAmbiguities);
     }
     app.add_plugin(PhysicsPlugin(get_domain_distribution()))
-        .insert_resource(ReportExecutionOrderAmbiguities)
         .insert_resource(domain)
         .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
         .insert_non_send_resource(SyncCommunicator::new(communicator2))

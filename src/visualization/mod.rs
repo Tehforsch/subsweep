@@ -1,5 +1,6 @@
 pub mod remote;
 
+use bevy::log::LogSettings;
 use bevy::prelude::shape::Circle;
 use bevy::prelude::*;
 use bevy::sprite::Mesh2dHandle;

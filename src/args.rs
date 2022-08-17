@@ -7,4 +7,6 @@ pub struct CommandLineOptions {
     pub num_threads: usize,
     #[clap(long)]
     pub visualize: bool,
+    #[clap(short, parse(from_occurrences))]
+    pub verbosity: usize,
 }
