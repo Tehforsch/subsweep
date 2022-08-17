@@ -69,11 +69,19 @@ fn log_setup(verbosity: usize) -> LogSettings {
         },
         1 => LogSettings {
             level: Level::DEBUG,
-            filter: "winit=error,bevy_render=error,naga=error,wgpu=error,symphonia_format_ogg=error,symphonia_core=error".to_string(),
+            filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error,symphonia_format_ogg=error,symphonia_core=error".to_string(),
         },
         2 => LogSettings {
             level: Level::DEBUG,
-            filter: "winit=error,bevy_render=error,naga=error,wgpu=error,symphonia_format_ogg=error,symphonia_core=error".to_string(),
+            filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error,symphonia_format_ogg=error,symphonia_core=error".to_string(),
+        },
+        3 => LogSettings {
+            level: Level::DEBUG,
+            ..Default::default()
+        },
+        4 => LogSettings {
+            level: Level::TRACE,
+            ..Default::default()
         },
         v => unimplemented!("Unsupported verbosity level: {}", v)
     }
