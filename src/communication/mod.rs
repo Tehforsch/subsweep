@@ -11,6 +11,9 @@ mod local;
 pub use data_by_rank::DataByRank;
 pub use world_communicator::WorldCommunicator;
 
+#[cfg(feature = "local")]
+pub use self::local::get_local_communicators;
+
 pub type Rank = mpi::Rank;
 
 #[cfg(feature = "local")]

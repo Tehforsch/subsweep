@@ -75,47 +75,21 @@ fn build_and_run_app(communicator: Communicator<ParticleExchangeData>) {
 #[cfg(feature = "local")]
 fn main() {
     use std::iter::once;
-    use std::sync::mpsc::channel;
     use std::thread;
 
     use args::CommandLineOptions;
     use clap::Parser;
-    use communication::DataByRank;
+    use communication::get_local_communicators;
 
     let opts = CommandLineOptions::parse();
-    let mut senders_and_receivers: Vec<Vec<_>> = (0..opts.num_threads)
-        .map(|_| {
-            (0..opts.num_threads)
-                .map(|_| {
-                    let (sender, receiver) = channel();
-                    (Some(sender), Some(receiver))
-                })
-                .collect()
-        })
-        .collect();
+    let mut communicators = get_local_communicators(opts.num_threads);
     for rank in (1..opts.num_threads).chain(once(0)) {
-        let mut senders = DataByRank::empty();
-        let mut receivers = DataByRank::empty();
-        for rank2 in 0..opts.num_threads {
-            if rank == rank2 {
-                continue;
-            }
-            senders.insert(
-                rank2 as Rank,
-                senders_and_receivers[rank][rank2].0.take().unwrap(),
-            );
-            receivers.insert(
-                rank2 as Rank,
-                senders_and_receivers[rank2][rank].1.take().unwrap(),
-            );
-        }
-        let local_communicator =
-            Communicator::new(rank as Rank, opts.num_threads, senders, receivers);
+        let communicator = communicators.remove(&(rank as Rank)).unwrap();
         if rank == 0 {
-            build_and_run_app(local_communicator);
+            build_and_run_app(communicator);
         } else {
             thread::spawn(move || {
-                build_and_run_app(local_communicator);
+                build_and_run_app(communicator);
             });
         }
     }

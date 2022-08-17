@@ -55,3 +55,10 @@ where
         self.communicator.rank()
     }
 }
+
+#[cfg(test)]
+#[cfg(feature = "local")]
+mod tests {
+    #[test]
+    fn exchange_communicator() {}
+}

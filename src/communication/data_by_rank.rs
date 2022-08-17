@@ -45,8 +45,14 @@ impl<T> DataByRank<Vec<T>> {
 }
 
 impl<T> DataByRank<T> {
+    #[cfg(feature = "local")]
     pub fn get(&self, rank: &Rank) -> Option<&T> {
         self.0.get(rank)
+    }
+
+    #[cfg(feature = "local")]
+    pub fn remove(&mut self, rank: &Rank) -> Option<T> {
+        self.0.remove(rank)
     }
 
     pub fn insert(&mut self, rank: Rank, data: T) {
