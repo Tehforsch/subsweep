@@ -3,7 +3,6 @@ use mpi::traits::Equivalence;
 
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
-use crate::communication::SizedCommunicator;
 use crate::domain::DomainDistribution;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;

@@ -1,13 +1,11 @@
 pub mod remote;
 
-use bevy::log::LogSettings;
 use bevy::prelude::shape::Circle;
 use bevy::prelude::*;
 use bevy::sprite::Mesh2dHandle;
 
 use self::remote::RemoteVisualizationMainThreadPlugin;
 use self::remote::RemoteVisualizationSideThreadPlugin;
-use crate::communication::Rank;
 use crate::physics::LocalParticle;
 use crate::physics::RemoteParticle;
 use crate::position::Position;

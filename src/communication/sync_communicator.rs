@@ -100,7 +100,7 @@ mod tests {
         let mut communicators = get_local_communicators(num_threads as usize);
         let mut communicator0 = SyncCommunicator::new(communicators.remove(&(0 as Rank)).unwrap());
         let mut communicator1 = SyncCommunicator::new(communicators.remove(&(1 as Rank)).unwrap());
-        let entity_translation = |rank, data| {
+        let entity_translation = |_, data| {
             // This makes no sense, and is just for test purposes
             Entity::from_raw(data)
         };

@@ -29,6 +29,7 @@ where
 }
 
 impl<T> DataByRank<T> {
+    #[cfg(feature = "local")]
     pub fn empty() -> Self {
         Self(HashMap::new())
     }

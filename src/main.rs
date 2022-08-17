@@ -29,7 +29,6 @@ use bevy::prelude::Commands;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
-use bevy::time::Time;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
 use communication::Identified;
@@ -132,7 +131,6 @@ fn main() {
     use std::iter::once;
     use std::thread;
 
-    use args::CommandLineOptions;
     use clap::Parser;
     use communication::get_local_communicators;
 
