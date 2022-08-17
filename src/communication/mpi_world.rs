@@ -33,11 +33,11 @@ impl<T> MpiWorld<T> {
     }
 }
 
-impl<T> WorldCommunicator<T> for MpiWorld<T>
+impl<S, T> WorldCommunicator<S> for MpiWorld<T>
 where
-    T: Equivalence,
+    S: Equivalence,
 {
-    fn send_vec(&mut self, rank: Rank, data: Vec<T>) {
+    fn send_vec(&mut self, rank: Rank, data: Vec<S>) {
         let num = data.len();
         let process = self.world.process_at_rank(rank);
         process.send(&num);
@@ -46,7 +46,7 @@ where
         }
     }
 
-    fn receive_vec(&mut self, rank: Rank) -> Vec<T> {
+    fn receive_vec(&mut self, rank: Rank) -> Vec<S> {
         let process = self.world.process_at_rank(rank);
         let (num_received, _): (usize, Status) = process.receive();
         if num_received > 0 {
@@ -64,5 +64,14 @@ impl<T> SizedCommunicator for MpiWorld<T> {
 
     fn size(&self) -> usize {
         self.world.size() as usize
+    }
+}
+
+impl<T> MpiWorld<T> {
+    pub fn clone_for_different_type<S>(&self) -> MpiWorld<S> {
+        MpiWorld {
+            world: self.world.clone(),
+            marker: PhantomData::default(),
+        }
     }
 }

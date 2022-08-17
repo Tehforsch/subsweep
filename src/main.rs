@@ -150,9 +150,12 @@ fn main() {
 
 #[cfg(not(feature = "local"))]
 fn main() {
+    use clap::Parser;
+
     let opts = CommandLineOptions::parse();
     let (_universe, world) = Communicator::<ParticleExchangeData>::initialize();
-    build_and_run_app(&opts, world);
+    let world2 = world.clone_for_different_type();
+    build_and_run_app(&opts, world, world2);
 }
 
 fn get_domain_distribution() -> DomainDistribution {

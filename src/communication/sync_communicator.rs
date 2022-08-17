@@ -4,17 +4,12 @@ use std::collections::HashSet;
 use bevy::prelude::Entity;
 
 use super::exchange_communicator::ExchangeCommunicator;
+use super::identified::EntityKey;
 use super::DataByRank;
+use super::Identified;
 use super::Rank;
 use super::SizedCommunicator;
 use super::WorldCommunicator;
-
-type Key = u64;
-
-pub struct Identified<T> {
-    key: Key,
-    data: T,
-}
 
 pub struct SyncResult<T> {
     pub updated: DataByRank<Vec<(Entity, T)>>,
@@ -32,7 +27,7 @@ impl<T> SyncResult<T> {
 
 pub struct SyncCommunicator<C, T> {
     communicator: ExchangeCommunicator<C, Identified<T>>,
-    known: DataByRank<HashMap<Key, Entity>>,
+    known: DataByRank<HashMap<EntityKey, Entity>>,
     to_sync: DataByRank<Vec<Identified<T>>>,
 }
 
