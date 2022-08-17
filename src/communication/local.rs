@@ -68,7 +68,8 @@ pub fn get_local_communicators<T>(num_threads: usize) -> DataByRank<LocalCommuni
 
 impl<T> WorldCommunicator<T> for LocalCommunicator<T> {
     fn receive_vec(&mut self, rank: Rank) -> Vec<T> {
-        self.receivers[rank].recv().unwrap()
+        let result = self.receivers[rank].recv().unwrap();
+        result
     }
 
     fn send_vec(&mut self, rank: Rank, data: Vec<T>) {

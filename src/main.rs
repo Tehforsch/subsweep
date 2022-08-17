@@ -11,30 +11,40 @@ mod args;
 mod communication;
 mod config;
 mod domain;
+mod particle;
 mod physics;
 mod position;
 pub mod units;
 mod velocity;
 mod visualization;
 
+use args::CommandLineOptions;
+use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
+use bevy::log::LogPlugin;
+use bevy::log::LogSettings;
 use bevy::prelude::App;
 use bevy::prelude::Commands;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
+use bevy::time::Time;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
+use communication::Identified;
 use communication::SizedCommunicator;
+use communication::SyncCommunicator;
 use domain::Domain;
 use domain::DomainDistribution;
 use glam::Vec2;
 use mpi::Rank;
+use particle::LocalParticleBundle;
 use physics::ParticleExchangeData;
 use physics::PhysicsPlugin;
 use position::Position;
 use units::vec2::meter;
 use units::vec2::meters_per_second;
 use velocity::Velocity;
+use visualization::remote::ParticleVisualizationExchangeData;
 use visualization::VisualizationPlugin;
 
 fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res<Rank>) {
@@ -43,30 +53,41 @@ fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res
     }
     for i in [0.5] {
         let pos = domain.upper_left + (domain.lower_right - domain.upper_left) * i;
-        commands
-            .spawn()
-            .insert(Position(pos))
-            .insert(Velocity(meters_per_second(Vec2::new(1.0, 0.0))));
+        commands.spawn().insert_bundle(LocalParticleBundle::new(
+            Position(pos),
+            Velocity(meters_per_second(Vec2::new(1.0, 0.0))),
+        ));
     }
 }
 
-fn build_and_run_app(communicator: Communicator<ParticleExchangeData>) {
+fn build_and_run_app(
+    opts: &CommandLineOptions,
+    communicator1: Communicator<ParticleExchangeData>,
+    communicator2: Communicator<Identified<ParticleVisualizationExchangeData>>,
+) {
     let mut app = App::new();
-    let rank = communicator.rank();
+    let rank = communicator1.rank();
     let domain_distribution = get_domain_distribution();
     let domain = domain_distribution.domains[&rank].clone();
     if rank == 0 {
-        app.add_plugins(DefaultPlugins)
-            .add_plugin(VisualizationPlugin);
+        if opts.visualize {
+            app.add_plugins(DefaultPlugins);
+        } else {
+            app.add_plugins(MinimalPlugins).add_plugin(LogPlugin);
+        }
     } else {
         app.add_plugins(MinimalPlugins);
     }
-    PhysicsPlugin::add_to_app(
-        &mut app,
-        domain_distribution,
-        ExchangeCommunicator::new(communicator),
-    );
-    app.insert_resource(domain)
+    if opts.visualize {
+        app.add_plugin(VisualizationPlugin {
+            main_rank: rank == 0,
+        });
+    }
+    app.add_plugin(PhysicsPlugin(get_domain_distribution()))
+        .insert_resource(ReportExecutionOrderAmbiguities)
+        .insert_resource(domain)
+        .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
+        .insert_non_send_resource(SyncCommunicator::new(communicator2))
         .insert_resource(rank)
         .add_startup_system(spawn_particles_system);
     app.run();
@@ -82,14 +103,16 @@ fn main() {
     use communication::get_local_communicators;
 
     let opts = CommandLineOptions::parse();
-    let mut communicators = get_local_communicators(opts.num_threads);
+    let mut communicators1 = get_local_communicators(opts.num_threads);
+    let mut communicators2 = get_local_communicators(opts.num_threads);
     for rank in (1..opts.num_threads).chain(once(0)) {
-        let communicator = communicators.remove(&(rank as Rank)).unwrap();
+        let communicator1 = communicators1.remove(&(rank as Rank)).unwrap();
+        let communicator2 = communicators2.remove(&(rank as Rank)).unwrap();
         if rank == 0 {
-            build_and_run_app(communicator);
+            build_and_run_app(&opts, communicator1, communicator2);
         } else {
             thread::spawn(move || {
-                build_and_run_app(communicator);
+                build_and_run_app(&opts, communicator1, communicator2);
             });
         }
     }
@@ -97,8 +120,9 @@ fn main() {
 
 #[cfg(not(feature = "local"))]
 fn main() {
+    let opts = CommandLineOptions::parse();
     let (_universe, world) = Communicator::<ParticleExchangeData>::initialize();
-    build_and_run_app(world);
+    build_and_run_app(&opts, world);
 }
 
 fn get_domain_distribution() -> DomainDistribution {

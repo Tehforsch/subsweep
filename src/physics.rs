@@ -2,28 +2,31 @@ use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
 use crate::communication::ExchangeCommunicator;
+use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::domain::DomainDistribution;
+use crate::particle::LocalParticleBundle;
 use crate::position::Position;
 use crate::units::f32::second;
 use crate::velocity::Velocity;
 
+#[derive(Component)]
+pub struct LocalParticle;
+
+#[derive(Component)]
+pub struct RemoteParticle(pub Rank);
+
 #[derive(Equivalence)]
 struct Timestep(crate::units::f32::Time);
 
-pub struct PhysicsPlugin;
+pub struct PhysicsPlugin(pub DomainDistribution);
 
-impl PhysicsPlugin {
-    pub fn add_to_app(
-        app: &mut App,
-        domain_distribution: DomainDistribution,
-        communicator: ExchangeCommunicator<ParticleExchangeData>,
-    ) {
+impl Plugin for PhysicsPlugin {
+    fn build(&self, app: &mut App) {
         app.insert_resource(Timestep(second(0.01)))
-            .insert_resource(domain_distribution.clone())
-            .insert_non_send_resource(communicator)
-            .add_system(exchange_particles_system)
-            .add_system(integrate_motion_system);
+            .insert_resource(self.0.clone())
+            .add_system(integrate_motion_system)
+            .add_system(exchange_particles_system.after(integrate_motion_system));
     }
 }
 
@@ -41,7 +44,7 @@ pub struct ParticleExchangeData {
 
 fn exchange_particles_system(
     mut commands: Commands,
-    particles: Query<(Entity, &Position, &Velocity)>,
+    particles: Query<(Entity, &Position, &Velocity), With<LocalParticle>>,
     mut communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
     domain: Res<DomainDistribution>,
 ) {
@@ -61,7 +64,9 @@ fn exchange_particles_system(
 
     for (_, moved_to_own_domain) in communicator.receive_vec().into_iter() {
         for data in moved_to_own_domain.into_iter() {
-            commands.spawn().insert(data.pos).insert(data.vel);
+            commands
+                .spawn()
+                .insert_bundle(LocalParticleBundle::new(data.pos, data.vel));
         }
     }
 }

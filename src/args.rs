@@ -1,8 +1,10 @@
 use clap::Parser;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone, Copy)]
 #[clap(author, version, about, long_about = None)]
 pub struct CommandLineOptions {
     #[cfg(feature = "local")]
     pub num_threads: usize,
+    #[clap(long)]
+    pub visualize: bool,
 }

@@ -1,4 +1,3 @@
-use super::DataByRank;
 use super::Rank;
 
 pub trait SizedCommunicator {

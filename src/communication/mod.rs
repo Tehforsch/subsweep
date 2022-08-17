@@ -12,6 +12,7 @@ mod local;
 
 pub use data_by_rank::DataByRank;
 pub use sized_communicator::SizedCommunicator;
+pub use sync_communicator::Identified;
 pub use world_communicator::WorldCommunicator;
 
 #[cfg(feature = "local")]
@@ -22,10 +23,15 @@ pub type Rank = mpi::Rank;
 #[cfg(feature = "local")]
 pub type ExchangeCommunicator<T> =
     exchange_communicator::ExchangeCommunicator<self::local::LocalCommunicator<T>, T>;
+#[cfg(feature = "local")]
+pub type SyncCommunicator<T> =
+    sync_communicator::SyncCommunicator<self::local::LocalCommunicator<Identified<T>>, T>;
 
 #[cfg(not(feature = "local"))]
 pub type ExchangeCommunicator<T> =
     exchange_communicator::ExchangeCommunicator<self::mpi_world::MpiWorld<T>, T>;
+#[cfg(not(feature = "local"))]
+pub type SyncCommunicator<T> = sync_communicator::SyncCommunicator<self::mpi_world::MpiWorld<T>, T>;
 
 #[cfg(feature = "local")]
 pub type Communicator<T> = self::local::LocalCommunicator<T>;

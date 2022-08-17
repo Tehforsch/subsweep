@@ -4,7 +4,7 @@ use super::Rank;
 use super::SizedCommunicator;
 
 pub struct ExchangeCommunicator<C, T> {
-    communicator: C,
+    pub communicator: C,
     data: DataByRank<Vec<T>>,
 }
 

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use bevy::prelude::Entity;
-use mpi::traits::Equivalence;
 
 use super::exchange_communicator::ExchangeCommunicator;
 use super::DataByRank;
@@ -57,7 +56,7 @@ where
         });
     }
 
-    pub fn receive_sync(&mut self, f: impl Fn(T) -> Entity) -> SyncResult<T> {
+    pub fn receive_sync(&mut self, mut f: impl FnMut(T) -> Entity) -> SyncResult<T> {
         for (rank, data) in self.to_sync.drain_all() {
             self.communicator.send_vec(rank, data);
         }
@@ -82,7 +81,8 @@ where
                 }
             }
             for key in known_but_not_mentioned.into_iter() {
-                deleted.push(known_this_rank.remove(&key).unwrap())
+                let entity = known_this_rank.remove(&key).unwrap();
+                deleted.push(entity);
             }
         }
         result
@@ -101,7 +101,6 @@ mod tests {
         use super::SyncCommunicator;
         use crate::communication::get_local_communicators;
         use crate::communication::Rank;
-        use crate::communication::SizedCommunicator;
         let num_threads = 2 as i32;
         let mut communicators = get_local_communicators(num_threads as usize);
         let mut communicator0 = SyncCommunicator::new(communicators.remove(&(0 as Rank)).unwrap());
@@ -157,6 +156,6 @@ mod tests {
         assert_eq!(result.updated[1].get(1), None);
         assert_eq!(result.deleted[1][0], Entity::from_raw(110));
 
-        thread.join();
+        thread.join().unwrap();
     }
 }
