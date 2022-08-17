@@ -1,5 +1,6 @@
 use std::collections::hash_map;
 use std::collections::HashMap;
+use std::ops::Index;
 
 use mpi::Rank;
 
@@ -15,6 +16,7 @@ where
 }
 
 impl<T> DataByRank<T> {
+    #[cfg(feature = "local")]
     pub fn empty() -> Self {
         Self(HashMap::new())
     }
@@ -44,8 +46,15 @@ impl<T> DataByRank<Vec<T>> {
     }
 }
 
+impl<T> Index<Rank> for DataByRank<T> {
+    type Output = T;
+
+    fn index(&self, index: Rank) -> &Self::Output {
+        self.get(&index).unwrap()
+    }
+}
+
 impl<T> DataByRank<T> {
-    #[cfg(feature = "local")]
     pub fn get(&self, rank: &Rank) -> Option<&T> {
         self.0.get(rank)
     }

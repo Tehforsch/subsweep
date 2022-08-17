@@ -2,6 +2,7 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
+use super::sized_communicator::SizedCommunicator;
 use super::world_communicator::WorldCommunicator;
 use super::DataByRank;
 use super::Rank;
@@ -73,7 +74,9 @@ impl<T> WorldCommunicator<T> for LocalCommunicator<T> {
     fn send_vec(&mut self, rank: Rank, data: Vec<T>) {
         self.senders.get(&rank).unwrap().send(data).unwrap();
     }
+}
 
+impl<T> SizedCommunicator for LocalCommunicator<T> {
     fn rank(&self) -> Rank {
         self.rank
     }

@@ -24,7 +24,7 @@ use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
-use communication::WorldCommunicator;
+use communication::SizedCommunicator;
 use domain::Domain;
 use domain::DomainDistribution;
 use glam::Vec2;

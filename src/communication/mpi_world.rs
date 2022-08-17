@@ -11,6 +11,7 @@ use mpi::traits::Source;
 use mpi::Threading;
 
 use super::world_communicator::WorldCommunicator;
+use super::SizedCommunicator;
 
 #[derive(Clone)]
 pub struct MpiWorld<T> {
@@ -54,7 +55,9 @@ where
         }
         vec![]
     }
+}
 
+impl<T> SizedCommunicator for MpiWorld<T> {
     fn rank(&self) -> i32 {
         self.world.rank()
     }

@@ -1,5 +1,6 @@
 mod data_by_rank;
 mod exchange_communicator;
+mod sized_communicator;
 mod world_communicator;
 
 #[cfg(not(feature = "local"))]
@@ -9,6 +10,7 @@ mod mpi_world;
 mod local;
 
 pub use data_by_rank::DataByRank;
+pub use sized_communicator::SizedCommunicator;
 pub use world_communicator::WorldCommunicator;
 
 #[cfg(feature = "local")]

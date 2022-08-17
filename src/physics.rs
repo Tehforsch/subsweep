@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
 use crate::communication::ExchangeCommunicator;
+use crate::communication::SizedCommunicator;
 use crate::domain::DomainDistribution;
 use crate::position::Position;
 use crate::units::f32::second;
