@@ -56,7 +56,7 @@ where
         });
     }
 
-    pub fn receive_sync(&mut self, mut f: impl FnMut(T) -> Entity) -> SyncResult<T> {
+    pub fn receive_sync(&mut self, mut f: impl FnMut(Rank, T) -> Entity) -> SyncResult<T> {
         for (rank, data) in self.to_sync.drain_all() {
             self.communicator.send_vec(rank, data);
         }
@@ -75,7 +75,7 @@ where
                         updated.push((*entity, d.data));
                     }
                     None => {
-                        let new_entity = f(d.data);
+                        let new_entity = f(rank, d.data);
                         known_this_rank.insert(d.key, new_entity);
                     }
                 }
@@ -105,7 +105,7 @@ mod tests {
         let mut communicators = get_local_communicators(num_threads as usize);
         let mut communicator0 = SyncCommunicator::new(communicators.remove(&(0 as Rank)).unwrap());
         let mut communicator1 = SyncCommunicator::new(communicators.remove(&(1 as Rank)).unwrap());
-        let entity_translation = |data| {
+        let entity_translation = |rank, data| {
             // This makes no sense, and is just for test purposes
             Entity::from_raw(data)
         };

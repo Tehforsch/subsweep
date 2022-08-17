@@ -42,7 +42,7 @@ fn send_particles_to_main_thread_system(
             ParticleVisualizationExchangeData { pos: pos.clone() },
         );
     }
-    communicator.receive_sync(|_| panic!("No items expected"));
+    communicator.receive_sync(|_, _| panic!("No items expected"));
 }
 
 fn receive_particles_on_main_thread_system(
@@ -52,14 +52,14 @@ fn receive_particles_on_main_thread_system(
     particles: Query<(Entity, &Position), With<LocalParticle>>,
 ) {
     assert!(*rank == 0);
-    let spawn_particle = |data: ParticleVisualizationExchangeData| {
-        commands
+    let spawn_particle = |rank: Rank, data: ParticleVisualizationExchangeData| {
+        dbg!(commands
             .spawn()
-            .insert_bundle(RemoteParticleBundle::new(data.pos.clone(), *rank))
-            .id()
+            .insert_bundle(RemoteParticleBundle::new(data.pos.clone(), rank))
+            .id())
     };
     let mut update = communicator.receive_sync(spawn_particle);
-    for (_, entities) in update.deleted.drain_all() {
+    for (rank, entities) in update.deleted.drain_all() {
         for entity in entities.into_iter() {
             // Decommenting this fixes the bug. wtf
             // commands.entity(entity).despawn();

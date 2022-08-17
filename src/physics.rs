@@ -50,11 +50,12 @@ fn exchange_particles_system(
     mut commands: Commands,
     particles: Query<(Entity, &Position, &Velocity), With<LocalParticle>>,
     mut communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
+    rank: Res<Rank>,
     domain: Res<DomainDistribution>,
 ) {
     for (entity, pos, vel) in particles.iter() {
         let target_rank = domain.target_rank(pos);
-        if target_rank != communicator.rank() {
+        if target_rank != *rank {
             commands.entity(entity).despawn();
             communicator.send(
                 target_rank,
