@@ -1,6 +1,7 @@
 mod data_by_rank;
 mod exchange_communicator;
 mod sized_communicator;
+mod sync_communicator;
 mod world_communicator;
 
 #[cfg(not(feature = "local"))]

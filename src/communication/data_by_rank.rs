@@ -1,10 +1,23 @@
+use core::fmt::Debug;
 use std::collections::hash_map;
 use std::collections::HashMap;
 use std::ops::Index;
+use std::ops::IndexMut;
 
 use mpi::Rank;
 
+use super::SizedCommunicator;
+
 pub struct DataByRank<T>(HashMap<Rank, T>);
+
+impl<T> Debug for DataByRank<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl<T> Clone for DataByRank<T>
 where
@@ -16,7 +29,6 @@ where
 }
 
 impl<T> DataByRank<T> {
-    #[cfg(feature = "local")]
     pub fn empty() -> Self {
         Self(HashMap::new())
     }
@@ -26,10 +38,10 @@ impl<T> DataByRank<T>
 where
     T: Default,
 {
-    pub fn new(num_ranks: usize, this_rank: Rank) -> Self {
+    pub fn from_communicator(communicator: &impl SizedCommunicator) -> Self {
         Self(
-            (0..num_ranks)
-                .filter(|rank| *rank != this_rank as usize)
+            (0..communicator.size())
+                .filter(|rank| *rank != communicator.rank() as usize)
                 .map(|rank| (rank as Rank, T::default()))
                 .collect(),
         )
@@ -54,11 +66,20 @@ impl<T> Index<Rank> for DataByRank<T> {
     }
 }
 
+impl<T> IndexMut<Rank> for DataByRank<T> {
+    fn index_mut(&mut self, index: Rank) -> &mut Self::Output {
+        self.get_mut(&index).unwrap()
+    }
+}
+
 impl<T> DataByRank<T> {
     pub fn get(&self, rank: &Rank) -> Option<&T> {
         self.0.get(rank)
     }
 
+    pub fn get_mut(&mut self, rank: &Rank) -> Option<&mut T> {
+        self.0.get_mut(rank)
+    }
     #[cfg(feature = "local")]
     pub fn remove(&mut self, rank: &Rank) -> Option<T> {
         self.0.remove(rank)

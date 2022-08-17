@@ -28,6 +28,11 @@ command = ["cargo", "hack", "test", "--each-feature", "--color", "always"]
 need_stdout = true
 watch = ["tests"]
 
+[jobs.test-local]
+command = ["cargo", "test", "--features", "local", "--color", "always"]
+need_stdout = true
+watch = ["tests"]
+
 # You can run your application and have the result displayed in bacon,
 # *if* it makes sense for this crate. You can run an example the same
 # way. Don't forget the `--color always` part or the errors won't be
@@ -48,3 +53,4 @@ d = "job:doc-open"
 t = "job:test"
 r = "job:mpi"
 k = "job:kill"
+l = "job:test-local"

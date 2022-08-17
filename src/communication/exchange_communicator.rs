@@ -27,7 +27,7 @@ where
     C: SizedCommunicator,
 {
     pub fn new(communicator: C) -> Self {
-        let data = communicator.initialize_data_by_rank();
+        let data = DataByRank::from_communicator(&communicator);
         Self {
             communicator,
             data: data,
@@ -38,11 +38,15 @@ where
         self.data.push(rank, data);
     }
 
+    pub fn send_vec(&mut self, rank: i32, data: Vec<T>) {
+        self.data[rank].extend(data)
+    }
+
     pub fn receive_vec(&mut self) -> DataByRank<Vec<T>> {
         for (rank, data) in self.data.drain_all() {
             self.communicator.send_vec(rank, data);
         }
-        let mut received_data = self.communicator.initialize_data_by_rank();
+        let mut received_data = DataByRank::from_communicator(&self.communicator);
         for rank in self.communicator.other_ranks() {
             let moved_to_own_domain = self.communicator.receive_vec(rank);
             received_data.insert(rank, moved_to_own_domain);
