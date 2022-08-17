@@ -37,6 +37,7 @@ unsafe impl<const D: Dimension> Equivalence for Quantity<Vec2, D> {
 }
 
 #[cfg(test)]
+#[cfg(not(feature = "local"))]
 mod tests {
     use glam::Vec2;
     use mpi::traits::Communicator;

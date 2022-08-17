@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
-use crate::communication::Communicator;
 use crate::communication::ExchangeCommunicator;
 use crate::domain::DomainDistribution;
 use crate::position::Position;
@@ -14,15 +13,15 @@ struct Timestep(crate::units::f32::Time);
 pub struct PhysicsPlugin;
 
 impl PhysicsPlugin {
-    pub fn add_to_app<C: Communicator<ParticleExchangeData> + 'static>(
+    pub fn add_to_app(
         app: &mut App,
         domain_distribution: DomainDistribution,
-        communicator: ExchangeCommunicator<C, ParticleExchangeData>,
+        communicator: ExchangeCommunicator<ParticleExchangeData>,
     ) {
         app.insert_resource(Timestep(second(0.01)))
             .insert_resource(domain_distribution.clone())
             .insert_non_send_resource(communicator)
-            .add_system(exchange_particles_system::<C>)
+            .add_system(exchange_particles_system)
             .add_system(integrate_motion_system);
     }
 }
@@ -39,14 +38,12 @@ pub struct ParticleExchangeData {
     pos: Position,
 }
 
-fn exchange_particles_system<C>(
+fn exchange_particles_system(
     mut commands: Commands,
     particles: Query<(Entity, &Position, &Velocity)>,
-    mut communicator: NonSendMut<ExchangeCommunicator<C, ParticleExchangeData>>,
+    mut communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
     domain: Res<DomainDistribution>,
-) where
-    C: Communicator<ParticleExchangeData>,
-{
+) {
     for (entity, pos, vel) in particles.iter() {
         let target_rank = domain.target_rank(pos);
         if target_rank != communicator.rank() {

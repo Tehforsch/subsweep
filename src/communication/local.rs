@@ -1,7 +1,7 @@
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
-use super::Communicator;
+use super::world_communicator::WorldCommunicator;
 use super::DataByRank;
 use super::Rank;
 
@@ -28,7 +28,7 @@ impl<T> LocalCommunicator<T> {
     }
 }
 
-impl<T> Communicator<T> for LocalCommunicator<T> {
+impl<T> WorldCommunicator<T> for LocalCommunicator<T> {
     fn receive_vec(&mut self, rank: Rank) -> Vec<T> {
         self.receivers.get(&rank).unwrap().recv().unwrap()
     }

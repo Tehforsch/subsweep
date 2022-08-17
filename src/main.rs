@@ -11,34 +11,24 @@ mod args;
 mod communication;
 mod config;
 mod domain;
-mod mpi_world;
 mod physics;
 mod position;
 pub mod units;
 mod velocity;
 mod visualization;
 
-use std::iter::once;
-use std::sync::mpsc::channel;
-use std::thread;
-
-use args::CommandLineOptions;
-use args::RunType;
 use bevy::prelude::App;
 use bevy::prelude::Commands;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
-use clap::Parser;
 use communication::Communicator;
-use communication::DataByRank;
 use communication::ExchangeCommunicator;
-use communication::LocalCommunicator;
+use communication::WorldCommunicator;
 use domain::Domain;
 use domain::DomainDistribution;
 use glam::Vec2;
 use mpi::Rank;
-use mpi_world::MpiWorld;
 use physics::ParticleExchangeData;
 use physics::PhysicsPlugin;
 use position::Position;
@@ -60,7 +50,7 @@ fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res
     }
 }
 
-fn build_and_run_app<C: Communicator<ParticleExchangeData> + 'static>(communicator: C) {
+fn build_and_run_app(communicator: Communicator<ParticleExchangeData>) {
     let mut app = App::new();
     let rank = communicator.rank();
     let domain_distribution = get_domain_distribution();
@@ -82,52 +72,59 @@ fn build_and_run_app<C: Communicator<ParticleExchangeData> + 'static>(communicat
     app.run();
 }
 
+#[cfg(feature = "local")]
 fn main() {
+    use std::iter::once;
+    use std::sync::mpsc::channel;
+    use std::thread;
+
+    use args::CommandLineOptions;
+    use clap::Parser;
+    use communication::DataByRank;
+
     let opts = CommandLineOptions::parse();
-    match opts.run_type {
-        RunType::Mpi => {
-            let (_universe, world) = MpiWorld::initialize();
-            build_and_run_app(world);
-        }
-        RunType::Local(op) => {
-            let mut senders_and_receivers: Vec<Vec<_>> = (0..op.num_threads)
+    let mut senders_and_receivers: Vec<Vec<_>> = (0..opts.num_threads)
+        .map(|_| {
+            (0..opts.num_threads)
                 .map(|_| {
-                    (0..op.num_threads)
-                        .map(|_| {
-                            let (sender, receiver) = channel();
-                            (Some(sender), Some(receiver))
-                        })
-                        .collect()
+                    let (sender, receiver) = channel();
+                    (Some(sender), Some(receiver))
                 })
-                .collect();
-            for rank in (1..op.num_threads).chain(once(0)) {
-                let mut senders = DataByRank::empty();
-                let mut receivers = DataByRank::empty();
-                for rank2 in 0..op.num_threads {
-                    if rank == rank2 {
-                        continue;
-                    }
-                    senders.insert(
-                        rank2 as Rank,
-                        senders_and_receivers[rank][rank2].0.take().unwrap(),
-                    );
-                    receivers.insert(
-                        rank2 as Rank,
-                        senders_and_receivers[rank2][rank].1.take().unwrap(),
-                    );
-                }
-                let local_communicator =
-                    LocalCommunicator::new(rank as Rank, op.num_threads, senders, receivers);
-                if rank == 0 {
-                    build_and_run_app(local_communicator);
-                } else {
-                    thread::spawn(move || {
-                        build_and_run_app(local_communicator);
-                    });
-                }
+                .collect()
+        })
+        .collect();
+    for rank in (1..opts.num_threads).chain(once(0)) {
+        let mut senders = DataByRank::empty();
+        let mut receivers = DataByRank::empty();
+        for rank2 in 0..opts.num_threads {
+            if rank == rank2 {
+                continue;
             }
+            senders.insert(
+                rank2 as Rank,
+                senders_and_receivers[rank][rank2].0.take().unwrap(),
+            );
+            receivers.insert(
+                rank2 as Rank,
+                senders_and_receivers[rank2][rank].1.take().unwrap(),
+            );
         }
-    };
+        let local_communicator =
+            Communicator::new(rank as Rank, opts.num_threads, senders, receivers);
+        if rank == 0 {
+            build_and_run_app(local_communicator);
+        } else {
+            thread::spawn(move || {
+                build_and_run_app(local_communicator);
+            });
+        }
+    }
+}
+
+#[cfg(not(feature = "local"))]
+fn main() {
+    let (_universe, world) = Communicator::<ParticleExchangeData>::initialize();
+    build_and_run_app(world);
 }
 
 fn get_domain_distribution() -> DomainDistribution {

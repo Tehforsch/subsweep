@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
 use mpi::topology::Rank;
@@ -8,20 +10,29 @@ use mpi::traits::Equivalence;
 use mpi::traits::Source;
 use mpi::Threading;
 
+use super::world_communicator::WorldCommunicator;
+
 #[derive(Clone)]
-pub struct MpiWorld {
+pub struct MpiWorld<T> {
     world: SystemCommunicator,
+    marker: PhantomData<T>,
 }
 
-impl MpiWorld {
+impl<T> MpiWorld<T> {
     pub fn initialize() -> (Universe, Self) {
         let (universe, _) = mpi::initialize_with_threading(Threading::Multiple).unwrap();
         let world = universe.world();
-        (universe, Self { world })
+        (
+            universe,
+            Self {
+                world,
+                marker: PhantomData::default(),
+            },
+        )
     }
 }
 
-impl<T> crate::communication::Communicator<T> for MpiWorld
+impl<T> WorldCommunicator<T> for MpiWorld<T>
 where
     T: Equivalence,
 {

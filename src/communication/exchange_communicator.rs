@@ -1,10 +1,10 @@
-use super::Communicator;
+use super::world_communicator::WorldCommunicator;
 use super::DataByRank;
 use super::Rank;
 
 pub struct ExchangeCommunicator<C, T>
 where
-    C: Communicator<T>,
+    C: WorldCommunicator<T>,
 {
     communicator: C,
     data: DataByRank<Vec<T>>,
@@ -12,7 +12,7 @@ where
 
 impl<C, T> Clone for ExchangeCommunicator<C, T>
 where
-    C: Clone + Communicator<T>,
+    C: Clone + WorldCommunicator<T>,
     T: Clone,
 {
     fn clone(&self) -> Self {
@@ -25,7 +25,7 @@ where
 
 impl<C, T> ExchangeCommunicator<C, T>
 where
-    C: Communicator<T>,
+    C: WorldCommunicator<T>,
 {
     pub fn new(communicator: C) -> Self {
         let data = communicator.initialize_data_by_rank();
