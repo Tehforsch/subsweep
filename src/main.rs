@@ -11,6 +11,7 @@ mod args;
 mod communication;
 mod config;
 mod domain;
+mod mass;
 mod particle;
 mod physics;
 mod position;
@@ -37,11 +38,13 @@ use communication::SyncCommunicator;
 use domain::Domain;
 use domain::DomainDistribution;
 use glam::Vec2;
+use mass::Mass;
 use mpi::Rank;
 use particle::LocalParticleBundle;
 use physics::ParticleExchangeData;
 use physics::PhysicsPlugin;
 use position::Position;
+use units::f32::kilograms;
 use units::vec2::meter;
 use units::vec2::meters_per_second;
 use velocity::Velocity;
@@ -57,6 +60,7 @@ fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res
         commands.spawn().insert_bundle(LocalParticleBundle::new(
             Position(pos),
             Velocity(meters_per_second(Vec2::new(1.0, 0.0))),
+            Mass(kilograms(1.0)),
         ));
     }
 }

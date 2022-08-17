@@ -4,6 +4,7 @@ use std::ops::Div;
 use std::ops::Mul;
 use std::ops::Neg;
 use std::ops::Sub;
+use std::ops::SubAssign;
 
 use super::dimension::Dimension;
 use crate::units::NONE;
@@ -72,6 +73,15 @@ where
 
     fn sub(self, rhs: Self) -> Self::Output {
         Quantity::<S, D>(self.0 - rhs.0)
+    }
+}
+
+impl<S, const D: Dimension> SubAssign for Quantity<S, D>
+where
+    S: SubAssign<S>,
+{
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0;
     }
 }
 

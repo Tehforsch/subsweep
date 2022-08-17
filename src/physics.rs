@@ -5,9 +5,13 @@ use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::domain::DomainDistribution;
+use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
+use crate::units::f32::meter;
+use crate::units::f32::newton;
 use crate::units::f32::second;
+use crate::units::vec2;
 use crate::velocity::Velocity;
 
 #[derive(Component)]
@@ -30,6 +34,7 @@ impl Plugin for PhysicsPlugin {
             .insert_resource(self.0.clone())
             .add_system(integrate_motion_system)
             .add_system(time_system)
+            .add_system(spring_system)
             .add_system(exchange_particles_system.after(integrate_motion_system));
     }
 }
@@ -44,16 +49,17 @@ fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timeste
 pub struct ParticleExchangeData {
     vel: Velocity,
     pos: Position,
+    mass: Mass,
 }
 
 fn exchange_particles_system(
     mut commands: Commands,
-    particles: Query<(Entity, &Position, &Velocity), With<LocalParticle>>,
+    particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
     mut communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
     rank: Res<Rank>,
     domain: Res<DomainDistribution>,
 ) {
-    for (entity, pos, vel) in particles.iter() {
+    for (entity, pos, vel, mass) in particles.iter() {
         let target_rank = domain.target_rank(pos);
         if target_rank != *rank {
             commands.entity(entity).despawn();
@@ -62,6 +68,7 @@ fn exchange_particles_system(
                 ParticleExchangeData {
                     pos: pos.clone(),
                     vel: vel.clone(),
+                    mass: mass.clone(),
                 },
             );
         }
@@ -71,11 +78,21 @@ fn exchange_particles_system(
         for data in moved_to_own_domain.into_iter() {
             commands
                 .spawn()
-                .insert_bundle(LocalParticleBundle::new(data.pos, data.vel));
+                .insert_bundle(LocalParticleBundle::new(data.pos, data.vel, data.mass));
         }
     }
 }
 
 fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
     time.0 += timestep.0;
+}
+
+fn spring_system(
+    timestep: Res<Timestep>,
+    mut particles: Query<(&mut Velocity, &Position, &Mass), With<LocalParticle>>,
+) {
+    let spring_constant = newton(20.0) / meter(1.0);
+    for (mut vel, pos, mass) in particles.iter_mut() {
+        vel.0 -= (pos.0 - vec2::meter(Vec2::new(0.5, 0.5))) * timestep.0 * spring_constant / mass.0;
+    }
 }

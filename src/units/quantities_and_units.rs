@@ -55,6 +55,14 @@ macro_rules! implement_storage_type {
                     VELOCITY, Velocity, length: 1, time: -1,
                     {
                         meters_per_second, 1.0
+                    },
+                    MASS, Mass, mass: 1,
+                    {
+                        kilograms, 1.0
+                    },
+                    FORCE, Force, mass: 1, length: 1, time: -2,
+                    {
+                        newton, 1.0
                     }
                     );
     }
