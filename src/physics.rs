@@ -19,13 +19,17 @@ pub struct RemoteParticle(pub Rank);
 #[derive(Equivalence)]
 struct Timestep(crate::units::f32::Time);
 
+pub struct Time(pub crate::units::f32::Time);
+
 pub struct PhysicsPlugin(pub DomainDistribution);
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(Timestep(second(0.01)))
+            .insert_resource(Time(second(0.00)))
             .insert_resource(self.0.clone())
             .add_system(integrate_motion_system)
+            .add_system(time_system)
             .add_system(exchange_particles_system.after(integrate_motion_system));
     }
 }
@@ -69,4 +73,8 @@ fn exchange_particles_system(
                 .insert_bundle(LocalParticleBundle::new(data.pos, data.vel));
         }
     }
+}
+
+fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
+    time.0 += timestep.0;
 }

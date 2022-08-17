@@ -120,3 +120,22 @@ where
         Quantity(self.0 / rhs.0)
     }
 }
+
+impl<S, const D: Dimension> Quantity<S, D>
+where
+    Quantity<S, { D.dimension_div(D) }>:,
+    S: Div<S, Output = S> + Copy,
+{
+    pub fn to_value(&self, unit: impl Fn(f32) -> Quantity<S, D>) -> S {
+        *(*self / unit(1.0)).unwrap_value()
+    }
+}
+
+impl<S> std::fmt::Display for Quantity<S, { NONE }>
+where
+    S: std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value())
+    }
+}
