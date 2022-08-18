@@ -42,13 +42,10 @@ impl Plugin for VisualizationPlugin {
                     VisualizationStage::Synchronize,
                     receive_particles_on_main_thread_system,
                 )
+                .add_system_to_stage(VisualizationStage::Visualize, spawn_sprites_system)
                 .add_system_to_stage(
                     VisualizationStage::Visualize,
-                    spawn_sprites_system.after(receive_particles_on_main_thread_system),
-                )
-                .add_system_to_stage(
-                    VisualizationStage::Visualize,
-                    position_to_translation_system.after(receive_particles_on_main_thread_system),
+                    position_to_translation_system,
                 );
         } else {
             app.add_system_to_stage(

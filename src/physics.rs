@@ -13,7 +13,6 @@ use crate::units::f32::newton;
 use crate::units::f32::second;
 use crate::units::vec2;
 use crate::velocity::Velocity;
-use crate::MainStage;
 
 #[derive(Component)]
 pub struct LocalParticle;
@@ -40,11 +39,7 @@ impl Plugin for PhysicsPlugin {
             .add_system(integrate_motion_system.after(spring_system))
             .add_system(time_system)
             .add_system(spring_system)
-            .add_system_to_stage(
-                MainStage,
-                exchange_particles_system.after(integrate_motion_system),
-            );
-        // .add_system(exchange_particles_system.after(integrate_motion_system));
+            .add_system(exchange_particles_system.after(integrate_motion_system));
     }
 }
 
