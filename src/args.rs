@@ -6,7 +6,7 @@ pub struct CommandLineOptions {
     #[cfg(feature = "local")]
     pub num_threads: usize,
     #[clap(long)]
-    pub visualize: bool,
+    pub headless: bool,
     #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
 }

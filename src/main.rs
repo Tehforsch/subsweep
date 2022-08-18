@@ -80,19 +80,19 @@ fn build_and_run_app(
     app.insert_resource(rank);
     if rank == 0 {
         app.insert_resource(log_setup(opts.verbosity));
-        if opts.visualize {
-            app.add_plugins(DefaultPlugins);
-        } else {
+        if opts.headless {
             app.add_plugins(MinimalPlugins).add_plugin(LogPlugin);
+        } else {
+            app.add_plugins(DefaultPlugins);
         }
     } else {
         app.add_plugins(MinimalPlugins);
     }
-    if opts.visualize {
-        app.add_plugin(VisualizationPlugin);
-    } else {
+    if opts.headless {
         // Only show execution order ambiguities when running without render plugins
         app.insert_resource(ReportExecutionOrderAmbiguities);
+    } else {
+        app.add_plugin(VisualizationPlugin);
     }
     app.add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin)
