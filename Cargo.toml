@@ -16,7 +16,7 @@ glam = "0.21.3"
 # This is because the autoconfigure/build script of libffi (the C project, not the crate) seems to be bugged on my machine
 # since it is trying to invoke cc -V which my gcc doesnt support (and hasnt since 2013?)
 libffi = { version = "3.0.0", features = ["system"] }
-mpi = { git = "https://github.com/rsmpi/rsmpi", features = ["derive"] }
+mpi = { version = "0.6", features = ["user-operations", "derive"] }
 once_cell = "1.13.0"
 
 # Optimize dependencies even in a debug build
