@@ -1,16 +1,20 @@
 pub mod remote;
 
 use bevy::prelude::shape::Circle;
+use bevy::prelude::shape::RegularPolygon;
 use bevy::prelude::*;
 use bevy::sprite::Mesh2dHandle;
 
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
 use crate::communication::Rank;
+use crate::domain::QuadTree;
 use crate::physics::LocalParticle;
 use crate::physics::RemoteParticle;
 use crate::position::Position;
 use crate::units::f32::meter;
+use crate::units::vec2;
+use crate::units::vec2::Length;
 const CIRCLE_SIZE: f32 = 5.0;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
@@ -46,7 +50,8 @@ impl Plugin for VisualizationPlugin {
                 .add_system_to_stage(
                     VisualizationStage::Visualize,
                     position_to_translation_system,
-                );
+                )
+                .add_system_to_stage(VisualizationStage::Visualize, show_quadtree_system);
         } else {
             app.add_system_to_stage(
                 VisualizationStage::Synchronize,
@@ -109,4 +114,40 @@ pub fn position_to_translation_system(mut query: Query<(&mut Transform, &Positio
     for (mut transform, position) in query.iter_mut() {
         transform.translation = position_to_translation(position);
     }
+}
+
+#[derive(Component)]
+struct Outline;
+
+fn show_quadtree_system(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    particles: Query<(Entity, &Position)>,
+    outlines: Query<&Outline>,
+) {
+    if outlines.iter().next().is_some() {
+        return;
+    }
+    let particles: Vec<(vec2::Length, Entity)> = particles
+        .iter()
+        .map(|(entity, pos)| (pos.0, entity))
+        .collect();
+    let quadtree = QuadTree::new(particles);
+    quadtree.depth_first_map(&mut |extents| {
+        let center = Length::new(extents.x_center, extents.y_center);
+        let handle = meshes.add(Mesh::from(RegularPolygon::new(
+            67.0 * (extents.x_max.unwrap_value() - extents.x_min.unwrap_value()),
+            4,
+        )));
+        let circle = ColorMesh2dBundle {
+            mesh: handle.into(),
+            transform: Transform {
+                translation: position_to_translation(&Position(center)),
+                rotation: Quat::from_axis_angle(Vec3::Z, std::f32::consts::PI / 4.0),
+                ..default()
+            },
+            ..default()
+        };
+        commands.spawn().insert(Outline).insert_bundle(circle);
+    });
 }

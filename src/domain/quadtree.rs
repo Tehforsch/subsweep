@@ -30,13 +30,13 @@ impl Node {
 }
 
 #[derive(Debug)]
-struct QuadTree {
+pub struct QuadTree {
     data: Node,
     extents: Extents,
 }
 
 impl QuadTree {
-    pub fn new<'a>(particles: &[(vec2::Length, Entity)]) -> Self {
+    pub fn new<'a>(particles: Vec<(vec2::Length, Entity)>) -> Self {
         let extents = Extents::from_positions(particles.iter().map(|(pos, _)| pos))
             .expect("Not enough particles to construct quadtree");
         let mut tree = Self::make_empty_leaf_from_extents(extents);
@@ -77,6 +77,19 @@ impl QuadTree {
             extents,
         }
     }
+
+    pub fn depth_first_map(&self, closure: &mut impl FnMut(&Extents) -> ()) {
+        match self.data {
+            Node::Node(ref node) => {
+                for child in node.iter() {
+                    child.depth_first_map(closure);
+                }
+            }
+            Node::Leaf(ref leaf) => {
+                closure(&self.extents);
+            }
+        }
+    }
 }
 
 impl Index<usize> for QuadTree {
@@ -111,13 +124,13 @@ mod tests {
 
     #[test]
     fn construct_tree() {
-        let positions = &[
+        let positions = [
             (vec2::meter(Vec2::new(1.0, 1.0)), Entity::from_raw(0)),
             (vec2::meter(Vec2::new(-1.0, 1.0)), Entity::from_raw(1)),
             (vec2::meter(Vec2::new(1.0, -1.0)), Entity::from_raw(2)),
             (vec2::meter(Vec2::new(-1.0, -1.0)), Entity::from_raw(3)),
         ];
-        let tree = QuadTree::new(positions);
+        let tree = QuadTree::new(positions.into_iter().collect());
         dbg!(tree);
         assert!(false);
     }

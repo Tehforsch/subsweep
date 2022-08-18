@@ -5,12 +5,12 @@ use crate::units::vec2;
 
 #[derive(Clone, Debug)]
 pub struct Extents {
-    x_min: Length,
-    x_max: Length,
-    y_min: Length,
-    y_max: Length,
-    x_center: Length,
-    y_center: Length,
+    pub x_min: Length,
+    pub x_max: Length,
+    pub y_min: Length,
+    pub y_max: Length,
+    pub x_center: Length,
+    pub y_center: Length,
 }
 
 impl Extents {

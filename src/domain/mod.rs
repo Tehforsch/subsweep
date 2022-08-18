@@ -4,6 +4,7 @@ mod quadtree;
 use std::collections::HashMap;
 
 use self::extents::Extents;
+pub use self::quadtree::QuadTree;
 use crate::communication::Rank;
 use crate::position::Position;
 use crate::units::f32::meter;
