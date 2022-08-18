@@ -11,6 +11,7 @@ mod args;
 mod communication;
 mod config;
 mod domain;
+mod initial_conditions;
 mod mass;
 mod particle;
 mod physics;
@@ -25,10 +26,8 @@ use bevy::log::Level;
 use bevy::log::LogPlugin;
 use bevy::log::LogSettings;
 use bevy::prelude::App;
-use bevy::prelude::Commands;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
-use bevy::prelude::Res;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
 use communication::Identified;
@@ -37,32 +36,12 @@ use communication::SyncCommunicator;
 use domain::Domain;
 use domain::DomainDistribution;
 use glam::Vec2;
-use mass::Mass;
-use mpi::Rank;
-use particle::LocalParticleBundle;
+use initial_conditions::InitialConditionsPlugin;
 use physics::ParticleExchangeData;
 use physics::PhysicsPlugin;
-use position::Position;
-use units::f32::kilograms;
 use units::vec2::meter;
-use units::vec2::meters_per_second;
-use velocity::Velocity;
 use visualization::remote::ParticleVisualizationExchangeData;
 use visualization::VisualizationPlugin;
-
-fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res<Rank>) {
-    if *rank != 0 {
-        return;
-    }
-    for i in [0.5] {
-        let pos = domain.upper_left + (domain.lower_right - domain.upper_left) * i;
-        commands.spawn().insert_bundle(LocalParticleBundle::new(
-            Position(pos),
-            Velocity(meters_per_second(Vec2::new(1.0, 0.0))),
-            Mass(kilograms(1.0)),
-        ));
-    }
-}
 
 fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
@@ -116,9 +95,9 @@ fn build_and_run_app(
         app.insert_resource(ReportExecutionOrderAmbiguities);
     }
     app.add_plugin(PhysicsPlugin)
+        .add_plugin(InitialConditionsPlugin)
         .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
-        .insert_non_send_resource(SyncCommunicator::new(communicator2))
-        .add_startup_system(spawn_particles_system);
+        .insert_non_send_resource(SyncCommunicator::new(communicator2));
     app.run();
 }
 
@@ -129,6 +108,7 @@ fn main() {
 
     use clap::Parser;
     use communication::get_local_communicators;
+    use communication::Rank;
 
     let opts = CommandLineOptions::parse();
     let mut communicators1 = get_local_communicators(opts.num_threads);
