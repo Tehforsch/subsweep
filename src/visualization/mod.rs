@@ -29,7 +29,7 @@ impl Plugin for VisualizationPlugin {
         app.add_stage_after(
             CoreStage::Update,
             VisualizationStage::Synchronize,
-            SystemStage::single_threaded(),
+            SystemStage::parallel(),
         );
         app.add_stage_after(
             VisualizationStage::Synchronize,
