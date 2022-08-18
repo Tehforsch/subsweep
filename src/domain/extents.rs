@@ -5,10 +5,12 @@ use crate::units::vec2;
 
 #[derive(Clone, Debug)]
 pub struct Extents {
-    pub x_min: Length,
-    pub x_max: Length,
-    pub y_min: Length,
-    pub y_max: Length,
+    x_min: Length,
+    x_max: Length,
+    y_min: Length,
+    y_max: Length,
+    x_center: Length,
+    y_center: Length,
 }
 
 impl Extents {
@@ -20,6 +22,8 @@ impl Extents {
             x_max,
             y_min,
             y_max,
+            x_center: (x_min + x_max) * 0.5,
+            y_center: (y_min + y_max) * 0.5,
         }
     }
 
@@ -51,40 +55,28 @@ impl Extents {
         }
     }
 
-    pub fn contains(&self, pos: &Position) -> bool {
-        self.x_min <= pos.0.x()
-            && pos.0.x() < self.x_max
-            && self.y_min <= pos.0.y()
-            && pos.0.y() < self.y_max
+    pub fn get_quadrant_index(&self, pos: &vec2::Length) -> usize {
+        debug_assert!(self.contains(pos));
+        match (pos.x() < self.x_center, pos.y() < self.y_center) {
+            (true, true) => 0,
+            (false, true) => 1,
+            (false, false) => 2,
+            (true, false) => 3,
+        }
+    }
+
+    pub fn contains(&self, pos: &vec2::Length) -> bool {
+        self.x_min <= pos.x()
+            && pos.x() <= self.x_max
+            && self.y_min <= pos.y()
+            && pos.y() <= self.y_max
     }
 
     pub fn get_quadrants(&self) -> [Self; 4] {
-        let center_x = (self.x_min + self.x_max) * 0.5;
-        let center_y = (self.y_min + self.y_max) * 0.5;
-        let lower_left = Extents {
-            x_min: self.x_min,
-            x_max: center_x,
-            y_min: self.y_min,
-            y_max: center_y,
-        };
-        let lower_right = Extents {
-            x_min: center_x,
-            x_max: self.x_max,
-            y_min: self.y_min,
-            y_max: center_y,
-        };
-        let upper_right = Extents {
-            x_min: center_x,
-            x_max: self.x_max,
-            y_min: center_y,
-            y_max: self.y_max,
-        };
-        let upper_left = Extents {
-            x_min: self.x_min,
-            x_max: center_x,
-            y_min: center_y,
-            y_max: self.y_max,
-        };
+        let lower_left = Self::new(self.x_min, self.x_center, self.y_min, self.y_center);
+        let lower_right = Self::new(self.x_center, self.x_max, self.y_min, self.y_center);
+        let upper_right = Self::new(self.x_center, self.x_max, self.y_center, self.y_max);
+        let upper_left = Self::new(self.x_min, self.x_center, self.y_center, self.y_max);
         [lower_left, lower_right, upper_right, upper_left]
     }
 }

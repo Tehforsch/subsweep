@@ -18,7 +18,7 @@ impl DomainDistribution {
         *self
             .domains
             .iter()
-            .find(|(_, domain)| domain.contains(pos))
+            .find(|(_, domain)| domain.contains(&pos.0))
             .map(|(rank, _)| rank)
             .unwrap_or(&0)
     }
