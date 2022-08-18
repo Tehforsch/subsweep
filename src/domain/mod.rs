@@ -8,12 +8,12 @@ use crate::units::vec2::meter;
 use crate::units::vec2::Length;
 
 #[derive(Clone)]
-pub struct Domain {
+pub struct Extents {
     pub upper_left: Length,
     pub lower_right: Length,
 }
 
-impl Domain {
+impl Extents {
     fn contains(&self, pos: &Position) -> bool {
         let ul = self.upper_left.unwrap_value();
         let lr = self.lower_right.unwrap_value();
@@ -24,7 +24,7 @@ impl Domain {
 
 #[derive(Clone)]
 pub struct DomainDistribution {
-    pub domains: HashMap<Rank, Domain>,
+    pub domains: HashMap<Rank, Extents>,
 }
 
 impl DomainDistribution {
@@ -43,28 +43,28 @@ pub fn get_domain_distribution() -> DomainDistribution {
         domains: [
             (
                 0,
-                Domain {
+                Extents {
                     upper_left: meter(Vec2::new(-100.0, -100.0)),
                     lower_right: meter(Vec2::new(0.0, 0.0)),
                 },
             ),
             (
                 1,
-                Domain {
+                Extents {
                     upper_left: meter(Vec2::new(0.0, -100.0)),
                     lower_right: meter(Vec2::new(100.0, 0.0)),
                 },
             ),
             (
                 2,
-                Domain {
+                Extents {
                     upper_left: meter(Vec2::new(0.0, 0.0)),
                     lower_right: meter(Vec2::new(100.0, 100.0)),
                 },
             ),
             (
                 3,
-                Domain {
+                Extents {
                     upper_left: meter(Vec2::new(-100.0, 0.0)),
                     lower_right: meter(Vec2::new(0.0, 100.0)),
                 },
