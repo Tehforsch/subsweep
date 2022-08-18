@@ -27,6 +27,10 @@ impl<const D: Dimension> Quantity<glam::Vec2, D> {
     pub fn y(&self) -> Quantity<f32, D> {
         Quantity(self.0.y)
     }
+
+    pub fn length(&self) -> Quantity<f32, D> {
+        Quantity::<f32, D>(self.0.length())
+    }
 }
 
 macro_rules! unit_functions {

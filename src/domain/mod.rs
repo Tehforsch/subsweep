@@ -1,26 +1,12 @@
+mod extents;
+mod quadtree;
+
 use std::collections::HashMap;
 
-use glam::Vec2;
-
+use self::extents::Extents;
 use crate::communication::Rank;
 use crate::position::Position;
-use crate::units::vec2::meter;
-use crate::units::vec2::Length;
-
-#[derive(Clone)]
-pub struct Extents {
-    pub upper_left: Length,
-    pub lower_right: Length,
-}
-
-impl Extents {
-    fn contains(&self, pos: &Position) -> bool {
-        let ul = self.upper_left.unwrap_value();
-        let lr = self.lower_right.unwrap_value();
-        let pos = pos.0.unwrap_value();
-        ul.x <= pos.x && pos.x < lr.x && ul.y <= pos.y && pos.y < lr.y
-    }
-}
+use crate::units::f32::meter;
 
 #[derive(Clone)]
 pub struct DomainDistribution {
@@ -39,38 +25,13 @@ impl DomainDistribution {
 }
 
 pub fn get_domain_distribution() -> DomainDistribution {
+    let total_extents = Extents::new(meter(-100.0), meter(100.0), meter(-100.0), meter(100.0));
+    let quadrants = total_extents.get_quadrants();
     DomainDistribution {
-        domains: [
-            (
-                0,
-                Extents {
-                    upper_left: meter(Vec2::new(-100.0, -100.0)),
-                    lower_right: meter(Vec2::new(0.0, 0.0)),
-                },
-            ),
-            (
-                1,
-                Extents {
-                    upper_left: meter(Vec2::new(0.0, -100.0)),
-                    lower_right: meter(Vec2::new(100.0, 0.0)),
-                },
-            ),
-            (
-                2,
-                Extents {
-                    upper_left: meter(Vec2::new(0.0, 0.0)),
-                    lower_right: meter(Vec2::new(100.0, 100.0)),
-                },
-            ),
-            (
-                3,
-                Extents {
-                    upper_left: meter(Vec2::new(-100.0, 0.0)),
-                    lower_right: meter(Vec2::new(0.0, 100.0)),
-                },
-            ),
-        ]
-        .into_iter()
-        .collect(),
+        domains: quadrants
+            .into_iter()
+            .enumerate()
+            .map(|(i, quadrant)| (i as Rank, quadrant))
+            .collect(),
     }
 }

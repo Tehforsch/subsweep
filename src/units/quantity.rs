@@ -9,7 +9,7 @@ use std::ops::SubAssign;
 use super::dimension::Dimension;
 use crate::units::NONE;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Quantity<S, const D: Dimension>(pub(super) S);
 
 impl<S> Quantity<S, { NONE }> {
