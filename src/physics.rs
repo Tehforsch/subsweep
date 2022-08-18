@@ -3,8 +3,8 @@ use mpi::traits::Equivalence;
 
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
+use crate::domain::get_domain_distribution;
 use crate::domain::DomainDistribution;
-use crate::get_domain_distribution;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;

@@ -35,13 +35,9 @@ use communication::ExchangeCommunicator;
 use communication::Identified;
 use communication::SizedCommunicator;
 use communication::SyncCommunicator;
-use domain::Domain;
-use domain::DomainDistribution;
-use glam::Vec2;
 use initial_conditions::InitialConditionsPlugin;
 use physics::ParticleExchangeData;
 use physics::PhysicsPlugin;
-use units::vec2::meter;
 use visualization::remote::ParticleVisualizationExchangeData;
 use visualization::VisualizationPlugin;
 
@@ -152,41 +148,4 @@ fn main() {
         PARTICLE_VISUALIZATION_EXCHANGE_TAG,
     );
     build_and_run_app(&opts, world1, world2);
-}
-
-fn get_domain_distribution() -> DomainDistribution {
-    DomainDistribution {
-        domains: [
-            (
-                0,
-                Domain {
-                    upper_left: meter(Vec2::new(0.0, 0.0)),
-                    lower_right: meter(Vec2::new(0.5, 0.5)),
-                },
-            ),
-            (
-                1,
-                Domain {
-                    upper_left: meter(Vec2::new(0.5, 0.0)),
-                    lower_right: meter(Vec2::new(1.0, 0.5)),
-                },
-            ),
-            (
-                2,
-                Domain {
-                    upper_left: meter(Vec2::new(0.5, 0.5)),
-                    lower_right: meter(Vec2::new(1.0, 1.0)),
-                },
-            ),
-            (
-                3,
-                Domain {
-                    upper_left: meter(Vec2::new(0.0, 0.5)),
-                    lower_right: meter(Vec2::new(0.5, 1.0)),
-                },
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    }
 }

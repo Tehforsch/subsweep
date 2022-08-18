@@ -1,3 +1,5 @@
+use glam::Vec2;
+
 use super::dimension::Dimension;
 use super::quantity::Quantity;
 
@@ -10,6 +12,20 @@ pub(super) const NONE: Dimension = Dimension {
 impl<const D: Dimension> Quantity<f32, D> {
     pub fn abs(&self) -> Self {
         Self(self.0.abs())
+    }
+}
+
+impl<const D: Dimension> Quantity<glam::Vec2, D> {
+    pub fn new(x: Quantity<f32, D>, y: Quantity<f32, D>) -> Self {
+        Self(Vec2::new(*x.unwrap_value(), *y.unwrap_value()))
+    }
+
+    pub fn x(&self) -> Quantity<f32, D> {
+        Quantity(self.0.x)
+    }
+
+    pub fn y(&self) -> Quantity<f32, D> {
+        Quantity(self.0.y)
     }
 }
 

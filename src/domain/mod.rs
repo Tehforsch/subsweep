@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
+use glam::Vec2;
+
 use crate::communication::Rank;
 use crate::position::Position;
+use crate::units::vec2::meter;
 use crate::units::vec2::Length;
 
 #[derive(Clone)]
@@ -32,5 +35,42 @@ impl DomainDistribution {
             .find(|(_, domain)| domain.contains(pos))
             .map(|(rank, _)| rank)
             .unwrap_or(&0)
+    }
+}
+
+pub fn get_domain_distribution() -> DomainDistribution {
+    DomainDistribution {
+        domains: [
+            (
+                0,
+                Domain {
+                    upper_left: meter(Vec2::new(-100.0, -100.0)),
+                    lower_right: meter(Vec2::new(0.0, 0.0)),
+                },
+            ),
+            (
+                1,
+                Domain {
+                    upper_left: meter(Vec2::new(0.0, -100.0)),
+                    lower_right: meter(Vec2::new(100.0, 0.0)),
+                },
+            ),
+            (
+                2,
+                Domain {
+                    upper_left: meter(Vec2::new(0.0, 0.0)),
+                    lower_right: meter(Vec2::new(100.0, 100.0)),
+                },
+            ),
+            (
+                3,
+                Domain {
+                    upper_left: meter(Vec2::new(-100.0, 0.0)),
+                    lower_right: meter(Vec2::new(0.0, 100.0)),
+                },
+            ),
+        ]
+        .into_iter()
+        .collect(),
     }
 }

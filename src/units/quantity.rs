@@ -12,12 +12,6 @@ use crate::units::NONE;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Quantity<S, const D: Dimension>(pub(super) S);
 
-impl<S, const D: Dimension> Quantity<S, D> {
-    pub fn new(value: S) -> Self {
-        Self(value)
-    }
-}
-
 impl<S> Quantity<S, { NONE }> {
     /// Get the value of a dimensionless quantity
     pub fn value(&self) -> &S {
