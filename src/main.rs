@@ -68,15 +68,16 @@ fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
         0 => LogSettings {
             level: Level::INFO,
+            filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
             ..Default::default()
         },
         1 => LogSettings {
             level: Level::DEBUG,
-            filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error,symphonia_format_ogg=error,symphonia_core=error".to_string(),
+            filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
         },
         2 => LogSettings {
             level: Level::DEBUG,
-            filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error,symphonia_format_ogg=error,symphonia_core=error".to_string(),
+            filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
         },
         3 => LogSettings {
             level: Level::DEBUG,
@@ -132,16 +133,20 @@ fn main() {
     let opts = CommandLineOptions::parse();
     let mut communicators1 = get_local_communicators(opts.num_threads);
     let mut communicators2 = get_local_communicators(opts.num_threads);
+    let mut handles = vec![];
     for rank in (1..opts.num_threads).chain(once(0)) {
         let communicator1 = communicators1.remove(&(rank as Rank)).unwrap();
         let communicator2 = communicators2.remove(&(rank as Rank)).unwrap();
         if rank == 0 {
             build_and_run_app(&opts, communicator1, communicator2);
         } else {
-            thread::spawn(move || {
+            handles.push(thread::spawn(move || {
                 build_and_run_app(&opts, communicator1, communicator2);
-            });
+            }));
         }
+    }
+    for handle in handles.into_iter() {
+        handle.join().unwrap();
     }
 }
 
