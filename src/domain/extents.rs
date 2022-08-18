@@ -1,5 +1,7 @@
 use crate::position::Position;
+use crate::units::f32::meter;
 use crate::units::f32::Length;
+use crate::units::vec2;
 
 #[derive(Clone, Debug)]
 pub struct Extents {
@@ -18,6 +20,34 @@ impl Extents {
             x_max,
             y_min,
             y_max,
+        }
+    }
+
+    pub fn from_positions<'a>(positions: impl Iterator<Item = &'a vec2::Length>) -> Option<Self> {
+        let mut x_min = None;
+        let mut x_max = None;
+        let mut y_min = None;
+        let mut y_max = None;
+        let update_min = |x: &mut Option<Length>, y: Length| {
+            if x.is_none() || y < x.unwrap() {
+                *x = Some(y);
+            }
+        };
+        let update_max = |x: &mut Option<Length>, y: Length| {
+            if x.is_none() || y > x.unwrap() {
+                *x = Some(y);
+            }
+        };
+        for pos in positions {
+            update_min(&mut x_min, pos.x());
+            update_max(&mut x_max, pos.x());
+            update_min(&mut y_min, pos.y());
+            update_max(&mut y_max, pos.y());
+        }
+        if x_min == x_max || y_min == y_max {
+            None
+        } else {
+            Some(Self::new(x_min?, x_max?, y_min?, y_max?))
         }
     }
 
@@ -61,9 +91,12 @@ impl Extents {
 
 #[cfg(test)]
 mod tests {
+    use glam::Vec2;
+
     use crate::domain::Extents;
     use crate::units::f32::meter;
     use crate::units::f32::Length;
+    use crate::units::vec2;
 
     fn assert_is_close(x: Length, y: f32) {
         const EPSILON: f32 = 1e-20;
@@ -93,5 +126,35 @@ mod tests {
         assert_is_close(quadrants[3].x_max, 0.0);
         assert_is_close(quadrants[3].y_min, 0.0);
         assert_is_close(quadrants[3].y_max, 2.0);
+    }
+
+    #[test]
+    fn extent_from_positions() {
+        let positions = &[
+            vec2::meter(Vec2::new(1.0, 0.0)),
+            vec2::meter(Vec2::new(-1.0, 0.0)),
+            vec2::meter(Vec2::new(0.0, -2.0)),
+            vec2::meter(Vec2::new(0.0, 2.0)),
+        ];
+        let extents = Extents::from_positions(positions.iter()).unwrap();
+        assert_is_close(extents.x_min, -1.0);
+        assert_is_close(extents.x_max, 1.0);
+        assert_is_close(extents.y_min, -2.0);
+        assert_is_close(extents.y_max, 2.0);
+    }
+
+    #[test]
+    fn extent_from_positions_is_none_with_zero_positions() {
+        assert!(Extents::from_positions([].iter()).is_none());
+    }
+
+    #[test]
+    fn extent_from_positions_is_none_with_particles_at_same_positions() {
+        let positions = &[
+            vec2::meter(Vec2::new(1.0, 0.0)),
+            vec2::meter(Vec2::new(1.0, 0.0)),
+            vec2::meter(Vec2::new(1.0, 0.0)),
+        ];
+        assert!(Extents::from_positions(positions.iter()).is_none());
     }
 }
