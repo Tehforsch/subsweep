@@ -36,7 +36,7 @@ impl Plugin for PhysicsPlugin {
             .insert_resource(Time(second(0.00)))
             .insert_resource(domain_distribution)
             .insert_resource(domain)
-            .add_system(integrate_motion_system)
+            .add_system(integrate_motion_system.after(spring_system))
             .add_system(time_system)
             .add_system(spring_system)
             .add_system(exchange_particles_system.after(integrate_motion_system));

@@ -93,6 +93,7 @@ fn build_and_run_app(
         } else {
             app.add_plugins(DefaultPlugins);
         }
+        app.add_system(show_time_system);
     } else {
         app.add_plugins(MinimalPlugins);
     }
@@ -104,7 +105,6 @@ fn build_and_run_app(
     }
     app.add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin)
-        .add_system(show_time_system)
         .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
         .insert_non_send_resource(SyncCommunicator::new(communicator2));
     app.run();
