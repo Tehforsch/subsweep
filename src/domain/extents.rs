@@ -1,5 +1,3 @@
-use crate::position::Position;
-use crate::units::f32::meter;
 use crate::units::f32::Length;
 use crate::units::vec2;
 

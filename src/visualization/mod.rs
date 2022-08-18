@@ -1,12 +1,13 @@
 pub mod remote;
+mod shape_spawning;
 
-use bevy::prelude::shape::Circle;
-use bevy::prelude::shape::RegularPolygon;
 use bevy::prelude::*;
-use bevy::sprite::Mesh2dHandle;
 
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
+use self::shape_spawning::spawn_visualization_item_system;
+use self::shape_spawning::DrawCircle;
+use self::shape_spawning::DrawRect;
 use crate::communication::Rank;
 use crate::domain::QuadTree;
 use crate::physics::LocalParticle;
@@ -15,9 +16,10 @@ use crate::position::Position;
 use crate::units::f32::meter;
 use crate::units::vec2;
 use crate::units::vec2::Length;
-const CIRCLE_SIZE: f32 = 5.0;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
+
+pub const CAMERA_ZOOM_METERS: f32 = 0.01;
 
 #[derive(StageLabel)]
 pub enum VisualizationStage {
@@ -49,6 +51,14 @@ impl Plugin for VisualizationPlugin {
                 .add_system_to_stage(VisualizationStage::Visualize, spawn_sprites_system)
                 .add_system_to_stage(
                     VisualizationStage::Visualize,
+                    spawn_visualization_item_system::<DrawCircle>,
+                )
+                .add_system_to_stage(
+                    VisualizationStage::Visualize,
+                    spawn_visualization_item_system::<DrawRect>,
+                )
+                .add_system_to_stage(
+                    VisualizationStage::Visualize,
                     position_to_translation_system,
                 )
                 .add_system_to_stage(VisualizationStage::Visualize, show_quadtree_system);
@@ -61,22 +71,20 @@ impl Plugin for VisualizationPlugin {
     }
 }
 
-pub fn spawn_sprites_system(
+fn spawn_sprites_system(
     mut commands: Commands,
     local_cells: Query<
         (Entity, &Position),
         (
             With<LocalParticle>,
             Without<RemoteParticle>,
-            Without<Mesh2dHandle>,
+            Without<DrawCircle>,
         ),
     >,
     remote_cells: Query<
         (Entity, &Position, &RemoteParticle),
-        (Without<LocalParticle>, Without<Mesh2dHandle>),
+        (Without<LocalParticle>, Without<DrawCircle>),
     >,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut color_materials: ResMut<Assets<ColorMaterial>>,
 ) {
     for (entity, pos, rank) in local_cells
         .iter()
@@ -87,32 +95,12 @@ pub fn spawn_sprites_system(
                 .map(|(entity, pos, rank)| (entity, pos, rank.0)),
         )
     {
-        let handle = meshes.add(Mesh::from(Circle::new(CIRCLE_SIZE)));
         let color = COLORS[rank as usize];
-        let material = color_materials.add(ColorMaterial { color, ..default() });
-        let circle = ColorMesh2dBundle {
-            mesh: handle.into(),
-            material,
-            transform: Transform::from_translation(position_to_translation(pos)),
-            ..default()
-        };
-        commands.entity(entity).insert_bundle(circle);
-    }
-}
-
-fn position_to_translation(position: &Position) -> Vec3 {
-    let camera_zoom = meter(0.01);
-    let pos = *(position.0 / camera_zoom).value();
-    Vec3::new(pos.x, pos.y, 0.0)
-}
-
-pub fn setup_camera_system(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle::default());
-}
-
-pub fn position_to_translation_system(mut query: Query<(&mut Transform, &Position)>) {
-    for (mut transform, position) in query.iter_mut() {
-        transform.translation = position_to_translation(position);
+        commands.entity(entity).insert(DrawCircle {
+            position: pos.0,
+            radius: meter(0.05),
+            color,
+        });
     }
 }
 
@@ -121,7 +109,6 @@ struct Outline;
 
 fn show_quadtree_system(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
     particles: Query<(Entity, &Position)>,
     outlines: Query<&Outline>,
 ) {
@@ -134,20 +121,28 @@ fn show_quadtree_system(
         .collect();
     let quadtree = QuadTree::new(particles);
     quadtree.depth_first_map(&mut |extents| {
-        let center = Length::new(extents.x_center, extents.y_center);
-        let handle = meshes.add(Mesh::from(RegularPolygon::new(
-            67.0 * (extents.x_max.unwrap_value() - extents.x_min.unwrap_value()),
-            4,
-        )));
-        let circle = ColorMesh2dBundle {
-            mesh: handle.into(),
-            transform: Transform {
-                translation: position_to_translation(&Position(center)),
-                rotation: Quat::from_axis_angle(Vec3::Z, std::f32::consts::PI / 4.0),
-                ..default()
-            },
-            ..default()
-        };
-        commands.spawn().insert(Outline).insert_bundle(circle);
+        let lower_left = Length::new(extents.x_min, extents.y_min);
+        let upper_right = Length::new(extents.x_max, extents.y_max);
+        commands.spawn().insert(Outline).insert(DrawRect {
+            lower_left,
+            upper_right,
+            color: Color::RED,
+        });
     });
+}
+
+fn position_to_translation(position: &Position) -> Vec3 {
+    let camera_zoom = meter(CAMERA_ZOOM_METERS);
+    let pos = *(position.0 / camera_zoom).value();
+    Vec3::new(pos.x, pos.y, 0.0)
+}
+
+pub fn position_to_translation_system(mut query: Query<(&mut Transform, &Position)>) {
+    for (mut transform, position) in query.iter_mut() {
+        transform.translation = position_to_translation(position);
+    }
+}
+
+pub fn setup_camera_system(mut commands: Commands) {
+    commands.spawn_bundle(Camera2dBundle::default());
 }

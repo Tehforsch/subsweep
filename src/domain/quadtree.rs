@@ -4,7 +4,6 @@ use std::ops::IndexMut;
 use bevy::prelude::Entity;
 
 use super::Extents;
-use crate::position::Position;
 use crate::units::vec2;
 
 #[derive(Debug, Default)]
@@ -85,7 +84,7 @@ impl QuadTree {
                     child.depth_first_map(closure);
                 }
             }
-            Node::Leaf(ref leaf) => {
+            Node::Leaf(_) => {
                 closure(&self.extents);
             }
         }
