@@ -45,7 +45,6 @@ pub(super) fn receive_particles_on_main_thread_system(
     let mut sync = communicator.receive_sync(spawn_particle);
     for (_, entities) in sync.deleted.drain_all() {
         for entity in entities.into_iter() {
-            // Decommenting this fixes the bug. wtf
             commands.entity(entity).despawn();
         }
     }
