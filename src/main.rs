@@ -25,9 +25,11 @@ use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
 use bevy::log::LogPlugin;
 use bevy::log::LogSettings;
+use bevy::prelude::debug;
 use bevy::prelude::App;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
+use bevy::prelude::Res;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
 use communication::Identified;
@@ -42,6 +44,8 @@ use physics::PhysicsPlugin;
 use units::vec2::meter;
 use visualization::remote::ParticleVisualizationExchangeData;
 use visualization::VisualizationPlugin;
+
+use crate::units::f32::second;
 
 fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
@@ -70,6 +74,10 @@ fn log_setup(verbosity: usize) -> LogSettings {
     }
 }
 
+fn show_time_system(time: Res<crate::physics::Time>) {
+    debug!("Time: {:.3} s", time.0.to_value(second));
+}
+
 fn build_and_run_app(
     opts: &CommandLineOptions,
     communicator1: Communicator<ParticleExchangeData>,
@@ -96,6 +104,7 @@ fn build_and_run_app(
     }
     app.add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin)
+        .add_system(show_time_system)
         .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
         .insert_non_send_resource(SyncCommunicator::new(communicator2));
     app.run();

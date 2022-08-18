@@ -11,8 +11,6 @@ use crate::physics::LocalParticle;
 use crate::physics::RemoteParticle;
 use crate::position::Position;
 use crate::units::f32::meter;
-use crate::units::f32::second;
-
 const CIRCLE_SIZE: f32 = 5.0;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
@@ -33,7 +31,6 @@ impl Plugin for VisualizationPlugin {
         if rank == 0 {
             app.add_plugin(RemoteVisualizationMainThreadPlugin)
                 .add_startup_system(setup_camera_system)
-                .add_system(show_time_system)
                 .add_system_to_stage(VisualizationStage, spawn_sprites_system)
                 .add_system_to_stage(VisualizationStage, position_to_translation_system);
         } else {
@@ -95,8 +92,4 @@ pub fn position_to_translation_system(mut query: Query<(&mut Transform, &Positio
     for (mut transform, position) in query.iter_mut() {
         transform.translation = position_to_translation(position);
     }
-}
-
-fn show_time_system(time: Res<crate::physics::Time>) {
-    debug!("Time: {:.3} s", time.0.to_value(second));
 }
