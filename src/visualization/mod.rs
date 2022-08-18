@@ -34,7 +34,7 @@ impl Plugin for VisualizationPlugin {
         app.add_stage_after(
             VisualizationStage::Synchronize,
             VisualizationStage::Visualize,
-            SystemStage::single_threaded(),
+            SystemStage::parallel(),
         );
         if rank == 0 {
             app.add_startup_system(setup_camera_system)
