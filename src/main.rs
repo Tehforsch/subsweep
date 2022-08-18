@@ -97,8 +97,7 @@ fn build_and_run_app(
 ) {
     let mut app = App::new();
     let rank = communicator1.rank();
-    let domain_distribution = get_domain_distribution();
-    let domain = domain_distribution.domains[&rank].clone();
+    app.insert_resource(rank);
     if rank == 0 {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.visualize {
@@ -110,18 +109,14 @@ fn build_and_run_app(
         app.add_plugins(MinimalPlugins);
     }
     if opts.visualize {
-        app.add_plugin(VisualizationPlugin {
-            main_rank: rank == 0,
-        });
+        app.add_plugin(VisualizationPlugin);
     } else {
         // Only show execution order ambiguities when running without render plugins
         app.insert_resource(ReportExecutionOrderAmbiguities);
     }
-    app.add_plugin(PhysicsPlugin(get_domain_distribution()))
-        .insert_resource(domain)
+    app.add_plugin(PhysicsPlugin)
         .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
         .insert_non_send_resource(SyncCommunicator::new(communicator2))
-        .insert_resource(rank)
         .add_startup_system(spawn_particles_system);
     app.run();
 }

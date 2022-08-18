@@ -6,6 +6,7 @@ use bevy::sprite::Mesh2dHandle;
 
 use self::remote::RemoteVisualizationMainThreadPlugin;
 use self::remote::RemoteVisualizationSideThreadPlugin;
+use crate::communication::Rank;
 use crate::physics::LocalParticle;
 use crate::physics::RemoteParticle;
 use crate::position::Position;
@@ -19,18 +20,17 @@ const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW]
 #[derive(StageLabel)]
 pub struct VisualizationStage;
 
-pub struct VisualizationPlugin {
-    pub main_rank: bool,
-}
+pub struct VisualizationPlugin;
 
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
+        let rank = *app.world.get_resource::<Rank>().unwrap();
         app.add_stage_after(
             CoreStage::Update,
             VisualizationStage,
             SystemStage::parallel(),
         );
-        if self.main_rank {
+        if rank == 0 {
             app.add_plugin(RemoteVisualizationMainThreadPlugin)
                 .add_startup_system(setup_camera_system)
                 .add_system(show_time_system)

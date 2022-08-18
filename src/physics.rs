@@ -4,6 +4,7 @@ use mpi::traits::Equivalence;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
 use crate::domain::DomainDistribution;
+use crate::get_domain_distribution;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
@@ -24,13 +25,17 @@ struct Timestep(crate::units::f32::Time);
 
 pub struct Time(pub crate::units::f32::Time);
 
-pub struct PhysicsPlugin(pub DomainDistribution);
+pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
+        let rank = app.world.get_resource::<Rank>().unwrap();
+        let domain_distribution = get_domain_distribution();
+        let domain = domain_distribution.domains[&rank].clone();
         app.insert_resource(Timestep(second(0.01)))
             .insert_resource(Time(second(0.00)))
-            .insert_resource(self.0.clone())
+            .insert_resource(domain_distribution)
+            .insert_resource(domain)
             .add_system(integrate_motion_system)
             .add_system(time_system)
             .add_system(spring_system)
@@ -53,10 +58,10 @@ pub struct ParticleExchangeData {
 
 fn exchange_particles_system(
     mut commands: Commands,
-    particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
     mut communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
     rank: Res<Rank>,
     domain: Res<DomainDistribution>,
+    particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
 ) {
     for (entity, pos, vel, mass) in particles.iter() {
         let target_rank = domain.target_rank(pos);
