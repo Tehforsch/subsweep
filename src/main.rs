@@ -50,6 +50,9 @@ use visualization::VisualizationPlugin;
 
 use crate::units::f32::second;
 
+pub const PARTICLE_VISUALIZATION_EXCHANGE_TAG: i32 = 1337;
+pub const PARTICLE_EXCHANGE_TAG: i32 = 1338;
+
 fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
         0 => LogSettings {
@@ -151,8 +154,10 @@ fn main() {
     use clap::Parser;
 
     let opts = CommandLineOptions::parse();
-    let world1 = Communicator::<ParticleExchangeData>::new();
-    let world2 = Communicator::<Identified<ParticleVisualizationExchangeData>>::new();
+    let world1 = Communicator::<ParticleExchangeData>::new(PARTICLE_EXCHANGE_TAG);
+    let world2 = Communicator::<Identified<ParticleVisualizationExchangeData>>::new(
+        PARTICLE_VISUALIZATION_EXCHANGE_TAG,
+    );
     build_and_run_app(&opts, world1, world2);
 }
 

@@ -9,6 +9,7 @@ use mpi::traits::Communicator;
 use mpi::traits::Destination;
 use mpi::traits::Equivalence;
 use mpi::traits::Source;
+use mpi::Tag;
 use mpi::Threading;
 
 use super::world_communicator::WorldCommunicator;
@@ -25,13 +26,15 @@ lazy_static! {
 pub struct MpiWorld<T> {
     world: SystemCommunicator,
     marker: PhantomData<T>,
+    tag: Tag,
 }
 
 impl<T> MpiWorld<T> {
-    pub fn new() -> Self {
+    pub fn new(tag: Tag) -> Self {
         let world = MPI_UNIVERSE.world();
         Self {
             world,
+            tag,
             marker: PhantomData::default(),
         }
     }
@@ -44,17 +47,17 @@ where
     fn send_vec(&mut self, rank: Rank, data: Vec<S>) {
         let num = data.len();
         let process = self.world.process_at_rank(rank);
-        process.send(&num);
-        for d in data.into_iter() {
-            process.send(&d);
+        process.send_with_tag(&num, self.tag);
+        if num > 0 {
+            process.send_with_tag(&data, self.tag);
         }
     }
 
     fn receive_vec(&mut self, rank: Rank) -> Vec<S> {
         let process = self.world.process_at_rank(rank);
-        let (num_received, _): (usize, Status) = process.receive();
+        let (num_received, _): (usize, Status) = process.receive_with_tag(self.tag);
         if num_received > 0 {
-            let (data, _) = process.receive_vec();
+            let (data, _) = process.receive_vec_with_tag(self.tag);
             return data;
         }
         vec![]

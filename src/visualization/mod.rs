@@ -4,8 +4,8 @@ use bevy::prelude::shape::Circle;
 use bevy::prelude::*;
 use bevy::sprite::Mesh2dHandle;
 
-use self::remote::RemoteVisualizationMainThreadPlugin;
-use self::remote::RemoteVisualizationSideThreadPlugin;
+use self::remote::receive_particles_on_main_thread_system;
+use self::remote::send_particles_to_main_thread_system;
 use crate::communication::Rank;
 use crate::physics::LocalParticle;
 use crate::physics::RemoteParticle;
@@ -16,7 +16,10 @@ const CIRCLE_SIZE: f32 = 5.0;
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
 #[derive(StageLabel)]
-pub struct VisualizationStage;
+pub enum VisualizationStage {
+    Synchronize,
+    Visualize,
+}
 
 pub struct VisualizationPlugin;
 
@@ -25,16 +28,33 @@ impl Plugin for VisualizationPlugin {
         let rank = *app.world.get_resource::<Rank>().unwrap();
         app.add_stage_after(
             CoreStage::Update,
-            VisualizationStage,
+            VisualizationStage::Synchronize,
+            SystemStage::single_threaded(),
+        );
+        app.add_stage_after(
+            VisualizationStage::Synchronize,
+            VisualizationStage::Visualize,
             SystemStage::single_threaded(),
         );
         if rank == 0 {
-            app.add_plugin(RemoteVisualizationMainThreadPlugin)
-                .add_startup_system(setup_camera_system)
-                .add_system_to_stage(VisualizationStage, spawn_sprites_system)
-                .add_system_to_stage(VisualizationStage, position_to_translation_system);
+            app.add_startup_system(setup_camera_system)
+                .add_system_to_stage(
+                    VisualizationStage::Synchronize,
+                    receive_particles_on_main_thread_system,
+                )
+                .add_system_to_stage(
+                    VisualizationStage::Visualize,
+                    spawn_sprites_system.after(receive_particles_on_main_thread_system),
+                )
+                .add_system_to_stage(
+                    VisualizationStage::Visualize,
+                    position_to_translation_system.after(receive_particles_on_main_thread_system),
+                );
         } else {
-            app.add_plugin(RemoteVisualizationSideThreadPlugin);
+            app.add_system_to_stage(
+                VisualizationStage::Synchronize,
+                send_particles_to_main_thread_system,
+            );
         }
     }
 }

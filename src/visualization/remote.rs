@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
-use super::VisualizationStage;
 use crate::communication::Rank;
 use crate::communication::SyncCommunicator;
 use crate::particle::RemoteParticleBundle;
@@ -14,23 +13,7 @@ pub struct ParticleVisualizationExchangeData {
     pos: Position,
 }
 
-pub(super) struct RemoteVisualizationSideThreadPlugin;
-
-impl Plugin for RemoteVisualizationSideThreadPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_system_to_stage(VisualizationStage, send_particles_to_main_thread_system);
-    }
-}
-
-pub struct RemoteVisualizationMainThreadPlugin;
-
-impl Plugin for RemoteVisualizationMainThreadPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_system_to_stage(VisualizationStage, receive_particles_on_main_thread_system);
-    }
-}
-
-fn send_particles_to_main_thread_system(
+pub(super) fn send_particles_to_main_thread_system(
     rank: Res<Rank>,
     mut communicator: NonSendMut<SyncCommunicator<ParticleVisualizationExchangeData>>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
@@ -46,7 +29,7 @@ fn send_particles_to_main_thread_system(
     communicator.receive_sync(|_, _| panic!("No items expected"));
 }
 
-fn receive_particles_on_main_thread_system(
+pub(super) fn receive_particles_on_main_thread_system(
     mut commands: Commands,
     rank: Res<Rank>,
     mut communicator: NonSendMut<SyncCommunicator<ParticleVisualizationExchangeData>>,
