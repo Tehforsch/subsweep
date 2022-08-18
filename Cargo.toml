@@ -11,6 +11,7 @@ local = []
 bevy = { version = "0.8.0", default-features = false, features = ["render", "x11", "bevy_winit", "serialize", "filesystem_watcher"]}
 clap = {version = "3.2.17", features = ["derive"]}
 glam = "0.21.3"
+lazy_static = "1.4.0"
 
 # Use the system feature which uses the system library.
 # This is because the autoconfigure/build script of libffi (the C project, not the crate) seems to be bugged on my machine

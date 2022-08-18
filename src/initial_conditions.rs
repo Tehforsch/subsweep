@@ -23,8 +23,8 @@ fn spawn_particles_system(mut commands: Commands, domain: Res<Domain>, rank: Res
     if *rank != 0 {
         return;
     }
-    for i in [0.5] {
-        let pos = domain.upper_left + (domain.lower_right - domain.upper_left) * i;
+    for i in 0..2 {
+        let pos = domain.upper_left + (domain.lower_right - domain.upper_left) * i as f32;
         commands.spawn().insert_bundle(LocalParticleBundle::new(
             Position(pos),
             Velocity(meters_per_second(Vec2::new(1.0, 0.0))),

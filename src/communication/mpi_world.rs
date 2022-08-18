@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use lazy_static::lazy_static;
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
 use mpi::topology::Rank;
@@ -13,6 +14,13 @@ use mpi::Threading;
 use super::world_communicator::WorldCommunicator;
 use super::SizedCommunicator;
 
+lazy_static! {
+    pub static ref MPI_UNIVERSE: Universe = {
+        let (universe, _threading) = mpi::initialize_with_threading(Threading::Multiple).unwrap();
+        universe
+    };
+}
+
 #[derive(Clone)]
 pub struct MpiWorld<T> {
     world: SystemCommunicator,
@@ -20,16 +28,12 @@ pub struct MpiWorld<T> {
 }
 
 impl<T> MpiWorld<T> {
-    pub fn initialize() -> (Universe, Self) {
-        let (universe, _) = mpi::initialize_with_threading(Threading::Multiple).unwrap();
-        let world = universe.world();
-        (
-            universe,
-            Self {
-                world,
-                marker: PhantomData::default(),
-            },
-        )
+    pub fn new() -> Self {
+        let world = MPI_UNIVERSE.world();
+        Self {
+            world,
+            marker: PhantomData::default(),
+        }
     }
 }
 
@@ -64,14 +68,5 @@ impl<T> SizedCommunicator for MpiWorld<T> {
 
     fn size(&self) -> usize {
         self.world.size() as usize
-    }
-}
-
-impl<T> MpiWorld<T> {
-    pub fn clone_for_different_type<S>(&self) -> MpiWorld<S> {
-        MpiWorld {
-            world: self.world.clone(),
-            marker: PhantomData::default(),
-        }
     }
 }

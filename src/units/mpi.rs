@@ -42,13 +42,13 @@ mod tests {
     use glam::Vec2;
     use mpi::traits::Communicator;
 
+    use crate::communication::MPI_UNIVERSE;
     use crate::units::f32;
     use crate::units::vec2;
 
     #[test]
-    fn pack_unpack_quantity() {
-        let universe = mpi::initialize().unwrap();
-        let world = universe.world();
+    fn pack_unpack_f32_quantity() {
+        let world = MPI_UNIVERSE.world();
 
         let q1 = f32::meter(1.0);
         let mut q2 = f32::meter(2.0);
@@ -56,12 +56,18 @@ mod tests {
         unsafe {
             world.unpack_into(&a, &mut q2, 0);
         }
+        assert_eq!(q1, q2);
+    }
 
+    #[test]
+    fn pack_unpack_vec_quantity() {
+        let world = MPI_UNIVERSE.world();
         let q1 = vec2::meter(Vec2::new(1.0, 2.0));
         let mut q2 = vec2::meter(Vec2::new(3.0, 4.0));
         let a = world.pack(&q1);
         unsafe {
             world.unpack_into(&a, &mut q2, 0);
         }
+        assert_eq!(q1, q2);
     }
 }

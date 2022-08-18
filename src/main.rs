@@ -27,9 +27,12 @@ use bevy::log::LogPlugin;
 use bevy::log::LogSettings;
 use bevy::prelude::debug;
 use bevy::prelude::App;
+use bevy::prelude::CoreStage;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
+use bevy::prelude::StageLabel;
+use bevy::prelude::SystemStage;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
 use communication::Identified;
@@ -78,12 +81,16 @@ fn show_time_system(time: Res<crate::physics::Time>) {
     debug!("Time: {:.3} s", time.0.to_value(second));
 }
 
+#[derive(StageLabel)]
+pub struct MainStage;
+
 fn build_and_run_app(
     opts: &CommandLineOptions,
     communicator1: Communicator<ParticleExchangeData>,
     communicator2: Communicator<Identified<ParticleVisualizationExchangeData>>,
 ) {
     let mut app = App::new();
+    app.add_stage_after(CoreStage::Update, MainStage, SystemStage::parallel());
     let rank = communicator1.rank();
     app.insert_resource(rank);
     if rank == 0 {
@@ -93,7 +100,7 @@ fn build_and_run_app(
         } else {
             app.add_plugins(DefaultPlugins);
         }
-        app.add_system(show_time_system);
+        app.add_system_to_stage(MainStage, show_time_system);
     } else {
         app.add_plugins(MinimalPlugins);
     }
@@ -144,9 +151,9 @@ fn main() {
     use clap::Parser;
 
     let opts = CommandLineOptions::parse();
-    let (_universe, world) = Communicator::<ParticleExchangeData>::initialize();
-    let world2 = world.clone_for_different_type();
-    build_and_run_app(&opts, world, world2);
+    let world1 = Communicator::<ParticleExchangeData>::new();
+    let world2 = Communicator::<Identified<ParticleVisualizationExchangeData>>::new();
+    build_and_run_app(&opts, world1, world2);
 }
 
 fn get_domain_distribution() -> DomainDistribution {

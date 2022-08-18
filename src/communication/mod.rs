@@ -50,4 +50,6 @@ mod mpi_reexport {
         super::sync_communicator::SyncCommunicator<super::mpi_world::MpiWorld<Identified<T>>, T>;
 
     pub type Communicator<T> = super::mpi_world::MpiWorld<T>;
+
+    pub use super::mpi_world::MPI_UNIVERSE;
 }

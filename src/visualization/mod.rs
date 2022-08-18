@@ -26,7 +26,7 @@ impl Plugin for VisualizationPlugin {
         app.add_stage_after(
             CoreStage::Update,
             VisualizationStage,
-            SystemStage::parallel(),
+            SystemStage::single_threaded(),
         );
         if rank == 0 {
             app.add_plugin(RemoteVisualizationMainThreadPlugin)

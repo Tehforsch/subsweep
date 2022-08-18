@@ -2463,6 +2463,7 @@ dependencies = [
  "bevy",
  "clap",
  "glam",
+ "lazy_static",
  "libffi",
  "mpi",
  "once_cell",
