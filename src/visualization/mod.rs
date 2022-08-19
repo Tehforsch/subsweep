@@ -2,6 +2,8 @@ pub mod remote;
 mod shape_spawning;
 
 use bevy::prelude::*;
+use bevy_prototype_lyon::prelude::ShapePlugin;
+use lazy_static::lazy_static;
 
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
@@ -19,7 +21,9 @@ use crate::units::vec2::Length;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
-pub const CAMERA_ZOOM_METERS: f32 = 0.01;
+lazy_static! {
+    pub static ref CAMERA_ZOOM: crate::units::f32::Length = crate::units::f32::meter(0.01);
+}
 
 #[derive(StageLabel)]
 pub enum VisualizationStage {
@@ -49,7 +53,8 @@ impl Plugin for VisualizationPlugin {
             SystemStage::parallel(),
         );
         if rank == 0 {
-            app.add_startup_system(setup_camera_system)
+            app.add_plugin(ShapePlugin)
+                .add_startup_system(setup_camera_system)
                 .add_system_to_stage(
                     VisualizationStage::Synchronize,
                     receive_particles_on_main_thread_system,
@@ -133,8 +138,7 @@ fn show_quadtree_system(
 }
 
 fn position_to_translation(position: &Position) -> Vec3 {
-    let camera_zoom = meter(CAMERA_ZOOM_METERS);
-    let pos = *(position.0 / camera_zoom).value();
+    let pos = position.0.in_units(*CAMERA_ZOOM);
     Vec3::new(pos.x, pos.y, 0.0)
 }
 

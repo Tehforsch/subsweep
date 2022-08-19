@@ -19,12 +19,23 @@ impl<S> Quantity<S, { NONE }> {
     }
 }
 
-impl<S, const D: Dimension> Quantity<S, D> {
+impl<S, const D: Dimension> Quantity<S, D>
+where
+    S: Clone,
+{
     /// Unwrap the value of a quantity, regardless of whether
     /// it is dimensionless or not. Use this carefully, since the
     /// result depends on the underlying base units
-    pub fn unwrap_value(&self) -> &S {
-        &self.0
+    pub fn unwrap_value(self) -> S {
+        self.0
+    }
+
+    pub fn in_units(self, other: Quantity<f32, D>) -> S
+    where
+        S: Div<f32, Output = S>,
+        Quantity<S, { D.dimension_div(D) }>:,
+    {
+        (self / other).unwrap_value().clone()
     }
 }
 
@@ -153,7 +164,7 @@ where
     S: Div<S, Output = S> + Copy,
 {
     pub fn to_value(&self, unit: impl Fn(f32) -> Quantity<S, D>) -> S {
-        *(*self / unit(1.0)).unwrap_value()
+        (*self / unit(1.0)).unwrap_value()
     }
 }
 

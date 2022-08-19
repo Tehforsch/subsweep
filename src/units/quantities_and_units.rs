@@ -37,7 +37,7 @@ impl<const D: Dimension> Quantity<f32, D> {
 
 impl<const D: Dimension> Quantity<glam::Vec2, D> {
     pub fn new(x: Quantity<f32, D>, y: Quantity<f32, D>) -> Self {
-        Self(Vec2::new(*x.unwrap_value(), *y.unwrap_value()))
+        Self(Vec2::new(x.unwrap_value(), y.unwrap_value()))
     }
 
     pub fn zero() -> Self {

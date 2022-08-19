@@ -58,11 +58,8 @@ impl Plugin for PhysicsPlugin {
                 PhysicsStages::QuadTreeConstruction,
                 construct_quad_tree_system,
             )
-            .add_system_to_stage(
-                PhysicsStages::Gravity,
-                gravity_system.after(construct_quad_tree_system),
-            )
-            .add_system(integrate_motion_system.after(gravity_system))
+            .add_system_to_stage(PhysicsStages::Gravity, gravity_system)
+            .add_system(integrate_motion_system)
             .add_system(time_system)
             .add_system(exchange_particles_system.after(integrate_motion_system));
     }
