@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use super::parameters::Parameters;
 use super::LocalParticle;
 use super::Timestep;
 use crate::domain::quadtree::Node;
@@ -16,23 +17,31 @@ fn get_gravity_acceleration(
     pos1: Length,
     pos2: Length,
     mass2: crate::units::f32::Mass,
+    softening_length: crate::units::f32::Length,
 ) -> Acceleration {
     let distance_vector = pos1 - pos2;
-    let distance = distance_vector.length();
+    let distance = distance_vector.length() + softening_length;
     -distance_vector * GRAVITY_CONSTANT * mass2 / distance.cubed()
 }
 
-pub fn get_acceleration_on_particle(tree: &QuadTree, pos: Length, entity: Entity) -> Acceleration {
+pub fn get_acceleration_on_particle(
+    tree: &QuadTree,
+    pos: Length,
+    entity: Entity,
+    softening_length: crate::units::f32::Length,
+) -> Acceleration {
     match tree.data {
         Node::Node(ref children) => children
             .iter()
-            .map(|child| get_acceleration_on_particle(child, pos, entity))
+            .map(|child| get_acceleration_on_particle(child, pos, entity, softening_length))
             .sum(),
         Node::Leaf(ref leaf) => leaf
             .particles
             .iter()
             .filter(|particle| particle.entity != entity)
-            .map(|particle| get_gravity_acceleration(pos, particle.pos, particle.mass))
+            .map(|particle| {
+                get_gravity_acceleration(pos, particle.pos, particle.mass, softening_length)
+            })
             .sum(),
     }
 }
@@ -54,9 +63,11 @@ pub(super) fn gravity_system(
     timestep: Res<Timestep>,
     tree: Res<QuadTree>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
+    parameters: Res<Parameters>,
 ) {
     for (entity, pos, mut vel) in particles.iter_mut() {
-        let acceleration = get_acceleration_on_particle(&tree, pos.0, entity);
+        let acceleration =
+            get_acceleration_on_particle(&tree, pos.0, entity, parameters.softening_length);
         vel.0 += acceleration * timestep.0;
     }
 }
