@@ -4,6 +4,7 @@ use super::LocalParticle;
 use super::Timestep;
 use crate::domain::quadtree::Node;
 use crate::domain::quadtree::QuadTree;
+use crate::domain::quadtree::QuadTreeConfig;
 use crate::mass::Mass;
 use crate::position::Position;
 use crate::units::vec2::Acceleration;
@@ -44,7 +45,8 @@ pub(super) fn construct_quad_tree_system(
         .iter()
         .map(|(entity, pos, mass)| (pos.0, mass.0, entity))
         .collect();
-    let quadtree = QuadTree::new(particles);
+    let config = QuadTreeConfig { max_depth: 3 };
+    let quadtree = QuadTree::new(&config, particles);
     commands.insert_resource(quadtree);
 }
 
