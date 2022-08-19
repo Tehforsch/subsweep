@@ -13,6 +13,7 @@ mod config;
 mod domain;
 mod initial_conditions;
 mod mass;
+mod parameters;
 mod particle;
 mod physics;
 mod position;
