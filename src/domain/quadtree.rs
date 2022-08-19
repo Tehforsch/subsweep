@@ -13,6 +13,12 @@ pub struct QuadTreeConfig {
     pub max_depth: usize,
 }
 
+impl Default for QuadTreeConfig {
+    fn default() -> Self {
+        Self { max_depth: 20 }
+    }
+}
+
 #[derive(Debug)]
 pub struct ParticleData {
     pub entity: Entity,

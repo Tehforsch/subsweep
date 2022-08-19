@@ -2,6 +2,7 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::Path;
 
+use bevy::prelude::debug;
 use bevy::prelude::App;
 use bevy::prelude::Plugin;
 
@@ -30,7 +31,9 @@ impl<T> ParameterPlugin<T> {
     }
 }
 
-impl<T: Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Plugin for ParameterPlugin<T> {
+impl<T: Default + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Plugin
+    for ParameterPlugin<T>
+{
     fn build(&self, app: &mut App) {
         let name = self.name.clone();
         let parameter_file_contents = &app.world.get_resource::<ParameterFileContents>().expect("No parameter file contents resource available - failed to call add_parameter_file_contents?").0;
@@ -40,17 +43,26 @@ impl<T: Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Plugin for Par
     }
 }
 
-impl<T: Sync + Send + 'static + for<'de> serde::Deserialize<'de>> ParameterPlugin<T> {
+impl<T: Default + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> ParameterPlugin<T> {
     fn get_parameter_struct_from_parameter_file_contents(
         name: &str,
         parameter_file_contents: &str,
     ) -> T {
         let all_parameters: serde_yaml::Value =
             serde_yaml::from_str(parameter_file_contents).unwrap();
-        let plugin_parameters = all_parameters
+        all_parameters
             .get(name)
-            .expect(&format!("Parameter section missing for '{}'", name));
-        serde_yaml::from_value(plugin_parameters.clone()).expect("Failed to read parameter file")
+            .map(|plugin_parameters| {
+                serde_yaml::from_value(plugin_parameters.clone())
+                    .expect("Failed to read parameter file")
+            })
+            .unwrap_or_else(|| {
+                debug!(
+                    "Parameter section missing for '{}', assuming defaults",
+                    name
+                );
+                T::default()
+            })
     }
 }
 

@@ -1,4 +1,5 @@
 mod drawing;
+mod parameters;
 pub mod remote;
 
 use bevy::prelude::*;
@@ -10,10 +11,12 @@ use lazy_static::lazy_static;
 use self::drawing::draw_translation_system;
 use self::drawing::DrawBundlePlugin;
 use self::drawing::IntoBundle;
+use self::parameters::Parameters;
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
 use crate::communication::Rank;
 use crate::domain::quadtree::QuadTree;
+use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsStages;
 use crate::physics::RemoteParticle;
@@ -61,7 +64,8 @@ impl Plugin for VisualizationPlugin {
             SystemStage::parallel(),
         );
         if rank == 0 {
-            app.add_plugin(ShapePlugin)
+            app.add_plugin(ParameterPlugin::<Parameters>::new("visualization"))
+                .add_plugin(ShapePlugin)
                 .add_plugin(DrawBundlePlugin::<DrawRect>::default())
                 .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
                 .add_plugin(ShapePlugin)
@@ -71,12 +75,19 @@ impl Plugin for VisualizationPlugin {
                     receive_particles_on_main_thread_system,
                 )
                 .add_system_to_stage(VisualizationStage::AddVisualization, spawn_sprites_system)
-                .add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system)
                 .add_system_to_stage(
                     VisualizationStage::Draw,
                     position_to_translation_system::<DrawCircle>
                         .before(draw_translation_system::<DrawCircle>),
                 );
+            if app
+                .world
+                .get_resource::<Parameters>()
+                .unwrap()
+                .show_quadtree
+            {
+                app.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
+            }
         } else {
             app.add_system_to_stage(
                 VisualizationStage::Synchronize,
