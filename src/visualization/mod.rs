@@ -1,15 +1,17 @@
+mod drawing;
 pub mod remote;
-mod shape_spawning;
 
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::ShapePlugin;
+pub use drawing::DrawCircle;
+pub use drawing::DrawRect;
 use lazy_static::lazy_static;
 
+use self::drawing::draw_translation_system;
+use self::drawing::DrawBundlePlugin;
+use self::drawing::IntoBundle;
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
-use self::shape_spawning::spawn_visualization_item_system;
-use self::shape_spawning::DrawCircle;
-use self::shape_spawning::DrawRect;
 use crate::communication::Rank;
 use crate::domain::quadtree::QuadTree;
 use crate::physics::LocalParticle;
@@ -29,6 +31,7 @@ lazy_static! {
 pub enum VisualizationStage {
     Synchronize,
     AddVisualization,
+    AddDrawComponents,
     Draw,
 }
 
@@ -49,30 +52,31 @@ impl Plugin for VisualizationPlugin {
         );
         app.add_stage_after(
             VisualizationStage::AddVisualization,
+            VisualizationStage::AddDrawComponents,
+            SystemStage::parallel(),
+        );
+        app.add_stage_after(
+            VisualizationStage::AddDrawComponents,
             VisualizationStage::Draw,
             SystemStage::parallel(),
         );
         if rank == 0 {
             app.add_plugin(ShapePlugin)
+                .add_plugin(DrawBundlePlugin::<DrawRect>::default())
+                .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
+                .add_plugin(ShapePlugin)
                 .add_startup_system(setup_camera_system)
                 .add_system_to_stage(
                     VisualizationStage::Synchronize,
                     receive_particles_on_main_thread_system,
                 )
                 .add_system_to_stage(VisualizationStage::AddVisualization, spawn_sprites_system)
+                .add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system)
                 .add_system_to_stage(
                     VisualizationStage::Draw,
-                    spawn_visualization_item_system::<DrawCircle>,
-                )
-                .add_system_to_stage(
-                    VisualizationStage::Draw,
-                    spawn_visualization_item_system::<DrawRect>,
-                )
-                .add_system_to_stage(
-                    VisualizationStage::AddVisualization,
-                    position_to_translation_system,
-                )
-                .add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
+                    position_to_translation_system::<DrawCircle>
+                        .before(draw_translation_system::<DrawCircle>),
+                );
         } else {
             app.add_system_to_stage(
                 VisualizationStage::Synchronize,
@@ -136,18 +140,14 @@ fn show_quadtree_system(
         });
     });
 }
-
-fn position_to_translation(position: &Position) -> Vec3 {
-    let pos = position.0.in_units(*CAMERA_ZOOM);
-    Vec3::new(pos.x, pos.y, 0.0)
-}
-
-pub fn position_to_translation_system(mut query: Query<(&mut Transform, &Position)>) {
-    for (mut transform, position) in query.iter_mut() {
-        transform.translation = position_to_translation(position);
-    }
-}
-
 pub fn setup_camera_system(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
+}
+
+fn position_to_translation_system<T: Component + IntoBundle>(
+    mut query: Query<(&mut T, &Position)>,
+) {
+    for (mut item, position) in query.iter_mut() {
+        item.set_translation(&position.0);
+    }
 }

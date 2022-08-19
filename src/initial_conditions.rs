@@ -10,6 +10,8 @@ use crate::units::f32::kilogram;
 use crate::units::f32::second;
 use crate::units::vec2::meter;
 use crate::velocity::Velocity;
+use crate::visualization::DrawCircle;
+use crate::visualization::DrawRect;
 
 pub struct InitialConditionsPlugin;
 
@@ -23,16 +25,16 @@ fn spawn_particles_system(mut commands: Commands, rank: Res<Rank>) {
     if *rank != 0 {
         return;
     }
-    let upper_left = meter(Vec2::new(0.0, 0.0));
+    let upper_left = meter(Vec2::new(-0.1, -0.1));
     let lower_right = meter(Vec2::new(0.1, 0.1));
-    for i in 0..10 {
-        let pos = upper_left + (lower_right - upper_left) * i as f32;
+    for i in -100..100 {
+        let pos = upper_left + (lower_right - upper_left) * i as f32 / 50.0;
         let vel = pos / second(1.0);
         let vel = crate::units::vec2::Velocity::new(vel.y(), -vel.x());
         commands.spawn().insert_bundle(LocalParticleBundle::new(
             Position(pos),
             Velocity(vel),
-            Mass(kilogram(100000000.0)),
+            Mass(kilogram(1000000.0)),
         ));
     }
 }

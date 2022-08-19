@@ -17,7 +17,7 @@ mod tests {
 
     fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
         const EPSILON: f32 = 1e-20;
-        assert!(*(x - y).abs().unwrap_value() < EPSILON)
+        assert!((x - y).abs().unwrap_value() < EPSILON)
     }
 
     #[test]
