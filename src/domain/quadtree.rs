@@ -4,15 +4,23 @@ use std::ops::IndexMut;
 use bevy::prelude::Entity;
 
 use super::Extents;
+use crate::units::f32::Mass;
 use crate::units::vec2;
 
+#[derive(Debug)]
+pub struct ParticleData {
+    pub entity: Entity,
+    pub pos: vec2::Length,
+    pub mass: Mass,
+}
+
 #[derive(Debug, Default)]
-struct LeafData {
-    particles: Vec<(vec2::Length, Entity)>,
+pub struct LeafData {
+    pub particles: Vec<ParticleData>,
 }
 
 #[derive(Debug)]
-enum Node {
+pub enum Node {
     Node(Box<[QuadTree; 4]>),
     Leaf(LeafData),
 }
@@ -30,33 +38,37 @@ impl Node {
 
 #[derive(Debug)]
 pub struct QuadTree {
-    data: Node,
-    extents: Extents,
+    pub data: Node,
+    pub extents: Extents,
 }
 
 impl QuadTree {
-    pub fn new<'a>(particles: Vec<(vec2::Length, Entity)>) -> Self {
-        let extents = Extents::from_positions(particles.iter().map(|(pos, _)| pos))
+    pub fn new<'a>(particles: Vec<(vec2::Length, Mass, Entity)>) -> Self {
+        let extents = Extents::from_positions(particles.iter().map(|particle| &particle.0))
             .expect("Not enough particles to construct quadtree");
         let mut tree = Self::make_empty_leaf_from_extents(extents);
-        for (pos, entity) in particles.iter() {
-            tree.insert(pos.clone(), entity.clone());
+        for (pos, mass, entity) in particles.iter() {
+            tree.insert(ParticleData {
+                pos: pos.clone(),
+                entity: entity.clone(),
+                mass: mass.clone(),
+            });
         }
         tree
     }
 
-    fn insert(&mut self, pos: vec2::Length, entity: Entity) {
+    fn insert(&mut self, particle: ParticleData) {
         if let Node::Leaf(ref mut leaf) = self.data {
             if leaf.particles.is_empty() {
-                leaf.particles.push((pos, entity));
+                leaf.particles.push(particle);
                 return;
             } else {
                 self.subdivide();
             }
         }
         if let Node::Node(ref mut children) = self.data {
-            let quadrant = &mut children[self.extents.get_quadrant_index(&pos)];
-            quadrant.insert(pos, entity);
+            let quadrant = &mut children[self.extents.get_quadrant_index(&particle.pos)];
+            quadrant.insert(particle);
         }
     }
 
@@ -65,8 +77,8 @@ impl QuadTree {
         let quadrants = self.extents.get_quadrants();
         let children = Box::new(quadrants.map(Self::make_empty_leaf_from_extents));
         let particles = self.data.make_node(children);
-        for (pos, entity) in particles.particles.into_iter() {
-            self.insert(pos, entity);
+        for particle in particles.particles.into_iter() {
+            self.insert(particle);
         }
     }
 
@@ -118,19 +130,24 @@ mod tests {
     use glam::Vec2;
 
     use super::*;
-    use crate::domain::extents::Extents;
-    use crate::units::f32::meter;
+    use crate::units::f32::kilogram;
 
     #[test]
-    fn construct_tree() {
+    fn no_infinite_recursion_in_tree_construction_with_close_particles() {
+        assert!(false);
         let positions = [
-            (vec2::meter(Vec2::new(1.0, 1.0)), Entity::from_raw(0)),
-            (vec2::meter(Vec2::new(-1.0, 1.0)), Entity::from_raw(1)),
-            (vec2::meter(Vec2::new(1.0, -1.0)), Entity::from_raw(2)),
-            (vec2::meter(Vec2::new(-1.0, -1.0)), Entity::from_raw(3)),
+            (
+                vec2::meter(Vec2::new(1.0, 1.0)),
+                kilogram(1.0),
+                Entity::from_raw(0),
+            ),
+            (
+                vec2::meter(Vec2::new(1.0, 1.0)),
+                kilogram(1.0),
+                Entity::from_raw(0),
+            ),
         ];
         let tree = QuadTree::new(positions.into_iter().collect());
-        dbg!(tree);
-        assert!(false);
+        dbg!(&tree);
     }
 }

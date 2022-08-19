@@ -9,12 +9,12 @@ use self::shape_spawning::spawn_visualization_item_system;
 use self::shape_spawning::DrawCircle;
 use self::shape_spawning::DrawRect;
 use crate::communication::Rank;
-use crate::domain::QuadTree;
+use crate::domain::quadtree::QuadTree;
 use crate::physics::LocalParticle;
+use crate::physics::PhysicsStages;
 use crate::physics::RemoteParticle;
 use crate::position::Position;
 use crate::units::f32::meter;
-use crate::units::vec2;
 use crate::units::vec2::Length;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
@@ -24,7 +24,8 @@ pub const CAMERA_ZOOM_METERS: f32 = 0.01;
 #[derive(StageLabel)]
 pub enum VisualizationStage {
     Synchronize,
-    Visualize,
+    AddVisualization,
+    Draw,
 }
 
 pub struct VisualizationPlugin;
@@ -33,13 +34,18 @@ impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
         let rank = *app.world.get_resource::<Rank>().unwrap();
         app.add_stage_after(
-            CoreStage::Update,
+            PhysicsStages::Gravity,
             VisualizationStage::Synchronize,
             SystemStage::parallel(),
         );
         app.add_stage_after(
             VisualizationStage::Synchronize,
-            VisualizationStage::Visualize,
+            VisualizationStage::AddVisualization,
+            SystemStage::parallel(),
+        );
+        app.add_stage_after(
+            VisualizationStage::AddVisualization,
+            VisualizationStage::Draw,
             SystemStage::parallel(),
         );
         if rank == 0 {
@@ -48,20 +54,20 @@ impl Plugin for VisualizationPlugin {
                     VisualizationStage::Synchronize,
                     receive_particles_on_main_thread_system,
                 )
-                .add_system_to_stage(VisualizationStage::Visualize, spawn_sprites_system)
+                .add_system_to_stage(VisualizationStage::AddVisualization, spawn_sprites_system)
                 .add_system_to_stage(
-                    VisualizationStage::Visualize,
+                    VisualizationStage::Draw,
                     spawn_visualization_item_system::<DrawCircle>,
                 )
                 .add_system_to_stage(
-                    VisualizationStage::Visualize,
+                    VisualizationStage::Draw,
                     spawn_visualization_item_system::<DrawRect>,
                 )
                 .add_system_to_stage(
-                    VisualizationStage::Visualize,
+                    VisualizationStage::AddVisualization,
                     position_to_translation_system,
                 )
-                .add_system_to_stage(VisualizationStage::Visualize, show_quadtree_system);
+                .add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
         } else {
             app.add_system_to_stage(
                 VisualizationStage::Synchronize,
@@ -109,24 +115,19 @@ struct Outline;
 
 fn show_quadtree_system(
     mut commands: Commands,
-    particles: Query<(Entity, &Position)>,
-    outlines: Query<&Outline>,
+    quadtree: Res<QuadTree>,
+    outlines: Query<Entity, With<Outline>>,
 ) {
-    if outlines.iter().next().is_some() {
-        return;
+    for entity in outlines.iter() {
+        commands.entity(entity).despawn();
     }
-    let particles: Vec<(vec2::Length, Entity)> = particles
-        .iter()
-        .map(|(entity, pos)| (pos.0, entity))
-        .collect();
-    let quadtree = QuadTree::new(particles);
     quadtree.depth_first_map(&mut |extents| {
         let lower_left = Length::new(extents.x_min, extents.y_min);
         let upper_right = Length::new(extents.x_max, extents.y_max);
         commands.spawn().insert(Outline).insert(DrawRect {
             lower_left,
             upper_right,
-            color: Color::RED,
+            color: Color::GREEN,
         });
     });
 }

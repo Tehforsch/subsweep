@@ -1,10 +1,9 @@
 mod extents;
-mod quadtree;
+pub mod quadtree;
 
 use std::collections::HashMap;
 
 use self::extents::Extents;
-pub use self::quadtree::QuadTree;
 use crate::communication::Rank;
 use crate::position::Position;
 use crate::units::f32::meter;
@@ -27,12 +26,15 @@ impl DomainDistribution {
 
 pub fn get_domain_distribution() -> DomainDistribution {
     let total_extents = Extents::new(meter(-100.0), meter(100.0), meter(-100.0), meter(100.0));
-    let quadrants = total_extents.get_quadrants();
-    DomainDistribution {
-        domains: quadrants
-            .into_iter()
-            .enumerate()
-            .map(|(i, quadrant)| (i as Rank, quadrant))
-            .collect(),
-    }
+    return DomainDistribution {
+        domains: [(0, total_extents)].into_iter().collect(),
+    };
+    // let quadrants = total_extents.get_quadrants();
+    // DomainDistribution {
+    //     domains: quadrants
+    //         .into_iter()
+    //         .enumerate()
+    //         .map(|(i, quadrant)| (i as Rank, quadrant))
+    //         .collect(),
+    // }
 }

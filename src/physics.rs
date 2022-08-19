@@ -1,6 +1,10 @@
+mod gravity;
+
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
+use self::gravity::construct_quad_tree_system;
+use self::gravity::gravity_system;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
 use crate::domain::get_domain_distribution;
@@ -8,10 +12,7 @@ use crate::domain::DomainDistribution;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
-use crate::units::f32::meter;
-use crate::units::f32::newton;
 use crate::units::f32::second;
-use crate::units::vec2;
 use crate::velocity::Velocity;
 
 #[derive(Component)]
@@ -27,8 +28,25 @@ pub struct Time(pub crate::units::f32::Time);
 
 pub struct PhysicsPlugin;
 
+// Cannot wait for stageless
+#[derive(StageLabel)]
+pub enum PhysicsStages {
+    QuadTreeConstruction,
+    Gravity,
+}
+
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
+        app.add_stage_after(
+            CoreStage::Update,
+            PhysicsStages::QuadTreeConstruction,
+            SystemStage::parallel(),
+        );
+        app.add_stage_after(
+            PhysicsStages::QuadTreeConstruction,
+            PhysicsStages::Gravity,
+            SystemStage::parallel(),
+        );
         let rank = app.world.get_resource::<Rank>().unwrap();
         let domain_distribution = get_domain_distribution();
         let domain = domain_distribution.domains[&rank].clone();
@@ -36,9 +54,16 @@ impl Plugin for PhysicsPlugin {
             .insert_resource(Time(second(0.00)))
             .insert_resource(domain_distribution)
             .insert_resource(domain)
-            .add_system(integrate_motion_system.after(spring_system))
+            .add_system_to_stage(
+                PhysicsStages::QuadTreeConstruction,
+                construct_quad_tree_system,
+            )
+            .add_system_to_stage(
+                PhysicsStages::Gravity,
+                gravity_system.after(construct_quad_tree_system),
+            )
+            .add_system(integrate_motion_system.after(gravity_system))
             .add_system(time_system)
-            .add_system(spring_system)
             .add_system(exchange_particles_system.after(integrate_motion_system));
     }
 }
@@ -89,14 +114,4 @@ fn exchange_particles_system(
 
 fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
     time.0 += timestep.0;
-}
-
-fn spring_system(
-    timestep: Res<Timestep>,
-    mut particles: Query<(&mut Velocity, &Position, &Mass), With<LocalParticle>>,
-) {
-    let spring_constant = newton(20.0) / meter(1.0);
-    for (mut vel, pos, mass) in particles.iter_mut() {
-        vel.0 -= (pos.0 - vec2::meter(Vec2::new(0.5, 0.5))) * timestep.0 * spring_constant / mass.0;
-    }
 }

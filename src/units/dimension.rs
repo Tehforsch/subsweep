@@ -1,8 +1,8 @@
 #[derive(PartialEq, Eq, Debug)]
 pub struct Dimension {
-    pub length: i8,
-    pub time: i8,
-    pub mass: i8,
+    pub length: i32,
+    pub time: i32,
+    pub mass: i32,
 }
 
 impl Dimension {
@@ -19,6 +19,14 @@ impl Dimension {
             length: self.length - rhs.length,
             mass: self.mass - rhs.mass,
             time: self.time - rhs.time,
+        }
+    }
+
+    pub const fn dimension_powi(self, rhs: i32) -> Self {
+        Self {
+            length: self.length * rhs,
+            mass: self.mass * rhs,
+            time: self.time * rhs,
         }
     }
 }

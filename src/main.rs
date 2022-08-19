@@ -84,7 +84,11 @@ fn build_and_run_app(
 ) {
     let mut app = App::new();
     let rank = communicator1.rank();
-    app.insert_resource(rank);
+    app.insert_resource(rank)
+        .add_plugin(PhysicsPlugin)
+        .add_plugin(InitialConditionsPlugin)
+        .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
+        .insert_non_send_resource(SyncCommunicator::new(communicator2));
     if rank == 0 {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
@@ -102,10 +106,6 @@ fn build_and_run_app(
     } else {
         app.add_plugin(VisualizationPlugin);
     }
-    app.add_plugin(PhysicsPlugin)
-        .add_plugin(InitialConditionsPlugin)
-        .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
-        .insert_non_send_resource(SyncCommunicator::new(communicator2));
     app.run();
 }
 

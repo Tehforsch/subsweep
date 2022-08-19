@@ -101,6 +101,28 @@ where
     }
 }
 
+impl<S, const D: Dimension> Div<f32> for Quantity<S, D>
+where
+    S: Div<f32, Output = S>,
+{
+    type Output = Quantity<S, D>;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Quantity(self.0 / rhs)
+    }
+}
+
+impl<S, const D: Dimension> Div<Quantity<S, D>> for f32
+where
+    f32: Div<S, Output = S>,
+{
+    type Output = Quantity<S, D>;
+
+    fn div(self, rhs: Quantity<S, D>) -> Self::Output {
+        Quantity(self / rhs.0)
+    }
+}
+
 impl<SL, SR, const DL: Dimension, const DR: Dimension> Mul<Quantity<SR, DR>> for Quantity<SL, DL>
 where
     Quantity<SL, { DL.dimension_mul(DR) }>:,

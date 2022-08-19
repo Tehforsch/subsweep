@@ -6,7 +6,7 @@ use mpi::Rank;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
-use crate::units::f32::kilograms;
+use crate::units::f32::kilogram;
 use crate::units::f32::second;
 use crate::units::vec2::meter;
 use crate::velocity::Velocity;
@@ -24,15 +24,15 @@ fn spawn_particles_system(mut commands: Commands, rank: Res<Rank>) {
         return;
     }
     let upper_left = meter(Vec2::new(0.0, 0.0));
-    let lower_right = meter(Vec2::new(0.5, 0.5));
-    for i in 0..200 {
+    let lower_right = meter(Vec2::new(0.1, 0.1));
+    for i in 0..10 {
         let pos = upper_left + (lower_right - upper_left) * i as f32;
         let vel = pos / second(1.0);
         let vel = crate::units::vec2::Velocity::new(vel.y(), -vel.x());
         commands.spawn().insert_bundle(LocalParticleBundle::new(
             Position(pos),
             Velocity(vel),
-            Mass(kilograms(1.0)),
+            Mass(kilogram(100000000.0)),
         ));
     }
 }
