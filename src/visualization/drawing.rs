@@ -36,7 +36,7 @@ impl IntoBundle for DrawCircle {
     fn into_bundle(&self) -> Self::Output {
         let shape = shapes::Circle {
             radius: self.radius.in_units(*CAMERA_ZOOM),
-            center: self.position.in_units(*CAMERA_ZOOM),
+            center: Vec2::new(0.0, 0.0),
         };
 
         GeometryBuilder::build_as(
