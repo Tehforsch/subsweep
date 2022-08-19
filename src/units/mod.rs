@@ -1,4 +1,5 @@
 mod constants;
+mod deserialize;
 mod dimension;
 mod mpi;
 mod quantities_and_units;
@@ -15,9 +16,14 @@ mod tests {
     use super::f32::meter;
     use super::quantity::Quantity;
 
-    fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
+    pub(super) fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
         const EPSILON: f32 = 1e-20;
-        assert!((x - y).abs().unwrap_value() < EPSILON)
+        assert!(
+            (x - y).abs().unwrap_value() < EPSILON,
+            "{} {}",
+            x.unwrap_value(),
+            y.unwrap_value()
+        )
     }
 
     #[test]

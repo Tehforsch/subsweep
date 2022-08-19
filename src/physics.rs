@@ -60,8 +60,8 @@ impl Plugin for PhysicsPlugin {
             )
             .add_system_to_stage(PhysicsStages::Gravity, gravity_system)
             .add_system(integrate_motion_system)
-            .add_system(time_system)
-            .add_system(exchange_particles_system.after(integrate_motion_system));
+            .add_system(time_system);
+        // .add_system(exchange_particles_system.after(integrate_motion_system));
     }
 }
 
