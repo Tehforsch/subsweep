@@ -39,13 +39,13 @@ pub fn get_acceleration_on_particle(tree: &QuadTree, pos: Length, entity: Entity
 
 pub(super) fn construct_quad_tree_system(
     mut commands: Commands,
+    config: Res<QuadTreeConfig>,
     particles: Query<(Entity, &Position, &Mass)>,
 ) {
     let particles: Vec<_> = particles
         .iter()
         .map(|(entity, pos, mass)| (pos.0, mass.0, entity))
         .collect();
-    let config = QuadTreeConfig { max_depth: 3 };
     let quadtree = QuadTree::new(&config, particles);
     commands.insert_resource(quadtree);
 }

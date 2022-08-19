@@ -2,10 +2,16 @@ use std::ops::Index;
 use std::ops::IndexMut;
 
 use bevy::prelude::Entity;
+use serde::Deserialize;
 
 use super::Extents;
 use crate::units::f32::Mass;
 use crate::units::vec2;
+
+#[derive(Deserialize)]
+pub struct QuadTreeConfig {
+    pub max_depth: usize,
+}
 
 #[derive(Debug)]
 pub struct ParticleData {
@@ -40,10 +46,6 @@ impl Node {
 pub struct QuadTree {
     pub data: Node,
     pub extents: Extents,
-}
-
-pub struct QuadTreeConfig {
-    pub max_depth: usize,
 }
 
 impl QuadTree {

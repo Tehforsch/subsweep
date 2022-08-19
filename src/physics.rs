@@ -1,14 +1,18 @@
 mod gravity;
+mod parameters;
 
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
 use self::gravity::construct_quad_tree_system;
 use self::gravity::gravity_system;
+use self::parameters::Parameters;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
+use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::DomainDistribution;
 use crate::mass::Mass;
+use crate::parameters::ParameterPlugin;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
 use crate::units::f32::second;
@@ -46,7 +50,9 @@ impl Plugin for PhysicsPlugin {
             PhysicsStages::Gravity,
             SystemStage::parallel(),
         );
-        app.insert_resource(Timestep(second(0.01)))
+        app.add_plugin(ParameterPlugin::<Parameters>::new("physics"))
+            .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("tree"))
+            .insert_resource(Timestep(second(0.01)))
             .insert_resource(Time(second(0.00)))
             .add_system_to_stage(
                 PhysicsStages::QuadTreeConstruction,
