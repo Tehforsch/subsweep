@@ -1,6 +1,5 @@
 use std::fmt;
 
-use serde::de::DeserializeOwned;
 use serde::de::Visitor;
 use serde::de::{self};
 use serde::Deserialize;
@@ -44,24 +43,10 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
                 &numerical_value_str
             ))
         })?;
-        // Dimensionless quantities
-        // if D == NONE {
-        //     if unit_str.trim().is_empty() {
-        //         Ok(Quantity::<f32, D>(numerical_value))
-        //     }
-        //     else {
-        //         Err(E::custom(format!("unable to parse dimensionless quantity from unit string: {}", &unit_str)))
-        //     }
-        // }
-        // else {
         let mut total_dimension = NONE;
         let mut total_factor = 1.0;
         for unit in split {
-            let (dimension, _, factor) = UNIT_NAMES
-                .iter()
-                .filter(|(dimension, unit_name, factor)| &unit == unit_name)
-                .next()
-                .ok_or_else(|| E::custom(format!("unknown unit: {}", &unit)))?;
+            let (dimension, factor) = read_unit_str(unit)?;
             total_dimension = total_dimension.dimension_mul(dimension.clone());
             total_factor *= factor;
         }
@@ -73,20 +58,47 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
                 D, total_dimension
             )))
         }
-        // }
     }
+}
+
+fn read_unit_str<E>(unit_str: &str) -> Result<(Dimension, f32), E>
+where
+    E: de::Error,
+{
+    let (unit, exponent) = if unit_str.contains("^") {
+        let split: Vec<_> = unit_str.split("^").collect();
+        if split.len() != 2 {
+            return Err(E::custom(format!("invalid unit string: {}", unit_str)));
+        }
+        (
+            split[0],
+            split[1]
+                .parse::<i32>()
+                .map_err(|_| E::custom(format!("unable to parse unit exponent: {}", split[1])))?,
+        )
+    } else {
+        (unit_str, 1)
+    };
+    let (dimension, _, factor) = UNIT_NAMES
+        .iter()
+        .filter(|(_, known_unit_name, _)| &unit == known_unit_name)
+        .next()
+        .ok_or_else(|| E::custom(format!("unknown unit: {}", &unit)))?;
+    Ok((dimension.clone().dimension_powi(exponent), *factor))
 }
 
 #[cfg(test)]
 mod tests {
     use crate::units::f32::dimensionless;
     use crate::units::f32::meter;
+    use crate::units::f32::newton;
     use crate::units::f32::Dimensionless;
+    use crate::units::f32::Force;
     use crate::units::f32::Length;
     use crate::units::tests::assert_is_close;
 
     #[test]
-    fn deserialize_quantities() {
+    fn deserialize_basic_units() {
         let q: Length = serde_yaml::from_str(&"1.0 m").unwrap();
         assert_is_close(q, meter(1.0));
         let q: Length = serde_yaml::from_str(&"2.0 m").unwrap();
@@ -113,6 +125,16 @@ mod tests {
     #[test]
     #[should_panic]
     fn do_not_allow_unit_mismatch() {
-        let q: Dimensionless = serde_yaml::from_str(&"5.0 km m").unwrap();
+        let _q: Dimensionless = serde_yaml::from_str(&"5.0 km m").unwrap();
+    }
+
+    #[test]
+    fn deserialize_unit_exponents() {
+        let q: Dimensionless = serde_yaml::from_str(&"5.0 km m^-1").unwrap();
+        assert_is_close(q, dimensionless(5000.0));
+        let q: Force = serde_yaml::from_str(&"5.0 kg m^1 s^-2").unwrap();
+        assert_is_close(q, newton(5.0));
+        let q: Force = serde_yaml::from_str(&"5.0e0 kg km^1 s^-2").unwrap();
+        assert_is_close(q, newton(5000.0));
     }
 }
