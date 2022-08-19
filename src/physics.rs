@@ -7,7 +7,6 @@ use self::gravity::construct_quad_tree_system;
 use self::gravity::gravity_system;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
-use crate::domain::get_domain_distribution;
 use crate::domain::DomainDistribution;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
@@ -47,13 +46,8 @@ impl Plugin for PhysicsPlugin {
             PhysicsStages::Gravity,
             SystemStage::parallel(),
         );
-        let rank = app.world.get_resource::<Rank>().unwrap();
-        let domain_distribution = get_domain_distribution();
-        let domain = domain_distribution.domains[&rank].clone();
         app.insert_resource(Timestep(second(0.01)))
             .insert_resource(Time(second(0.00)))
-            .insert_resource(domain_distribution)
-            .insert_resource(domain)
             .add_system_to_stage(
                 PhysicsStages::QuadTreeConstruction,
                 construct_quad_tree_system,
@@ -86,7 +80,7 @@ fn exchange_particles_system(
     particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
 ) {
     for (entity, pos, vel, mass) in particles.iter() {
-        let target_rank = domain.target_rank(pos);
+        let target_rank = domain.target_rank(&pos.0);
         if target_rank != *rank {
             commands.entity(entity).despawn();
             communicator.send(

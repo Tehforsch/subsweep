@@ -147,4 +147,10 @@ mod tests {
         ];
         assert!(Extents::from_positions(positions.iter()).is_none());
     }
+
+    #[test]
+    #[should_panic]
+    fn invalid_extents() {
+        Extents::new(meter(1.0), meter(-1.0), meter(0.0), meter(1.0));
+    }
 }

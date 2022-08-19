@@ -29,7 +29,7 @@ where
 }
 
 impl<T> DataByRank<T> {
-    #[cfg(feature = "local")]
+    #[cfg(any(feature = "local", test))]
     pub fn empty() -> Self {
         Self(HashMap::new())
     }
@@ -88,6 +88,10 @@ impl<T> DataByRank<T> {
 
     pub fn insert(&mut self, rank: Rank, data: T) {
         self.0.insert(rank, data);
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Rank, &T)> + '_ {
+        self.0.iter()
     }
 }
 
