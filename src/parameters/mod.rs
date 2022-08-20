@@ -6,6 +6,26 @@ use bevy::prelude::debug;
 use bevy::prelude::App;
 use bevy::prelude::Plugin;
 
+pub struct ReadParametersError(String);
+
+pub trait Parameters
+where
+    Self: Sized,
+{
+    fn from_empty() -> Result<Self, ReadParametersError>;
+}
+
+impl<T> Parameters for T
+where
+    T: Default,
+{
+    fn from_empty() -> Result<Self, ReadParametersError> {
+        Ok(<T as Default>::default())
+    }
+}
+
+struct ParameterFileContents(String);
+
 pub fn add_parameter_file_contents(app: &mut App, parameter_file_name: &Path) {
     let contents = fs::read_to_string(&parameter_file_name).expect(&format!(
         "Failed to read parameter file at {:?}",
@@ -14,8 +34,6 @@ pub fn add_parameter_file_contents(app: &mut App, parameter_file_name: &Path) {
     app.world
         .insert_resource(ParameterFileContents(contents.clone()));
 }
-
-struct ParameterFileContents(String);
 
 pub struct ParameterPlugin<T> {
     _marker: PhantomData<T>,
@@ -31,7 +49,7 @@ impl<T> ParameterPlugin<T> {
     }
 }
 
-impl<T: Default + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Plugin
+impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Plugin
     for ParameterPlugin<T>
 {
     fn build(&self, app: &mut App) {
@@ -43,7 +61,7 @@ impl<T: Default + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Plug
     }
 }
 
-impl<T: Default + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> ParameterPlugin<T> {
+impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> ParameterPlugin<T> {
     fn get_parameter_struct_from_parameter_file_contents(
         name: &str,
         parameter_file_contents: &str,
@@ -56,12 +74,17 @@ impl<T: Default + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Para
                 serde_yaml::from_value(plugin_parameters.clone())
                     .expect("Failed to read parameter file")
             })
-            .unwrap_or_else(|| {
-                debug!(
-                    "Parameter section missing for '{}', assuming defaults",
-                    name
-                );
-                T::default()
+            .unwrap_or_else(|| match T::from_empty() {
+                Ok(params) => {
+                    debug!(
+                        "Parameter section missing for '{}', assuming defaults",
+                        name
+                    );
+                    params
+                }
+                Err(msg) => {
+                    panic!("Failed to read parameters: {}", &msg.0)
+                }
             })
     }
 }
@@ -73,15 +96,17 @@ mod tests {
 
     use crate::parameters::ParameterFileContents;
     use crate::parameters::ParameterPlugin;
+    use crate::parameters::Parameters;
+    use crate::parameters::ReadParametersError;
 
     #[test]
     fn parameter_plugin() {
-        #[derive(Deserialize)]
+        #[derive(Deserialize, Default)]
         struct Parameters1 {
             i: i32,
         }
 
-        #[derive(Deserialize)]
+        #[derive(Deserialize, Default)]
         struct Parameters2 {
             s: String,
             #[serde(default)]
@@ -106,5 +131,23 @@ parameters2:
         assert_eq!(params1.i, 1);
         assert_eq!(params2.s, "hi");
         assert_eq!(params2.d, "");
+    }
+
+    #[test]
+    #[should_panic]
+    fn do_not_accept_missing_required_parameter_section() {
+        #[derive(Deserialize)]
+        struct Parameters1 {
+            _i: i32,
+        }
+
+        impl Parameters for Parameters1 {
+            fn from_empty() -> Result<Self, crate::parameters::ReadParametersError> {
+                Err(ReadParametersError("Missing required param 'i'".into()))
+            }
+        }
+        let mut app = App::new();
+        app.insert_resource(ParameterFileContents("".into()));
+        app.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"));
     }
 }
