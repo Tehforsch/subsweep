@@ -7,7 +7,7 @@
 // perfectly readable.
 #![allow(clippy::type_complexity)]
 
-mod args;
+mod command_line_options;
 mod communication;
 mod config;
 mod domain;
@@ -21,7 +21,6 @@ pub mod units;
 mod velocity;
 mod visualization;
 
-use args::CommandLineOptions;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
 use bevy::log::LogPlugin;
@@ -31,6 +30,7 @@ use bevy::prelude::App;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
+use command_line_options::CommandLineOptions;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
 use communication::Identified;
