@@ -129,8 +129,9 @@ fn main() {
         let communicator1 = communicators1.remove(&(rank as Rank)).unwrap();
         let communicator2 = communicators2.remove(&(rank as Rank)).unwrap();
         if rank == 0 {
-            build_and_run_app(&opts, communicator1, communicator2);
+            build_and_run_app(&opts.clone(), communicator1, communicator2);
         } else {
+            let opts = opts.clone();
             handles.push(thread::spawn(move || {
                 build_and_run_app(&opts, communicator1, communicator2);
             }));
