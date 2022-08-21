@@ -44,6 +44,10 @@ impl<const D: Dimension> Quantity<glam::Vec2, D> {
         Self(Vec2::new(x.unwrap_value(), y.unwrap_value()))
     }
 
+    pub fn abs(&self) -> Self {
+        Self(self.0.abs())
+    }
+
     pub fn zero() -> Self {
         Self(Vec2::new(0.0, 0.0))
     }

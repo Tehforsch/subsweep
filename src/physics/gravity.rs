@@ -135,31 +135,38 @@ pub(super) fn gravity_system(
 mod tests {
     use bevy::prelude::Entity;
 
+    use super::get_acceleration_on_particle;
+    use super::get_gravity_acceleration;
     use super::ParticleData;
     use super::QuadTree;
     use crate::domain::quadtree::QuadTreeConfig;
     use crate::domain::quadtree::{self};
     use crate::units::assert_is_close;
+    use crate::units::Dimensionless;
+    use crate::units::Length;
     use crate::units::Mass;
+    use crate::units::Vec2Acceleration;
     use crate::units::Vec2Length;
 
-    #[test]
-    fn mass_sum() {
-        let n = 7;
-        let positions: Vec<_> = (0..n)
+    fn get_positions(n: i32) -> Vec<(Vec2Length, ParticleData)> {
+        (0..n)
             .flat_map(move |x| {
                 (0..n).map(move |y| {
                     (
                         Vec2Length::meter(x as f32, y as f32),
                         ParticleData {
                             mass: Mass::kilogram(x as f32 * y as f32),
-                            entity: Entity::from_raw(n),
+                            entity: Entity::from_raw(n as u32),
                         },
                     )
                 })
             })
-            .collect();
-        let quadtree = QuadTree::new(&QuadTreeConfig::default(), positions.into_iter().collect());
+            .collect()
+    }
+
+    #[test]
+    fn mass_sum() {
+        let quadtree = QuadTree::new(&QuadTreeConfig::default(), get_positions(7));
         check_all_sub_trees(&quadtree);
     }
 
@@ -179,5 +186,33 @@ mod tests {
         let mut total = Mass::zero();
         tree.depth_first_map(&mut |_, data| total += data.iter().map(|(_, p)| p.mass).sum());
         assert_is_close(tree.data.total, total);
+    }
+
+    #[test]
+    fn compare_quadtree_gravity_to_direct_sum() {
+        let n_particles = 200;
+        let tree = QuadTree::new(&QuadTreeConfig::default(), get_positions(n_particles));
+        let pos = Vec2Length::meter(3.5, 3.5);
+        let acc2 = direct_sum(&pos, get_positions(n_particles));
+        let acc1 = get_acceleration_on_particle(
+            &tree,
+            pos,
+            Entity::from_raw(0),
+            Length::zero(),
+            Dimensionless::zero(),
+        );
+        let relative_diff = (acc1 - acc2).length() / acc1.length();
+        assert!(relative_diff.value() < &5e-6);
+    }
+
+    fn direct_sum(
+        pos1: &Vec2Length,
+        other_positions: Vec<(Vec2Length, ParticleData)>,
+    ) -> Vec2Acceleration {
+        let mut total = Vec2Acceleration::zero();
+        for (pos2, data) in other_positions.iter() {
+            total += get_gravity_acceleration(pos1, pos2, data.mass, Length::zero());
+        }
+        total
     }
 }
