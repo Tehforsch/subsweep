@@ -101,7 +101,7 @@ impl<const D: Dimension> Sum for Quantity<f32, D> {
 }
 
 macro_rules! unit_functions {
-    ($($const: ident, $quantity:ident, $($dimension_name: ident: $dimension: literal),*, {$($unit:ident, $factor:literal, $($unit_symbol:literal)?),+}),+) => {
+    ($($const: ident, $quantity:ident, $($dimension_name: ident: $dimension: literal),*, {$($unit:ident, $factor:literal, $($unit_symbol:literal)?),*}),+) => {
         use paste::paste;
         pub const UNIT_NAMES: &[(Dimension, &str, f32)] = &[
         $(
@@ -173,5 +173,8 @@ unit_functions!(
     FORCE, Force, mass: 1, length: 1, time: -2,
     {
         newton, 1.0, "N"
+    },
+    LENGTHMASS, LengthMass, mass: 1, length: 1,
+    {
     }
     );

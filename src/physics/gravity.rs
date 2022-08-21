@@ -14,6 +14,7 @@ use crate::units::Dimensionless;
 use crate::units::Length;
 use crate::units::VecAcceleration;
 use crate::units::VecLength;
+use crate::units::VecLengthMass;
 use crate::units::GRAVITY_CONSTANT;
 use crate::velocity::Velocity;
 
@@ -23,14 +24,26 @@ pub struct ParticleData {
     pub mass: units::Mass,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MassMoments {
     total: units::Mass,
+    weighted_position_sum: VecLengthMass,
+    count: usize,
 }
 
+impl MassMoments {
+    fn center_of_mass(&self) -> VecLength {
+        if self.count == 0 {
+            return VecLength::zero();
+        }
+        self.weighted_position_sum / self.total
+    }
+}
 impl NodeDataType<ParticleData> for MassMoments {
-    fn add_new_leaf_data(&mut self, _pos: &VecLength, data: &ParticleData) {
+    fn add_new_leaf_data(&mut self, pos: &VecLength, data: &ParticleData) {
+        self.count += 1;
         self.total += data.mass;
+        self.weighted_position_sum += *pos * data.mass;
     }
 }
 
@@ -61,7 +74,7 @@ pub fn get_acceleration_on_particle(
                 if opening_criterion(child, pos, opening_angle) {
                     get_gravity_acceleration(
                         &pos,
-                        &child.extents.center(),
+                        &child.data.center_of_mass(),
                         child.data.total,
                         softening_length,
                     )
@@ -89,7 +102,7 @@ pub fn get_acceleration_on_particle(
 fn opening_criterion(child: &QuadTree, pos: VecLength, opening_angle: Dimensionless) -> bool {
     let distance = pos.distance(&child.extents.center());
     let length = child.extents.max_side_length();
-    distance / length < opening_angle
+    length / distance < opening_angle
 }
 
 pub(super) fn construct_quad_tree_system(
@@ -149,9 +162,9 @@ mod tests {
     use crate::units::Vec2Length;
 
     fn get_positions(n: i32) -> Vec<(Vec2Length, ParticleData)> {
-        (0..n)
+        (1..n)
             .flat_map(move |x| {
-                (0..n).map(move |y| {
+                (1..n).map(move |y| {
                     (
                         Vec2Length::meter(x as f32, y as f32),
                         ParticleData {
@@ -190,10 +203,9 @@ mod tests {
 
     #[test]
     fn compare_quadtree_gravity_to_direct_sum() {
-        let n_particles = 200;
+        let n_particles = 50;
         let tree = QuadTree::new(&QuadTreeConfig::default(), get_positions(n_particles));
         let pos = Vec2Length::meter(3.5, 3.5);
-        let acc2 = direct_sum(&pos, get_positions(n_particles));
         let acc1 = get_acceleration_on_particle(
             &tree,
             pos,
@@ -201,8 +213,10 @@ mod tests {
             Length::zero(),
             Dimensionless::zero(),
         );
-        let relative_diff = (acc1 - acc2).length() / acc1.length();
-        assert!(relative_diff.value() < &5e-6);
+        let acc2 = direct_sum(&pos, get_positions(n_particles));
+        let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length());
+        // Precision is pretty low with f32, so change this to f64 once variable precision is implemented
+        assert!(relative_diff.value() < &1e-5);
     }
 
     fn direct_sum(
