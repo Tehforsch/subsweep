@@ -86,6 +86,16 @@ impl<const D: Dimension> Sum for Quantity<glam::Vec2, D> {
     }
 }
 
+impl<const D: Dimension> Sum for Quantity<f32, D> {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let mut total = Self::zero();
+        for item in iter {
+            total += item;
+        }
+        total
+    }
+}
+
 macro_rules! unit_functions {
     ($($const: ident, $quantity:ident, $($dimension_name: ident: $dimension: literal),*, {$($unit:ident, $factor:literal, $($unit_symbol:literal)?),+}),+) => {
         use paste::paste;

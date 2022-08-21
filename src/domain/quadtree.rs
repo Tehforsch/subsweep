@@ -54,15 +54,19 @@ impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
             .expect("Not enough particles to construct quadtree");
         let mut tree = Self::make_empty_leaf_from_extents(extents);
         for (pos, data) in particles.iter() {
-            tree.insert(config, (pos.clone(), data.clone()), 0);
+            tree.insert_new(config, (pos.clone(), data.clone()), 0);
         }
         tree
+    }
+
+    fn insert_new(&mut self, config: &QuadTreeConfig, data: (VecLength, L), depth: usize) {
+        self.data.add_new_leaf_data(&data.0, &data.1);
+        self.insert(config, data, depth)
     }
 
     fn insert(&mut self, config: &QuadTreeConfig, data: (VecLength, L), depth: usize) {
         if let Node::Leaf(ref mut leaf) = self.node {
             if leaf.is_empty() || depth == config.max_depth {
-                self.data.add_new_leaf_data(&data.0, &data.1);
                 leaf.push(data);
                 return;
             } else {
@@ -71,7 +75,7 @@ impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
         }
         if let Node::Tree(ref mut children) = self.node {
             let quadrant = &mut children[self.extents.get_quadrant_index(&data.0)];
-            quadrant.insert(&config, data, depth + 1);
+            quadrant.insert_new(&config, data, depth + 1);
         }
     }
 
@@ -93,15 +97,15 @@ impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
         }
     }
 
-    pub fn depth_first_map(&self, closure: &mut impl FnMut(&Extents) -> ()) {
+    pub fn depth_first_map(&self, closure: &mut impl FnMut(&Extents, &LeafData<L>) -> ()) {
         match self.node {
             Node::Tree(ref node) => {
                 for child in node.iter() {
                     child.depth_first_map(closure);
                 }
             }
-            Node::Leaf(_) => {
-                closure(&self.extents);
+            Node::Leaf(ref leaf) => {
+                closure(&self.extents, &leaf);
             }
         }
     }

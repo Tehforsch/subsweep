@@ -59,19 +59,19 @@ pub fn get_acceleration_on_particle(
             .iter()
             .map(|child| {
                 if opening_criterion(child, pos, opening_angle) {
+                    get_gravity_acceleration(
+                        &pos,
+                        &child.extents.center(),
+                        child.data.total,
+                        softening_length,
+                    )
+                } else {
                     get_acceleration_on_particle(
                         child,
                         pos,
                         entity,
                         softening_length,
                         opening_angle,
-                    )
-                } else {
-                    get_gravity_acceleration(
-                        &pos,
-                        &child.extents.center(),
-                        child.data.total,
-                        softening_length,
                     )
                 }
             })
@@ -128,5 +128,128 @@ pub(super) fn gravity_system(
             parameters.opening_angle,
         );
         vel.0 += acceleration * timestep.0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bevy::prelude::Entity;
+
+    use super::ParticleData;
+    use super::QuadTree;
+    use crate::domain::quadtree::QuadTreeConfig;
+    use crate::domain::quadtree::{self};
+    use crate::units::assert_is_close;
+    use crate::units::Mass;
+    use crate::units::Vec2Length;
+
+    #[test]
+    fn mass_sum() {
+        let positions = [
+            (
+                Vec2Length::meter(0.0, 1.0),
+                ParticleData {
+                    mass: Mass::kilogram(1.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(2.0, 1.0),
+                ParticleData {
+                    mass: Mass::kilogram(2.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(3.0, 1.0),
+                ParticleData {
+                    mass: Mass::kilogram(3.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(1.0, 2.0),
+                ParticleData {
+                    mass: Mass::kilogram(1.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(2.0, 2.0),
+                ParticleData {
+                    mass: Mass::kilogram(2.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(3.0, 2.0),
+                ParticleData {
+                    mass: Mass::kilogram(3.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(1.0, 3.0),
+                ParticleData {
+                    mass: Mass::kilogram(1.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(2.0, 3.0),
+                ParticleData {
+                    mass: Mass::kilogram(2.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(3.0, 3.0),
+                ParticleData {
+                    mass: Mass::kilogram(3.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(1.0, 4.0),
+                ParticleData {
+                    mass: Mass::kilogram(1.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(2.0, 4.0),
+                ParticleData {
+                    mass: Mass::kilogram(2.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+            (
+                Vec2Length::meter(3.0, 4.0),
+                ParticleData {
+                    mass: Mass::kilogram(3.0),
+                    entity: Entity::from_raw(0),
+                },
+            ),
+        ];
+        let quadtree = QuadTree::new(&QuadTreeConfig::default(), positions.into_iter().collect());
+        check_all_sub_trees(&quadtree);
+    }
+
+    fn check_all_sub_trees(tree: &QuadTree) {
+        check_mass(tree);
+        match tree.node {
+            quadtree::Node::Tree(ref children) => {
+                for child in children.iter() {
+                    check_all_sub_trees(child)
+                }
+            }
+            quadtree::Node::Leaf(_) => {}
+        }
+    }
+
+    fn check_mass(tree: &QuadTree) {
+        let mut total = Mass::zero();
+        tree.depth_first_map(&mut |_, data| total += data.iter().map(|(_, p)| p.mass).sum());
+        assert_is_close(tree.data.total, total);
     }
 }

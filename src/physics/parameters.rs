@@ -13,7 +13,7 @@ impl Default for Parameters {
     fn default() -> Self {
         Self {
             softening_length: Length::zero(),
-            opening_angle: Dimensionless::zero(),
+            opening_angle: Dimensionless::dimensionless(0.5),
         }
     }
 }

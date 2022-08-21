@@ -141,7 +141,7 @@ fn show_quadtree_system(
     for entity in outlines.iter() {
         commands.entity(entity).despawn();
     }
-    quadtree.depth_first_map(&mut |extents| {
+    quadtree.depth_first_map(&mut |extents, _| {
         let lower_left = VecLength::new(extents.x_min, extents.y_min);
         let upper_right = VecLength::new(extents.x_max, extents.y_max);
         commands.spawn().insert(Outline).insert(DrawRect {

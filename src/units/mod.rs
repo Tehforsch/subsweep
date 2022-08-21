@@ -7,6 +7,8 @@ mod quantity;
 
 pub use constants::*;
 pub use quantities_and_units::*;
+#[cfg(test)]
+pub use tests::assert_is_close;
 
 #[cfg(test)]
 mod tests {
@@ -15,7 +17,7 @@ mod tests {
     use super::Dimensionless;
     use super::Length;
 
-    pub(super) fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
+    pub fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
         const EPSILON: f32 = 1e-20;
         assert!(
             (x - y).abs().unwrap_value() < EPSILON,
