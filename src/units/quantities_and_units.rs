@@ -20,6 +20,10 @@ impl<const D: Dimension> Quantity<f32, D> {
         Self(0.0)
     }
 
+    pub fn max(&self, rhs: &Self) -> Self {
+        Self(self.0.max(rhs.0))
+    }
+
     pub fn squared(&self) -> Quantity<f32, { D.dimension_powi(2) }>
     where
         Quantity<f32, { D.dimension_powi(2) }>:,

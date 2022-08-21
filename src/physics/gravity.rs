@@ -10,6 +10,7 @@ use crate::domain::quadtree::QuadTreeConfig;
 use crate::mass::Mass;
 use crate::position::Position;
 use crate::units;
+use crate::units::Dimensionless;
 use crate::units::Length;
 use crate::units::VecAcceleration;
 use crate::units::VecLength;
@@ -51,11 +52,29 @@ pub fn get_acceleration_on_particle(
     pos: VecLength,
     entity: Entity,
     softening_length: Length,
+    opening_angle: Dimensionless,
 ) -> VecAcceleration {
     match tree.node {
         Node::Tree(ref children) => children
             .iter()
-            .map(|child| get_acceleration_on_particle(child, pos, entity, softening_length))
+            .map(|child| {
+                if opening_criterion(child, pos, opening_angle) {
+                    get_acceleration_on_particle(
+                        child,
+                        pos,
+                        entity,
+                        softening_length,
+                        opening_angle,
+                    )
+                } else {
+                    get_gravity_acceleration(
+                        &pos,
+                        &child.extents.center(),
+                        child.data.total,
+                        softening_length,
+                    )
+                }
+            })
             .sum(),
         Node::Leaf(ref leaf) => leaf
             .iter()
@@ -65,6 +84,12 @@ pub fn get_acceleration_on_particle(
             })
             .sum(),
     }
+}
+
+fn opening_criterion(child: &QuadTree, pos: VecLength, opening_angle: Dimensionless) -> bool {
+    let distance = pos.distance(&child.extents.center());
+    let length = child.extents.max_side_length();
+    distance / length < opening_angle
 }
 
 pub(super) fn construct_quad_tree_system(
@@ -95,8 +120,13 @@ pub(super) fn gravity_system(
     parameters: Res<Parameters>,
 ) {
     for (entity, pos, mut vel) in particles.iter_mut() {
-        let acceleration =
-            get_acceleration_on_particle(&tree, pos.0, entity, parameters.softening_length);
+        let acceleration = get_acceleration_on_particle(
+            &tree,
+            pos.0,
+            entity,
+            parameters.softening_length,
+            parameters.opening_angle,
+        );
         vel.0 += acceleration * timestep.0;
     }
 }

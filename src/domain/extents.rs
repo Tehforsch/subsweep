@@ -25,6 +25,14 @@ impl Extents {
         }
     }
 
+    pub fn center(&self) -> VecLength {
+        VecLength::new(self.x_center, self.y_center)
+    }
+
+    pub fn max_side_length(&self) -> Length {
+        (self.x_max - self.x_min).max(&(self.y_max - self.y_min))
+    }
+
     pub fn from_positions<'a>(positions: impl Iterator<Item = &'a VecLength>) -> Option<Self> {
         let mut x_min = None;
         let mut x_max = None;
