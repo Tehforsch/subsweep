@@ -159,6 +159,16 @@ mod tests {
     }
 
     #[test]
+    fn extent_from_particles_is_none_with_particles_in_a_line() {
+        let positions = &[
+            VecLength::meter(1.0, 0.0),
+            VecLength::meter(2.0, 0.0),
+            VecLength::meter(3.0, 0.0),
+        ];
+        assert!(Extents::from_positions(positions.iter()).is_none());
+    }
+
+    #[test]
     #[should_panic]
     fn invalid_extents() {
         Extents::new(
