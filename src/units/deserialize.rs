@@ -28,6 +28,47 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
         formatter.write_str("a numerical value followed by a series of powers of units")
     }
 
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        if D == NONE {
+            Ok(Quantity::<f32, D>(value as f32))
+        } else {
+            Err(E::custom(format!(
+                "dimensionless numerical value given for non-dimensionless quantity: {}",
+                value
+            )))
+        }
+    }
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        if D == NONE {
+            Ok(Quantity::<f32, D>(value as f32))
+        } else {
+            Err(E::custom(format!(
+                "dimensionless numerical value given for non-dimensionless quantity: {}",
+                value
+            )))
+        }
+    }
+
+    fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        if D == NONE {
+            Ok(Quantity::<f32, D>(value as f32))
+        } else {
+            Err(E::custom(format!(
+                "dimensionless numerical value given for non-dimensionless quantity: {}",
+                value
+            )))
+        }
+    }
+
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
     where
         E: de::Error,
