@@ -7,7 +7,9 @@ use rand::Rng;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
-use crate::units::vec2;
+use crate::units;
+use crate::units::Vec2Length;
+use crate::units::Vec2Velocity;
 use crate::velocity::Velocity;
 
 pub struct InitialConditionsPlugin;
@@ -26,28 +28,28 @@ fn spawn_particles_system(mut commands: Commands, rank: Res<Rank>) {
     for _ in 0..n_particles {
         let x = rand::thread_rng().gen_range(-5.0..-4.0);
         let y = rand::thread_rng().gen_range(-1.0..1.0);
-        let pos = vec2::Length::meter(Vec2::new(x, y));
+        let pos = Vec2Length::meter(x, y);
         let x = 0.0;
         let y = 0.1;
-        let vel = vec2::Velocity::meters_per_second(Vec2::new(x, y)) * 1.0;
+        let vel = Vec2Velocity::meters_per_second(x, y) * 1.0;
         commands.spawn().insert_bundle(LocalParticleBundle::new(
             Position(pos),
             Velocity(vel),
-            Mass(crate::units::f32::Mass::kilogram(10000000.0)),
+            Mass(units::Mass::kilogram(10000000.0)),
         ));
     }
 
     for _ in 0..n_particles {
         let x = rand::thread_rng().gen_range(4.0..5.0);
         let y = rand::thread_rng().gen_range(-1.0..1.0);
-        let pos = vec2::Length::meter(Vec2::new(x, y));
+        let pos = Vec2Length::meter(x, y);
         let x = 0.0;
         let y = -0.1;
-        let vel = vec2::Velocity::meters_per_second(Vec2::new(x, y)) * 1.0;
+        let vel = Vec2Velocity::meters_per_second(x, y) * 1.0;
         commands.spawn().insert_bundle(LocalParticleBundle::new(
             Position(pos),
             Velocity(vel),
-            Mass(crate::units::f32::Mass::kilogram(10000000.0)),
+            Mass(units::Mass::kilogram(10000000.0)),
         ));
     }
 }

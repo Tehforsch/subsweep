@@ -11,10 +11,9 @@ pub use quantities_and_units::*;
 #[cfg(test)]
 mod tests {
     use super::dimension::Dimension;
-    use super::f32::Dimensionless;
-    use super::f32::Length;
-    use super::f32::{self};
     use super::quantity::Quantity;
+    use super::Dimensionless;
+    use super::Length;
 
     pub(super) fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
         const EPSILON: f32 = 1e-20;

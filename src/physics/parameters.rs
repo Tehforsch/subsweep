@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::units::f32::Length;
+use crate::units::Length;
 
 #[derive(Deserialize)]
 pub(super) struct Parameters {

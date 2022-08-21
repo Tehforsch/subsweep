@@ -8,17 +8,19 @@ use crate::domain::quadtree::QuadTree;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::mass::Mass;
 use crate::position::Position;
-use crate::units::vec2::Acceleration;
-use crate::units::vec2::Length;
+use crate::units;
+use crate::units::Length;
+use crate::units::VecAcceleration;
+use crate::units::VecLength;
 use crate::units::GRAVITY_CONSTANT;
 use crate::velocity::Velocity;
 
 fn get_gravity_acceleration(
-    pos1: Length,
-    pos2: Length,
-    mass2: crate::units::f32::Mass,
-    softening_length: crate::units::f32::Length,
-) -> Acceleration {
+    pos1: VecLength,
+    pos2: VecLength,
+    mass2: units::Mass,
+    softening_length: Length,
+) -> VecAcceleration {
     let distance_vector = pos1 - pos2;
     let distance = distance_vector.length() + softening_length;
     -distance_vector * GRAVITY_CONSTANT * mass2 / distance.cubed()
@@ -26,10 +28,10 @@ fn get_gravity_acceleration(
 
 pub fn get_acceleration_on_particle(
     tree: &QuadTree,
-    pos: Length,
+    pos: VecLength,
     entity: Entity,
-    softening_length: crate::units::f32::Length,
-) -> Acceleration {
+    softening_length: Length,
+) -> VecAcceleration {
     match tree.data {
         Node::Node(ref children) => children
             .iter()

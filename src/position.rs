@@ -1,7 +1,7 @@
 use bevy::prelude::Component;
 use mpi::traits::Equivalence;
 
-use crate::units::vec2::Length;
+use crate::units::VecLength;
 
 #[derive(Component, Debug, Clone, Equivalence)]
-pub struct Position(pub Length);
+pub struct Position(pub VecLength);

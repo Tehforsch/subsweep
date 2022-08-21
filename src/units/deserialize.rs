@@ -6,9 +6,9 @@ use serde::Deserialize;
 use serde::Deserializer;
 
 use super::dimension::Dimension;
-use super::f32::UNIT_NAMES;
 use super::quantity::Quantity;
 use super::NONE;
+use super::UNIT_NAMES;
 
 impl<'de, const D: Dimension> Deserialize<'de> for Quantity<f32, D> {
     fn deserialize<DE>(deserializer: DE) -> Result<Quantity<f32, D>, DE::Error>
@@ -89,10 +89,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::units::f32::Dimensionless;
-    use crate::units::f32::Force;
-    use crate::units::f32::Length;
     use crate::units::tests::assert_is_close;
+    use crate::units::Dimensionless;
+    use crate::units::Force;
+    use crate::units::Length;
 
     #[test]
     fn deserialize_basic_units() {

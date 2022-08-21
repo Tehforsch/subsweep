@@ -7,28 +7,28 @@ use bevy_prototype_lyon::prelude::*;
 
 use super::VisualizationStage;
 use super::CAMERA_ZOOM;
-use crate::units::f32::Length;
-use crate::units::vec2;
+use crate::units::Length;
+use crate::units::VecLength;
 
 #[derive(Component)]
 pub struct DrawCircle {
-    pub position: vec2::Length,
+    pub position: VecLength,
     pub radius: Length,
     pub color: Color,
 }
 
 #[derive(Component)]
 pub struct DrawRect {
-    pub lower_left: vec2::Length,
-    pub upper_right: vec2::Length,
+    pub lower_left: VecLength,
+    pub upper_right: VecLength,
     pub color: Color,
 }
 
 pub(super) trait IntoBundle {
     type Output: Bundle;
     fn into_bundle(&self) -> Self::Output;
-    fn translation(&self) -> &vec2::Length;
-    fn set_translation(&mut self, pos: &vec2::Length);
+    fn translation(&self) -> &VecLength;
+    fn set_translation(&mut self, pos: &VecLength);
 }
 
 impl IntoBundle for DrawCircle {
@@ -46,11 +46,11 @@ impl IntoBundle for DrawCircle {
         )
     }
 
-    fn translation(&self) -> &vec2::Length {
+    fn translation(&self) -> &VecLength {
         &self.position
     }
 
-    fn set_translation(&mut self, pos: &vec2::Length) {
+    fn set_translation(&mut self, pos: &VecLength) {
         self.position = *pos;
     }
 }
@@ -70,11 +70,11 @@ impl IntoBundle for DrawRect {
         )
     }
 
-    fn translation(&self) -> &vec2::Length {
+    fn translation(&self) -> &VecLength {
         &self.lower_left
     }
 
-    fn set_translation(&mut self, pos: &vec2::Length) {
+    fn set_translation(&mut self, pos: &VecLength) {
         self.lower_left = *pos;
     }
 }
@@ -110,7 +110,7 @@ fn spawn_visualization_item_system<T: Component + IntoBundle>(
     }
 }
 
-fn position_to_translation(position: &vec2::Length) -> Vec3 {
+fn position_to_translation(position: &VecLength) -> Vec3 {
     let pos = position.in_units(*CAMERA_ZOOM);
     Vec3::new(pos.x, pos.y, 0.0)
 }

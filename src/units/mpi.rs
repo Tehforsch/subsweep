@@ -39,19 +39,18 @@ unsafe impl<const D: Dimension> Equivalence for Quantity<Vec2, D> {
 #[cfg(test)]
 #[cfg(not(feature = "local"))]
 mod tests {
-    use glam::Vec2;
     use mpi::traits::Communicator;
 
     use crate::communication::MPI_UNIVERSE;
-    use crate::units::f32;
-    use crate::units::vec2;
+    use crate::units::Length;
+    use crate::units::VecLength;
 
     #[test]
     fn pack_unpack_f32_quantity() {
         let world = MPI_UNIVERSE.world();
 
-        let q1 = f32::Length::meter(1.0);
-        let mut q2 = f32::Length::meter(2.0);
+        let q1 = Length::meter(1.0);
+        let mut q2 = Length::meter(2.0);
         let a = world.pack(&q1);
         unsafe {
             world.unpack_into(&a, &mut q2, 0);
@@ -62,8 +61,8 @@ mod tests {
     #[test]
     fn pack_unpack_vec_quantity() {
         let world = MPI_UNIVERSE.world();
-        let q1 = vec2::Length::meter(Vec2::new(1.0, 2.0));
-        let mut q2 = vec2::Length::meter(Vec2::new(3.0, 4.0));
+        let q1 = VecLength::meter(1.0, 2.0);
+        let mut q2 = VecLength::meter(3.0, 4.0);
         let a = world.pack(&q1);
         unsafe {
             world.unpack_into(&a, &mut q2, 0);

@@ -74,10 +74,7 @@ fn log_setup(verbosity: usize) -> LogSettings {
 }
 
 fn show_time_system(time: Res<crate::physics::Time>) {
-    debug!(
-        "Time: {:.3} s",
-        time.0.to_value(crate::units::f32::Time::second)
-    );
+    debug!("Time: {:.3} s", time.0.to_value(crate::units::Time::second));
 }
 
 fn build_and_run_app(

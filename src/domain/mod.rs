@@ -4,7 +4,7 @@ pub mod quadtree;
 use self::extents::Extents;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
-use crate::units::vec2;
+use crate::units::VecLength;
 
 #[derive(Clone)]
 pub struct DomainDistribution {
@@ -12,7 +12,7 @@ pub struct DomainDistribution {
 }
 
 impl DomainDistribution {
-    pub fn target_rank(&self, pos: &vec2::Length) -> Rank {
+    pub fn target_rank(&self, pos: &VecLength) -> Rank {
         *self
             .domains
             .iter()
@@ -24,13 +24,11 @@ impl DomainDistribution {
 
 #[cfg(test)]
 mod tests {
-    use glam::Vec2;
-
     use super::extents::Extents;
     use super::DomainDistribution;
     use crate::communication::DataByRank;
-    use crate::units::f32::Length;
-    use crate::units::vec2;
+    use crate::units::Length;
+    use crate::units::VecLength;
 
     #[test]
     fn target_rank() {
@@ -45,9 +43,6 @@ mod tests {
         domains.insert(0, vec![quadrants[0].clone(), quadrants[1].clone()]);
         domains.insert(1, vec![quadrants[2].clone(), quadrants[3].clone()]);
         let distribution = DomainDistribution { domains };
-        assert_eq!(
-            distribution.target_rank(&vec2::Length::meter(Vec2::new(-70.0, -70.0))),
-            0
-        );
+        assert_eq!(distribution.target_rank(&VecLength::meter(-70.0, -70.0)), 0);
     }
 }

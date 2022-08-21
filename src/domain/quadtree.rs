@@ -5,8 +5,8 @@ use bevy::prelude::Entity;
 use serde::Deserialize;
 
 use super::Extents;
-use crate::units::f32::Mass;
-use crate::units::vec2;
+use crate::units::Mass;
+use crate::units::VecLength;
 
 #[derive(Deserialize)]
 pub struct QuadTreeConfig {
@@ -22,7 +22,7 @@ impl Default for QuadTreeConfig {
 #[derive(Debug)]
 pub struct ParticleData {
     pub entity: Entity,
-    pub pos: vec2::Length,
+    pub pos: VecLength,
     pub mass: Mass,
 }
 
@@ -55,7 +55,7 @@ pub struct QuadTree {
 }
 
 impl QuadTree {
-    pub fn new<'a>(config: &QuadTreeConfig, particles: Vec<(vec2::Length, Mass, Entity)>) -> Self {
+    pub fn new<'a>(config: &QuadTreeConfig, particles: Vec<(VecLength, Mass, Entity)>) -> Self {
         let extents = Extents::from_positions(particles.iter().map(|particle| &particle.0))
             .expect("Not enough particles to construct quadtree");
         let mut tree = Self::make_empty_leaf_from_extents(extents);
@@ -143,26 +143,24 @@ impl IndexMut<usize> for QuadTree {
 
 #[cfg(test)]
 mod tests {
-    use glam::Vec2;
-
     use super::*;
+    use crate::units::Vec2Length;
 
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
-        use vec2::Length;
         let positions = [
             (
-                Length::meter(Vec2::new(1.0, 1.0)),
+                Vec2Length::meter(1.0, 1.0),
                 Mass::kilogram(1.0),
                 Entity::from_raw(0),
             ),
             (
-                Length::meter(Vec2::new(1.0, 1.0)),
+                Vec2Length::meter(1.0, 1.0),
                 Mass::kilogram(1.0),
                 Entity::from_raw(0),
             ),
             (
-                Length::meter(Vec2::new(2.0, 2.0)),
+                Vec2Length::meter(2.0, 2.0),
                 Mass::kilogram(1.0),
                 Entity::from_raw(0),
             ),

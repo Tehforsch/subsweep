@@ -21,13 +21,13 @@ use crate::physics::LocalParticle;
 use crate::physics::PhysicsStages;
 use crate::physics::RemoteParticle;
 use crate::position::Position;
-use crate::units::f32;
-use crate::units::vec2::Length;
+use crate::units::Length;
+use crate::units::VecLength;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
 lazy_static! {
-    pub static ref CAMERA_ZOOM: f32::Length = f32::Length::meter(0.01);
+    pub static ref CAMERA_ZOOM: Length = Length::meter(0.01);
 }
 
 #[derive(StageLabel)]
@@ -124,7 +124,7 @@ fn spawn_sprites_system(
         let color = COLORS[rank as usize];
         commands.entity(entity).insert(DrawCircle {
             position: pos.0,
-            radius: f32::Length::meter(0.05),
+            radius: Length::meter(0.05),
             color,
         });
     }
@@ -142,8 +142,8 @@ fn show_quadtree_system(
         commands.entity(entity).despawn();
     }
     quadtree.depth_first_map(&mut |extents| {
-        let lower_left = Length::new(extents.x_min, extents.y_min);
-        let upper_right = Length::new(extents.x_max, extents.y_max);
+        let lower_left = VecLength::new(extents.x_min, extents.y_min);
+        let upper_right = VecLength::new(extents.x_max, extents.y_max);
         commands.spawn().insert(Outline).insert(DrawRect {
             lower_left,
             upper_right,
