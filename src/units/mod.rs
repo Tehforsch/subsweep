@@ -11,9 +11,9 @@ pub use quantities_and_units::*;
 #[cfg(test)]
 mod tests {
     use super::dimension::Dimension;
-    use super::f32::dimensionless;
-    use super::f32::kilometer;
-    use super::f32::meter;
+    use super::f32::Dimensionless;
+    use super::f32::Length;
+    use super::f32::{self};
     use super::quantity::Quantity;
 
     pub(super) fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
@@ -28,29 +28,29 @@ mod tests {
 
     #[test]
     fn add_same_unit() {
-        let x = meter(1.0);
-        let y = meter(10.0);
-        assert_is_close(x + y, meter(11.0));
+        let x = Length::meter(1.0);
+        let y = Length::meter(10.0);
+        assert_is_close(x + y, Length::meter(11.0));
     }
 
     #[test]
     fn add_different_units() {
-        let x = meter(1.0);
-        let y = kilometer(10.0);
-        assert_is_close(x + y, meter(10001.0));
+        let x = Length::meter(1.0);
+        let y = Length::kilometer(10.0);
+        assert_is_close(x + y, Length::meter(10001.0));
     }
 
     #[test]
     fn sub_different_units() {
-        let x = meter(1.0);
-        let y = kilometer(10.0);
-        assert_is_close(x - y, meter(-9999.0));
+        let x = Length::meter(1.0);
+        let y = Length::kilometer(10.0);
+        assert_is_close(x - y, Length::meter(-9999.0));
     }
 
     #[test]
     fn div_same_unit() {
-        let x = meter(1.0);
-        let y = meter(10.0);
-        assert_is_close(x / y, dimensionless(0.1));
+        let x = Length::meter(1.0);
+        let y = Length::meter(10.0);
+        assert_is_close(x / y, Dimensionless::dimensionless(0.1));
     }
 }

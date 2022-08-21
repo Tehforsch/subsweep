@@ -15,7 +15,7 @@ use crate::mass::Mass;
 use crate::parameters::ParameterPlugin;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
-use crate::units::f32::second;
+use crate::units::f32;
 use crate::velocity::Velocity;
 
 #[derive(Component)]
@@ -52,8 +52,8 @@ impl Plugin for PhysicsPlugin {
         );
         app.add_plugin(ParameterPlugin::<Parameters>::new("physics"))
             .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("tree"))
-            .insert_resource(Timestep(second(0.01)))
-            .insert_resource(Time(second(0.00)))
+            .insert_resource(Timestep(f32::Time::second(0.01)))
+            .insert_resource(Time(f32::Time::second(0.00)))
             .add_system_to_stage(
                 PhysicsStages::QuadTreeConstruction,
                 construct_quad_tree_system,

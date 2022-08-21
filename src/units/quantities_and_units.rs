@@ -103,11 +103,13 @@ macro_rules! unit_functions {
                 )*
                 .. NONE };
             pub type $quantity = Quantity<$storage_type, $const>;
-            $(
-            pub fn $unit(v: $storage_type) -> $quantity {
-                Quantity::<$storage_type, $const>(v * $factor)
+            impl $quantity {
+                $(
+                    pub fn $unit(v: $storage_type) -> $quantity {
+                        Quantity::<$storage_type, $const>(v * $factor)
+                    }
+                )*
             }
-            )*
         )*
     }
 }

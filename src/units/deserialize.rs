@@ -89,9 +89,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::units::f32::dimensionless;
-    use crate::units::f32::meter;
-    use crate::units::f32::newton;
     use crate::units::f32::Dimensionless;
     use crate::units::f32::Force;
     use crate::units::f32::Length;
@@ -100,26 +97,26 @@ mod tests {
     #[test]
     fn deserialize_basic_units() {
         let q: Length = serde_yaml::from_str(&"1.0 m").unwrap();
-        assert_is_close(q, meter(1.0));
+        assert_is_close(q, Length::meter(1.0));
         let q: Length = serde_yaml::from_str(&"2.0 m").unwrap();
-        assert_is_close(q, meter(2.0));
+        assert_is_close(q, Length::meter(2.0));
         let q: Length = serde_yaml::from_str(&"2.0e8 m").unwrap();
-        assert_is_close(q, meter(2.0e8));
+        assert_is_close(q, Length::meter(2.0e8));
         let q: Length = serde_yaml::from_str(&"5.0 km").unwrap();
-        assert_is_close(q, meter(5000.0));
+        assert_is_close(q, Length::meter(5000.0));
     }
 
     #[test]
     fn deserialize_dimensionless_quantities() {
         let q: Dimensionless = serde_yaml::from_str(&"5.0").unwrap();
-        assert_is_close(q, dimensionless(5.0));
+        assert_is_close(q, Dimensionless::dimensionless(5.0));
     }
 
     #[test]
     #[should_panic]
     fn do_not_deserialize_dimensionless_quantities_with_unit_str() {
         let q: Dimensionless = serde_yaml::from_str(&"5.0 m").unwrap();
-        assert_is_close(q, dimensionless(5.0));
+        assert_is_close(q, Dimensionless::dimensionless(5.0));
     }
 
     #[test]
@@ -131,10 +128,10 @@ mod tests {
     #[test]
     fn deserialize_unit_exponents() {
         let q: Dimensionless = serde_yaml::from_str(&"5.0 km m^-1").unwrap();
-        assert_is_close(q, dimensionless(5000.0));
+        assert_is_close(q, Dimensionless::dimensionless(5000.0));
         let q: Force = serde_yaml::from_str(&"5.0 kg m^1 s^-2").unwrap();
-        assert_is_close(q, newton(5.0));
+        assert_is_close(q, Force::newton(5.0));
         let q: Force = serde_yaml::from_str(&"5.0e0 kg km^1 s^-2").unwrap();
-        assert_is_close(q, newton(5000.0));
+        assert_is_close(q, Force::newton(5000.0));
     }
 }

@@ -43,8 +43,6 @@ use physics::PhysicsPlugin;
 use visualization::remote::ParticleVisualizationExchangeData;
 use visualization::VisualizationPlugin;
 
-use crate::units::f32::second;
-
 pub const PARTICLE_VISUALIZATION_EXCHANGE_TAG: i32 = 1337;
 pub const PARTICLE_EXCHANGE_TAG: i32 = 1338;
 
@@ -76,7 +74,10 @@ fn log_setup(verbosity: usize) -> LogSettings {
 }
 
 fn show_time_system(time: Res<crate::physics::Time>) {
-    debug!("Time: {:.3} s", time.0.to_value(second));
+    debug!(
+        "Time: {:.3} s",
+        time.0.to_value(crate::units::f32::Time::second)
+    );
 }
 
 fn build_and_run_app(

@@ -84,18 +84,22 @@ mod tests {
     use glam::Vec2;
 
     use crate::domain::Extents;
-    use crate::units::f32::meter;
     use crate::units::f32::Length;
     use crate::units::vec2;
 
     fn assert_is_close(x: Length, y: f32) {
         const EPSILON: f32 = 1e-20;
-        assert!((x - meter(y)).unwrap_value().abs() < EPSILON)
+        assert!((x - Length::meter(y)).unwrap_value().abs() < EPSILON)
     }
 
     #[test]
     fn extent_quadrants() {
-        let root_extents = Extents::new(meter(-1.0), meter(1.0), meter(-2.0), meter(2.0));
+        let root_extents = Extents::new(
+            Length::meter(-1.0),
+            Length::meter(1.0),
+            Length::meter(-2.0),
+            Length::meter(2.0),
+        );
         let quadrants = root_extents.get_quadrants();
         assert_is_close(quadrants[0].x_min, -1.0);
         assert_is_close(quadrants[0].x_max, 0.0);
@@ -120,11 +124,12 @@ mod tests {
 
     #[test]
     fn extent_from_positions() {
+        use vec2::Length;
         let positions = &[
-            vec2::meter(Vec2::new(1.0, 0.0)),
-            vec2::meter(Vec2::new(-1.0, 0.0)),
-            vec2::meter(Vec2::new(0.0, -2.0)),
-            vec2::meter(Vec2::new(0.0, 2.0)),
+            Length::meter(Vec2::new(1.0, 0.0)),
+            Length::meter(Vec2::new(-1.0, 0.0)),
+            Length::meter(Vec2::new(0.0, -2.0)),
+            Length::meter(Vec2::new(0.0, 2.0)),
         ];
         let extents = Extents::from_positions(positions.iter()).unwrap();
         assert_is_close(extents.x_min, -1.0);
@@ -140,10 +145,11 @@ mod tests {
 
     #[test]
     fn extent_from_positions_is_none_with_particles_at_same_positions() {
+        use vec2::Length;
         let positions = &[
-            vec2::meter(Vec2::new(1.0, 0.0)),
-            vec2::meter(Vec2::new(1.0, 0.0)),
-            vec2::meter(Vec2::new(1.0, 0.0)),
+            Length::meter(Vec2::new(1.0, 0.0)),
+            Length::meter(Vec2::new(1.0, 0.0)),
+            Length::meter(Vec2::new(1.0, 0.0)),
         ];
         assert!(Extents::from_positions(positions.iter()).is_none());
     }
@@ -151,6 +157,11 @@ mod tests {
     #[test]
     #[should_panic]
     fn invalid_extents() {
-        Extents::new(meter(1.0), meter(-1.0), meter(0.0), meter(1.0));
+        Extents::new(
+            Length::meter(1.0),
+            Length::meter(-1.0),
+            Length::meter(0.0),
+            Length::meter(1.0),
+        );
     }
 }

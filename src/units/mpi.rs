@@ -50,8 +50,8 @@ mod tests {
     fn pack_unpack_f32_quantity() {
         let world = MPI_UNIVERSE.world();
 
-        let q1 = f32::meter(1.0);
-        let mut q2 = f32::meter(2.0);
+        let q1 = f32::Length::meter(1.0);
+        let mut q2 = f32::Length::meter(2.0);
         let a = world.pack(&q1);
         unsafe {
             world.unpack_into(&a, &mut q2, 0);
@@ -62,8 +62,8 @@ mod tests {
     #[test]
     fn pack_unpack_vec_quantity() {
         let world = MPI_UNIVERSE.world();
-        let q1 = vec2::meter(Vec2::new(1.0, 2.0));
-        let mut q2 = vec2::meter(Vec2::new(3.0, 4.0));
+        let q1 = vec2::Length::meter(Vec2::new(1.0, 2.0));
+        let mut q2 = vec2::Length::meter(Vec2::new(3.0, 4.0));
         let a = world.pack(&q1);
         unsafe {
             world.unpack_into(&a, &mut q2, 0);

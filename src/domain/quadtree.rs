@@ -146,24 +146,24 @@ mod tests {
     use glam::Vec2;
 
     use super::*;
-    use crate::units::f32::kilogram;
 
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
+        use vec2::Length;
         let positions = [
             (
-                vec2::meter(Vec2::new(1.0, 1.0)),
-                kilogram(1.0),
+                Length::meter(Vec2::new(1.0, 1.0)),
+                Mass::kilogram(1.0),
                 Entity::from_raw(0),
             ),
             (
-                vec2::meter(Vec2::new(1.0, 1.0)),
-                kilogram(1.0),
+                Length::meter(Vec2::new(1.0, 1.0)),
+                Mass::kilogram(1.0),
                 Entity::from_raw(0),
             ),
             (
-                vec2::meter(Vec2::new(2.0, 2.0)),
-                kilogram(1.0),
+                Length::meter(Vec2::new(2.0, 2.0)),
+                Mass::kilogram(1.0),
                 Entity::from_raw(0),
             ),
         ];
