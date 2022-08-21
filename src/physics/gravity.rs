@@ -145,92 +145,20 @@ mod tests {
 
     #[test]
     fn mass_sum() {
-        let positions = [
-            (
-                Vec2Length::meter(0.0, 1.0),
-                ParticleData {
-                    mass: Mass::kilogram(1.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(2.0, 1.0),
-                ParticleData {
-                    mass: Mass::kilogram(2.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(3.0, 1.0),
-                ParticleData {
-                    mass: Mass::kilogram(3.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(1.0, 2.0),
-                ParticleData {
-                    mass: Mass::kilogram(1.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(2.0, 2.0),
-                ParticleData {
-                    mass: Mass::kilogram(2.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(3.0, 2.0),
-                ParticleData {
-                    mass: Mass::kilogram(3.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(1.0, 3.0),
-                ParticleData {
-                    mass: Mass::kilogram(1.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(2.0, 3.0),
-                ParticleData {
-                    mass: Mass::kilogram(2.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(3.0, 3.0),
-                ParticleData {
-                    mass: Mass::kilogram(3.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(1.0, 4.0),
-                ParticleData {
-                    mass: Mass::kilogram(1.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(2.0, 4.0),
-                ParticleData {
-                    mass: Mass::kilogram(2.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-            (
-                Vec2Length::meter(3.0, 4.0),
-                ParticleData {
-                    mass: Mass::kilogram(3.0),
-                    entity: Entity::from_raw(0),
-                },
-            ),
-        ];
+        let n = 7;
+        let positions: Vec<_> = (0..n)
+            .flat_map(move |x| {
+                (0..n).map(move |y| {
+                    (
+                        Vec2Length::meter(x as f32, y as f32),
+                        ParticleData {
+                            mass: Mass::kilogram(x as f32 * y as f32),
+                            entity: Entity::from_raw(n),
+                        },
+                    )
+                })
+            })
+            .collect();
         let quadtree = QuadTree::new(&QuadTreeConfig::default(), positions.into_iter().collect());
         check_all_sub_trees(&quadtree);
     }
