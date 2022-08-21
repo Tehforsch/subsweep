@@ -32,7 +32,7 @@ pub fn get_acceleration_on_particle(
     entity: Entity,
     softening_length: Length,
 ) -> VecAcceleration {
-    match tree.data {
+    match tree.node {
         Node::Node(ref children) => children
             .iter()
             .map(|child| get_acceleration_on_particle(child, pos, entity, softening_length))

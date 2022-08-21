@@ -50,7 +50,7 @@ impl Node {
 
 #[derive(Debug)]
 pub struct QuadTree {
-    pub data: Node,
+    pub node: Node,
     pub extents: Extents,
 }
 
@@ -74,7 +74,7 @@ impl QuadTree {
     }
 
     fn insert(&mut self, config: &QuadTreeConfig, particle: ParticleData, depth: usize) {
-        if let Node::Leaf(ref mut leaf) = self.data {
+        if let Node::Leaf(ref mut leaf) = self.node {
             if leaf.particles.is_empty() || depth == config.max_depth {
                 leaf.particles.push(particle);
                 return;
@@ -82,17 +82,17 @@ impl QuadTree {
                 self.subdivide(config, depth);
             }
         }
-        if let Node::Node(ref mut children) = self.data {
+        if let Node::Node(ref mut children) = self.node {
             let quadrant = &mut children[self.extents.get_quadrant_index(&particle.pos)];
             quadrant.insert(&config, particle, depth + 1);
         }
     }
 
     fn subdivide(&mut self, config: &QuadTreeConfig, depth: usize) {
-        debug_assert!(matches!(self.data, Node::Leaf(_)));
+        debug_assert!(matches!(self.node, Node::Leaf(_)));
         let quadrants = self.extents.get_quadrants();
         let children = Box::new(quadrants.map(Self::make_empty_leaf_from_extents));
-        let particles = self.data.make_node(children);
+        let particles = self.node.make_node(children);
         for particle in particles.particles.into_iter() {
             self.insert(config, particle, depth);
         }
@@ -100,13 +100,13 @@ impl QuadTree {
 
     fn make_empty_leaf_from_extents(extents: Extents) -> Self {
         Self {
-            data: Node::Leaf(LeafData::default()),
+            node: Node::Leaf(LeafData::default()),
             extents,
         }
     }
 
     pub fn depth_first_map(&self, closure: &mut impl FnMut(&Extents) -> ()) {
-        match self.data {
+        match self.node {
             Node::Node(ref node) => {
                 for child in node.iter() {
                     child.depth_first_map(closure);
@@ -123,7 +123,7 @@ impl Index<usize> for QuadTree {
     type Output = QuadTree;
 
     fn index(&self, idx: usize) -> &Self::Output {
-        if let Node::Node(ref children) = self.data {
+        if let Node::Node(ref children) = self.node {
             &children[idx]
         } else {
             panic!("index called on leaf node");
@@ -133,7 +133,7 @@ impl Index<usize> for QuadTree {
 
 impl IndexMut<usize> for QuadTree {
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
-        if let Node::Node(ref mut children) = self.data {
+        if let Node::Node(ref mut children) = self.node {
             &mut children[idx]
         } else {
             panic!("index_mut called on leaf node");
