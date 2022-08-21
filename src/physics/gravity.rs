@@ -5,6 +5,7 @@ use super::LocalParticle;
 use super::Timestep;
 use crate::domain::quadtree;
 use crate::domain::quadtree::Node;
+use crate::domain::quadtree::NodeDataType;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::mass::Mass;
 use crate::position::Position;
@@ -21,7 +22,18 @@ pub struct ParticleData {
     pub mass: units::Mass,
 }
 
-pub type QuadTree = quadtree::QuadTree<(), ParticleData>;
+#[derive(Default)]
+pub struct MassMoments {
+    total: units::Mass,
+}
+
+impl NodeDataType<ParticleData> for MassMoments {
+    fn add_new_leaf_data(&mut self, _pos: &VecLength, data: &ParticleData) {
+        self.total += data.mass;
+    }
+}
+
+pub type QuadTree = quadtree::QuadTree<MassMoments, ParticleData>;
 
 fn get_gravity_acceleration(
     pos1: &VecLength,
@@ -41,7 +53,7 @@ pub fn get_acceleration_on_particle(
     softening_length: Length,
 ) -> VecAcceleration {
     match tree.node {
-        Node::Node(ref children) => children
+        Node::Tree(ref children) => children
             .iter()
             .map(|child| get_acceleration_on_particle(child, pos, entity, softening_length))
             .sum(),
