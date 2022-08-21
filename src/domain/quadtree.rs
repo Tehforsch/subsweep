@@ -1,11 +1,9 @@
 use std::ops::Index;
 use std::ops::IndexMut;
 
-use bevy::prelude::Entity;
 use serde::Deserialize;
 
 use super::Extents;
-use crate::units::Mass;
 use crate::units::VecLength;
 
 #[derive(Deserialize)]
@@ -19,26 +17,17 @@ impl Default for QuadTreeConfig {
     }
 }
 
-#[derive(Debug)]
-pub struct ParticleData {
-    pub entity: Entity,
-    pub pos: VecLength,
-    pub mass: Mass,
-}
-
-#[derive(Debug, Default)]
-pub struct LeafData {
-    pub particles: Vec<ParticleData>,
-}
+type LeafData<L> = (VecLength, L);
+type Leaf<L> = Vec<LeafData<L>>;
 
 #[derive(Debug)]
-pub enum Node {
-    Node(Box<[QuadTree; 4]>),
-    Leaf(LeafData),
+pub enum Node<N, L> {
+    Node(Box<[QuadTree<N, L>; 4]>),
+    Leaf(Leaf<L>),
 }
 
-impl Node {
-    fn make_node(&mut self, children: Box<[QuadTree; 4]>) -> LeafData {
+impl<N, L> Node<N, L> {
+    fn make_node(&mut self, children: Box<[QuadTree<N, L>; 4]>) -> Leaf<L> {
         let value = std::mem::replace(self, Node::Node(children));
         if let Self::Leaf(leaf) = value {
             leaf
@@ -49,42 +38,35 @@ impl Node {
 }
 
 #[derive(Debug)]
-pub struct QuadTree {
-    pub node: Node,
+pub struct QuadTree<N, L> {
+    pub node: Node<N, L>,
+    pub data: N,
     pub extents: Extents,
 }
 
-impl QuadTree {
-    pub fn new<'a>(config: &QuadTreeConfig, particles: Vec<(VecLength, Mass, Entity)>) -> Self {
+impl<N: Default, L: Clone> QuadTree<N, L> {
+    pub fn new<'a>(config: &QuadTreeConfig, particles: Vec<LeafData<L>>) -> Self {
         let extents = Extents::from_positions(particles.iter().map(|particle| &particle.0))
             .expect("Not enough particles to construct quadtree");
         let mut tree = Self::make_empty_leaf_from_extents(extents);
-        for (pos, mass, entity) in particles.iter() {
-            tree.insert(
-                config,
-                ParticleData {
-                    pos: pos.clone(),
-                    entity: entity.clone(),
-                    mass: mass.clone(),
-                },
-                0,
-            );
+        for (pos, data) in particles.iter() {
+            tree.insert(config, (pos.clone(), data.clone()), 0);
         }
         tree
     }
 
-    fn insert(&mut self, config: &QuadTreeConfig, particle: ParticleData, depth: usize) {
+    fn insert(&mut self, config: &QuadTreeConfig, data: LeafData<L>, depth: usize) {
         if let Node::Leaf(ref mut leaf) = self.node {
-            if leaf.particles.is_empty() || depth == config.max_depth {
-                leaf.particles.push(particle);
+            if leaf.is_empty() || depth == config.max_depth {
+                leaf.push(data);
                 return;
             } else {
                 self.subdivide(config, depth);
             }
         }
         if let Node::Node(ref mut children) = self.node {
-            let quadrant = &mut children[self.extents.get_quadrant_index(&particle.pos)];
-            quadrant.insert(&config, particle, depth + 1);
+            let quadrant = &mut children[self.extents.get_quadrant_index(&data.0)];
+            quadrant.insert(&config, data, depth + 1);
         }
     }
 
@@ -93,14 +75,15 @@ impl QuadTree {
         let quadrants = self.extents.get_quadrants();
         let children = Box::new(quadrants.map(Self::make_empty_leaf_from_extents));
         let particles = self.node.make_node(children);
-        for particle in particles.particles.into_iter() {
+        for particle in particles.into_iter() {
             self.insert(config, particle, depth);
         }
     }
 
     fn make_empty_leaf_from_extents(extents: Extents) -> Self {
         Self {
-            node: Node::Leaf(LeafData::default()),
+            node: Node::Leaf(vec![]),
+            data: N::default(),
             extents,
         }
     }
@@ -119,8 +102,8 @@ impl QuadTree {
     }
 }
 
-impl Index<usize> for QuadTree {
-    type Output = QuadTree;
+impl<N, L> Index<usize> for QuadTree<N, L> {
+    type Output = QuadTree<N, L>;
 
     fn index(&self, idx: usize) -> &Self::Output {
         if let Node::Node(ref children) = self.node {
@@ -131,7 +114,7 @@ impl Index<usize> for QuadTree {
     }
 }
 
-impl IndexMut<usize> for QuadTree {
+impl<N, L> IndexMut<usize> for QuadTree<N, L> {
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
         if let Node::Node(ref mut children) = self.node {
             &mut children[idx]
@@ -149,23 +132,11 @@ mod tests {
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
         let positions = [
-            (
-                Vec2Length::meter(1.0, 1.0),
-                Mass::kilogram(1.0),
-                Entity::from_raw(0),
-            ),
-            (
-                Vec2Length::meter(1.0, 1.0),
-                Mass::kilogram(1.0),
-                Entity::from_raw(0),
-            ),
-            (
-                Vec2Length::meter(2.0, 2.0),
-                Mass::kilogram(1.0),
-                Entity::from_raw(0),
-            ),
+            (Vec2Length::meter(1.0, 1.0), ()),
+            (Vec2Length::meter(1.0, 1.0), ()),
+            (Vec2Length::meter(2.0, 2.0), ()),
         ];
         let config = QuadTreeConfig { max_depth: 10 };
-        QuadTree::new(&config, positions.into_iter().collect());
+        QuadTree::<(), ()>::new(&config, positions.into_iter().collect());
     }
 }

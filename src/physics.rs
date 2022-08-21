@@ -2,6 +2,7 @@ mod gravity;
 mod parameters;
 
 use bevy::prelude::*;
+pub use gravity::QuadTree;
 use mpi::traits::Equivalence;
 
 use self::gravity::construct_quad_tree_system;
