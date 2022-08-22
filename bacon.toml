@@ -28,6 +28,11 @@ command = ["cargo", "hack", "test", "--each-feature", "--color", "always"]
 need_stdout = true
 watch = ["tests"]
 
+[jobs.test]
+command = ["cargo", "test", "--color", "always"]
+need_stdout = true
+watch = ["tests"]
+
 [jobs.test-local]
 command = ["cargo", "test", "--features", "local", "--color", "always"]
 need_stdout = true
@@ -46,11 +51,11 @@ need_stdout = true
 # Shortcuts to internal functions (scrolling, toggling, etc.)
 # should go in your personal prefs.toml file instead.
 [keybindings]
-a = "job:check-all"
+a = "job:test-all"
 i = "job:initial"
 c = "job:clippy"
 d = "job:doc-open"
-t = "job:test-all"
+t = "job:test"
 r = "job:mpi"
 k = "job:kill"
 l = "job:test-local"
