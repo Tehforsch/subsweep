@@ -3,11 +3,14 @@ use bevy::prelude::*;
 mod extent;
 mod peano_hilbert;
 pub mod quadtree;
-mod segment;
+pub mod segment;
 
 use self::extent::Extent;
 use self::peano_hilbert::PeanoHilbertKey;
 use self::segment::get_segments;
+use self::segment::Segment;
+use crate::communication::ExchangeCommunicator;
+use crate::communication::SizedCommunicator;
 use crate::physics::LocalParticle;
 use crate::position::Position;
 use crate::units::Length;
@@ -61,6 +64,7 @@ fn determine_global_extent_system(// mut commands: Commands,
 fn domain_decomposition_system(
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
+    mut comm: NonSendMut<ExchangeCommunicator<Segment>>,
 ) {
     let mut particles: Vec<_> = particles
         .iter()
@@ -70,5 +74,11 @@ fn domain_decomposition_system(
         })
         .collect();
     particles.sort();
-    let segments = get_segments(&particles, particles.len() / 50);
+    const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 10;
+    let num_desired_particles_per_segment = particles.len() / NUM_DESIRED_SEGMENTS_PER_RANK;
+    let segments = get_segments(&particles, num_desired_particles_per_segment);
+    for rank in comm.other_ranks() {
+        comm.send_vec(rank, segments.clone());
+    }
+    let all_segments = comm.receive_vec();
 }

@@ -1,10 +1,12 @@
+use mpi::traits::Equivalence;
+
 use super::peano_hilbert::PeanoHilbertKey;
 use super::ParticleData;
 
 /// A segment of peano hilbert keys corresponding to
 /// the interval including `start` but excluding `end`
-#[derive(Debug)]
-pub(super) struct Segment {
+#[derive(Debug, Equivalence, Clone)]
+pub struct Segment {
     start: PeanoHilbertKey,
     end: PeanoHilbertKey,
 }

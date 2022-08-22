@@ -1,3 +1,5 @@
+use mpi::traits::Equivalence;
+
 use super::extent::Extent;
 use crate::units::VecLength;
 
@@ -6,7 +8,7 @@ use crate::units::VecLength;
 const NUM_BITS_PER_DIMENSION: u32 = 21;
 const NUM_SUBDIVISIONS: u64 = 2u64.pow(NUM_BITS_PER_DIMENSION);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Equivalence)]
 pub struct PeanoHilbertKey(pub u64);
 
 pub fn get_integer_position(extents: &Extent, pos: &VecLength) -> (u64, u64) {

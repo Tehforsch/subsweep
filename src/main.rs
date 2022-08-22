@@ -36,6 +36,7 @@ use communication::ExchangeCommunicator;
 use communication::Identified;
 use communication::SizedCommunicator;
 use communication::SyncCommunicator;
+use domain::segment::Segment;
 use domain::DomainDecompositionPlugin;
 use initial_conditions::InitialConditionsPlugin;
 use parameters::add_parameter_file_contents;
@@ -46,6 +47,7 @@ use visualization::VisualizationPlugin;
 
 pub const PARTICLE_VISUALIZATION_EXCHANGE_TAG: i32 = 1337;
 pub const PARTICLE_EXCHANGE_TAG: i32 = 1338;
+pub const SEGMENT_EXCHANGE_TAG: i32 = 1339;
 
 fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
@@ -82,6 +84,7 @@ fn build_and_run_app(
     opts: &CommandLineOptions,
     communicator1: Communicator<ParticleExchangeData>,
     communicator2: Communicator<Identified<ParticleVisualizationExchangeData>>,
+    communicator3: Communicator<Segment>,
 ) {
     let mut app = App::new();
     let rank = communicator1.rank();
@@ -91,7 +94,8 @@ fn build_and_run_app(
         .add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin)
         .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
-        .insert_non_send_resource(SyncCommunicator::new(communicator2));
+        .insert_non_send_resource(SyncCommunicator::new(communicator2))
+        .insert_non_send_resource(ExchangeCommunicator::new(communicator3));
     if rank == 0 {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
@@ -151,5 +155,6 @@ fn main() {
     let world2 = Communicator::<Identified<ParticleVisualizationExchangeData>>::new(
         PARTICLE_VISUALIZATION_EXCHANGE_TAG,
     );
-    build_and_run_app(&opts, world1, world2);
+    let world3 = Communicator::<Segment>::new(SEGMENT_EXCHANGE_TAG);
+    build_and_run_app(&opts, world1, world2, world3);
 }
