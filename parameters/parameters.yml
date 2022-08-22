@@ -1,6 +1,7 @@
 physics:
   softening_length: 1e-3 m
+  opening_angle: "0.5"
 tree:
   max_depth: 20
 visualization:
-  show_quadtree: true
+  show_quadtree: false
