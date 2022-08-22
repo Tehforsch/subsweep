@@ -10,6 +10,8 @@ pub trait NodeDataType<L> {
     fn add_new_leaf_data(&mut self, _pos: &VecLength, _l: &L) {}
 }
 
+impl<L> NodeDataType<L> for () {}
+
 #[derive(Deserialize)]
 pub struct QuadTreeConfig {
     pub max_depth: usize,
@@ -140,7 +142,6 @@ mod tests {
 
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
-        impl<L> NodeDataType<L> for () {}
         let positions = [
             (Vec2Length::meter(1.0, 1.0), ()),
             (Vec2Length::meter(1.0, 1.0), ()),

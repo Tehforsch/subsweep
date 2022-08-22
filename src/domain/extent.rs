@@ -29,6 +29,14 @@ impl Extent {
         VecLength::new(self.x_center, self.y_center)
     }
 
+    pub fn lower_left(&self) -> VecLength {
+        VecLength::new(self.x_min, self.y_min)
+    }
+
+    pub fn side_lengths(&self) -> VecLength {
+        VecLength::new(self.x_max - self.x_min, self.y_max - self.y_min)
+    }
+
     pub fn max_side_length(&self) -> Length {
         (self.x_max - self.x_min).max(&(self.y_max - self.y_min))
     }
