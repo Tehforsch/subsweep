@@ -59,7 +59,7 @@ pub(super) fn get_segments(
     }
     let segment = Segment {
         start: particles[0].key,
-        end: particles.last().unwrap().key,
+        end: particles.last().unwrap().key.next(),
     };
     let mut segments = vec![];
     segment.split_into(&mut segments, &particles, desired_segment_size);
@@ -108,13 +108,27 @@ mod tests {
     }
 
     #[test]
-    fn get_segments() {
+    fn get_segments_reaches_desired_size() {
         let particles = get_particles();
         let desired_size = 4;
-        let segments = super::get_segments(&particles, 4);
-        for segment in segments {
+        let segments = super::get_segments(&particles, desired_size);
+        for segment in segments.iter() {
             assert!(segment.num_contained_particles(&particles) <= desired_size);
         }
+    }
+
+    #[test]
+    fn get_segments_has_correct_total_number_of_particles() {
+        let particles = get_particles();
+        let desired_size = 4;
+        let segments = super::get_segments(&particles, desired_size);
+        assert_eq!(
+            segments
+                .iter()
+                .map(|segment| segment.num_contained_particles(&particles))
+                .sum::<usize>(),
+            particles.len()
+        );
     }
 
     #[test]
