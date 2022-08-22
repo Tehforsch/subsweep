@@ -9,20 +9,29 @@ use super::ParticleData;
 pub struct Segment {
     start: PeanoHilbertKey,
     end: PeanoHilbertKey,
+    num_particles: usize,
+}
+
+fn num_contained_particles(
+    particles: &[ParticleData],
+    start: PeanoHilbertKey,
+    end: PeanoHilbertKey,
+) -> usize {
+    let start_index = particles.binary_search_by_key(&start, |p: &ParticleData| p.key);
+    let end_index = particles.binary_search_by_key(&end, |p: &ParticleData| p.key);
+    let start_index = start_index.unwrap_or_else(|not_found| not_found);
+    let end_index = end_index.unwrap_or_else(|not_found| not_found);
+    end_index - start_index
 }
 
 impl Segment {
-    fn new(start: PeanoHilbertKey, end: PeanoHilbertKey) -> Self {
-        Self { start, end }
-    }
-
-    fn num_contained_particles(&self, particles: &[ParticleData]) -> usize {
-        debug_assert!(self.start <= self.end);
-        let start_index = particles.binary_search_by_key(&self.start, |p: &ParticleData| p.key);
-        let end_index = particles.binary_search_by_key(&self.end, |p: &ParticleData| p.key);
-        let start_index = start_index.unwrap_or_else(|not_found| not_found);
-        let end_index = end_index.unwrap_or_else(|not_found| not_found);
-        end_index - start_index
+    fn new(particles: &[ParticleData], start: PeanoHilbertKey, end: PeanoHilbertKey) -> Self {
+        debug_assert!(start <= end);
+        Self {
+            start,
+            end,
+            num_particles: num_contained_particles(particles, start, end),
+        }
     }
 
     fn split_into(
@@ -31,14 +40,13 @@ impl Segment {
         particles: &[ParticleData],
         desired_segment_size: usize,
     ) {
-        let num_particles = self.num_contained_particles(particles);
-        if num_particles > desired_segment_size {
+        if self.num_particles > desired_segment_size {
             let half = PeanoHilbertKey((self.end.0 + self.start.0) / 2);
-            let left = Segment::new(self.start, half);
-            let right = Segment::new(half, self.end);
+            let left = Segment::new(particles, self.start, half);
+            let right = Segment::new(particles, half, self.end);
             left.split_into(segments, particles, desired_segment_size);
             right.split_into(segments, particles, desired_segment_size);
-        } else if num_particles > 0 {
+        } else if self.num_particles > 0 {
             segments.push(self);
         }
     }
@@ -55,11 +63,13 @@ pub(super) fn get_segments(
         return vec![Segment {
             start: particles[0].key,
             end: particles[0].key,
+            num_particles: 1,
         }];
     }
     let segment = Segment {
         start: particles[0].key,
         end: particles.last().unwrap().key.next(),
+        num_particles: particles.len(),
     };
     let mut segments = vec![];
     segment.split_into(&mut segments, &particles, desired_segment_size);
@@ -89,8 +99,12 @@ mod tests {
         let particles = get_particles();
         let check_num = |start: usize, end: usize, num: usize| {
             assert_eq!(
-                Segment::new(PeanoHilbertKey(start as u64), PeanoHilbertKey(end as u64))
-                    .num_contained_particles(&particles),
+                Segment::new(
+                    &particles,
+                    PeanoHilbertKey(start as u64),
+                    PeanoHilbertKey(end as u64)
+                )
+                .num_particles,
                 num
             );
         };
@@ -113,7 +127,7 @@ mod tests {
         let desired_size = 4;
         let segments = super::get_segments(&particles, desired_size);
         for segment in segments.iter() {
-            assert!(segment.num_contained_particles(&particles) <= desired_size);
+            assert!(segment.num_particles <= desired_size);
         }
     }
 
@@ -125,7 +139,7 @@ mod tests {
         assert_eq!(
             segments
                 .iter()
-                .map(|segment| segment.num_contained_particles(&particles))
+                .map(|segment| segment.num_particles)
                 .sum::<usize>(),
             particles.len()
         );
