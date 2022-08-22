@@ -1,14 +1,14 @@
-mod extents;
+mod extent;
 pub mod quadtree;
 
-use self::extents::Extents;
+use self::extent::Extent;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
 use crate::units::VecLength;
 
 #[derive(Clone)]
 pub struct DomainDistribution {
-    domains: DataByRank<Vec<Extents>>,
+    domains: DataByRank<Vec<Extent>>,
 }
 
 impl DomainDistribution {
@@ -24,7 +24,7 @@ impl DomainDistribution {
 
 #[cfg(test)]
 mod tests {
-    use super::extents::Extents;
+    use super::extent::Extent;
     use super::DomainDistribution;
     use crate::communication::DataByRank;
     use crate::units::Length;
@@ -32,7 +32,7 @@ mod tests {
 
     #[test]
     fn target_rank() {
-        let total_extents = Extents::new(
+        let total_extents = Extent::new(
             Length::meter(-100.0),
             Length::meter(100.0),
             Length::meter(-100.0),

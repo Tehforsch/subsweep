@@ -2,7 +2,7 @@ use crate::units::Length;
 use crate::units::VecLength;
 
 #[derive(Clone, Debug)]
-pub struct Extents {
+pub struct Extent {
     pub x_min: Length,
     pub x_max: Length,
     pub y_min: Length,
@@ -11,7 +11,7 @@ pub struct Extents {
     pub y_center: Length,
 }
 
-impl Extents {
+impl Extent {
     pub fn new(x_min: Length, x_max: Length, y_min: Length, y_max: Length) -> Self {
         debug_assert!(x_min < x_max);
         debug_assert!(y_min < y_max);
@@ -89,7 +89,7 @@ impl Extents {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::Extents;
+    use crate::domain::Extent;
     use crate::units::Length;
     use crate::units::VecLength;
 
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn extent_quadrants() {
-        let root_extents = Extents::new(
+        let root_extents = Extent::new(
             Length::meter(-1.0),
             Length::meter(1.0),
             Length::meter(-2.0),
@@ -136,7 +136,7 @@ mod tests {
             VecLength::meter(0.0, -2.0),
             VecLength::meter(0.0, 2.0),
         ];
-        let extents = Extents::from_positions(positions.iter()).unwrap();
+        let extents = Extent::from_positions(positions.iter()).unwrap();
         assert_is_close(extents.x_min, -1.0);
         assert_is_close(extents.x_max, 1.0);
         assert_is_close(extents.y_min, -2.0);
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn extent_from_positions_is_none_with_zero_positions() {
-        assert!(Extents::from_positions([].iter()).is_none());
+        assert!(Extent::from_positions([].iter()).is_none());
     }
 
     #[test]
@@ -155,7 +155,7 @@ mod tests {
             VecLength::meter(1.0, 0.0),
             VecLength::meter(1.0, 0.0),
         ];
-        assert!(Extents::from_positions(positions.iter()).is_none());
+        assert!(Extent::from_positions(positions.iter()).is_none());
     }
 
     #[test]
@@ -165,13 +165,13 @@ mod tests {
             VecLength::meter(2.0, 0.0),
             VecLength::meter(3.0, 0.0),
         ];
-        assert!(Extents::from_positions(positions.iter()).is_none());
+        assert!(Extent::from_positions(positions.iter()).is_none());
     }
 
     #[test]
     #[should_panic]
     fn invalid_extents() {
-        Extents::new(
+        Extent::new(
             Length::meter(1.0),
             Length::meter(-1.0),
             Length::meter(0.0),

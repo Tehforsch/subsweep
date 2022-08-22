@@ -3,7 +3,7 @@ use std::ops::IndexMut;
 
 use serde::Deserialize;
 
-use super::Extents;
+use super::Extent;
 use crate::units::VecLength;
 
 pub trait NodeDataType<L> {
@@ -45,12 +45,12 @@ impl<N, L> Node<N, L> {
 pub struct QuadTree<N, L> {
     pub node: Node<N, L>,
     pub data: N,
-    pub extents: Extents,
+    pub extents: Extent,
 }
 
 impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
     pub fn new<'a>(config: &QuadTreeConfig, particles: Vec<(VecLength, L)>) -> Self {
-        let extents = Extents::from_positions(particles.iter().map(|particle| &particle.0))
+        let extents = Extent::from_positions(particles.iter().map(|particle| &particle.0))
             .expect("Not enough particles to construct quadtree");
         let mut tree = Self::make_empty_leaf_from_extents(extents);
         for (pos, data) in particles.iter() {
@@ -89,7 +89,7 @@ impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
         }
     }
 
-    fn make_empty_leaf_from_extents(extents: Extents) -> Self {
+    fn make_empty_leaf_from_extents(extents: Extent) -> Self {
         Self {
             node: Node::Leaf(vec![]),
             data: N::default(),
@@ -97,7 +97,7 @@ impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
         }
     }
 
-    pub fn depth_first_map(&self, closure: &mut impl FnMut(&Extents, &LeafData<L>) -> ()) {
+    pub fn depth_first_map(&self, closure: &mut impl FnMut(&Extent, &LeafData<L>) -> ()) {
         match self.node {
             Node::Tree(ref node) => {
                 for child in node.iter() {
