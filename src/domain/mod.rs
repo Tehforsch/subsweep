@@ -3,9 +3,11 @@ use bevy::prelude::*;
 mod extent;
 mod peano_hilbert;
 pub mod quadtree;
+mod segment;
 
 use self::extent::Extent;
 use self::peano_hilbert::PeanoHilbertKey;
+use self::segment::get_segments;
 use crate::physics::LocalParticle;
 use crate::position::Position;
 use crate::units::Length;
@@ -44,7 +46,7 @@ impl Plugin for DomainDecompositionPlugin {
 
 struct GlobalExtent(Extent);
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct ParticleData {
     key: PeanoHilbertKey,
     entity: Entity,
@@ -57,7 +59,6 @@ fn determine_global_extent_system(// mut commands: Commands,
 }
 
 fn domain_decomposition_system(
-    mut commands: Commands,
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
 ) {
@@ -68,5 +69,6 @@ fn domain_decomposition_system(
             key: PeanoHilbertKey::new(&extent.0, &pos.0),
         })
         .collect();
-    particles.sort_by_key(|particle| particle.key);
+    particles.sort();
+    let segments = get_segments(&particles, particles.len() / 50);
 }
