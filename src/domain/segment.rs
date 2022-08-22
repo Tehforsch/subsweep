@@ -17,11 +17,12 @@ fn num_contained_particles(
     start: PeanoHilbertKey,
     end: PeanoHilbertKey,
 ) -> usize {
-    let start_index = particles.binary_search_by_key(&start, |p: &ParticleData| p.key);
-    let end_index = particles.binary_search_by_key(&end, |p: &ParticleData| p.key);
-    let start_index = start_index.unwrap_or_else(|not_found| not_found);
-    let end_index = end_index.unwrap_or_else(|not_found| not_found);
-    end_index - start_index
+    let get_position = |key| {
+        particles
+            .binary_search_by_key(key, |p: &ParticleData| p.key)
+            .unwrap_or_else(|insertion_index| insertion_index)
+    };
+    get_position(&end) - get_position(&start)
 }
 
 impl Segment {
