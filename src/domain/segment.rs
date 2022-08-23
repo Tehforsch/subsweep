@@ -1,4 +1,5 @@
-use bevy::prelude::debug;
+use std::ops::Range;
+
 use mpi::traits::Equivalence;
 
 use super::peano_hilbert::PeanoHilbertKey;
@@ -14,9 +15,13 @@ pub struct Segment {
     pub num_particles: usize,
 }
 
-fn get_position(particles: &[ParticleData], key: &PeanoHilbertKey) -> usize {
-    particles
-        .binary_search_by_key(key, |p: &ParticleData| p.key)
+fn get_position<T>(
+    items: &[T],
+    map: impl Fn(&T) -> PeanoHilbertKey,
+    key: &PeanoHilbertKey,
+) -> usize {
+    items
+        .binary_search_by_key(key, map)
         .unwrap_or_else(|insertion_index| insertion_index)
 }
 
@@ -25,7 +30,8 @@ fn num_contained_particles(
     start: PeanoHilbertKey,
     end: PeanoHilbertKey,
 ) -> usize {
-    get_position(particles, &end) - get_position(particles, &start)
+    get_position(particles, ParticleData::key, &end)
+        - get_position(particles, ParticleData::key, &start)
 }
 
 impl Segment {
@@ -38,11 +44,27 @@ impl Segment {
         }
     }
 
+    fn start(&self) -> PeanoHilbertKey {
+        self.start
+    }
+    fn end(&self) -> PeanoHilbertKey {
+        self.end
+    }
+
+    fn length(&self) -> u64 {
+        self.end.0 - self.start.0
+    }
+
+    fn overlap(&self, other: &Segment) -> u64 {
+        self.end.min(other.end).0 - self.start.max(other.start).0
+    }
+
     pub(super) fn iter_contained_particles<'a>(
         &self,
         particles: &'a [ParticleData],
     ) -> &'a [ParticleData] {
-        &particles[get_position(&particles, &self.start)..get_position(&particles, &self.end)]
+        &particles[get_position(&particles, ParticleData::key, &self.start)
+            ..get_position(&particles, ParticleData::key, &self.end)]
     }
 
     fn split_into(
@@ -89,18 +111,35 @@ pub(super) fn get_segments(
     segments
 }
 
+fn get_overlapping_segments(segments: &[Segment], segment: &Segment) -> Range<usize> {
+    let last_beginning_before_start = get_position(segments, Segment::start, &segment.start);
+    let last_ending_before_end = get_position(segments, Segment::end, &segment.end);
+    if last_ending_before_end == segments.len() {
+        last_beginning_before_start..last_ending_before_end
+    } else {
+        last_beginning_before_start..last_ending_before_end + 1
+    }
+}
+
+/// Sloppily keep segments in sorted order and merge
+/// any overlapping segments (while adding
 pub(super) fn sort_and_merge_segments(mut segments: DataByRank<Vec<Segment>>) -> Vec<Segment> {
     let mut result = vec![];
     for (_, segments) in segments.drain_all() {
         for segment in segments {
-            let start = result
-                .binary_search_by_key(&segment.start, |s: &Segment| s.end)
-                .unwrap_or_else(|i| i);
-            let end = result
-                .binary_search_by_key(&segment.end, |s| s.start)
-                .unwrap_or_else(|i| i);
-            result.push(segment);
-            debug!("for tomorrow");
+            let overlapping_segments = get_overlapping_segments(&result, &segment);
+            if overlapping_segments.is_empty() {
+                result.insert(overlapping_segments.start, segment);
+            } else {
+                let num_overlapping_segments = overlapping_segments.len();
+                let new_num_particles_per_overlapping_segment =
+                    segment.num_particles / num_overlapping_segments;
+                dbg!(&result);
+                dbg!(&overlapping_segments);
+                for mut other in &mut result[overlapping_segments] {
+                    other.num_particles += new_num_particles_per_overlapping_segment;
+                }
+            }
         }
     }
     result
@@ -185,5 +224,24 @@ mod tests {
     fn get_segments_does_not_fail_with_single_particle() {
         let particles = vec![get_particles().remove(0)];
         super::get_segments(&particles, 3);
+    }
+
+    #[test]
+    fn get_overlapping_segments() {
+        let particles = get_particles();
+        let segment = |s, e| Segment::new(&particles, PeanoHilbertKey(s), PeanoHilbertKey(e));
+        let segments = vec![
+            segment(0, 5),
+            segment(5, 7),
+            segment(9, 11),
+            segment(11, 19),
+        ];
+        let overlapping = |s, e| super::get_overlapping_segments(&segments, &segment(s, e));
+        assert_eq!(overlapping(0, 3), 0..1);
+        assert_eq!(overlapping(0, 5), 0..1);
+        assert_eq!(overlapping(0, 6), 0..2);
+        assert_eq!(overlapping(7, 11), 2..3);
+        assert_eq!(overlapping(7, 12), 2..4);
+        assert_eq!(overlapping(100, 100), 4..4);
     }
 }

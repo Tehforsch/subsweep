@@ -58,6 +58,12 @@ struct ParticleData {
     entity: Entity,
 }
 
+impl ParticleData {
+    fn key(&self) -> PeanoHilbertKey {
+        self.key
+    }
+}
+
 fn determine_global_extent_system(// mut commands: Commands,
     // particles: Query<&Position, With<LocalParticle>>,
 ) {
