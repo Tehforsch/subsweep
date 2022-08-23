@@ -76,6 +76,9 @@ impl Segment {
     ) {
         if self.num_particles == 0 {
             return;
+        }
+        if self.start.next() == self.end {
+            segments.push(self)
         } else if self.num_particles > desired_segment_size {
             let half = PeanoHilbertKey((self.end.0 + self.start.0) / 2);
             let left = Segment::new(particles, self.start, half);
@@ -223,6 +226,12 @@ mod tests {
     fn get_segments_does_not_fail_with_single_particle() {
         let particles = vec![get_particles().remove(0)];
         super::get_segments(&particles, 3);
+    }
+
+    #[test]
+    fn get_segments_does_not_infinitely_recurse() {
+        let particles = get_particles();
+        super::get_segments(&particles, 0);
     }
 
     #[test]
