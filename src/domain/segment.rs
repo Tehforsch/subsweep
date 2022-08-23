@@ -56,8 +56,8 @@ impl Segment {
         self.end.0 - self.start.0
     }
 
-    fn overlap(&self, other: &Segment) -> u64 {
-        self.end.min(other.end).0 - self.start.max(other.start).0
+    fn overlaps_with(&self, other: &Segment) -> bool {
+        self.end.min(other.end).0 > self.start.max(other.start).0
     }
 
     pub(super) fn iter_contained_particles<'a>(
@@ -116,12 +116,20 @@ pub(super) fn get_segments(
 }
 
 fn get_overlapping_segments(segments: &[Segment], segment: &Segment) -> Range<usize> {
-    let last_beginning_before_start = get_position(segments, Segment::start, &segment.start);
-    let last_ending_before_end = get_position(segments, Segment::end, &segment.end);
-    if last_ending_before_end == segments.len() {
-        last_beginning_before_start..last_ending_before_end
-    } else {
-        last_beginning_before_start..last_ending_before_end + 1
+    let first_potentially_overlapping_segment =
+        get_position(segments, Segment::end, &segment.start);
+    let last_potentially_overlapping_segment = get_position(segments, Segment::start, &segment.end);
+    let range = || first_potentially_overlapping_segment..last_potentially_overlapping_segment;
+    let first_overlapping_segment = range()
+        .filter(|i| segments[*i].overlaps_with(segment))
+        .next();
+    let last_overlapping_segment = range()
+        .rev()
+        .filter(|i| segments[*i].overlaps_with(segment))
+        .next();
+    match first_overlapping_segment {
+        Some(segment_index) => segment_index..(last_overlapping_segment.unwrap() + 1),
+        None => first_potentially_overlapping_segment..first_potentially_overlapping_segment,
     }
 }
 
@@ -248,6 +256,7 @@ mod tests {
         ];
         let overlapping = |s, e| super::get_overlapping_segments(&segments, &segment(s, e));
         assert_eq!(overlapping(0, 3), 0..1);
+        assert_eq!(overlapping(1, 3), 0..1);
         assert_eq!(overlapping(0, 5), 0..1);
         assert_eq!(overlapping(0, 6), 0..2);
         assert_eq!(overlapping(7, 11), 2..3);
