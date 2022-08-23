@@ -50,15 +50,23 @@ pub struct QuadTree<N, L> {
     pub extents: Extent,
 }
 
+#[derive(Debug)]
+pub enum QuadTreeConstructionError {
+    NotEnoughParticles,
+}
+
 impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
-    pub fn new<'a>(config: &QuadTreeConfig, particles: Vec<(VecLength, L)>) -> Self {
+    pub fn new<'a>(
+        config: &QuadTreeConfig,
+        particles: Vec<(VecLength, L)>,
+    ) -> Result<Self, QuadTreeConstructionError> {
         let extents = Extent::from_positions(particles.iter().map(|particle| &particle.0))
-            .expect("Not enough particles to construct quadtree");
+            .ok_or(QuadTreeConstructionError::NotEnoughParticles)?;
         let mut tree = Self::make_empty_leaf_from_extents(extents);
         for (pos, data) in particles.iter() {
             tree.insert_new(config, (pos.clone(), data.clone()), 0);
         }
-        tree
+        Ok(tree)
     }
 
     fn insert_new(&mut self, config: &QuadTreeConfig, data: (VecLength, L), depth: usize) {

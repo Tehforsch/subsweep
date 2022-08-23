@@ -7,6 +7,7 @@ use crate::domain::quadtree;
 use crate::domain::quadtree::Node;
 use crate::domain::quadtree::NodeDataType;
 use crate::domain::quadtree::QuadTreeConfig;
+use crate::domain::quadtree::QuadTreeConstructionError;
 use crate::mass::Mass;
 use crate::position::Position;
 use crate::units;
@@ -123,15 +124,24 @@ pub(super) fn construct_quad_tree_system(
         })
         .collect();
     let quadtree = QuadTree::new(&config, particles);
-    commands.insert_resource(quadtree);
+    match quadtree {
+        Err(QuadTreeConstructionError::NotEnoughParticles) => {
+            error!("Failed to construct quadtree - not enough particles")
+        }
+        Ok(quadtree) => commands.insert_resource(quadtree),
+    }
 }
 
 pub(super) fn gravity_system(
     timestep: Res<Timestep>,
-    tree: Res<QuadTree>,
+    tree: Option<Res<QuadTree>>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
     parameters: Res<Parameters>,
 ) {
+    if tree.is_none() {
+        return;
+    }
+    let tree = tree.unwrap();
     for (entity, pos, mut vel) in particles.iter_mut() {
         let acceleration = get_acceleration_on_particle(
             &tree,
@@ -179,7 +189,7 @@ mod tests {
 
     #[test]
     fn mass_sum() {
-        let quadtree = QuadTree::new(&QuadTreeConfig::default(), get_positions(7));
+        let quadtree = QuadTree::new(&QuadTreeConfig::default(), get_positions(7)).unwrap();
         check_all_sub_trees(&quadtree);
     }
 
@@ -204,7 +214,7 @@ mod tests {
     #[test]
     fn compare_quadtree_gravity_to_direct_sum() {
         let n_particles = 50;
-        let tree = QuadTree::new(&QuadTreeConfig::default(), get_positions(n_particles));
+        let tree = QuadTree::new(&QuadTreeConfig::default(), get_positions(n_particles)).unwrap();
         let pos = Vec2Length::meter(3.5, 3.5);
         let acc1 = get_acceleration_on_particle(
             &tree,
