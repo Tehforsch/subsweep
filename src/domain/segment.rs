@@ -151,6 +151,8 @@ pub(super) fn sort_and_merge_segments(mut segments: DataByRank<Vec<Segment>>) ->
 mod tests {
     use bevy::prelude::Entity;
 
+    use super::sort_and_merge_segments;
+    use crate::communication::DataByRank;
     use crate::domain::peano_hilbert::PeanoHilbertKey;
     use crate::domain::segment::Segment;
     use crate::domain::ParticleData;
@@ -251,5 +253,30 @@ mod tests {
         assert_eq!(overlapping(7, 11), 2..3);
         assert_eq!(overlapping(7, 12), 2..4);
         assert_eq!(overlapping(100, 100), 4..4);
+    }
+
+    #[test]
+    fn sort_and_merge_segments_sorts() {
+        let mut segments = DataByRank::empty();
+        segments.insert(
+            0,
+            vec![Segment {
+                start: PeanoHilbertKey(0),
+                end: PeanoHilbertKey(3),
+                num_particles: 1,
+            }],
+        );
+        segments.insert(
+            1,
+            vec![Segment {
+                start: PeanoHilbertKey(1),
+                end: PeanoHilbertKey(2),
+                num_particles: 1,
+            }],
+        );
+        let result = sort_and_merge_segments(segments);
+        for (seg1, seg2) in result.iter().zip(result[1..].iter()) {
+            assert!(seg1.end <= seg2.start);
+        }
     }
 }
