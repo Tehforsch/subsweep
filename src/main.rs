@@ -106,6 +106,8 @@ fn build_and_run_app(
         app.add_system(show_time_system);
     } else {
         app.add_plugins(MinimalPlugins);
+        #[cfg(not(feature = "local"))]
+        app.add_plugin(LogPlugin);
     }
     if opts.headless {
         // Only show execution order ambiguities when running without render plugins
