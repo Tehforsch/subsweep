@@ -69,13 +69,6 @@ fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timeste
     }
 }
 
-#[derive(Equivalence, Clone)]
-pub struct ParticleExchangeData {
-    vel: Velocity,
-    pos: Position,
-    mass: Mass,
-}
-
 fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
     time.0 += timestep.0;
 }

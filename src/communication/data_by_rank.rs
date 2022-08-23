@@ -57,6 +57,12 @@ impl<T> DataByRank<Vec<T>> {
     pub fn drain_all(&mut self) -> impl Iterator<Item = (Rank, Vec<T>)> + '_ {
         self.0.iter_mut().map(|(k, v)| (*k, v.drain(..).collect()))
     }
+
+    pub fn drain_all_sorted(&mut self) -> impl Iterator<Item = (Rank, Vec<T>)> + '_ {
+        let mut keys: Vec<_> = self.0.keys().map(|k| *k).collect();
+        keys.sort();
+        keys.into_iter().map(|k| (k, self.0.remove(&k).unwrap()))
+    }
 }
 
 impl<T> Index<Rank> for DataByRank<T> {

@@ -44,10 +44,11 @@ impl Segment {
         }
     }
 
-    fn start(&self) -> PeanoHilbertKey {
+    pub fn start(&self) -> PeanoHilbertKey {
         self.start
     }
-    fn end(&self) -> PeanoHilbertKey {
+
+    pub fn end(&self) -> PeanoHilbertKey {
         self.end
     }
 
@@ -125,7 +126,7 @@ fn get_overlapping_segments(segments: &[Segment], segment: &Segment) -> Range<us
 /// any overlapping segments (while adding
 pub(super) fn sort_and_merge_segments(mut segments: DataByRank<Vec<Segment>>) -> Vec<Segment> {
     let mut result = vec![];
-    for (_, segments) in segments.drain_all() {
+    for (_, segments) in segments.drain_all_sorted() {
         for segment in segments {
             let overlapping_segments = get_overlapping_segments(&result, &segment);
             if overlapping_segments.is_empty() {
@@ -134,8 +135,6 @@ pub(super) fn sort_and_merge_segments(mut segments: DataByRank<Vec<Segment>>) ->
                 let num_overlapping_segments = overlapping_segments.len();
                 let new_num_particles_per_overlapping_segment =
                     segment.num_particles / num_overlapping_segments;
-                dbg!(&result);
-                dbg!(&overlapping_segments);
                 for mut other in &mut result[overlapping_segments] {
                     other.num_particles += new_num_particles_per_overlapping_segment;
                 }

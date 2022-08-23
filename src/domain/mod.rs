@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use mpi::traits::Equivalence;
 
 mod extent;
 mod peano_hilbert;
@@ -13,10 +14,13 @@ use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::domain::segment::sort_and_merge_segments;
+use crate::mass::Mass;
+use crate::particle::LocalParticleBundle;
 use crate::physics::LocalParticle;
-use crate::physics::RemoteParticle;
 use crate::position::Position;
 use crate::units::Length;
+use crate::units::VecLength;
+use crate::velocity::Velocity;
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
@@ -75,7 +79,9 @@ fn domain_decomposition_system(
     rank: Res<Rank>,
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
+    full_particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
     mut comm: NonSendMut<ExchangeCommunicator<Segment>>,
+    mut exchange_comm: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
 ) {
     let mut particles: Vec<_> = particles
         .iter()
@@ -85,7 +91,7 @@ fn domain_decomposition_system(
         })
         .collect();
     particles.sort();
-    const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 10;
+    const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
     let num_desired_particles_per_segment =
         (particles.len() / NUM_DESIRED_SEGMENTS_PER_RANK).max(1);
     let segments = get_segments(&particles, num_desired_particles_per_segment);
@@ -94,23 +100,58 @@ fn domain_decomposition_system(
     }
     let mut all_segments = comm.receive_vec();
     all_segments.insert(*rank, segments);
+    let total_load: usize = all_segments
+        .iter()
+        .map(|(_, segments)| segments.iter().map(|s| s.num_particles).sum::<usize>())
+        .sum();
     let all_segments = sort_and_merge_segments(all_segments);
-    let total_load: usize = all_segments.iter().map(|s| s.num_particles).sum();
     let load_per_rank = total_load / comm.size();
     let mut load = 0;
-    let mut current_rank = 0;
+    let mut key_cutoffs_by_rank = vec![];
     for segment in all_segments.into_iter() {
-        for part in segment.iter_contained_particles(&particles) {
-            if current_rank != *rank {
-                commands
-                    .entity(part.entity)
-                    .insert(RemoteParticle(current_rank));
-            }
-        }
         load += segment.num_particles;
-        if load > load_per_rank {
+        if load >= load_per_rank {
+            key_cutoffs_by_rank.push(segment.end());
+            if key_cutoffs_by_rank.len() == comm.size() - 1 {
+                break;
+            }
             load = 0;
-            current_rank += 1;
         }
     }
+
+    let target_rank = |pos: &VecLength| {
+        let key = PeanoHilbertKey::new(&extent.0, &pos);
+        key_cutoffs_by_rank
+            .binary_search(&key)
+            .unwrap_or_else(|e| e) as Rank
+    };
+    for (entity, pos, vel, mass) in full_particles.iter() {
+        let target_rank = target_rank(&pos.0);
+        if target_rank != *rank {
+            commands.entity(entity).despawn();
+            exchange_comm.send(
+                target_rank,
+                ParticleExchangeData {
+                    pos: pos.clone(),
+                    vel: vel.clone(),
+                    mass: mass.clone(),
+                },
+            );
+        }
+    }
+
+    for (_, moved_to_own_domain) in exchange_comm.receive_vec().into_iter() {
+        for data in moved_to_own_domain.into_iter() {
+            commands
+                .spawn()
+                .insert_bundle(LocalParticleBundle::new(data.pos, data.vel, data.mass));
+        }
+    }
+}
+
+#[derive(Equivalence, Clone)]
+pub struct ParticleExchangeData {
+    vel: Velocity,
+    pos: Position,
+    mass: Mass,
 }
