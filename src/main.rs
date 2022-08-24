@@ -31,7 +31,8 @@ use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use command_line_options::CommandLineOptions;
-use communication::AllgatherCommunicator;
+use communication::AllGatherCommunicator;
+use communication::AllReduceCommunicator;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
 use communication::Identified;
@@ -51,6 +52,7 @@ pub const PARTICLE_VISUALIZATION_EXCHANGE_TAG: i32 = 1337;
 pub const PARTICLE_EXCHANGE_TAG: i32 = 1338;
 pub const SEGMENT_EXCHANGE_TAG: i32 = 1339;
 pub const EXTENT_EXCHANGE_TAG: i32 = 1340;
+pub const NUM_PARTICLES_EXCHANGE_TAG: i32 = 1341;
 
 fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
@@ -89,6 +91,7 @@ fn build_and_run_app(
     communicator2: Communicator<Identified<ParticleVisualizationExchangeData>>,
     communicator3: Communicator<Segment>,
     communicator4: Communicator<Extent>,
+    communicator5: Communicator<usize>,
 ) {
     let mut app = App::new();
     let rank = communicator1.rank();
@@ -100,7 +103,8 @@ fn build_and_run_app(
         .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
         .insert_non_send_resource(SyncCommunicator::new(communicator2))
         .insert_non_send_resource(ExchangeCommunicator::new(communicator3))
-        .insert_non_send_resource(AllgatherCommunicator::from(communicator4));
+        .insert_non_send_resource(AllGatherCommunicator::from(communicator4))
+        .insert_non_send_resource(AllReduceCommunicator::from(communicator5));
     if rank == 0 {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
@@ -164,5 +168,6 @@ fn main() {
     );
     let world3 = Communicator::<Segment>::new(SEGMENT_EXCHANGE_TAG);
     let world4 = Communicator::<Extent>::new(EXTENT_EXCHANGE_TAG);
-    build_and_run_app(&opts, world1, world2, world3, world4);
+    let world5 = Communicator::<usize>::new(NUM_PARTICLES_EXCHANGE_TAG);
+    build_and_run_app(&opts, world1, world2, world3, world4, world5);
 }

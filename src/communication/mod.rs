@@ -7,6 +7,7 @@ mod sync_communicator;
 mod world_communicator;
 
 pub use collective_communicator::CollectiveCommunicator;
+pub use collective_communicator::Operation;
 pub use data_by_rank::DataByRank;
 pub use identified::Identified;
 pub use sized_communicator::SizedCommunicator;
@@ -46,7 +47,8 @@ pub use mpi_reexport::*;
 #[path = ""]
 mod mpi_reexport {
     use super::identified::Identified;
-    pub type AllgatherCommunicator<T> = super::mpi_world::MpiWorld<T>;
+    pub type AllReduceCommunicator<T> = super::mpi_world::MpiWorld<T>;
+    pub type AllGatherCommunicator<T> = super::mpi_world::MpiWorld<T>;
     pub type ExchangeCommunicator<T> =
         super::exchange_communicator::ExchangeCommunicator<super::mpi_world::MpiWorld<T>, T>;
     pub type SyncCommunicator<T> =

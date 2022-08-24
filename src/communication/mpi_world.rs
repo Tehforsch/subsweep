@@ -79,20 +79,20 @@ impl<T> SizedCommunicator for MpiWorld<T> {
 }
 
 impl<T: Equivalence + Clone> CollectiveCommunicator<T> for MpiWorld<T> {
-    fn all_gather(&self, send: T) -> Vec<T> {
+    fn all_gather(&mut self, send: &T) -> Vec<T> {
         let count = self.world.size() as usize;
         // we can replace this by MaybeUninit at some point, but that will require unsafe
         let mut result_buffer = vec![send.clone(); count];
-        self.world.all_gather_into(&send, &mut result_buffer[..]);
+        self.world.all_gather_into(send, &mut result_buffer[..]);
         result_buffer
     }
 
-    fn all_reduce(&self, send: T, operation: Operation) -> T {
+    fn all_reduce(&mut self, send: &T, operation: Operation) -> T {
         let operation = match operation {
             Operation::Sum => SystemOperation::sum(),
         };
         let mut result = send.clone();
-        self.world.all_reduce_into(&send, &mut result, operation);
+        self.world.all_reduce_into(send, &mut result, operation);
         result
     }
 }
