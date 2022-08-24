@@ -92,14 +92,13 @@ fn domain_decomposition_system(
         })
         .collect();
     particles.sort();
-    const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 10;
+    const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
     let num_desired_particles_per_segment = particles.len() / NUM_DESIRED_SEGMENTS_PER_RANK;
     let segments = get_segments(&particles, num_desired_particles_per_segment);
     for rank in comm.other_ranks() {
         comm.send_vec(rank, segments.clone());
     }
     let mut all_segments = comm.receive_vec();
-    let received_all_segments = all_segments.clone();
     all_segments.insert(*rank, segments);
     let total_load: usize = all_segments
         .iter()
@@ -108,7 +107,6 @@ fn domain_decomposition_system(
     let num_desired_particles_per_segment =
         total_load / (NUM_DESIRED_SEGMENTS_PER_RANK * comm.size());
     let all_segments = merge_and_split_segments(all_segments, num_desired_particles_per_segment);
-    let seggis = all_segments.clone();
     let load_per_rank = total_load / comm.size();
     let mut load = 0;
     let mut key_cutoffs_by_rank = vec![];
@@ -132,31 +130,6 @@ fn domain_decomposition_system(
     let mut counts = vec![0, 0, 0, 0];
     for (_, part) in all_particles.iter() {
         counts[target_rank(&part.0) as usize] += 1
-    }
-    if *rank == 0 {
-        if counts[2] > 100 {
-            dbg!(received_all_segments);
-            println!(
-                "{} {} {}",
-                key_cutoffs_by_rank[0].0, key_cutoffs_by_rank[1].0, key_cutoffs_by_rank[2].0
-            );
-            println!("---");
-            let mut total = 0;
-            for seg in seggis.iter() {
-                total += seg.num_particles;
-                let r = key_cutoffs_by_rank
-                    .binary_search(&seg.start())
-                    .unwrap_or_else(|e| e) as Rank;
-                println!(
-                    "{} {:03} {:02} {} {}",
-                    r,
-                    total,
-                    seg.num_particles,
-                    seg.start().0,
-                    seg.end().0
-                );
-            }
-        }
     }
     for (entity, pos, vel, mass) in full_particles.iter() {
         let target_rank = target_rank(&pos.0);

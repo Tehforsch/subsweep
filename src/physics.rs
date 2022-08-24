@@ -11,7 +11,6 @@ use self::parameters::Parameters;
 use crate::communication::Rank;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::DomainDecompositionStages;
-use crate::mass::Mass;
 use crate::parameters::ParameterPlugin;
 use crate::position::Position;
 use crate::units;

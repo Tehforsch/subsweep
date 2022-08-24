@@ -61,20 +61,8 @@ impl Segment {
         self.end
     }
 
-    fn length(&self) -> u64 {
-        self.end.0 - self.start.0
-    }
-
     fn overlaps_with(&self, other: &Segment) -> bool {
         self.end.min(other.end).0 > self.start.max(other.start).0
-    }
-
-    pub(super) fn iter_contained_particles<'a>(
-        &self,
-        particles: &'a [ParticleData],
-    ) -> &'a [ParticleData] {
-        &particles[get_position(&particles, ParticleData::key, &self.start)
-            ..get_position(&particles, ParticleData::key, &self.end)]
     }
 
     fn split_into_vec(
@@ -155,7 +143,7 @@ fn get_overlapping_segments(segments: &[Segment], segment: &Segment) -> Range<us
         .next();
     match first_overlapping_segment {
         Some(segment_index) => segment_index..(last_overlapping_segment.unwrap() + 1),
-        None => first_potentially_overlapping_segment..first_potentially_overlapping_segment,
+        None => last_potentially_overlapping_segment..last_potentially_overlapping_segment,
     }
 }
 
@@ -302,6 +290,7 @@ mod tests {
         assert_eq!(overlapping(0, 6), 0..2);
         assert_eq!(overlapping(7, 11), 2..3);
         assert_eq!(overlapping(7, 12), 2..4);
+        assert_eq!(overlapping(19, 25), 4..4);
         assert_eq!(overlapping(100, 100), 4..4);
     }
 
@@ -329,6 +318,21 @@ mod tests {
             segment(0, 1, 11).split_into_n_pieces(4),
             vec![segment(0, 1, 11),]
         );
+    }
+
+    #[test]
+    fn merge_overlapping_segments_returns_sorted_result() {
+        let mut segments = DataByRank::empty();
+        let particles = get_particles();
+        segments.insert(0, super::get_segments(&particles, 10));
+        segments.insert(1, super::get_segments(&particles, 10));
+        segments.insert(2, super::get_segments(&particles, 10));
+        segments.insert(3, super::get_segments(&particles, 10));
+        let result = merge_overlapping_segments(segments);
+        dbg!(&result);
+        for (seg1, seg2) in result.iter().zip(result[1..].iter()) {
+            assert!(seg1.end <= seg2.start);
+        }
     }
 
     #[test]
