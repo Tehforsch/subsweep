@@ -156,6 +156,6 @@ mod tests {
             (Vec2Length::meter(2.0, 2.0), ()),
         ];
         let config = QuadTreeConfig { max_depth: 10 };
-        QuadTree::<(), ()>::new(&config, positions.into_iter().collect());
+        QuadTree::<(), ()>::new(&config, positions.into_iter().collect()).unwrap();
     }
 }

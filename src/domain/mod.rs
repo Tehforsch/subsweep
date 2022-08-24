@@ -68,21 +68,22 @@ impl ParticleData {
     }
 }
 
-fn determine_global_extent_system(// mut commands: Commands,
-    // particles: Query<&Position, With<LocalParticle>>,
+fn determine_global_extent_system(
+    particles: Query<&Position, With<LocalParticle>>,
+    mut extent_communicator: NonSendMut<ExchangeCommunicator<Extent>>,
 ) {
+    let extents = Extent::from_positions(particles.iter().map(|x| &x.0));
     debug!("TODO: Determine global extent");
 }
 
 fn domain_decomposition_system(
     mut commands: Commands,
+    mut segment_communicator: NonSendMut<ExchangeCommunicator<Segment>>,
+    mut exchange_communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
     rank: Res<Rank>,
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
     full_particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
-    all_particles: Query<(Entity, &Position)>,
-    mut comm: NonSendMut<ExchangeCommunicator<Segment>>,
-    mut exchange_comm: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
 ) {
     let mut particles: Vec<_> = particles
         .iter()
@@ -95,26 +96,26 @@ fn domain_decomposition_system(
     const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
     let num_desired_particles_per_segment = particles.len() / NUM_DESIRED_SEGMENTS_PER_RANK;
     let segments = get_segments(&particles, num_desired_particles_per_segment);
-    for rank in comm.other_ranks() {
-        comm.send_vec(rank, segments.clone());
+    for rank in segment_communicator.other_ranks() {
+        segment_communicator.send_vec(rank, segments.clone());
     }
-    let mut all_segments = comm.receive_vec();
+    let mut all_segments = segment_communicator.receive_vec();
     all_segments.insert(*rank, segments);
     let total_load: usize = all_segments
         .iter()
         .map(|(_, segments)| segments.iter().map(|s| s.num_particles).sum::<usize>())
         .sum();
     let num_desired_particles_per_segment =
-        total_load / (NUM_DESIRED_SEGMENTS_PER_RANK * comm.size());
+        total_load / (NUM_DESIRED_SEGMENTS_PER_RANK * segment_communicator.size());
     let all_segments = merge_and_split_segments(all_segments, num_desired_particles_per_segment);
-    let load_per_rank = total_load / comm.size();
+    let load_per_rank = total_load / segment_communicator.size();
     let mut load = 0;
     let mut key_cutoffs_by_rank = vec![];
     for segment in all_segments.into_iter() {
         load += segment.num_particles;
         if load >= load_per_rank {
             key_cutoffs_by_rank.push(segment.end());
-            if key_cutoffs_by_rank.len() == comm.size() - 1 {
+            if key_cutoffs_by_rank.len() == segment_communicator.size() - 1 {
                 break;
             }
             load = 0;
@@ -127,15 +128,11 @@ fn domain_decomposition_system(
             .binary_search(&key)
             .unwrap_or_else(|e| e) as Rank
     };
-    let mut counts = vec![0, 0, 0, 0];
-    for (_, part) in all_particles.iter() {
-        counts[target_rank(&part.0) as usize] += 1
-    }
     for (entity, pos, vel, mass) in full_particles.iter() {
         let target_rank = target_rank(&pos.0);
         if target_rank != *rank {
             commands.entity(entity).despawn();
-            exchange_comm.send(
+            exchange_communicator.send(
                 target_rank,
                 ParticleExchangeData {
                     pos: pos.clone(),
@@ -146,7 +143,7 @@ fn domain_decomposition_system(
         }
     }
 
-    for (_, moved_to_own_domain) in exchange_comm.receive_vec().into_iter() {
+    for (_, moved_to_own_domain) in exchange_communicator.receive_vec().into_iter() {
         for data in moved_to_own_domain.into_iter() {
             commands
                 .spawn()

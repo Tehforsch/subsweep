@@ -22,8 +22,6 @@ use crate::physics::QuadTree;
 use crate::physics::RemoteParticle;
 use crate::position::Position;
 use crate::units::Length;
-use crate::units::VecLength;
-
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
 lazy_static! {
@@ -142,11 +140,9 @@ fn show_quadtree_system(
         commands.entity(entity).despawn();
     }
     quadtree.depth_first_map(&mut |extents, _| {
-        let lower_left = VecLength::new(extents.x_min, extents.y_min);
-        let upper_right = VecLength::new(extents.x_max, extents.y_max);
         commands.spawn().insert(Outline).insert(DrawRect {
-            lower_left,
-            upper_right,
+            lower_left: extents.min,
+            upper_right: extents.max,
             color: Color::GREEN,
         });
     });
