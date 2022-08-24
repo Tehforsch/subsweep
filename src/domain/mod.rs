@@ -23,7 +23,6 @@ use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::physics::LocalParticle;
 use crate::position::Position;
-use crate::units::VecLength;
 use crate::velocity::Velocity;
 
 const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
