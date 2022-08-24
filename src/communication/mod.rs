@@ -13,9 +13,6 @@ pub use identified::Identified;
 pub use sized_communicator::SizedCommunicator;
 pub use world_communicator::WorldCommunicator;
 
-pub type Rank = mpi::Rank;
-pub struct NumRanks(pub usize);
-
 #[cfg(feature = "local")]
 mod local;
 
@@ -58,4 +55,22 @@ mod mpi_reexport {
     pub type Communicator<T> = super::mpi_world::MpiWorld<T>;
 
     pub use super::mpi_world::MPI_UNIVERSE;
+}
+
+pub type Rank = mpi::Rank;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct NumRanks(pub usize);
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct WorldRank(pub Rank);
+
+impl WorldRank {
+    pub fn is_main(&self) -> bool {
+        self.0 == 0
+    }
+
+    pub fn main() -> Rank {
+        0
+    }
 }

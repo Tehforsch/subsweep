@@ -18,6 +18,7 @@ use crate::communication::NumRanks;
 use crate::communication::Operation;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
+use crate::communication::WorldRank;
 use crate::domain::segment::merge_and_split_segments;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
@@ -148,7 +149,7 @@ fn domain_decomposition_system(
     mut segment_communicator: NonSendMut<ExchangeCommunicator<Segment>>,
     mut exchange_communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
     mut num_particle_communicator: NonSendMut<AllReduceCommunicator<usize>>,
-    rank: Res<Rank>,
+    rank: Res<WorldRank>,
     num_ranks: Res<NumRanks>,
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
@@ -171,7 +172,7 @@ fn domain_decomposition_system(
     };
     for ParticleData { key, entity } in particles.iter() {
         let target_rank = target_rank(key);
-        if target_rank != *rank {
+        if target_rank != rank.0 {
             commands.entity(*entity).despawn();
             let (pos, vel, mass) = full_particle_data.get(*entity).unwrap();
             exchange_communicator.send(

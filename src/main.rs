@@ -39,6 +39,7 @@ use communication::Identified;
 use communication::NumRanks;
 use communication::SizedCommunicator;
 use communication::SyncCommunicator;
+use communication::WorldRank;
 use domain::extent::Extent;
 use domain::segment::Segment;
 use domain::DomainDecompositionPlugin;
@@ -97,7 +98,7 @@ fn build_and_run_app(
     let mut app = App::new();
     let rank = communicator1.rank();
     add_parameter_file_contents(&mut app, &opts.parameter_file_path);
-    app.insert_resource(rank)
+    app.insert_resource(WorldRank(rank))
         .insert_resource(NumRanks(communicator1.size()))
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)

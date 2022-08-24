@@ -3,6 +3,7 @@ use mpi::traits::Equivalence;
 
 use crate::communication::Rank;
 use crate::communication::SyncCommunicator;
+use crate::communication::WorldRank;
 use crate::particle::RemoteParticleBundle;
 use crate::physics::LocalParticle;
 use crate::physics::RemoteParticle;
@@ -14,14 +15,14 @@ pub struct ParticleVisualizationExchangeData {
 }
 
 pub(super) fn send_particles_to_main_thread_system(
-    rank: Res<Rank>,
+    rank: Res<WorldRank>,
     mut communicator: NonSendMut<SyncCommunicator<ParticleVisualizationExchangeData>>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
 ) {
-    assert!(*rank != 0);
+    debug_assert!(!rank.is_main());
     for (entity, pos) in particles.iter() {
         communicator.send_sync(
-            0,
+            WorldRank::main(),
             entity,
             ParticleVisualizationExchangeData { pos: pos.clone() },
         );
@@ -31,11 +32,11 @@ pub(super) fn send_particles_to_main_thread_system(
 
 pub(super) fn receive_particles_on_main_thread_system(
     mut commands: Commands,
-    rank: Res<Rank>,
+    rank: Res<WorldRank>,
     mut communicator: NonSendMut<SyncCommunicator<ParticleVisualizationExchangeData>>,
     mut particles: Query<&mut Position, With<RemoteParticle>>,
 ) {
-    assert!(*rank == 0);
+    debug_assert!(rank.is_main());
     let spawn_particle = |rank: Rank, data: ParticleVisualizationExchangeData| {
         commands
             .spawn()

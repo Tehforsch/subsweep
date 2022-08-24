@@ -14,7 +14,7 @@ use self::drawing::IntoBundle;
 use self::parameters::Parameters;
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
-use crate::communication::Rank;
+use crate::communication::WorldRank;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsStages;
@@ -40,7 +40,7 @@ pub struct VisualizationPlugin;
 
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
-        let rank = *app.world.get_resource::<Rank>().unwrap();
+        let rank = *app.world.get_resource::<WorldRank>().unwrap();
         app.add_stage_after(
             PhysicsStages::Gravity,
             VisualizationStage::Synchronize,
@@ -61,7 +61,7 @@ impl Plugin for VisualizationPlugin {
             VisualizationStage::Draw,
             SystemStage::parallel(),
         );
-        if rank == 0 {
+        if rank.is_main() {
             app.add_plugin(ParameterPlugin::<Parameters>::new("visualization"))
                 .add_plugin(ShapePlugin)
                 .add_plugin(DrawBundlePlugin::<DrawRect>::default())

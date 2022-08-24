@@ -1,9 +1,9 @@
 use bevy::prelude::Commands;
 use bevy::prelude::Res;
 use bevy::prelude::*;
-use mpi::Rank;
 use rand::Rng;
 
+use crate::communication::WorldRank;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
@@ -20,8 +20,8 @@ impl Plugin for InitialConditionsPlugin {
     }
 }
 
-fn spawn_particles_system(mut commands: Commands, rank: Res<Rank>) {
-    if *rank != 0 {
+fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
+    if !rank.is_main() {
         return;
     }
     let n_particles = 150;
