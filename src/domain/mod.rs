@@ -108,7 +108,7 @@ fn get_total_number_particles(
 
 fn get_global_segments_from_peano_hilbert_keys(
     segment_communicator: &mut ExchangeCommunicator<Segment>,
-    particles: Vec<ParticleData>,
+    particles: &Vec<ParticleData>,
     num_particles_total: usize,
 ) -> Vec<Segment> {
     let num_desired_particles_per_segment =
@@ -153,28 +153,28 @@ fn domain_decomposition_system(
     num_ranks: Res<NumRanks>,
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
-    full_particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
+    full_particle_data: Query<(&Position, &Velocity, &Mass), With<LocalParticle>>,
 ) {
     let particles = get_sorted_peano_hilbert_keys(&extent.0, &particles);
     let num_particles_total =
         get_total_number_particles(particles.len(), &mut num_particle_communicator);
     let global_segment_list = get_global_segments_from_peano_hilbert_keys(
         &mut segment_communicator,
-        particles,
+        &particles,
         num_particles_total,
     );
     let key_cutoffs_by_rank =
         find_key_cutoffs(num_ranks.0, num_particles_total, global_segment_list);
-    let target_rank = |pos: &VecLength| {
-        let key = PeanoHilbertKey::new(&extent.0, &pos);
+    let target_rank = |key: &PeanoHilbertKey| {
         key_cutoffs_by_rank
             .binary_search(&key)
             .unwrap_or_else(|e| e) as Rank
     };
-    for (entity, pos, vel, mass) in full_particles.iter() {
-        let target_rank = target_rank(&pos.0);
+    for ParticleData { key, entity } in particles.iter() {
+        let target_rank = target_rank(key);
         if target_rank != *rank {
-            commands.entity(entity).despawn();
+            commands.entity(*entity).despawn();
+            let (pos, vel, mass) = full_particle_data.get(*entity).unwrap();
             exchange_communicator.send(
                 target_rank,
                 ParticleExchangeData {
