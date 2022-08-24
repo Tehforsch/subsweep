@@ -1,3 +1,4 @@
+use std::iter::once;
 use std::ops::Range;
 
 use mpi::traits::Equivalence;
@@ -8,7 +9,7 @@ use crate::communication::DataByRank;
 
 /// A segment of peano hilbert keys corresponding to
 /// the interval including `start` but excluding `end`
-#[derive(Debug, Equivalence, Clone)]
+#[derive(Debug, Equivalence, Clone, PartialEq)]
 pub struct Segment {
     start: PeanoHilbertKey,
     end: PeanoHilbertKey,
@@ -44,6 +45,14 @@ impl Segment {
         }
     }
 
+    pub fn from_num(start: u64, end: u64, num_particles: usize) -> Self {
+        Self {
+            start: PeanoHilbertKey(start),
+            end: PeanoHilbertKey(end),
+            num_particles,
+        }
+    }
+
     pub fn start(&self) -> PeanoHilbertKey {
         self.start
     }
@@ -68,7 +77,7 @@ impl Segment {
             ..get_position(&particles, ParticleData::key, &self.end)]
     }
 
-    fn split_into(
+    fn split_into_vec(
         self,
         segments: &mut Vec<Segment>,
         particles: &[ParticleData],
@@ -83,11 +92,28 @@ impl Segment {
             let half = PeanoHilbertKey((self.end.0 + self.start.0) / 2);
             let left = Segment::new(particles, self.start, half);
             let right = Segment::new(particles, half, self.end);
-            left.split_into(segments, particles, desired_segment_size);
-            right.split_into(segments, particles, desired_segment_size);
+            left.split_into_vec(segments, particles, desired_segment_size);
+            right.split_into_vec(segments, particles, desired_segment_size);
         } else {
             segments.push(self);
         }
+    }
+
+    fn split_into_n_pieces(self, n: usize) -> Vec<Segment> {
+        let step = (self.end.0 - self.start.0) / n as u64;
+        if step == 0 {
+            // impossible to split this into n pieces, simply return the segment
+            return vec![self];
+        }
+        let num = self.num_particles / n;
+        (0u64..(n - 1) as u64)
+            .map(|i| Self::from_num(self.start.0 + step * i, self.start.0 + step * (i + 1), num))
+            .chain(once(Segment::from_num(
+                self.start.0 + step * (n - 1) as u64,
+                self.end.0,
+                self.num_particles - num * (n - 1) as usize,
+            )))
+            .collect()
     }
 }
 
@@ -111,7 +137,7 @@ pub(super) fn get_segments(
         num_particles: particles.len(),
     };
     let mut segments = vec![];
-    segment.split_into(&mut segments, &particles, desired_segment_size);
+    segment.split_into_vec(&mut segments, &particles, desired_segment_size);
     segments
 }
 
@@ -133,9 +159,7 @@ fn get_overlapping_segments(segments: &[Segment], segment: &Segment) -> Range<us
     }
 }
 
-/// Sloppily keep segments in sorted order and merge
-/// any overlapping segments (while adding
-pub(super) fn sort_and_merge_segments(mut segments: DataByRank<Vec<Segment>>) -> Vec<Segment> {
+fn merge_overlapping_segments(mut segments: DataByRank<Vec<Segment>>) -> Vec<Segment> {
     let mut result = vec![];
     for (_, segments) in segments.drain_all_sorted() {
         for segment in segments {
@@ -155,11 +179,28 @@ pub(super) fn sort_and_merge_segments(mut segments: DataByRank<Vec<Segment>>) ->
     result
 }
 
+pub(super) fn merge_and_split_segments(
+    segments: DataByRank<Vec<Segment>>,
+    desired_segment_size: usize,
+) -> Vec<Segment> {
+    let segments = merge_overlapping_segments(segments);
+    let mut result = vec![];
+    for segment in segments.into_iter() {
+        if segment.num_particles > desired_segment_size {
+            let num_segments = segment.num_particles / desired_segment_size;
+            result.extend(segment.split_into_n_pieces(num_segments))
+        } else {
+            result.push(segment)
+        }
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use bevy::prelude::Entity;
 
-    use super::sort_and_merge_segments;
+    use super::merge_overlapping_segments;
     use crate::communication::DataByRank;
     use crate::domain::peano_hilbert::PeanoHilbertKey;
     use crate::domain::segment::Segment;
@@ -265,7 +306,33 @@ mod tests {
     }
 
     #[test]
-    fn sort_and_merge_segments_sorts() {
+    fn split_into_n_pieces() {
+        let segment = |s, e, n| Segment::from_num(s, e, n);
+        assert_eq!(
+            segment(0, 10, 10).split_into_n_pieces(2),
+            vec![segment(0, 5, 5), segment(5, 10, 5)]
+        );
+        assert_eq!(
+            segment(0, 10, 11).split_into_n_pieces(2),
+            vec![segment(0, 5, 5), segment(5, 10, 6)]
+        );
+        assert_eq!(
+            segment(0, 15, 11).split_into_n_pieces(4),
+            vec![
+                segment(0, 3, 2),
+                segment(3, 6, 2),
+                segment(6, 9, 2),
+                segment(9, 15, 5),
+            ]
+        );
+        assert_eq!(
+            segment(0, 1, 11).split_into_n_pieces(4),
+            vec![segment(0, 1, 11),]
+        );
+    }
+
+    #[test]
+    fn merge_overlapping_segments_does_not_fail_on_contained_segments() {
         let mut segments = DataByRank::empty();
         segments.insert(
             0,
@@ -283,7 +350,7 @@ mod tests {
                 num_particles: 1,
             }],
         );
-        let result = sort_and_merge_segments(segments);
+        let result = merge_overlapping_segments(segments);
         for (seg1, seg2) in result.iter().zip(result[1..].iter()) {
             assert!(seg1.end <= seg2.start);
         }

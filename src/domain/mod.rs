@@ -13,7 +13,7 @@ use self::segment::Segment;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
-use crate::domain::segment::sort_and_merge_segments;
+use crate::domain::segment::merge_and_split_segments;
 use crate::mass::Mass;
 use crate::particle::LocalParticleBundle;
 use crate::physics::LocalParticle;
@@ -105,7 +105,9 @@ fn domain_decomposition_system(
         .iter()
         .map(|(_, segments)| segments.iter().map(|s| s.num_particles).sum::<usize>())
         .sum();
-    let all_segments = sort_and_merge_segments(all_segments);
+    let num_desired_particles_per_segment =
+        total_load / (NUM_DESIRED_SEGMENTS_PER_RANK * comm.size());
+    let all_segments = merge_and_split_segments(all_segments, num_desired_particles_per_segment);
     let seggis = all_segments.clone();
     let load_per_rank = total_load / comm.size();
     let mut load = 0;
