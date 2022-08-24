@@ -1,7 +1,9 @@
+use mpi::traits::Equivalence;
+
 use crate::units::Length;
 use crate::units::VecLength;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Equivalence)]
 pub struct Extent {
     pub min: VecLength,
     pub max: VecLength,
@@ -18,6 +20,15 @@ impl Extent {
             min,
             max,
             center: (min + max) * 0.5,
+        }
+    }
+
+    /// A sentinel value used for communicating that there are not enough particles to construct extents
+    pub fn sentinel() -> Self {
+        Self {
+            min: VecLength::meter(0.0, 0.0),
+            max: VecLength::meter(0.0, 0.0),
+            center: VecLength::meter(0.0, 0.0),
         }
     }
 

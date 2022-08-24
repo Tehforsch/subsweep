@@ -31,11 +31,13 @@ use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use command_line_options::CommandLineOptions;
+use communication::AllgatherCommunicator;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
 use communication::Identified;
 use communication::SizedCommunicator;
 use communication::SyncCommunicator;
+use domain::extent::Extent;
 use domain::segment::Segment;
 use domain::DomainDecompositionPlugin;
 use domain::ParticleExchangeData;
@@ -48,6 +50,7 @@ use visualization::VisualizationPlugin;
 pub const PARTICLE_VISUALIZATION_EXCHANGE_TAG: i32 = 1337;
 pub const PARTICLE_EXCHANGE_TAG: i32 = 1338;
 pub const SEGMENT_EXCHANGE_TAG: i32 = 1339;
+pub const EXTENT_EXCHANGE_TAG: i32 = 1340;
 
 fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
@@ -85,6 +88,7 @@ fn build_and_run_app(
     communicator1: Communicator<ParticleExchangeData>,
     communicator2: Communicator<Identified<ParticleVisualizationExchangeData>>,
     communicator3: Communicator<Segment>,
+    communicator4: Communicator<Extent>,
 ) {
     let mut app = App::new();
     let rank = communicator1.rank();
@@ -95,7 +99,8 @@ fn build_and_run_app(
         .add_plugin(InitialConditionsPlugin)
         .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
         .insert_non_send_resource(SyncCommunicator::new(communicator2))
-        .insert_non_send_resource(ExchangeCommunicator::new(communicator3));
+        .insert_non_send_resource(ExchangeCommunicator::new(communicator3))
+        .insert_non_send_resource(AllgatherCommunicator::from(communicator4));
     if rank == 0 {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
@@ -158,5 +163,6 @@ fn main() {
         PARTICLE_VISUALIZATION_EXCHANGE_TAG,
     );
     let world3 = Communicator::<Segment>::new(SEGMENT_EXCHANGE_TAG);
-    build_and_run_app(&opts, world1, world2, world3);
+    let world4 = Communicator::<Extent>::new(EXTENT_EXCHANGE_TAG);
+    build_and_run_app(&opts, world1, world2, world3, world4);
 }

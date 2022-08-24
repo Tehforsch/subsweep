@@ -6,6 +6,7 @@ use mpi::point_to_point::Status;
 use mpi::topology::Rank;
 use mpi::topology::SystemCommunicator;
 use mpi::traits::Communicator;
+use mpi::traits::CommunicatorCollectives;
 use mpi::traits::Destination;
 use mpi::traits::Equivalence;
 use mpi::traits::Source;
@@ -13,6 +14,7 @@ use mpi::Tag;
 use mpi::Threading;
 
 use super::world_communicator::WorldCommunicator;
+use super::CollectiveCommunicator;
 use super::SizedCommunicator;
 
 lazy_static! {
@@ -71,5 +73,15 @@ impl<T> SizedCommunicator for MpiWorld<T> {
 
     fn size(&self) -> usize {
         self.world.size() as usize
+    }
+}
+
+impl<T: Equivalence + Clone> CollectiveCommunicator<T> for MpiWorld<T> {
+    fn all_gather(&self, send: T) -> Vec<T> {
+        let count = self.world.size() as usize;
+        // we can replace this by MaybeUninit at some point, but that will require unsafe
+        let mut result_buffer = vec![send.clone(); count];
+        self.world.all_gather_into(&send, &mut result_buffer[..]);
+        result_buffer
     }
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
-mod extent;
+pub mod extent;
 mod peano_hilbert;
 pub mod quadtree;
 pub mod segment;
@@ -10,6 +10,8 @@ use self::extent::Extent;
 use self::peano_hilbert::PeanoHilbertKey;
 use self::segment::get_segments;
 use self::segment::Segment;
+use crate::communication::AllgatherCommunicator;
+use crate::communication::CollectiveCommunicator;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
@@ -70,9 +72,11 @@ impl ParticleData {
 
 fn determine_global_extent_system(
     particles: Query<&Position, With<LocalParticle>>,
-    mut extent_communicator: NonSendMut<ExchangeCommunicator<Extent>>,
+    extent_communicator: NonSendMut<AllgatherCommunicator<Extent>>,
 ) {
-    let extents = Extent::from_positions(particles.iter().map(|x| &x.0));
+    let extent =
+        Extent::from_positions(particles.iter().map(|x| &x.0)).unwrap_or(Extent::sentinel());
+    let other_extents = (*extent_communicator).all_gather(extent);
     debug!("TODO: Determine global extent");
 }
 
