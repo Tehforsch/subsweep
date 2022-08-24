@@ -36,6 +36,7 @@ use communication::AllReduceCommunicator;
 use communication::Communicator;
 use communication::ExchangeCommunicator;
 use communication::Identified;
+use communication::NumRanks;
 use communication::SizedCommunicator;
 use communication::SyncCommunicator;
 use domain::extent::Extent;
@@ -97,6 +98,7 @@ fn build_and_run_app(
     let rank = communicator1.rank();
     add_parameter_file_contents(&mut app, &opts.parameter_file_path);
     app.insert_resource(rank)
+        .insert_resource(NumRanks(communicator1.size()))
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin)

@@ -14,6 +14,7 @@ use crate::communication::AllGatherCommunicator;
 use crate::communication::AllReduceCommunicator;
 use crate::communication::CollectiveCommunicator;
 use crate::communication::ExchangeCommunicator;
+use crate::communication::NumRanks;
 use crate::communication::Operation;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
@@ -24,6 +25,8 @@ use crate::physics::LocalParticle;
 use crate::position::Position;
 use crate::units::VecLength;
 use crate::velocity::Velocity;
+
+const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
@@ -81,7 +84,7 @@ fn determine_global_extent_system(
     );
 }
 
-fn get_sorted_peano_hilbert_key_data(
+fn get_sorted_peano_hilbert_keys(
     extent: &Extent,
     particles: &Query<(Entity, &Position), With<LocalParticle>>,
 ) -> Vec<ParticleData> {
@@ -103,43 +106,65 @@ fn get_total_number_particles(
     communicator.all_reduce(&num, Operation::Sum)
 }
 
-fn domain_decomposition_system(
-    mut commands: Commands,
-    mut segment_communicator: NonSendMut<ExchangeCommunicator<Segment>>,
-    mut exchange_communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
-    mut num_particle_communicator: NonSendMut<AllReduceCommunicator<usize>>,
-    rank: Res<Rank>,
-    extent: Res<GlobalExtent>,
-    particles: Query<(Entity, &Position), With<LocalParticle>>,
-    full_particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
-) {
-    let particles = get_sorted_peano_hilbert_key_data(&extent.0, &particles);
-    let num_particles_total =
-        get_total_number_particles(particles.len(), &mut num_particle_communicator);
-    const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
+fn get_global_segments_from_peano_hilbert_keys(
+    segment_communicator: &mut ExchangeCommunicator<Segment>,
+    particles: Vec<ParticleData>,
+    num_particles_total: usize,
+) -> Vec<Segment> {
     let num_desired_particles_per_segment =
         num_particles_total / (NUM_DESIRED_SEGMENTS_PER_RANK * segment_communicator.size());
     let segments = get_segments(&particles, num_desired_particles_per_segment);
     for rank in segment_communicator.other_ranks() {
         segment_communicator.send_vec(rank, segments.clone());
     }
+    // replace this with an appropriate allgather call at some point
     let mut all_segments = segment_communicator.receive_vec();
-    all_segments.insert(*rank, segments);
-    let all_segments = merge_and_split_segments(all_segments, num_desired_particles_per_segment);
-    let load_per_rank = num_particles_total / segment_communicator.size();
+    all_segments.insert(segment_communicator.rank(), segments);
+    merge_and_split_segments(all_segments, num_desired_particles_per_segment)
+}
+
+fn find_key_cutoffs(
+    num_ranks: usize,
+    num_particles_total: usize,
+    global_segment_list: Vec<Segment>,
+) -> Vec<PeanoHilbertKey> {
+    let load_per_rank = num_particles_total / num_ranks;
     let mut load = 0;
     let mut key_cutoffs_by_rank = vec![];
-    for segment in all_segments.into_iter() {
+    for segment in global_segment_list.into_iter() {
         load += segment.num_particles;
         if load >= load_per_rank {
             key_cutoffs_by_rank.push(segment.end());
-            if key_cutoffs_by_rank.len() == segment_communicator.size() - 1 {
+            if key_cutoffs_by_rank.len() == num_ranks - 1 {
                 break;
             }
             load = 0;
         }
     }
+    key_cutoffs_by_rank
+}
 
+fn domain_decomposition_system(
+    mut commands: Commands,
+    mut segment_communicator: NonSendMut<ExchangeCommunicator<Segment>>,
+    mut exchange_communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
+    mut num_particle_communicator: NonSendMut<AllReduceCommunicator<usize>>,
+    rank: Res<Rank>,
+    num_ranks: Res<NumRanks>,
+    extent: Res<GlobalExtent>,
+    particles: Query<(Entity, &Position), With<LocalParticle>>,
+    full_particles: Query<(Entity, &Position, &Velocity, &Mass), With<LocalParticle>>,
+) {
+    let particles = get_sorted_peano_hilbert_keys(&extent.0, &particles);
+    let num_particles_total =
+        get_total_number_particles(particles.len(), &mut num_particle_communicator);
+    let global_segment_list = get_global_segments_from_peano_hilbert_keys(
+        &mut segment_communicator,
+        particles,
+        num_particles_total,
+    );
+    let key_cutoffs_by_rank =
+        find_key_cutoffs(num_ranks.0, num_particles_total, global_segment_list);
     let target_rank = |pos: &VecLength| {
         let key = PeanoHilbertKey::new(&extent.0, &pos);
         key_cutoffs_by_rank

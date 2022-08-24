@@ -14,6 +14,7 @@ pub use sized_communicator::SizedCommunicator;
 pub use world_communicator::WorldCommunicator;
 
 pub type Rank = mpi::Rank;
+pub struct NumRanks(pub usize);
 
 #[cfg(feature = "local")]
 mod local;
