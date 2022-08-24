@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use lazy_static::lazy_static;
+use mpi::collective::SystemOperation;
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
 use mpi::topology::Rank;
@@ -13,6 +14,7 @@ use mpi::traits::Source;
 use mpi::Tag;
 use mpi::Threading;
 
+use super::collective_communicator::Operation;
 use super::world_communicator::WorldCommunicator;
 use super::CollectiveCommunicator;
 use super::SizedCommunicator;
@@ -83,5 +85,14 @@ impl<T: Equivalence + Clone> CollectiveCommunicator<T> for MpiWorld<T> {
         let mut result_buffer = vec![send.clone(); count];
         self.world.all_gather_into(&send, &mut result_buffer[..]);
         result_buffer
+    }
+
+    fn all_reduce(&self, send: T, operation: Operation) -> T {
+        let operation = match operation {
+            Operation::Sum => SystemOperation::sum(),
+        };
+        let mut result = send.clone();
+        self.world.all_reduce_into(&send, &mut result, operation);
+        result
     }
 }

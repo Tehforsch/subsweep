@@ -33,18 +33,12 @@ pub struct DomainDecompositionPlugin;
 
 impl Plugin for DomainDecompositionPlugin {
     fn build(&self, app: &mut App) {
+        app.insert_resource(GlobalExtent(Extent::sentinel()));
         app.add_stage_after(
             CoreStage::Update,
             DomainDecompositionStages::Decomposition,
             SystemStage::parallel(),
         );
-        let extent = Extent::new(
-            Length::meter(-100.0),
-            Length::meter(100.0),
-            Length::meter(-100.0),
-            Length::meter(100.0),
-        );
-        app.insert_resource(GlobalExtent(extent));
         app.add_system_to_stage(
             DomainDecompositionStages::Decomposition,
             determine_global_extent_system,
@@ -56,6 +50,7 @@ impl Plugin for DomainDecompositionPlugin {
     }
 }
 
+#[derive(Debug)]
 struct GlobalExtent(Extent);
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -73,11 +68,16 @@ impl ParticleData {
 fn determine_global_extent_system(
     particles: Query<&Position, With<LocalParticle>>,
     extent_communicator: NonSendMut<AllgatherCommunicator<Extent>>,
+    mut global_extent: ResMut<GlobalExtent>,
 ) {
     let extent =
         Extent::from_positions(particles.iter().map(|x| &x.0)).unwrap_or(Extent::sentinel());
-    let other_extents = (*extent_communicator).all_gather(extent);
-    debug!("TODO: Determine global extent");
+    let all_extents = (*extent_communicator).all_gather(extent);
+    *global_extent = GlobalExtent(
+        Extent::get_all_encompassing(all_extents.iter())
+            .expect("Failed to find simulation extents - are there no particles?")
+            .pad(),
+    );
 }
 
 fn domain_decomposition_system(

@@ -3,7 +3,7 @@ use mpi::traits::Equivalence;
 use crate::units::Length;
 use crate::units::VecLength;
 
-#[derive(Clone, Debug, Equivalence)]
+#[derive(Clone, Debug, Equivalence, PartialEq)]
 pub struct Extent {
     pub min: VecLength,
     pub max: VecLength,
@@ -29,6 +29,27 @@ impl Extent {
             min: VecLength::meter(0.0, 0.0),
             max: VecLength::meter(0.0, 0.0),
             center: VecLength::meter(0.0, 0.0),
+        }
+    }
+
+    pub fn get_all_encompassing<'a>(extents: impl Iterator<Item = &'a Extent>) -> Option<Self> {
+        Self::from_positions(
+            extents
+                .filter(|extent| *extent != &Self::sentinel())
+                .flat_map(|extent: &Extent| [&extent.min, &extent.max].into_iter()),
+        )
+    }
+
+    /// Return an extent with slightly increased size
+    /// but the same center
+    pub fn pad(self) -> Self {
+        let dist_to_min = self.min - self.center;
+        let dist_to_max = self.max - self.center;
+        const PADDING_FRACTION: f32 = 0.01;
+        Self {
+            min: self.center + dist_to_min * (1.0 + PADDING_FRACTION),
+            max: self.center + dist_to_max * (1.0 + PADDING_FRACTION),
+            center: self.center,
         }
     }
 
