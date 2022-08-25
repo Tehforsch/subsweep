@@ -13,6 +13,8 @@ use self::segment::Segment;
 use crate::communication::AllGatherCommunicator;
 use crate::communication::AllReduceCommunicator;
 use crate::communication::CollectiveCommunicator;
+use crate::communication::CommunicationPlugin;
+use crate::communication::CommunicationType;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::NumRanks;
 use crate::communication::Rank;
@@ -50,7 +52,17 @@ impl Plugin for DomainDecompositionPlugin {
         app.add_system_to_stage(
             DomainDecompositionStages::Decomposition,
             domain_decomposition_system.after(determine_global_extent_system),
-        );
+        )
+        .add_plugin(CommunicationPlugin::<ParticleExchangeData>::new(
+            CommunicationType::Exchange,
+        ))
+        .add_plugin(CommunicationPlugin::<Extent>::new(
+            CommunicationType::AllGather,
+        ))
+        .add_plugin(CommunicationPlugin::<usize>::new(CommunicationType::Sum))
+        .add_plugin(CommunicationPlugin::<Segment>::new(
+            CommunicationType::Exchange,
+        ));
     }
 }
 

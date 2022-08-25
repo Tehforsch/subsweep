@@ -11,6 +11,8 @@ pub use collective_communicator::CollectiveCommunicator;
 pub use collective_communicator::SumCommunicator;
 pub use data_by_rank::DataByRank;
 pub use identified::Identified;
+pub use plugin::CommunicationPlugin;
+pub use plugin::CommunicationType;
 pub use sized_communicator::SizedCommunicator;
 pub use world_communicator::WorldCommunicator;
 
