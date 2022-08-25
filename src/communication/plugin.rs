@@ -5,12 +5,16 @@ use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
+use super::Communicator;
+use super::ExchangeCommunicator;
+use super::Identified;
+use super::SyncCommunicator;
+
 const INITIAL_TAG: Tag = 0;
 
 pub enum CommunicationType {
     Exchange,
     Sync,
-    SendReceive,
     Sum,
     AllGather,
 }
@@ -43,7 +47,6 @@ where
                 CommunicationType::Exchange => {
                     app.insert_non_send_resource(ExchangeCommunicator::new(comm))
                 }
-                CommunicationType::SendReceive => app.insert_non_send_resource(comm),
                 CommunicationType::Sum => app.insert_non_send_resource(comm),
                 CommunicationType::AllGather => app.insert_non_send_resource(comm),
                 CommunicationType::Sync => unreachable!(),
@@ -70,13 +73,8 @@ fn get_communicator<T>(app: &mut bevy::prelude::App) {
     app.insert_resource(ExchangeCommunicator::<T>::new());
 }
 
-use super::Communicator;
-use super::ExchangeCommunicator;
-use super::Identified;
-use super::SyncCommunicator;
-
 #[cfg(not(feature = "local"))]
-fn get_communicator<T: Equivalence>(app: &mut bevy::prelude::App, tag: Tag) -> Communicator<T> {
+fn get_communicator<T: Equivalence>(_app: &mut bevy::prelude::App, tag: Tag) -> Communicator<T> {
     use crate::communication::mpi_world::MpiWorld;
 
     MpiWorld::new(tag)

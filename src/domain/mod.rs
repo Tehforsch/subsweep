@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
-pub mod extent;
+mod extent;
 mod peano_hilbert;
 pub mod quadtree;
-pub mod segment;
+mod segment;
 
 use self::extent::Extent;
 use self::peano_hilbert::PeanoHilbertKey;
@@ -208,7 +208,7 @@ fn domain_decomposition_system(
 }
 
 #[derive(Equivalence, Clone)]
-pub struct ParticleExchangeData {
+pub(super) struct ParticleExchangeData {
     vel: Velocity,
     pos: Position,
     mass: Mass,

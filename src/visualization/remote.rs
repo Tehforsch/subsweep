@@ -10,7 +10,7 @@ use crate::physics::RemoteParticle;
 use crate::position::Position;
 
 #[derive(Debug, Equivalence)]
-pub struct ParticleVisualizationExchangeData {
+pub(super) struct ParticleVisualizationExchangeData {
     pos: Position,
 }
 

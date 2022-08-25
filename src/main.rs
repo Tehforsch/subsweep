@@ -31,23 +31,12 @@ use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use command_line_options::CommandLineOptions;
-use communication::AllGatherCommunicator;
-use communication::AllReduceCommunicator;
-use communication::Communicator;
-use communication::ExchangeCommunicator;
-use communication::Identified;
 use communication::NumRanks;
-use communication::SizedCommunicator;
-use communication::SyncCommunicator;
 use communication::WorldRank;
-use domain::extent::Extent;
-use domain::segment::Segment;
 use domain::DomainDecompositionPlugin;
-use domain::ParticleExchangeData;
 use initial_conditions::InitialConditionsPlugin;
 use parameters::add_parameter_file_contents;
 use physics::PhysicsPlugin;
-use visualization::remote::ParticleVisualizationExchangeData;
 use visualization::VisualizationPlugin;
 
 pub const PARTICLE_VISUALIZATION_EXCHANGE_TAG: i32 = 1337;
@@ -87,27 +76,13 @@ fn show_time_system(time: Res<crate::physics::Time>) {
     debug!("Time: {:.3} s", time.0.to_value(crate::units::Time::second));
 }
 
-fn build_app(
-    app: &mut App,
-    opts: &CommandLineOptions,
-    communicator1: Communicator<ParticleExchangeData>,
-    communicator2: Communicator<Identified<ParticleVisualizationExchangeData>>,
-    communicator3: Communicator<Segment>,
-    communicator4: Communicator<Extent>,
-    communicator5: Communicator<usize>,
-) {
-    let rank = communicator1.rank();
+fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
     add_parameter_file_contents(app, &opts.parameter_file_path);
     app.insert_resource(WorldRank(rank))
-        .insert_resource(NumRanks(communicator1.size()))
+        .insert_resource(NumRanks(size))
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
-        .add_plugin(InitialConditionsPlugin)
-        .insert_non_send_resource(ExchangeCommunicator::new(communicator1))
-        .insert_non_send_resource(SyncCommunicator::new(communicator2))
-        .insert_non_send_resource(ExchangeCommunicator::new(communicator3))
-        .insert_non_send_resource(AllGatherCommunicator::from(communicator4))
-        .insert_non_send_resource(AllReduceCommunicator::from(communicator5));
+        .add_plugin(InitialConditionsPlugin);
     if rank == 0 {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
@@ -140,43 +115,17 @@ fn main() {
 
     let mut app = App::new();
     let opts = CommandLineOptions::parse();
-    let mut communicators1 = get_local_communicators(opts.num_threads);
-    let mut communicators2 = get_local_communicators(opts.num_threads);
-    let mut communicators3 = get_local_communicators(opts.num_threads);
-    let mut communicators4 = get_local_communicators(opts.num_threads);
-    let mut communicators5 = get_local_communicators(opts.num_threads);
     let mut handles = vec![];
     for rank in 0..opts.num_threads {
-        let communicator1 = communicators1.remove(&(rank as Rank)).unwrap();
-        let communicator2 = communicators2.remove(&(rank as Rank)).unwrap();
-        let communicator3 = communicators3.remove(&(rank as Rank)).unwrap();
-        let communicator4 = communicators4.remove(&(rank as Rank)).unwrap();
-        let communicator5 = communicators5.remove(&(rank as Rank)).unwrap();
         let sub_app = App::new();
         app.add_sub_app(sub_app);
         if rank == 0 {
-            build_app(
-                &mut app,
-                &opts.clone(),
-                communicator1,
-                communicator2,
-                communicator3,
-                communicator4,
-                communicator5,
-            );
+            build_app(&mut app, &opts.clone(), opts.num_threads, rank);
         } else {
             let opts = opts.clone();
             handles.push(thread::spawn(move || {
                 let mut app = App::new();
-                build_app(
-                    &mut app,
-                    &opts,
-                    communicator1,
-                    communicator2,
-                    communicator3,
-                    communicator4,
-                    communicator5,
-                );
+                build_app(&mut app, &opts.clone(), opts.num_threads, rank);
             }));
         }
     }
@@ -189,15 +138,12 @@ fn main() {
 fn main() {
     use clap::Parser;
 
+    use crate::communication::MpiWorld;
+    use crate::communication::SizedCommunicator;
+
     let opts = CommandLineOptions::parse();
-    let world1 = Communicator::<ParticleExchangeData>::new(PARTICLE_EXCHANGE_TAG);
-    let world2 = Communicator::<Identified<ParticleVisualizationExchangeData>>::new(
-        PARTICLE_VISUALIZATION_EXCHANGE_TAG,
-    );
-    let world3 = Communicator::<Segment>::new(SEGMENT_EXCHANGE_TAG);
-    let world4 = Communicator::<Extent>::new(EXTENT_EXCHANGE_TAG);
-    let world5 = Communicator::<usize>::new(NUM_PARTICLES_EXCHANGE_TAG);
+    let world: MpiWorld<usize> = MpiWorld::new(0);
     let mut app = App::new();
-    build_app(&mut app, &opts, world1, world2, world3, world4, world5);
+    build_app(&mut app, &opts, world.size(), world.rank());
     app.run();
 }

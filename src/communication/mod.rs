@@ -59,6 +59,7 @@ mod mpi_reexport {
 
     pub type Communicator<T> = super::mpi_world::MpiWorld<T>;
 
+    pub use super::mpi_world::MpiWorld;
     pub use super::mpi_world::MPI_UNIVERSE;
 }
 

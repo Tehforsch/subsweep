@@ -14,6 +14,9 @@ use self::drawing::IntoBundle;
 use self::parameters::Parameters;
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
+use self::remote::ParticleVisualizationExchangeData;
+use crate::communication::CommunicationPlugin;
+use crate::communication::CommunicationType;
 use crate::communication::WorldRank;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
@@ -22,6 +25,7 @@ use crate::physics::QuadTree;
 use crate::physics::RemoteParticle;
 use crate::position::Position;
 use crate::units::Length;
+
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
 lazy_static! {
@@ -67,6 +71,11 @@ impl Plugin for VisualizationPlugin {
                 .add_plugin(DrawBundlePlugin::<DrawRect>::default())
                 .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
                 .add_plugin(ShapePlugin)
+                .add_plugin(
+                    CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
+                        CommunicationType::Sync,
+                    ),
+                )
                 .add_startup_system(setup_camera_system)
                 .add_system_to_stage(
                     VisualizationStage::Synchronize,
@@ -87,7 +96,12 @@ impl Plugin for VisualizationPlugin {
                 app.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
             }
         } else {
-            app.add_system_to_stage(
+            app.add_plugin(
+                CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
+                    CommunicationType::Sync,
+                ),
+            )
+            .add_system_to_stage(
                 VisualizationStage::Synchronize,
                 send_particles_to_main_thread_system,
             );
