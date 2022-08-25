@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use bevy::prelude::Entity;
 
 use super::exchange_communicator::ExchangeCommunicator;
+use super::from_communicator::FromCommunicator;
 use super::identified::EntityKey;
 use super::DataByRank;
 use super::Identified;
@@ -31,19 +32,25 @@ pub struct SyncCommunicator<C, T> {
     to_sync: DataByRank<Vec<Identified<T>>>,
 }
 
-impl<C, T> SyncCommunicator<C, T>
+impl<C, T> FromCommunicator<C> for SyncCommunicator<C, T>
 where
     C: WorldCommunicator<Identified<T>> + SizedCommunicator,
 {
-    pub fn new(communicator: C) -> Self {
+    fn from_communicator(communicator: C) -> Self {
         let known = DataByRank::from_communicator(&communicator);
         let to_sync = DataByRank::from_communicator(&communicator);
         Self {
-            communicator: ExchangeCommunicator::new(communicator),
+            communicator: ExchangeCommunicator::from_communicator(communicator),
             known,
             to_sync,
         }
     }
+}
+
+impl<C, T> SyncCommunicator<C, T>
+where
+    C: WorldCommunicator<Identified<T>> + SizedCommunicator,
+{
     pub fn send_sync(&mut self, rank: Rank, entity: Entity, data: T) {
         self.to_sync[rank].push(Identified {
             key: entity.to_bits(),
@@ -89,6 +96,8 @@ where
 mod tests {
     use std::thread;
 
+    use crate::communication::from_communicator::FromCommunicator;
+
     #[test]
     fn sync_communicator() {
         use bevy::prelude::Entity;
@@ -98,8 +107,10 @@ mod tests {
         use crate::communication::Rank;
         let num_threads = 2 as i32;
         let mut communicators = get_local_communicators(num_threads as usize);
-        let mut communicator0 = SyncCommunicator::new(communicators.remove(&(0 as Rank)).unwrap());
-        let mut communicator1 = SyncCommunicator::new(communicators.remove(&(1 as Rank)).unwrap());
+        let mut communicator0 =
+            SyncCommunicator::from_communicator(communicators.remove(&(0 as Rank)).unwrap());
+        let mut communicator1 =
+            SyncCommunicator::from_communicator(communicators.remove(&(1 as Rank)).unwrap());
         let entity_translation = |_, data| {
             // This makes no sense, and is just for test purposes
             Entity::from_raw(data)

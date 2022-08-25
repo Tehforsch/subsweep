@@ -1,6 +1,7 @@
 mod collective_communicator;
 mod data_by_rank;
 mod exchange_communicator;
+mod from_communicator;
 mod identified;
 mod plugin;
 mod sized_communicator;

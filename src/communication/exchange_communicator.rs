@@ -1,3 +1,4 @@
+use super::from_communicator::FromCommunicator;
 use super::world_communicator::WorldCommunicator;
 use super::DataByRank;
 use super::Rank;
@@ -20,20 +21,24 @@ where
         }
     }
 }
-
-impl<C, T> ExchangeCommunicator<C, T>
+impl<C, T> FromCommunicator<C> for ExchangeCommunicator<C, T>
 where
-    C: WorldCommunicator<T>,
     C: SizedCommunicator,
 {
-    pub fn new(communicator: C) -> Self {
+    fn from_communicator(communicator: C) -> Self {
         let data = DataByRank::from_communicator(&communicator);
         Self {
             communicator,
             data: data,
         }
     }
+}
 
+impl<C, T> ExchangeCommunicator<C, T>
+where
+    C: WorldCommunicator<T>,
+    C: SizedCommunicator,
+{
     pub fn send(&mut self, rank: i32, data: T) {
         self.data.push(rank, data);
     }
@@ -73,6 +78,8 @@ where
 mod tests {
     use std::thread;
 
+    use crate::communication::from_communicator::FromCommunicator;
+
     #[test]
     fn exchange_communicator() {
         use crate::communication::get_local_communicators;
@@ -83,8 +90,9 @@ mod tests {
         let mut communicators = get_local_communicators(num_threads as usize);
         let threads: Vec<_> = (0 as Rank..num_threads as Rank)
             .map(|rank| {
-                let mut communicator =
-                    ExchangeCommunicator::new(communicators.remove(&(rank as Rank)).unwrap());
+                let mut communicator = ExchangeCommunicator::from_communicator(
+                    communicators.remove(&(rank as Rank)).unwrap(),
+                );
                 thread::spawn(move || {
                     let wrap = |x: i32| x.rem_euclid(num_threads);
                     let target_rank = wrap(rank + 1);

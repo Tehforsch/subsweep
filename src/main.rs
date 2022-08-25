@@ -21,6 +21,7 @@ pub mod units;
 mod velocity;
 mod visualization;
 
+use bevy::app::AppLabel;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
 use bevy::log::LogPlugin;
@@ -32,18 +33,13 @@ use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use command_line_options::CommandLineOptions;
 use communication::NumRanks;
+use communication::Rank;
 use communication::WorldRank;
 use domain::DomainDecompositionPlugin;
 use initial_conditions::InitialConditionsPlugin;
 use parameters::add_parameter_file_contents;
 use physics::PhysicsPlugin;
 use visualization::VisualizationPlugin;
-
-pub const PARTICLE_VISUALIZATION_EXCHANGE_TAG: i32 = 1337;
-pub const PARTICLE_EXCHANGE_TAG: i32 = 1338;
-pub const SEGMENT_EXCHANGE_TAG: i32 = 1339;
-pub const EXTENT_EXCHANGE_TAG: i32 = 1340;
-pub const NUM_PARTICLES_EXCHANGE_TAG: i32 = 1341;
 
 fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
@@ -76,6 +72,28 @@ fn show_time_system(time: Res<crate::physics::Time>) {
     debug!("Time: {:.3} s", time.0.to_value(crate::units::Time::second));
 }
 
+#[derive(AppLabel)]
+enum SubAppRank {
+    Rank0,
+    Rank1,
+    Rank2,
+    Rank3,
+    Rank4,
+}
+
+impl SubAppRank {
+    fn from_num(num: usize) -> Self {
+        match num {
+            0 => Self::Rank0,
+            1 => Self::Rank1,
+            2 => Self::Rank2,
+            3 => Self::Rank3,
+            4 => Self::Rank4,
+            _ => unimplemented!(),
+        }
+    }
+}
+
 fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
     add_parameter_file_contents(app, &opts.parameter_file_path);
     app.insert_resource(WorldRank(rank))
@@ -106,32 +124,17 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
 
 #[cfg(feature = "local")]
 fn main() {
-    use std::iter::once;
-    use std::thread;
-
     use clap::Parser;
-    use communication::get_local_communicators;
-    use communication::Rank;
 
     let mut app = App::new();
     let opts = CommandLineOptions::parse();
-    let mut handles = vec![];
-    for rank in 0..opts.num_threads {
-        let sub_app = App::new();
-        app.add_sub_app(sub_app);
-        if rank == 0 {
-            build_app(&mut app, &opts.clone(), opts.num_threads, rank);
-        } else {
-            let opts = opts.clone();
-            handles.push(thread::spawn(move || {
-                let mut app = App::new();
-                build_app(&mut app, &opts.clone(), opts.num_threads, rank);
-            }));
-        }
+    for rank in 1..opts.num_threads {
+        let mut sub_app = App::new();
+        build_app(&mut sub_app, &opts, opts.num_threads, rank as Rank);
+        app.add_sub_app(SubAppRank::from_num(rank), sub_app, |_, app| app.update());
     }
-    for handle in handles.into_iter() {
-        handle.join().unwrap();
-    }
+    build_app(&mut app, &opts, opts.num_threads, 0 as Rank);
+    app.run();
 }
 
 #[cfg(not(feature = "local"))]
