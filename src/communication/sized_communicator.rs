@@ -9,4 +9,8 @@ pub trait SizedCommunicator {
             .filter(|rank| *rank != self.rank())
             .collect()
     }
+
+    fn all_ranks(&self) -> Vec<Rank> {
+        (0i32..self.size() as i32).collect()
+    }
 }

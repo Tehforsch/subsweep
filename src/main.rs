@@ -142,16 +142,36 @@ fn main() {
     let opts = CommandLineOptions::parse();
     let mut communicators1 = get_local_communicators(opts.num_threads);
     let mut communicators2 = get_local_communicators(opts.num_threads);
+    let mut communicators3 = get_local_communicators(opts.num_threads);
+    let mut communicators4 = get_local_communicators(opts.num_threads);
+    let mut communicators5 = get_local_communicators(opts.num_threads);
     let mut handles = vec![];
     for rank in (1..opts.num_threads).chain(once(0)) {
         let communicator1 = communicators1.remove(&(rank as Rank)).unwrap();
         let communicator2 = communicators2.remove(&(rank as Rank)).unwrap();
+        let communicator3 = communicators3.remove(&(rank as Rank)).unwrap();
+        let communicator4 = communicators4.remove(&(rank as Rank)).unwrap();
+        let communicator5 = communicators5.remove(&(rank as Rank)).unwrap();
         if rank == 0 {
-            build_and_run_app(&opts.clone(), communicator1, communicator2);
+            build_and_run_app(
+                &opts.clone(),
+                communicator1,
+                communicator2,
+                communicator3,
+                communicator4,
+                communicator5,
+            );
         } else {
             let opts = opts.clone();
             handles.push(thread::spawn(move || {
-                build_and_run_app(&opts, communicator1, communicator2);
+                build_and_run_app(
+                    &opts,
+                    communicator1,
+                    communicator2,
+                    communicator3,
+                    communicator4,
+                    communicator5,
+                );
             }));
         }
     }

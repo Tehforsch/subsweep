@@ -14,7 +14,7 @@ use mpi::traits::Source;
 use mpi::Tag;
 use mpi::Threading;
 
-use super::collective_communicator::Operation;
+use super::collective_communicator::SumCommunicator;
 use super::world_communicator::WorldCommunicator;
 use super::CollectiveCommunicator;
 use super::SizedCommunicator;
@@ -86,13 +86,13 @@ impl<T: Equivalence + Clone> CollectiveCommunicator<T> for MpiWorld<T> {
         self.world.all_gather_into(send, &mut result_buffer[..]);
         result_buffer
     }
+}
 
-    fn all_reduce(&mut self, send: &T, operation: Operation) -> T {
-        let operation = match operation {
-            Operation::Sum => SystemOperation::sum(),
-        };
+impl<T: Equivalence + Clone> SumCommunicator<T> for MpiWorld<T> {
+    fn collective_sum(&mut self, send: &T) -> T {
         let mut result = send.clone();
-        self.world.all_reduce_into(send, &mut result, operation);
+        self.world
+            .all_reduce_into(send, &mut result, SystemOperation::sum());
         result
     }
 }

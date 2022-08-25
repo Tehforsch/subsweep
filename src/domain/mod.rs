@@ -15,9 +15,9 @@ use crate::communication::AllReduceCommunicator;
 use crate::communication::CollectiveCommunicator;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::NumRanks;
-use crate::communication::Operation;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
+use crate::communication::SumCommunicator;
 use crate::communication::WorldRank;
 use crate::domain::segment::merge_and_split_segments;
 use crate::mass::Mass;
@@ -103,7 +103,7 @@ fn get_total_number_particles(
     num: usize,
     communicator: &mut AllReduceCommunicator<usize>,
 ) -> usize {
-    communicator.all_reduce(&num, Operation::Sum)
+    communicator.collective_sum(&num)
 }
 
 fn get_global_segments_from_peano_hilbert_keys(

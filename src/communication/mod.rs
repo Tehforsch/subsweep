@@ -7,7 +7,7 @@ mod sync_communicator;
 mod world_communicator;
 
 pub use collective_communicator::CollectiveCommunicator;
-pub use collective_communicator::Operation;
+pub use collective_communicator::SumCommunicator;
 pub use data_by_rank::DataByRank;
 pub use identified::Identified;
 pub use sized_communicator::SizedCommunicator;
@@ -24,6 +24,8 @@ pub use local_reexport::*;
 mod local_reexport {
     use super::identified::Identified;
 
+    pub type AllReduceCommunicator<T> = super::local::LocalCommunicator<T>;
+    pub type AllGatherCommunicator<T> = super::local::LocalCommunicator<T>;
     pub type ExchangeCommunicator<T> =
         super::exchange_communicator::ExchangeCommunicator<super::local::LocalCommunicator<T>, T>;
     pub type SyncCommunicator<T> = super::sync_communicator::SyncCommunicator<
