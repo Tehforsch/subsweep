@@ -13,7 +13,6 @@ use super::Identified;
 use super::SyncCommunicator;
 use super::WorldCommunicator;
 use super::WorldRank;
-use crate::communication::get_local_communicators;
 
 const INITIAL_TAG: Tag = 0;
 
@@ -24,23 +23,6 @@ pub enum CommunicationType {
     Sum,
     AllGather,
 }
-
-// impl CommunicationType {
-//     fn add_to_app<T>(&self, app: &mut App, comm: Communicator<T>) {
-//         if matches!(self.type_, CommunicationType::Sync) {
-//             let comm: Communicator<T> = get_communicator(app, tag);
-//             app.insert_non_send_resource(SyncCommunicator::new(comm));
-//         }
-//         match self.type_ {
-//             Self::Exchange => {
-//                 app.insert_non_send_resource(ExchangeCommunicator::new(comm))
-//             }
-//             Self::Sum => app.insert_non_send_resource(comm),
-//             Self::AllGather => app.insert_non_send_resource(comm),
-//             Self::Sync => unreachable!(),
-//         }
-//     }
-// }
 
 struct CurrentTag(Tag);
 
@@ -101,9 +83,11 @@ where
     }
 }
 
+#[cfg(feature = "local")]
 fn add_to_app<T: 'static>(app: &mut App, type_: CommunicationType) {
+    use crate::communication::get_local_communicators;
     use crate::communication::NumRanks;
-    use crate::SubAppRank;
+
     let size = *app.world.get_resource::<NumRanks>().unwrap();
     let mut comms = get_local_communicators::<T>(size.0);
 
@@ -123,8 +107,9 @@ fn add_to_app<T: 'static>(app: &mut App, type_: CommunicationType) {
         _ => unimplemented!(),
     };
     add_comm(app, 0 as i32);
-    for rank in 1..size.0 {
-        let subapp = app.sub_app_mut(SubAppRank::from_num(rank));
+    let mut subapps = app.world.get_non_send_resource_mut::<Vec<App>>().unwrap();
+    for subapp in subapps.iter_mut() {
+        let rank = subapp.world.get_resource::<WorldRank>().unwrap().0;
         add_comm(subapp, rank as i32)
     }
 }

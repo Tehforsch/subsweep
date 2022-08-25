@@ -21,7 +21,6 @@ pub mod units;
 mod velocity;
 mod visualization;
 
-use bevy::app::AppLabel;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
 use bevy::log::LogPlugin;
@@ -72,28 +71,6 @@ fn show_time_system(time: Res<crate::physics::Time>) {
     debug!("Time: {:.3} s", time.0.to_value(crate::units::Time::second));
 }
 
-#[derive(AppLabel)]
-enum SubAppRank {
-    Rank0,
-    Rank1,
-    Rank2,
-    Rank3,
-    Rank4,
-}
-
-impl SubAppRank {
-    fn from_num(num: usize) -> Self {
-        match num {
-            0 => Self::Rank0,
-            1 => Self::Rank1,
-            2 => Self::Rank2,
-            3 => Self::Rank3,
-            4 => Self::Rank4,
-            _ => unimplemented!(),
-        }
-    }
-}
-
 fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
     add_parameter_file_contents(app, &opts.parameter_file_path);
     app.insert_resource(WorldRank(rank))
@@ -124,16 +101,25 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
 
 #[cfg(feature = "local")]
 fn main() {
+    use std::thread;
+
     use clap::Parser;
 
     let mut app = App::new();
     let opts = CommandLineOptions::parse();
+    let subapps = vec![];
     for rank in 1..opts.num_threads {
         let mut sub_app = App::new();
         build_app(&mut sub_app, &opts, opts.num_threads, rank as Rank);
-        app.add_sub_app(SubAppRank::from_num(rank), sub_app, |_, app| app.update());
+        subapps.push(sub_app);
     }
+    app.insert_non_send_resource(subapps);
     build_app(&mut app, &opts, opts.num_threads, 0 as Rank);
+    let subapps = app.world.remove_non_send_resource::<Vec<App>>().unwrap();
+    for subapp in subapps.into_iter() {
+        thread::spawn(move || subapp.run());
+    }
+
     app.run();
 }
 
