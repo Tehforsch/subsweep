@@ -100,68 +100,69 @@ mod tests {
 
     #[test]
     fn sync_communicator() {
-        use bevy::prelude::Entity;
+        todo!();
+        // use bevy::prelude::Entity;
 
-        use super::SyncCommunicator;
-        use crate::communication::get_local_communicators;
-        use crate::communication::Rank;
-        let num_threads = 2 as i32;
-        let mut communicators = get_local_communicators(num_threads as usize);
-        let mut communicator0 =
-            SyncCommunicator::from_communicator(communicators.remove(&(0 as Rank)).unwrap());
-        let mut communicator1 =
-            SyncCommunicator::from_communicator(communicators.remove(&(1 as Rank)).unwrap());
-        let entity_translation = |_, data| {
-            // This makes no sense, and is just for test purposes
-            Entity::from_raw(data)
-        };
-        let thread = thread::spawn(move || {
-            // Initialize some entities
-            communicator1.send_sync(0, Entity::from_raw(0), 100);
-            communicator1.send_sync(0, Entity::from_raw(1), 110);
-            let result = communicator1.receive_sync(entity_translation);
-            // they should only be created
-            assert!(result.updated[0].is_empty());
-            assert!(result.deleted[0].is_empty());
+        // use super::SyncCommunicator;
+        // use crate::communication::get_local_communicators;
+        // use crate::communication::Rank;
+        // let num_threads = 2 as i32;
+        // let mut communicators = get_local_communicators(num_threads as usize);
+        // let mut communicator0 =
+        //     SyncCommunicator::from_communicator(communicators.remove(&(0 as Rank)).unwrap());
+        // let mut communicator1 =
+        //     SyncCommunicator::from_communicator(communicators.remove(&(1 as Rank)).unwrap());
+        // let entity_translation = |_, data| {
+        //     // This makes no sense, and is just for test purposes
+        //     Entity::from_raw(data)
+        // };
+        // let thread = thread::spawn(move || {
+        //     // Initialize some entities
+        //     communicator1.send_sync(0, Entity::from_raw(0), 100);
+        //     communicator1.send_sync(0, Entity::from_raw(1), 110);
+        //     let result = communicator1.receive_sync(entity_translation);
+        //     // they should only be created
+        //     assert!(result.updated[0].is_empty());
+        //     assert!(result.deleted[0].is_empty());
 
-            // Sync the same entities
-            communicator1.send_sync(0, Entity::from_raw(0), 101);
-            communicator1.send_sync(0, Entity::from_raw(1), 111);
-            let result = communicator1.receive_sync(entity_translation);
-            // Make sure the updated information comes in
-            assert_eq!(result.updated[0][0].1, 201);
-            assert_eq!(result.updated[0][1].1, 211);
-            assert!(result.deleted[0].is_empty());
+        //     // Sync the same entities
+        //     communicator1.send_sync(0, Entity::from_raw(0), 101);
+        //     communicator1.send_sync(0, Entity::from_raw(1), 111);
+        //     let result = communicator1.receive_sync(entity_translation);
+        //     // Make sure the updated information comes in
+        //     assert_eq!(result.updated[0][0].1, 201);
+        //     assert_eq!(result.updated[0][1].1, 211);
+        //     assert!(result.deleted[0].is_empty());
 
-            // Leave out one entity on this core
-            communicator1.send_sync(0, Entity::from_raw(0), 102);
-            let result = communicator1.receive_sync(entity_translation);
-            assert_eq!(result.updated[0][0].1, 202);
-            assert_eq!(result.updated[0][1].1, 212);
-            assert!(result.deleted[0].is_empty());
-        });
+        //     // Leave out one entity on this core
+        //     communicator1.send_sync(0, Entity::from_raw(0), 102);
+        //     let result = communicator1.receive_sync(entity_translation);
+        //     assert_eq!(result.updated[0][0].1, 202);
+        //     assert_eq!(result.updated[0][1].1, 212);
+        //     assert!(result.deleted[0].is_empty());
+        // });
 
-        communicator0.send_sync(1, Entity::from_raw(0), 200);
-        communicator0.send_sync(1, Entity::from_raw(1), 210);
-        let result = communicator0.receive_sync(entity_translation);
-        assert!(result.updated[1].is_empty());
-        assert!(result.deleted[1].is_empty());
+        // communicator0.send_sync(1, Entity::from_raw(0), 200);
+        // communicator0.send_sync(1, Entity::from_raw(1), 210);
+        // let result = communicator0.receive_sync(entity_translation);
+        // assert!(result.updated[1].is_empty());
+        // assert!(result.deleted[1].is_empty());
 
-        communicator0.send_sync(1, Entity::from_raw(0), 201);
-        communicator0.send_sync(1, Entity::from_raw(1), 211);
-        let result = communicator0.receive_sync(entity_translation);
-        assert_eq!(result.updated[1][0].1, 101);
-        assert_eq!(result.updated[1][1].1, 111);
-        assert!(result.deleted[1].is_empty());
+        // communicator0.send_sync(1, Entity::from_raw(0), 201);
+        // communicator0.send_sync(1, Entity::from_raw(1), 211);
+        // let result = communicator0.receive_sync(entity_translation);
+        // assert_eq!(result.updated[1][0].1, 101);
+        // assert_eq!(result.updated[1][1].1, 111);
+        // assert!(result.deleted[1].is_empty());
 
-        communicator0.send_sync(1, Entity::from_raw(0), 202);
-        communicator0.send_sync(1, Entity::from_raw(1), 212);
-        let result = communicator0.receive_sync(entity_translation);
-        // Rank 1 left out one entity in the sync - make sure it is marked as deleted
-        assert_eq!(result.updated[1][0].1, 102);
-        assert_eq!(result.updated[1].get(1), None);
-        assert_eq!(result.deleted[1][0], Entity::from_raw(110));
+        // communicator0.send_sync(1, Entity::from_raw(0), 202);
+        // communicator0.send_sync(1, Entity::from_raw(1), 212);
+        // let result = communicator0.receive_sync(entity_translation);
+        // // Rank 1 left out one entity in the sync - make sure it is marked as deleted
+        // assert_eq!(result.updated[1][0].1, 102);
+        // assert_eq!(result.updated[1].get(1), None);
+        // assert_eq!(result.deleted[1][0], Entity::from_raw(110));
 
-        thread.join().unwrap();
+        // thread.join().unwrap();
     }
 }

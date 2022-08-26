@@ -1,5 +1,5 @@
 #![allow(incomplete_features)]
-#![feature(generic_const_exprs, adt_const_params)]
+#![feature(generic_const_exprs, adt_const_params, hash_drain_filter)]
 // Some or our '*_system' functions have a large number of arguments.
 // That is not necessarily a bad thing, as they are auto-provided by bevy.
 #![allow(clippy::too_many_arguments)]
@@ -99,30 +99,6 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
     }
 }
 
-#[cfg(feature = "local")]
-fn main() {
-    use std::thread;
-
-    use clap::Parser;
-
-    let mut app = App::new();
-    let opts = CommandLineOptions::parse();
-    let subapps = vec![];
-    for rank in 1..opts.num_threads {
-        let mut sub_app = App::new();
-        build_app(&mut sub_app, &opts, opts.num_threads, rank as Rank);
-        subapps.push(sub_app);
-    }
-    app.insert_non_send_resource(subapps);
-    build_app(&mut app, &opts, opts.num_threads, 0 as Rank);
-    let subapps = app.world.remove_non_send_resource::<Vec<App>>().unwrap();
-    for subapp in subapps.into_iter() {
-        thread::spawn(move || subapp.run());
-    }
-
-    app.run();
-}
-
 #[cfg(not(feature = "local"))]
 fn main() {
     use clap::Parser;
@@ -135,4 +111,11 @@ fn main() {
     let mut app = App::new();
     build_app(&mut app, &opts, world.size(), world.rank());
     app.run();
+}
+
+#[cfg(feature = "local")]
+fn main() {
+    use communication::build_local_communication_app;
+
+    build_local_communication_app(build_app);
 }

@@ -16,7 +16,6 @@ pub use plugin::CommunicationPlugin;
 pub use plugin::CommunicationType;
 pub use sized_communicator::SizedCommunicator;
 pub use world_communicator::WorldCommunicator;
-
 #[cfg(feature = "local")]
 mod local;
 
@@ -26,6 +25,11 @@ pub use local_reexport::*;
 #[cfg(feature = "local")]
 #[path = ""]
 mod local_reexport {
+    #[cfg(feature = "local")]
+    mod local_app_building;
+
+    pub use local_app_building::build_local_communication_app;
+
     use super::identified::Identified;
 
     pub type AllReduceCommunicator<T> = super::local::LocalCommunicator<T>;
@@ -37,8 +41,6 @@ mod local_reexport {
         T,
     >;
     pub type Communicator<T> = super::local::LocalCommunicator<T>;
-
-    pub use super::local::get_local_communicators;
 }
 
 #[cfg(not(feature = "local"))]
