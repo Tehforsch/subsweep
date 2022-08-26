@@ -10,7 +10,7 @@ use super::Communicator;
 use super::ExchangeCommunicator;
 use super::SyncCommunicator;
 
-const INITIAL_TAG: Tag = 0;
+pub(super) const INITIAL_TAG: Tag = 0;
 
 #[derive(Clone, Copy)]
 pub enum CommunicationType {

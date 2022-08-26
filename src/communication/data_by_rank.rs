@@ -89,6 +89,7 @@ impl<T> DataByRank<T> {
     }
 
     #[cfg(feature = "local")]
+    #[cfg(test)]
     pub fn remove(&mut self, rank: &Rank) -> Option<T> {
         self.0.remove(rank)
     }
