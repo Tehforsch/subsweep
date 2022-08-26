@@ -11,10 +11,12 @@ use mpi::Tag;
 
 use super::*;
 use crate::command_line_options::CommandLineOptions;
+use crate::communication::from_communicator::FromCommunicator;
 use crate::communication::local::LocalCommunicator;
 use crate::communication::local::Payload;
 use crate::communication::plugin::CurrentTag;
 use crate::communication::CommunicationPlugin;
+use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
 use crate::communication::NumRanks;
 use crate::communication::Rank;
@@ -99,9 +101,11 @@ impl<T: Sync + Send + 'static> Plugin for CommunicationPlugin<T> {
         };
         let rank = app.world.get_resource::<WorldRank>().unwrap().0;
         let world_size = app.world.get_resource::<NumRanks>().unwrap().0;
+        let all_ranks = 0i32..world_size as i32;
+        let other_ranks = (0i32..world_size as i32).filter(|r| *r != rank);
         if rank == 0 {
-            for rank1 in [0, 1, 2, 3] {
-                for rank2 in [0, 1, 2, 3] {
+            for rank1 in all_ranks.clone() {
+                for rank2 in all_ranks.clone() {
                     if rank1 == rank2 {
                         continue;
                     }
@@ -151,7 +155,7 @@ impl<T: Sync + Send + 'static> Plugin for CommunicationPlugin<T> {
             world_size,
             rank,
         );
-        for r in [0, 1, 2, 3] {
+        for r in other_ranks {
             if r == rank {
                 continue;
             }
@@ -176,6 +180,19 @@ impl<T: Sync + Send + 'static> Plugin for CommunicationPlugin<T> {
             commun.receivers.insert(r, receiver);
             commun.senders.insert(r, sender);
         }
-        app.insert_non_send_resource(commun);
+        match self.type_ {
+            CommunicationType::Exchange => {
+                app.insert_non_send_resource(ExchangeCommunicator::from_communicator(commun));
+            }
+            CommunicationType::Sync => {
+                todo!()
+            }
+            CommunicationType::Sum => {
+                app.insert_non_send_resource(commun);
+            }
+            CommunicationType::AllGather => {
+                app.insert_non_send_resource(commun);
+            }
+        }
     }
 }

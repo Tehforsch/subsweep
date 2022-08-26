@@ -10,6 +10,7 @@ use super::sized_communicator::SizedCommunicator;
 use super::world_communicator::WorldCommunicator;
 use super::CollectiveCommunicator;
 use super::DataByRank;
+use super::Identified;
 use super::Rank;
 
 pub(super) struct Payload;
@@ -86,5 +87,18 @@ impl<T: Sum + Clone> SumCommunicator<T> for LocalCommunicator<T> {
         // We don't care about efficiency in the local communicator
         let result = self.all_gather(send);
         result.into_iter().sum()
+    }
+}
+
+impl<T> From<LocalCommunicator<T>> for LocalCommunicator<Identified<T>> {
+    fn from(other: LocalCommunicator<T>) -> Self {
+        Self {
+            senders: other.senders,
+            receivers: other.receivers,
+            rank: other.rank,
+            size: other.size,
+            marker_: PhantomData::default(),
+            _tag: other._tag,
+        }
     }
 }

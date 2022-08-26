@@ -17,6 +17,7 @@ use mpi::Threading;
 use super::collective_communicator::SumCommunicator;
 use super::world_communicator::WorldCommunicator;
 use super::CollectiveCommunicator;
+use super::Identified;
 use super::SizedCommunicator;
 
 lazy_static! {
@@ -94,5 +95,15 @@ impl<T: Equivalence + Clone> SumCommunicator<T> for MpiWorld<T> {
         self.world
             .all_reduce_into(send, &mut result, SystemOperation::sum());
         result
+    }
+}
+
+impl<T> From<MpiWorld<T>> for MpiWorld<Identified<T>> {
+    fn from(other: MpiWorld<T>) -> Self {
+        Self {
+            world: other.world,
+            marker: PhantomData::default(),
+            tag: other.tag,
+        }
     }
 }

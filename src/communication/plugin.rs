@@ -28,7 +28,7 @@ pub(super) struct CurrentTag(pub(super) Tag);
 
 pub struct CommunicationPlugin<T> {
     _marker: PhantomData<T>,
-    type_: CommunicationType,
+    pub(super) type_: CommunicationType,
 }
 
 impl<T> CommunicationPlugin<T> {
@@ -46,19 +46,37 @@ where
     <T as Equivalence>::Out: MatchesRaw,
 {
     fn build(&self, app: &mut App) {
-        let tag = match app.world.get_resource_mut::<CurrentTag>() {
-            Some(mut tag) => {
-                tag.0 += 1;
-                tag.0
-            }
-            None => INITIAL_TAG,
-        };
+        let mut tag = app
+            .world
+            .get_resource_mut::<CurrentTag>()
+            .map(|x| x.0)
+            .unwrap_or(INITIAL_TAG);
+        tag += 1;
+        app.world.insert_resource(CurrentTag(tag));
         todo!()
     }
 }
 
-#[cfg(not(feature = "local"))]
-fn get_communicator<T: Equivalence>(_app: &mut App, tag: Tag) -> Communicator<T> {
-    use crate::communication::mpi_world::MpiWorld;
-    MpiWorld::new(tag)
+fn add_communicator<T: Equivalence + 'static + Sync + Send>(
+    type_: CommunicationType,
+    app: &mut App,
+    tag: Tag,
+    communicator: Communicator<T>,
+) where
+    <T as Equivalence>::Out: MatchesRaw,
+{
+    match type_ {
+        CommunicationType::Exchange => {
+            app.insert_non_send_resource(ExchangeCommunicator::from_communicator(communicator));
+        }
+        CommunicationType::Sync => {
+            app.insert_non_send_resource(SyncCommunicator::from_communicator(communicator.into()));
+        }
+        CommunicationType::Sum => {
+            app.insert_non_send_resource(communicator);
+        }
+        CommunicationType::AllGather => {
+            app.insert_non_send_resource(communicator);
+        }
+    }
 }
