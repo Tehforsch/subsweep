@@ -93,7 +93,7 @@ where
 
 #[cfg(test)]
 #[cfg(feature = "local")]
-mod tests {
+pub mod tests {
     use std::thread;
 
     use mpi::Tag;
@@ -105,7 +105,7 @@ mod tests {
     use crate::communication::local_app_building::get_senders_and_receivers;
     use crate::communication::DataByRank;
 
-    fn get_communicators<T>(num_threads: usize, tag: Tag) -> DataByRank<LocalCommunicator<T>> {
+    pub fn get_communicators<T>(num_threads: usize, tag: Tag) -> DataByRank<LocalCommunicator<T>> {
         let (mut senders, mut receivers) = get_senders_and_receivers(num_threads, tag);
         let mut communicators = DataByRank::empty();
         for rank in 0i32..num_threads as i32 {

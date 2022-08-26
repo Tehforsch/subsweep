@@ -76,41 +76,45 @@ where
 #[cfg(test)]
 #[cfg(feature = "local")]
 mod tests {
+    use std::thread;
+
+    use crate::communication::from_communicator::FromCommunicator;
+    use crate::communication::sync_communicator::tests::get_communicators;
+    use crate::communication::SizedCommunicator;
+
     #[test]
     fn exchange_communicator() {
-        todo!()
-        // use crate::communication::get_local_communicators;
-        // use crate::communication::ExchangeCommunicator;
-        // use crate::communication::Rank;
-        // use crate::communication::SizedCommunicator;
-        // let num_threads = 4 as i32;
-        // let mut communicators = get_local_communicators(num_threads as usize);
-        // let threads: Vec<_> = (0 as Rank..num_threads as Rank)
-        //     .map(|rank| {
-        //         let mut communicator = ExchangeCommunicator::from_communicator(
-        //             communicators.remove(&(rank as Rank)).unwrap(),
-        //         );
-        //         thread::spawn(move || {
-        //             let wrap = |x: i32| x.rem_euclid(num_threads);
-        //             let target_rank = wrap(rank + 1);
-        //             communicator.send(target_rank, rank);
-        //             communicator.send(target_rank, wrap(rank + 1));
-        //             let received = communicator.receive_vec();
-        //             for other_rank in communicator.other_ranks() {
-        //                 if other_rank == wrap(rank - 1) {
-        //                     assert_eq!(
-        //                         received.get(&other_rank).unwrap(),
-        //                         &vec![wrap(rank - 1), rank]
-        //                     );
-        //                 } else {
-        //                     assert_eq!(received.get(&other_rank).unwrap(), &Vec::<i32>::new());
-        //                 }
-        //             }
-        //         })
-        //     })
-        //     .collect();
-        // for thread in threads {
-        //     thread.join().unwrap();
-        // }
+        use crate::communication::ExchangeCommunicator;
+        use crate::communication::Rank;
+        let num_threads = 4 as i32;
+        let tag = 0;
+        let mut communicators = get_communicators(num_threads as usize, tag);
+        let threads: Vec<_> = (0 as Rank..num_threads as Rank)
+            .map(|rank| {
+                let mut communicator = ExchangeCommunicator::from_communicator(
+                    communicators.remove(&(rank as Rank)).unwrap(),
+                );
+                thread::spawn(move || {
+                    let wrap = |x: i32| x.rem_euclid(num_threads);
+                    let target_rank = wrap(rank + 1);
+                    communicator.send(target_rank, rank);
+                    communicator.send(target_rank, wrap(rank + 1));
+                    let received = communicator.receive_vec();
+                    for other_rank in communicator.other_ranks() {
+                        if other_rank == wrap(rank - 1) {
+                            assert_eq!(
+                                received.get(&other_rank).unwrap(),
+                                &vec![wrap(rank - 1), rank]
+                            );
+                        } else {
+                            assert_eq!(received.get(&other_rank).unwrap(), &Vec::<i32>::new());
+                        }
+                    }
+                })
+            })
+            .collect();
+        for thread in threads {
+            thread.join().unwrap();
+        }
     }
 }
