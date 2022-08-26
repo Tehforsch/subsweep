@@ -21,7 +21,7 @@ pub struct LocalCommunicator<T> {
     rank: Rank,
     size: usize,
     marker_: PhantomData<T>,
-    _tag: Tag,
+    tag: Tag,
 }
 
 impl<T> LocalCommunicator<T> {
@@ -37,9 +37,13 @@ impl<T> LocalCommunicator<T> {
             receivers,
             rank,
             size,
-            _tag: tag,
+            tag: tag,
             marker_: PhantomData::default(),
         }
+    }
+
+    pub(super) fn tag(&self) -> Tag {
+        self.tag
     }
 }
 
@@ -98,7 +102,7 @@ impl<T> From<LocalCommunicator<T>> for LocalCommunicator<Identified<T>> {
             rank: other.rank,
             size: other.size,
             marker_: PhantomData::default(),
-            _tag: other._tag,
+            tag: other.tag,
         }
     }
 }

@@ -19,6 +19,7 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::DataByRank;
 use crate::communication::NumRanks;
 use crate::communication::Rank;
+use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 
 fn create_and_build_app<
@@ -81,13 +82,13 @@ pub fn build_local_communication_app<
 }
 
 #[derive(PartialEq, Eq, Debug, Hash)]
-struct Comm {
+pub(super) struct Comm {
     owner: Rank,
     other: Rank,
     tag: Tag,
 }
 
-struct Receivers(HashMap<Comm, Receiver<Payload>>);
+pub(super) struct Receivers(HashMap<Comm, Receiver<Payload>>);
 
 struct Senders(HashMap<Comm, Sender<Payload>>);
 
@@ -100,52 +101,18 @@ where
         let tag = get_next_tag(app);
         let rank = app.world.get_resource::<WorldRank>().unwrap().0;
         let world_size = app.world.get_resource::<NumRanks>().unwrap().0;
-        let all_ranks = 0i32..world_size as i32;
-        let other_ranks = (0i32..world_size as i32).filter(|r| *r != rank);
         if rank == 0 {
-            for rank1 in all_ranks.clone() {
-                for rank2 in all_ranks.clone() {
-                    if rank1 == rank2 {
-                        continue;
-                    }
-                    let (sender1, receiver1) = channel();
-                    let (sender2, receiver2) = channel();
-                    let mut receivers = app.world.get_non_send_resource_mut::<Receivers>().unwrap();
-                    receivers.0.insert(
-                        Comm {
-                            owner: rank1,
-                            other: rank2,
-                            tag,
-                        },
-                        receiver1,
-                    );
-                    receivers.0.insert(
-                        Comm {
-                            owner: rank2,
-                            other: rank1,
-                            tag,
-                        },
-                        receiver2,
-                    );
-                    let mut senders = app.world.get_non_send_resource_mut::<Senders>().unwrap();
-                    senders.0.insert(
-                        Comm {
-                            owner: rank2,
-                            other: rank1,
-                            tag,
-                        },
-                        sender1,
-                    );
-                    senders.0.insert(
-                        Comm {
-                            owner: rank1,
-                            other: rank2,
-                            tag,
-                        },
-                        sender2,
-                    );
-                }
-            }
+            let (senders, receivers) = get_senders_and_receivers(world_size, tag);
+            app.world
+                .get_non_send_resource_mut::<Senders>()
+                .unwrap()
+                .0
+                .extend(senders.into_iter());
+            app.world
+                .get_non_send_resource_mut::<Receivers>()
+                .unwrap()
+                .0
+                .extend(receivers.into_iter());
         }
         let mut commun = LocalCommunicator::<T>::new(
             DataByRank::empty(),
@@ -154,31 +121,95 @@ where
             world_size,
             rank,
         );
-        for r in other_ranks {
-            if r == rank {
-                continue;
-            }
-            let mut senders = app.world.get_non_send_resource_mut::<Senders>().unwrap();
-            let sender = senders
-                .0
-                .remove(&Comm {
-                    owner: rank,
-                    other: r,
-                    tag,
-                })
-                .unwrap();
-            let mut receivers = app.world.get_non_send_resource_mut::<Receivers>().unwrap();
-            let receiver = receivers
-                .0
-                .remove(&Comm {
-                    owner: rank,
-                    other: r,
-                    tag,
-                })
-                .unwrap();
-            commun.receivers.insert(r, receiver);
-            commun.senders.insert(r, sender);
-        }
+        let mut senders = app.world.get_non_send_resource_mut::<Senders>().unwrap();
+        add_senders_to_communicator(&mut commun, &mut senders.0);
+        let mut receivers = app.world.get_non_send_resource_mut::<Receivers>().unwrap();
+        add_receivers_to_communicator(&mut commun, &mut receivers.0);
         add_communicator(self.type_, app, commun);
     }
+}
+
+pub(super) fn add_senders_to_communicator<T>(
+    communicator: &mut LocalCommunicator<T>,
+    senders: &mut HashMap<Comm, Sender<Payload>>,
+) {
+    for r in communicator.other_ranks() {
+        let sender = senders
+            .remove(&Comm {
+                owner: communicator.rank(),
+                other: r,
+                tag: communicator.tag(),
+            })
+            .unwrap();
+        communicator.senders.insert(r, sender);
+    }
+}
+
+pub(super) fn add_receivers_to_communicator<T>(
+    communicator: &mut LocalCommunicator<T>,
+    receivers: &mut HashMap<Comm, Receiver<Payload>>,
+) {
+    for r in communicator.other_ranks() {
+        let receiver = receivers
+            .remove(&Comm {
+                owner: communicator.rank(),
+                other: r,
+                tag: communicator.tag(),
+            })
+            .unwrap();
+        communicator.receivers.insert(r, receiver);
+    }
+}
+
+pub(super) fn get_senders_and_receivers(
+    num_threads: usize,
+    tag: Tag,
+) -> (
+    HashMap<Comm, Sender<Payload>>,
+    HashMap<Comm, Receiver<Payload>>,
+) {
+    let mut senders = HashMap::new();
+    let mut receivers = HashMap::new();
+    for rank1 in 0i32..num_threads as i32 {
+        for rank2 in 0i32..num_threads as i32 {
+            if rank1 == rank2 {
+                continue;
+            }
+            let (sender1, receiver1) = channel();
+            let (sender2, receiver2) = channel();
+            receivers.insert(
+                Comm {
+                    owner: rank1,
+                    other: rank2,
+                    tag,
+                },
+                receiver1,
+            );
+            receivers.insert(
+                Comm {
+                    owner: rank2,
+                    other: rank1,
+                    tag,
+                },
+                receiver2,
+            );
+            senders.insert(
+                Comm {
+                    owner: rank2,
+                    other: rank1,
+                    tag,
+                },
+                sender1,
+            );
+            senders.insert(
+                Comm {
+                    owner: rank1,
+                    other: rank2,
+                    tag,
+                },
+                sender2,
+            );
+        }
+    }
+    (senders, receivers)
 }

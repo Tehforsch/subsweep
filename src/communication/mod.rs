@@ -20,17 +20,16 @@ pub use world_communicator::WorldCommunicator;
 mod local;
 
 #[cfg(feature = "local")]
+pub mod local_app_building;
+
+#[cfg(feature = "local")]
 pub use local_reexport::*;
 
 #[cfg(feature = "local")]
 #[path = ""]
 mod local_reexport {
-    #[cfg(feature = "local")]
-    mod local_app_building;
-
-    pub use local_app_building::build_local_communication_app;
-
     use super::identified::Identified;
+    pub use super::local_app_building::build_local_communication_app;
 
     pub type AllReduceCommunicator<T> = super::local::LocalCommunicator<T>;
     pub type AllGatherCommunicator<T> = super::local::LocalCommunicator<T>;

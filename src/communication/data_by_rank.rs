@@ -88,6 +88,11 @@ impl<T> DataByRank<T> {
         self.0.get_mut(rank)
     }
 
+    #[cfg(feature = "local")]
+    pub fn remove(&mut self, rank: &Rank) -> Option<T> {
+        self.0.remove(rank)
+    }
+
     pub fn insert(&mut self, rank: Rank, data: T) {
         self.0.insert(rank, data);
     }
