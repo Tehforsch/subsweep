@@ -32,7 +32,6 @@ use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
 use command_line_options::CommandLineOptions;
 use communication::NumRanks;
-use communication::Rank;
 use communication::WorldRank;
 use domain::DomainDecompositionPlugin;
 use initial_conditions::InitialConditionsPlugin;

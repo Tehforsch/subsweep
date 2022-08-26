@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use bevy::prelude::App;
-use bevy::prelude::Plugin;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
@@ -9,10 +8,7 @@ use mpi::Tag;
 use super::from_communicator::FromCommunicator;
 use super::Communicator;
 use super::ExchangeCommunicator;
-use super::Identified;
 use super::SyncCommunicator;
-use super::WorldCommunicator;
-use super::WorldRank;
 
 const INITIAL_TAG: Tag = 0;
 
@@ -40,27 +36,31 @@ impl<T> CommunicationPlugin<T> {
     }
 }
 
+pub(super) fn get_next_tag(app: &mut App) -> Tag {
+    let mut tag = app
+        .world
+        .get_resource_mut::<CurrentTag>()
+        .map(|x| x.0)
+        .unwrap_or(INITIAL_TAG);
+    tag += 1;
+    app.world.insert_resource(CurrentTag(tag));
+    tag
+}
+
 #[cfg(not(feature = "local"))]
-impl<T: Equivalence + Sync + Send + 'static> Plugin for CommunicationPlugin<T>
+impl<T: Equivalence + Sync + Send + 'static> bevy::prelude::Plugin for CommunicationPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,
 {
     fn build(&self, app: &mut App) {
-        let mut tag = app
-            .world
-            .get_resource_mut::<CurrentTag>()
-            .map(|x| x.0)
-            .unwrap_or(INITIAL_TAG);
-        tag += 1;
-        app.world.insert_resource(CurrentTag(tag));
-        todo!()
+        let tag = get_next_tag(app);
+        add_communicator(self.type_, app, Communicator::<T>::new(tag));
     }
 }
 
-fn add_communicator<T: Equivalence + 'static + Sync + Send>(
+pub(super) fn add_communicator<T: Equivalence + 'static + Sync + Send>(
     type_: CommunicationType,
     app: &mut App,
-    tag: Tag,
     communicator: Communicator<T>,
 ) where
     <T as Equivalence>::Out: MatchesRaw,

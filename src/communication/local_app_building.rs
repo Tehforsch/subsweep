@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::marker::PhantomData;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
@@ -7,16 +6,16 @@ use std::thread;
 
 use bevy::prelude::App;
 use bevy::prelude::Plugin;
+use mpi::traits::Equivalence;
+use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
-use super::*;
 use crate::command_line_options::CommandLineOptions;
-use crate::communication::from_communicator::FromCommunicator;
 use crate::communication::local::LocalCommunicator;
 use crate::communication::local::Payload;
-use crate::communication::plugin::CurrentTag;
+use crate::communication::plugin::add_communicator;
+use crate::communication::plugin::get_next_tag;
 use crate::communication::CommunicationPlugin;
-use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
 use crate::communication::NumRanks;
 use crate::communication::Rank;
@@ -92,13 +91,13 @@ struct Receivers(HashMap<Comm, Receiver<Payload>>);
 
 struct Senders(HashMap<Comm, Sender<Payload>>);
 
-impl<T: Sync + Send + 'static> Plugin for CommunicationPlugin<T> {
+impl<T> Plugin for CommunicationPlugin<T>
+where
+    T: Equivalence + Sync + Send + 'static,
+    <T as Equivalence>::Out: MatchesRaw,
+{
     fn build(&self, app: &mut App) {
-        let tag = {
-            let mut tag = app.world.get_resource_mut::<CurrentTag>().unwrap();
-            tag.0 += 1;
-            tag.0
-        };
+        let tag = get_next_tag(app);
         let rank = app.world.get_resource::<WorldRank>().unwrap().0;
         let world_size = app.world.get_resource::<NumRanks>().unwrap().0;
         let all_ranks = 0i32..world_size as i32;
@@ -180,19 +179,6 @@ impl<T: Sync + Send + 'static> Plugin for CommunicationPlugin<T> {
             commun.receivers.insert(r, receiver);
             commun.senders.insert(r, sender);
         }
-        match self.type_ {
-            CommunicationType::Exchange => {
-                app.insert_non_send_resource(ExchangeCommunicator::from_communicator(commun));
-            }
-            CommunicationType::Sync => {
-                todo!()
-            }
-            CommunicationType::Sum => {
-                app.insert_non_send_resource(commun);
-            }
-            CommunicationType::AllGather => {
-                app.insert_non_send_resource(commun);
-            }
-        }
+        add_communicator(self.type_, app, commun);
     }
 }
