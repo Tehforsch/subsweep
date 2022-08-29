@@ -133,7 +133,7 @@ fn spawn_sprites_system(
                 .map(|(entity, pos, rank)| (entity, pos, rank.0)),
         )
     {
-        let color = COLORS[rank as usize];
+        let color = COLORS[(rank as usize).rem_euclid(COLORS.len())];
         commands.entity(entity).insert(DrawCircle {
             position: pos.0,
             radius: Length::meter(0.05),
