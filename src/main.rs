@@ -21,6 +21,7 @@ pub mod units;
 mod velocity;
 mod visualization;
 
+use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::core::DefaultTaskPoolOptions;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
@@ -39,6 +40,7 @@ use initial_conditions::InitialConditionsPlugin;
 use parameters::add_parameter_file_contents;
 use physics::PhysicsPlugin;
 use visualization::VisualizationPlugin;
+use crate::physics::time_system;
 
 fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
@@ -92,7 +94,7 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
         } else {
             app.add_plugins(DefaultPlugins);
         }
-        app.add_system(show_time_system);
+        app.add_system(show_time_system.after(time_system));
     } else {
         app.add_plugins(MinimalPlugins);
         #[cfg(not(feature = "local"))]

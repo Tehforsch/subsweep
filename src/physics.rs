@@ -23,7 +23,7 @@ pub struct LocalParticle;
 pub struct RemoteParticle(pub Rank);
 
 #[derive(Equivalence)]
-struct Timestep(crate::units::Time);
+pub(super) struct Timestep(crate::units::Time);
 
 pub struct Time(pub crate::units::Time);
 
@@ -68,6 +68,6 @@ fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timeste
     }
 }
 
-fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
+pub(super) fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
     time.0 += timestep.0;
 }
