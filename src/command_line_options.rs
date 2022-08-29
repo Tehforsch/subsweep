@@ -12,4 +12,6 @@ pub struct CommandLineOptions {
     pub headless: bool,
     #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
+    #[clap(long)]
+    pub num_worker_threads: Option<usize>,
 }

@@ -21,6 +21,7 @@ pub mod units;
 mod velocity;
 mod visualization;
 
+use bevy::core::DefaultTaskPoolOptions;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
 use bevy::log::LogPlugin;
@@ -72,8 +73,15 @@ fn show_time_system(time: Res<crate::physics::Time>) {
 
 fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
     add_parameter_file_contents(app, &opts.parameter_file_path);
+    let task_pool_opts = if let Some(num_worker_threads) = opts.num_worker_threads  {
+        DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
+    }
+    else {
+        DefaultTaskPoolOptions::default()
+    };
     app.insert_resource(WorldRank(rank))
         .insert_resource(NumRanks(size))
+        .insert_resource(task_pool_opts)
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin);
