@@ -124,7 +124,7 @@ fn get_global_segments_from_peano_hilbert_keys(
     num_particles_total: usize,
 ) -> Vec<Segment> {
     let num_desired_particles_per_segment =
-        num_particles_total / (NUM_DESIRED_SEGMENTS_PER_RANK * segment_communicator.size());
+        (num_particles_total / (NUM_DESIRED_SEGMENTS_PER_RANK * segment_communicator.size())).max(1);
     let segments = get_segments(&particles, num_desired_particles_per_segment);
     for rank in segment_communicator.other_ranks() {
         segment_communicator.send_vec(rank, segments.clone());
