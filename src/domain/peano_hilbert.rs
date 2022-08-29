@@ -23,9 +23,6 @@ pub(super) fn get_integer_position(extents: &Extent, pos: &VecLength) -> (u64, u
 
 impl PeanoHilbertKey {
     pub fn new(extents: &Extent, pos: &VecLength) -> Self {
-        if !extents.contains(pos) {
-            dbg!(extents, pos);
-        }
         debug_assert!(extents.contains(pos));
         let integer_pos = get_integer_position(extents, pos);
         Self::from_integer_pos(integer_pos)
