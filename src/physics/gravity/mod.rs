@@ -28,60 +28,56 @@ pub struct ParticleData {
 
 pub type QuadTree = quadtree::QuadTree<MassMoments, ParticleData>;
 
-fn get_gravity_acceleration(
-    pos1: &VecLength,
-    pos2: &VecLength,
-    mass2: units::Mass,
-    softening_length: Length,
-) -> VecAcceleration {
-    let distance_vector = *pos1 - *pos2;
-    let distance = distance_vector.length() + softening_length;
-    -distance_vector * GRAVITY_CONSTANT * mass2 / distance.cubed()
-}
-
-pub fn get_acceleration_on_particle(
-    tree: &QuadTree,
-    pos: VecLength,
-    entity: Entity,
+struct Solver {
     softening_length: Length,
     opening_angle: Dimensionless,
-) -> VecAcceleration {
-    match tree.node {
-        Node::Tree(ref children) => children
-            .iter()
-            .map(|child| {
-                if opening_criterion(child, pos, opening_angle) {
-                    get_gravity_acceleration(
-                        &pos,
-                        &child.data.center_of_mass(),
-                        child.data.total(),
-                        softening_length,
-                    )
-                } else {
-                    get_acceleration_on_particle(
-                        child,
-                        pos,
-                        entity,
-                        softening_length,
-                        opening_angle,
-                    )
-                }
-            })
-            .sum(),
-        Node::Leaf(ref leaf) => leaf
-            .iter()
-            .filter(|(_, particle)| particle.entity != entity)
-            .map(|(pos2, particle)| {
-                get_gravity_acceleration(&pos, pos2, particle.mass, softening_length)
-            })
-            .sum(),
-    }
 }
 
-fn opening_criterion(child: &QuadTree, pos: VecLength, opening_angle: Dimensionless) -> bool {
-    let distance = pos.distance(&child.extents.center());
-    let length = child.extents.max_side_length();
-    length / distance < opening_angle
+impl Solver {
+    fn get_gravity_acceleration(
+        &self,
+        pos1: &VecLength,
+        pos2: &VecLength,
+        mass2: units::Mass,
+    ) -> VecAcceleration {
+        let distance_vector = *pos1 - *pos2;
+        let distance = distance_vector.length() + self.softening_length;
+        -distance_vector * GRAVITY_CONSTANT * mass2 / distance.cubed()
+    }
+
+    pub fn get_acceleration_on_particle(
+        &self,
+        tree: &QuadTree,
+        pos: VecLength,
+        entity: Entity,
+    ) -> VecAcceleration {
+        match tree.node {
+            Node::Tree(ref children) => children
+                .iter()
+                .map(|child| {
+                    if self.opening_criterion(child, pos) {
+                        self.get_gravity_acceleration(
+                            &pos,
+                            &child.data.center_of_mass(),
+                            child.data.total(),
+                        )
+                    } else {
+                        self.get_acceleration_on_particle(child, pos, entity)
+                    }
+                })
+                .sum(),
+            Node::Leaf(ref leaf) => leaf
+                .iter()
+                .filter(|(_, particle)| particle.entity != entity)
+                .map(|(pos2, particle)| self.get_gravity_acceleration(&pos, pos2, particle.mass))
+                .sum(),
+        }
+    }
+    fn opening_criterion(&self, child: &QuadTree, pos: VecLength) -> bool {
+        let distance = pos.distance(&child.extents.center());
+        let length = child.extents.max_side_length();
+        length / distance < self.opening_angle
+    }
 }
 
 pub(super) fn construct_quad_tree_system(
@@ -120,14 +116,12 @@ pub(super) fn gravity_system(
         return;
     }
     let tree = tree.unwrap();
+    let gravity = Solver {
+        softening_length: parameters.softening_length,
+        opening_angle: parameters.opening_angle,
+    };
     for (entity, pos, mut vel) in particles.iter_mut() {
-        let acceleration = get_acceleration_on_particle(
-            &tree,
-            pos.0,
-            entity,
-            parameters.softening_length,
-            parameters.opening_angle,
-        );
+        let acceleration = gravity.get_acceleration_on_particle(&tree, pos.0, entity);
         vel.0 += acceleration * timestep.0;
     }
 }
@@ -136,12 +130,11 @@ pub(super) fn gravity_system(
 mod tests {
     use bevy::prelude::Entity;
 
-    use super::get_acceleration_on_particle;
-    use super::get_gravity_acceleration;
     use super::ParticleData;
     use super::QuadTree;
     use crate::domain::quadtree::QuadTreeConfig;
     use crate::domain::quadtree::{self};
+    use crate::physics::gravity::Solver;
     use crate::units::assert_is_close;
     use crate::units::Dimensionless;
     use crate::units::Length;
@@ -194,26 +187,25 @@ mod tests {
         let n_particles = 50;
         let tree = QuadTree::new(&QuadTreeConfig::default(), get_positions(n_particles)).unwrap();
         let pos = Vec2Length::meter(3.5, 3.5);
-        let acc1 = get_acceleration_on_particle(
-            &tree,
-            pos,
-            Entity::from_raw(0),
-            Length::zero(),
-            Dimensionless::zero(),
-        );
-        let acc2 = direct_sum(&pos, get_positions(n_particles));
+        let solver = Solver {
+            opening_angle: Dimensionless::zero(),
+            softening_length: Length::zero(),
+        };
+        let acc1 = solver.get_acceleration_on_particle(&tree, pos, Entity::from_raw(0));
+        let acc2 = direct_sum(&solver, &pos, get_positions(n_particles));
         let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length());
         // Precision is pretty low with f32, so change this to f64 once variable precision is implemented
         assert!(relative_diff.value() < &1e-5);
     }
 
     fn direct_sum(
+        solver: &Solver,
         pos1: &Vec2Length,
         other_positions: Vec<(Vec2Length, ParticleData)>,
     ) -> Vec2Acceleration {
         let mut total = Vec2Acceleration::zero();
         for (pos2, data) in other_positions.iter() {
-            total += get_gravity_acceleration(pos1, pos2, data.mass, Length::zero());
+            total += solver.get_gravity_acceleration(pos1, pos2, data.mass);
         }
         total
     }
