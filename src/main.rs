@@ -21,7 +21,6 @@ pub mod units;
 mod velocity;
 mod visualization;
 
-use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::core::DefaultTaskPoolOptions;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
@@ -31,6 +30,7 @@ use bevy::prelude::debug;
 use bevy::prelude::App;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
+use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 use command_line_options::CommandLineOptions;
 use communication::NumRanks;
@@ -40,6 +40,7 @@ use initial_conditions::InitialConditionsPlugin;
 use parameters::add_parameter_file_contents;
 use physics::PhysicsPlugin;
 use visualization::VisualizationPlugin;
+
 use crate::physics::time_system;
 
 fn log_setup(verbosity: usize) -> LogSettings {
@@ -75,10 +76,9 @@ fn show_time_system(time: Res<crate::physics::Time>) {
 
 fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
     add_parameter_file_contents(app, &opts.parameter_file_path);
-    let task_pool_opts = if let Some(num_worker_threads) = opts.num_worker_threads  {
+    let task_pool_opts = if let Some(num_worker_threads) = opts.num_worker_threads {
         DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
-    }
-    else {
+    } else {
         DefaultTaskPoolOptions::default()
     };
     app.insert_resource(WorldRank(rank))
