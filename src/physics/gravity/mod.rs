@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
+use self::mass_moments::MassMoments;
 use super::parameters::Parameters;
 use super::LocalParticle;
 use super::Timestep;
 use crate::domain::quadtree;
 use crate::domain::quadtree::Node;
-use crate::domain::quadtree::NodeDataType;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::quadtree::QuadTreeConstructionError;
 use crate::mass::Mass;
@@ -15,37 +15,15 @@ use crate::units::Dimensionless;
 use crate::units::Length;
 use crate::units::VecAcceleration;
 use crate::units::VecLength;
-use crate::units::VecLengthMass;
 use crate::units::GRAVITY_CONSTANT;
 use crate::velocity::Velocity;
+
+mod mass_moments;
 
 #[derive(Debug, Clone)]
 pub struct ParticleData {
     pub entity: Entity,
     pub mass: units::Mass,
-}
-
-#[derive(Default, Debug)]
-pub struct MassMoments {
-    total: units::Mass,
-    weighted_position_sum: VecLengthMass,
-    count: usize,
-}
-
-impl MassMoments {
-    fn center_of_mass(&self) -> VecLength {
-        if self.count == 0 {
-            return VecLength::zero();
-        }
-        self.weighted_position_sum / self.total
-    }
-}
-impl NodeDataType<ParticleData> for MassMoments {
-    fn add_new_leaf_data(&mut self, pos: &VecLength, data: &ParticleData) {
-        self.count += 1;
-        self.total += data.mass;
-        self.weighted_position_sum += *pos * data.mass;
-    }
 }
 
 pub type QuadTree = quadtree::QuadTree<MassMoments, ParticleData>;
@@ -76,7 +54,7 @@ pub fn get_acceleration_on_particle(
                     get_gravity_acceleration(
                         &pos,
                         &child.data.center_of_mass(),
-                        child.data.total,
+                        child.data.total(),
                         softening_length,
                     )
                 } else {
@@ -208,7 +186,7 @@ mod tests {
     fn check_mass(tree: &QuadTree) {
         let mut total = Mass::zero();
         tree.depth_first_map(&mut |_, data| total += data.iter().map(|(_, p)| p.mass).sum());
-        assert_is_close(tree.data.total, total);
+        assert_is_close(tree.data.total(), total);
     }
 
     #[test]
