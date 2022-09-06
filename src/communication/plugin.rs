@@ -9,10 +9,10 @@ use mpi::Tag;
 use super::from_communicator::FromCommunicator;
 use super::Communicator;
 use super::ExchangeCommunicator;
-use super::NumRanks;
 use super::Rank;
 use super::SyncCommunicator;
 use super::WorldRank;
+use super::WorldSize;
 
 pub(super) const INITIAL_TAG: Tag = 0;
 
@@ -27,14 +27,14 @@ pub enum CommunicationType {
 pub(super) struct CurrentTag(pub(super) Tag);
 
 pub struct BaseCommunicationPlugin {
-    num_ranks: NumRanks,
+    num_ranks: WorldSize,
     world_rank: WorldRank,
 }
 
 impl BaseCommunicationPlugin {
     pub fn new(size: usize, rank: Rank) -> Self {
         Self {
-            num_ranks: NumRanks(size),
+            num_ranks: WorldSize(size),
             world_rank: WorldRank(rank),
         }
     }

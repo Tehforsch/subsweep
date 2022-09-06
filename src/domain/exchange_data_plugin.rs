@@ -17,10 +17,10 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
-use crate::communication::NumRanks;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
+use crate::communication::WorldSize;
 use crate::physics::LocalParticle;
 
 struct ExchangePluginExists;
@@ -62,7 +62,7 @@ where
         let exists = app.world.get_resource_mut::<ExchangePluginExists>();
         let first = exists.is_none();
         let rank = app.world.get_resource::<WorldRank>().unwrap().0;
-        let size = app.world.get_resource::<NumRanks>().unwrap().0;
+        let size = app.world.get_resource::<WorldSize>().unwrap().0;
         if first {
             app.insert_resource(ExchangePluginExists)
                 .insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
@@ -162,7 +162,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
 
     fn reset_buffers_system(
         mut buffers: ResMut<ExchangeBuffers<T>>,
-        size: Res<NumRanks>,
+        size: Res<WorldSize>,
         rank: Res<WorldRank>,
     ) {
         *buffers = ExchangeBuffers(DataByRank::from_size_and_rank(size.0, rank.0));
@@ -198,7 +198,7 @@ fn spawn_incoming_entities_system(
 
 fn reset_outgoing_entities_system(
     mut outgoing: ResMut<OutgoingEntities>,
-    size: Res<NumRanks>,
+    size: Res<WorldSize>,
     rank: Res<WorldRank>,
 ) {
     *outgoing = OutgoingEntities(DataByRank::from_size_and_rank(size.0, rank.0));

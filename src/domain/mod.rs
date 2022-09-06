@@ -19,11 +19,11 @@ use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::ExchangeCommunicator;
-use crate::communication::NumRanks;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::SumCommunicator;
 use crate::communication::WorldRank;
+use crate::communication::WorldSize;
 use crate::domain::segment::merge_and_split_segments;
 use crate::mass::Mass;
 use crate::physics::LocalParticle;
@@ -167,7 +167,7 @@ fn domain_decomposition_system(
     mut num_particle_communicator: NonSendMut<AllReduceCommunicator<usize>>,
     mut outgoing_entities: ResMut<OutgoingEntities>,
     rank: Res<WorldRank>,
-    num_ranks: Res<NumRanks>,
+    num_ranks: Res<WorldSize>,
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
 ) {

@@ -16,10 +16,10 @@ use crate::communication::plugin::add_communicator;
 use crate::communication::plugin::get_next_tag;
 use crate::communication::CommunicationPlugin;
 use crate::communication::DataByRank;
-use crate::communication::NumRanks;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
+use crate::communication::WorldSize;
 
 fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut App, usize, Rank)>(
     build_app: F,
@@ -115,7 +115,7 @@ where
     fn build(&self, app: &mut App) {
         let tag = get_next_tag(app);
         let rank = app.world.get_resource::<WorldRank>().unwrap().0;
-        let world_size = app.world.get_resource::<NumRanks>().unwrap().0;
+        let world_size = app.world.get_resource::<WorldSize>().unwrap().0;
         if rank == 0 {
             let (senders, receivers) = get_senders_and_receivers(world_size, tag);
             app.world

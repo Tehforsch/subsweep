@@ -70,7 +70,7 @@ mod mpi_reexport {
 pub type Rank = mpi::Rank;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct NumRanks(pub usize);
+pub struct WorldSize(pub usize);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct WorldRank(pub Rank);
