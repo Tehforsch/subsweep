@@ -7,3 +7,7 @@ visualization:
   show_quadtree: false
 initial_conditions:
   num_particles: 100
+output:
+  output_dir: "output"
+  time_between_snapshots: 1.0 s
+  time_first_snapshot: 1.0 s
