@@ -5,3 +5,5 @@ tree:
   max_depth: 20
 visualization:
   show_quadtree: false
+initial_conditions:
+  num_particles: 100

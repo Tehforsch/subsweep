@@ -2,9 +2,11 @@ use bevy::prelude::Commands;
 use bevy::prelude::Res;
 use bevy::prelude::*;
 use rand::Rng;
+use serde::Deserialize;
 
 use crate::communication::WorldRank;
 use crate::mass::Mass;
+use crate::parameters::ParameterPlugin;
 use crate::particle::LocalParticleBundle;
 use crate::position::Position;
 use crate::units;
@@ -14,17 +16,27 @@ use crate::velocity::Velocity;
 
 pub struct InitialConditionsPlugin;
 
+#[derive(Default, Deserialize)]
+struct Parameters {
+    num_particles: usize,
+}
+
 impl Plugin for InitialConditionsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_particles_system);
+        app.add_startup_system(spawn_particles_system)
+            .add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"));
     }
 }
 
-fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
+fn spawn_particles_system(
+    mut commands: Commands,
+    parameters: Res<Parameters>,
+    rank: Res<WorldRank>,
+) {
     if !rank.is_main() {
         return;
     }
-    let n_particles = 150;
+    let n_particles = parameters.num_particles / 2;
     for _ in 0..n_particles {
         let x = rand::thread_rng().gen_range(-5.0..-4.0);
         let y = rand::thread_rng().gen_range(-1.0..1.0);
