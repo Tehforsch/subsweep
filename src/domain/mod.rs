@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
+mod exchange_data_plugin;
 mod extent;
 mod peano_hilbert;
 pub mod quadtree;
@@ -33,6 +34,7 @@ const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
     Decomposition,
+    Exchange,
 }
 
 pub struct DomainDecompositionPlugin;
