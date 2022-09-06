@@ -18,20 +18,28 @@ use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::NumRanks;
+use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
+use crate::physics::LocalParticle;
 
 struct ExchangePluginExists;
 
 #[derive(Default)]
-struct OutgoingEntities(DataByRank<Vec<Entity>>);
+pub(super) struct OutgoingEntities(DataByRank<Vec<Entity>>);
+
+impl OutgoingEntities {
+    pub fn add(&mut self, rank: Rank, entity: Entity) {
+        self.0[rank].push(entity);
+    }
+}
 
 #[derive(Default)]
 struct SpawnedEntities(DataByRank<Vec<Entity>>);
 
 struct ExchangeBuffers<T>(DataByRank<Vec<T>>);
 
-struct ExchangeDataPlugin<T> {
+pub struct ExchangeDataPlugin<T> {
     _marker: PhantomData<T>,
 }
 
@@ -73,10 +81,6 @@ where
         )
         .add_system_to_stage(
             DomainDecompositionStages::Exchange,
-            Self::despawn_outgoing_entities_system,
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::Exchange,
             Self::send_buffers_system
                 .after(Self::fill_buffers_system)
                 .before(reset_outgoing_entities_system)
@@ -97,6 +101,10 @@ where
             app.add_system_to_stage(
                 DomainDecompositionStages::Exchange,
                 send_num_outgoing_entities_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                despawn_outgoing_entities_system,
             )
             .add_system_to_stage(
                 DomainDecompositionStages::Exchange,
@@ -130,17 +138,6 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         }
     }
 
-    fn despawn_outgoing_entities_system(
-        mut commands: Commands,
-        entity_exchange: Res<OutgoingEntities>,
-    ) {
-        for (_, entities) in entity_exchange.0.iter() {
-            for entity in entities {
-                commands.entity(*entity).despawn();
-            }
-        }
-    }
-
     fn send_buffers_system(
         mut communicator: NonSendMut<ExchangeCommunicator<T>>,
         mut buffers: ResMut<ExchangeBuffers<T>>,
@@ -157,10 +154,9 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
     ) {
         for (rank, data) in communicator.receive_vec() {
             let spawned_entities = spawned_entities.0[rank].clone();
-            let iterator = spawned_entities
-                .into_iter()
-                .zip(data.into_iter().map(|component| (component,)));
-            commands.insert_or_spawn_batch(iterator);
+            for (entity, component) in spawned_entities.iter().zip(data.into_iter()) {
+                commands.entity(*entity).insert(component);
+            }
         }
     }
 
@@ -192,7 +188,7 @@ fn spawn_incoming_entities_system(
             rank,
             (0..num_incoming.0)
                 .map(|_| {
-                    let id = commands.spawn().id();
+                    let id = commands.spawn().insert(LocalParticle).id();
                     id
                 })
                 .collect(),
@@ -206,6 +202,17 @@ fn reset_outgoing_entities_system(
     rank: Res<WorldRank>,
 ) {
     *outgoing = OutgoingEntities(DataByRank::from_size_and_rank(size.0, rank.0));
+}
+
+fn despawn_outgoing_entities_system(
+    mut commands: Commands,
+    entity_exchange: Res<OutgoingEntities>,
+) {
+    for (_, entities) in entity_exchange.0.iter() {
+        for entity in entities {
+            commands.entity(*entity).despawn();
+        }
+    }
 }
 
 fn schedule_system() {}
@@ -239,16 +246,55 @@ mod tests {
 
     fn check_received(mut app: App) {
         let is_main = app.world.get_resource::<WorldRank>().unwrap().is_main();
-        app.update();
-        if !is_main {
-            let mut query = app.world.query::<&mut A>();
-            assert_eq!(query.iter(&app.world).count(), 1);
+        let mut entities = vec![];
+        if is_main {
+            entities.push(
+                app.world
+                    .spawn()
+                    .insert(A { x: 0, y: 5.0 })
+                    .insert(B { x: 0, y: false })
+                    .id(),
+            );
+            entities.push(
+                app.world
+                    .spawn()
+                    .insert(A { x: 1, y: 10.0 })
+                    .insert(B { x: 1, y: true })
+                    .id(),
+            );
+            entities.push(
+                app.world
+                    .spawn()
+                    .insert(A { x: 2, y: 20.0 })
+                    .insert(B { x: 2, y: false })
+                    .id(),
+            );
         }
-        app.update();
-        if !is_main {
+        let check_num_entities = |app: &mut App, rank_0_count: usize, rank_1_count: usize| {
             let mut query = app.world.query::<&mut A>();
-            assert_eq!(query.iter(&app.world).count(), 1);
-        }
+            let count = query.iter(&app.world).count();
+            if is_main {
+                assert_eq!(count, rank_0_count);
+            } else {
+                assert_eq!(count, rank_1_count);
+            }
+        };
+        let mut exchange_first_entity = |app: &mut App| {
+            if is_main {
+                let mut outgoing = app.world.get_resource_mut::<OutgoingEntities>().unwrap();
+                outgoing.add(1, entities.remove(0));
+            }
+        };
+        check_num_entities(&mut app, 3, 0);
+        exchange_first_entity(&mut app);
+        app.update();
+        check_num_entities(&mut app, 2, 1);
+        app.update();
+        check_num_entities(&mut app, 2, 1);
+        exchange_first_entity(&mut app);
+        exchange_first_entity(&mut app);
+        app.update();
+        check_num_entities(&mut app, 0, 3);
     }
 
     #[test]
@@ -269,17 +315,5 @@ mod tests {
         .add_plugin(BaseCommunicationPlugin::new(size, rank))
         .add_plugin(ExchangeDataPlugin::<A>::default())
         .add_plugin(ExchangeDataPlugin::<B>::default());
-        if rank == 0 {
-            let mut entities = vec![];
-            entities.push(
-                app.world
-                    .spawn()
-                    .insert(A { x: 0, y: 5.0 })
-                    .insert(B { x: 0, y: false })
-                    .id(),
-            );
-            let mut outgoing = app.world.get_resource_mut::<OutgoingEntities>().unwrap();
-            outgoing.0.insert(1, entities);
-        }
     }
 }
