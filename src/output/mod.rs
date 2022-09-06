@@ -7,6 +7,7 @@ use bevy::prelude::StageLabel;
 use bevy::prelude::SystemStage;
 
 use crate::physics::PhysicsStages;
+use crate::plugin_utils::run_once;
 
 #[derive(StageLabel)]
 enum OutputStages {
@@ -20,11 +21,13 @@ struct OutputPlugin<T> {
 
 impl<T: Component + Sync + Send + 'static> Plugin for OutputPlugin<T> {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_stage_after(
-            PhysicsStages::Gravity,
-            OutputStages::Output,
-            SystemStage::parallel(),
-        );
+        run_once("output_plugin", app, |app| {
+            app.add_stage_after(
+                PhysicsStages::Gravity,
+                OutputStages::Output,
+                SystemStage::parallel(),
+            );
+        });
         app.add_system_to_stage(OutputStages::Output, Self::output_system);
     }
 }

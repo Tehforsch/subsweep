@@ -17,6 +17,7 @@ mod output;
 mod parameters;
 mod particle;
 mod physics;
+mod plugin_utils;
 mod position;
 pub mod units;
 mod velocity;
