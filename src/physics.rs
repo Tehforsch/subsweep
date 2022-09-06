@@ -13,7 +13,7 @@ use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::DomainDecompositionStages;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass::Mass;
-use crate::output::OutputPlugin;
+use crate::output::DatasetPlugin;
 use crate::parameters::ParameterPlugin;
 use crate::position::Position;
 use crate::units;
@@ -56,9 +56,9 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())
-            .add_plugin(OutputPlugin::<Position>::new("position"))
-            .add_plugin(OutputPlugin::<Velocity>::new("velocity"))
-            .add_plugin(OutputPlugin::<Mass>::new("mass"))
+            .add_plugin(DatasetPlugin::<Position>::new("position"))
+            .add_plugin(DatasetPlugin::<Velocity>::new("velocity"))
+            .add_plugin(DatasetPlugin::<Mass>::new("mass"))
             .insert_resource(Timestep(units::Time::second(0.01)))
             .insert_resource(Time(units::Time::second(0.00)))
             .add_system_to_stage(
