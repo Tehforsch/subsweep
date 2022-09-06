@@ -12,6 +12,7 @@ pub use collective_communicator::CollectiveCommunicator;
 pub use collective_communicator::SumCommunicator;
 pub use data_by_rank::DataByRank;
 pub use identified::Identified;
+pub use plugin::BaseCommunicationPlugin;
 pub use plugin::CommunicationPlugin;
 pub use plugin::CommunicationType;
 pub use sized_communicator::SizedCommunicator;
@@ -30,6 +31,7 @@ pub use local_reexport::*;
 mod local_reexport {
     use super::identified::Identified;
     pub use super::local_app_building::build_local_communication_app;
+    pub use super::local_app_building::build_local_communication_app_with_custom_logic;
 
     pub type AllReduceCommunicator<T> = super::local::LocalCommunicator<T>;
     pub type AllGatherCommunicator<T> = super::local::LocalCommunicator<T>;

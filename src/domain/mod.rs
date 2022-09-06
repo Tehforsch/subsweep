@@ -1,11 +1,14 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
+mod exchange_data_plugin;
 mod extent;
 mod peano_hilbert;
 pub mod quadtree;
 mod segment;
 
+pub use self::exchange_data_plugin::ExchangeDataPlugin;
+use self::exchange_data_plugin::OutgoingEntities;
 use self::extent::Extent;
 use self::peano_hilbert::PeanoHilbertKey;
 use self::segment::get_segments;
@@ -23,7 +26,6 @@ use crate::communication::SumCommunicator;
 use crate::communication::WorldRank;
 use crate::domain::segment::merge_and_split_segments;
 use crate::mass::Mass;
-use crate::particle::LocalParticleBundle;
 use crate::physics::LocalParticle;
 use crate::position::Position;
 use crate::velocity::Velocity;
@@ -33,6 +35,7 @@ const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
     Decomposition,
+    Exchange,
 }
 
 pub struct DomainDecompositionPlugin;
@@ -45,6 +48,11 @@ impl Plugin for DomainDecompositionPlugin {
             DomainDecompositionStages::Decomposition,
             SystemStage::parallel(),
         );
+        app.add_stage_after(
+            DomainDecompositionStages::Decomposition,
+            DomainDecompositionStages::Exchange,
+            SystemStage::parallel(),
+        );
         app.add_system_to_stage(
             DomainDecompositionStages::Decomposition,
             determine_global_extent_system,
@@ -53,9 +61,6 @@ impl Plugin for DomainDecompositionPlugin {
             DomainDecompositionStages::Decomposition,
             domain_decomposition_system.after(determine_global_extent_system),
         )
-        .add_plugin(CommunicationPlugin::<ParticleExchangeData>::new(
-            CommunicationType::Exchange,
-        ))
         .add_plugin(CommunicationPlugin::<Extent>::new(
             CommunicationType::AllGather,
         ))
@@ -82,7 +87,7 @@ impl ParticleData {
 }
 
 fn determine_global_extent_system(
-    particles: Query<&Position, With<LocalParticle>>,
+    particles: Query<&Position>,
     mut extent_communicator: NonSendMut<AllGatherCommunicator<Extent>>,
     mut global_extent: ResMut<GlobalExtent>,
 ) {
@@ -158,15 +163,13 @@ fn find_key_cutoffs(
 }
 
 fn domain_decomposition_system(
-    mut commands: Commands,
     mut segment_communicator: NonSendMut<ExchangeCommunicator<Segment>>,
-    mut exchange_communicator: NonSendMut<ExchangeCommunicator<ParticleExchangeData>>,
     mut num_particle_communicator: NonSendMut<AllReduceCommunicator<usize>>,
+    mut outgoing_entities: ResMut<OutgoingEntities>,
     rank: Res<WorldRank>,
     num_ranks: Res<NumRanks>,
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
-    full_particle_data: Query<(&Position, &Velocity, &Mass), With<LocalParticle>>,
 ) {
     let particles = get_sorted_peano_hilbert_keys(&extent.0, &particles);
     let num_particles_total =
@@ -186,24 +189,7 @@ fn domain_decomposition_system(
     for ParticleData { key, entity } in particles.iter() {
         let target_rank = target_rank(key);
         if target_rank != rank.0 {
-            commands.entity(*entity).despawn();
-            let (pos, vel, mass) = full_particle_data.get(*entity).unwrap();
-            exchange_communicator.send(
-                target_rank,
-                ParticleExchangeData {
-                    pos: pos.clone(),
-                    vel: vel.clone(),
-                    mass: mass.clone(),
-                },
-            );
-        }
-    }
-
-    for (_, moved_to_own_domain) in exchange_communicator.receive_vec().into_iter() {
-        for data in moved_to_own_domain.into_iter() {
-            commands
-                .spawn()
-                .insert_bundle(LocalParticleBundle::new(data.pos, data.vel, data.mass));
+            outgoing_entities.add(target_rank, *entity);
         }
     }
 }

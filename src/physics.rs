@@ -11,6 +11,8 @@ use self::parameters::Parameters;
 use crate::communication::Rank;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::DomainDecompositionStages;
+use crate::domain::ExchangeDataPlugin;
+use crate::mass::Mass;
 use crate::parameters::ParameterPlugin;
 use crate::position::Position;
 use crate::units;
@@ -50,6 +52,9 @@ impl Plugin for PhysicsPlugin {
         );
         app.add_plugin(ParameterPlugin::<Parameters>::new("physics"))
             .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("tree"))
+            .add_plugin(ExchangeDataPlugin::<Position>::default())
+            .add_plugin(ExchangeDataPlugin::<Velocity>::default())
+            .add_plugin(ExchangeDataPlugin::<Mass>::default())
             .insert_resource(Timestep(units::Time::second(0.01)))
             .insert_resource(Time(units::Time::second(0.00)))
             .add_system_to_stage(

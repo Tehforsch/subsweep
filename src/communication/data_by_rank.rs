@@ -10,6 +10,12 @@ use super::SizedCommunicator;
 
 pub struct DataByRank<T>(HashMap<Rank, T>);
 
+impl<T> Default for DataByRank<T> {
+    fn default() -> Self {
+        Self(HashMap::default())
+    }
+}
+
 impl<T> Debug for DataByRank<T>
 where
     T: Debug,
@@ -40,9 +46,13 @@ where
     T: Default,
 {
     pub fn from_communicator(communicator: &impl SizedCommunicator) -> Self {
+        Self::from_size_and_rank(communicator.size(), communicator.rank())
+    }
+
+    pub fn from_size_and_rank(size: usize, this_rank: Rank) -> Self {
         Self(
-            (0..communicator.size())
-                .filter(|rank| *rank != communicator.rank() as usize)
+            (0..size)
+                .filter(|rank| *rank != this_rank as usize)
                 .map(|rank| (rank as Rank, T::default()))
                 .collect(),
         )
@@ -50,10 +60,6 @@ where
 }
 
 impl<T> DataByRank<Vec<T>> {
-    pub fn push(&mut self, rank: Rank, data: T) {
-        self.0.get_mut(&rank).unwrap().push(data);
-    }
-
     pub fn drain_all(&mut self) -> impl Iterator<Item = (Rank, Vec<T>)> + '_ {
         self.0.iter_mut().map(|(k, v)| (*k, v.drain(..).collect()))
     }
@@ -97,6 +103,10 @@ impl<T> DataByRank<T> {
     pub fn insert(&mut self, rank: Rank, data: T) {
         self.0.insert(rank, data);
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Rank, &T)> + '_ {
+        self.0.iter()
+    }
 }
 
 impl<T> IntoIterator for DataByRank<T> {
@@ -106,5 +116,11 @@ impl<T> IntoIterator for DataByRank<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+impl<T> FromIterator<(Rank, T)> for DataByRank<T> {
+    fn from_iter<I: IntoIterator<Item = (Rank, T)>>(iter: I) -> Self {
+        Self(HashMap::from_iter(iter))
     }
 }

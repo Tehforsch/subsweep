@@ -24,7 +24,7 @@ fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
     if !rank.is_main() {
         return;
     }
-    let n_particles = 150;
+    let n_particles = 10;
     for _ in 0..n_particles {
         let x = rand::thread_rng().gen_range(-5.0..-4.0);
         let y = rand::thread_rng().gen_range(-1.0..1.0);

@@ -10,7 +10,6 @@ use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
-use crate::command_line_options::CommandLineOptions;
 use crate::communication::local::LocalCommunicator;
 use crate::communication::local::Payload;
 use crate::communication::plugin::add_communicator;
@@ -22,38 +21,50 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 
-fn create_and_build_app<
-    F: 'static + Sync + Send + Copy + Fn(&mut App, &CommandLineOptions, usize, Rank),
->(
+fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut App, usize, Rank)>(
     build_app: F,
     receivers: Receivers,
     senders: Senders,
-    opts: &CommandLineOptions,
+    num_threads: usize,
     rank: Rank,
 ) -> App {
     let mut app = App::new();
     app.insert_non_send_resource(receivers);
     app.insert_non_send_resource(senders);
-    build_app(&mut app, opts, opts.num_threads, rank);
+    build_app(&mut app, num_threads, rank);
     app
 }
 
 pub fn build_local_communication_app<
-    F: 'static + Sync + Copy + Send + Fn(&mut App, &CommandLineOptions, usize, Rank),
+    F: 'static + Sync + Copy + Send + Fn(&mut App, usize, Rank),
 >(
     build_app: F,
+    num_threads: usize,
 ) {
-    use clap::Parser;
+    build_local_communication_app_with_custom_logic(
+        build_app,
+        |mut app: App| app.run(),
+        num_threads,
+    );
+}
 
-    let opts = CommandLineOptions::parse();
+pub fn build_local_communication_app_with_custom_logic<
+    F: 'static + Sync + Copy + Send + Fn(&mut App, usize, Rank),
+    G: 'static + Sync + Copy + Send + Fn(App),
+>(
+    build_app: F,
+    custom_logic: G,
+    num_threads: usize,
+) {
     let mut app = create_and_build_app(
         build_app,
         Receivers(HashMap::new()),
         Senders(HashMap::new()),
-        &opts,
+        num_threads,
         0,
     );
-    for rank in 1..opts.num_threads {
+    let mut handles = vec![];
+    for rank in 1..num_threads {
         let receivers = Receivers({
             let all = &mut app
                 .world
@@ -72,13 +83,17 @@ pub fn build_local_communication_app<
                 .collect();
             to_move
         });
-        let opts = opts.clone();
-        thread::spawn(move || {
-            let mut app = create_and_build_app(build_app, receivers, senders, &opts, rank as Rank);
-            app.run()
+        let handle = thread::spawn(move || {
+            let app =
+                create_and_build_app(build_app, receivers, senders, num_threads, rank as Rank);
+            custom_logic(app);
         });
+        handles.push(handle);
     }
-    app.run();
+    custom_logic(app);
+    for handle in handles {
+        handle.join().unwrap();
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Hash)]
