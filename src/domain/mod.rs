@@ -47,6 +47,11 @@ impl Plugin for DomainDecompositionPlugin {
             DomainDecompositionStages::Decomposition,
             SystemStage::parallel(),
         );
+        app.add_stage_after(
+            DomainDecompositionStages::Decomposition,
+            DomainDecompositionStages::Exchange,
+            SystemStage::parallel(),
+        );
         app.add_system_to_stage(
             DomainDecompositionStages::Decomposition,
             determine_global_extent_system,

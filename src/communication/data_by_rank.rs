@@ -10,6 +10,12 @@ use super::SizedCommunicator;
 
 pub struct DataByRank<T>(HashMap<Rank, T>);
 
+impl<T> Default for DataByRank<T> {
+    fn default() -> Self {
+        Self(HashMap::default())
+    }
+}
+
 impl<T> Debug for DataByRank<T>
 where
     T: Debug,

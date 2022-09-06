@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use bevy::prelude::App;
+use bevy::prelude::Plugin;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
@@ -8,7 +9,10 @@ use mpi::Tag;
 use super::from_communicator::FromCommunicator;
 use super::Communicator;
 use super::ExchangeCommunicator;
+use super::NumRanks;
+use super::Rank;
 use super::SyncCommunicator;
+use super::WorldRank;
 
 pub(super) const INITIAL_TAG: Tag = 0;
 
@@ -21,6 +25,26 @@ pub enum CommunicationType {
 }
 
 pub(super) struct CurrentTag(pub(super) Tag);
+
+pub struct BaseCommunicationPlugin {
+    num_ranks: NumRanks,
+    world_rank: WorldRank,
+}
+
+impl BaseCommunicationPlugin {
+    pub fn new(size: usize, rank: Rank) -> Self {
+        Self {
+            num_ranks: NumRanks(size),
+            world_rank: WorldRank(rank),
+        }
+    }
+}
+impl Plugin for BaseCommunicationPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(self.world_rank)
+            .insert_resource(self.num_ranks);
+    }
+}
 
 pub struct CommunicationPlugin<T> {
     _marker: PhantomData<T>,

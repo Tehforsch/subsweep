@@ -33,6 +33,7 @@ use bevy::prelude::MinimalPlugins;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 use command_line_options::CommandLineOptions;
+use communication::BaseCommunicationPlugin;
 use communication::NumRanks;
 use communication::WorldRank;
 use domain::DomainDecompositionPlugin;
@@ -81,9 +82,8 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
     } else {
         DefaultTaskPoolOptions::default()
     };
-    app.insert_resource(WorldRank(rank))
-        .insert_resource(NumRanks(size))
-        .insert_resource(task_pool_opts)
+    app.insert_resource(task_pool_opts)
+        .add_plugin(BaseCommunicationPlugin::new(size, rank))
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin);
@@ -124,7 +124,15 @@ fn main() {
 
 #[cfg(feature = "local")]
 fn main() {
+    use clap::Parser;
     use communication::build_local_communication_app;
 
-    build_local_communication_app(build_app);
+    let opts = CommandLineOptions::parse();
+    build_local_communication_app(
+        |app, num_threads, rank| {
+            let opts = CommandLineOptions::parse();
+            build_app(app, &opts, num_threads, rank)
+        },
+        opts.num_threads,
+    );
 }
