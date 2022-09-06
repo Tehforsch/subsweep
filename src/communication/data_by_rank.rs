@@ -97,6 +97,10 @@ impl<T> DataByRank<T> {
     pub fn insert(&mut self, rank: Rank, data: T) {
         self.0.insert(rank, data);
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&Rank, &T)> + '_ {
+        self.0.iter()
+    }
 }
 
 impl<T> IntoIterator for DataByRank<T> {
@@ -106,5 +110,11 @@ impl<T> IntoIterator for DataByRank<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+impl<T> FromIterator<(Rank, T)> for DataByRank<T> {
+    fn from_iter<I: IntoIterator<Item = (Rank, T)>>(iter: I) -> Self {
+        Self(HashMap::from_iter(iter))
     }
 }

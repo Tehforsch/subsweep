@@ -43,6 +43,19 @@ where
         self.data.push(rank, data);
     }
 
+    pub fn receive(&mut self) -> DataByRank<T> {
+        for (_, data) in self.data.iter() {
+            debug_assert_eq!(data.len(), 1);
+        }
+        let data = self.receive_vec();
+        data.into_iter()
+            .map(|(rank, mut data)| {
+                debug_assert_eq!(data.len(), 1);
+                (rank, data.remove(0))
+            })
+            .collect()
+    }
+
     pub fn send_vec(&mut self, rank: i32, data: Vec<T>) {
         self.data[rank].extend(data)
     }
