@@ -79,7 +79,9 @@ where
                 )
                 .add_system_to_stage(
                     DomainDecompositionStages::Exchange,
-                    reset_outgoing_entities_system.after(send_num_outgoing_entities_system),
+                    reset_outgoing_entities_system
+                        .after(send_num_outgoing_entities_system)
+                        .after(despawn_outgoing_entities_system),
                 )
                 .add_system_to_stage(
                     DomainDecompositionStages::Exchange,
