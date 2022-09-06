@@ -166,4 +166,20 @@ mod tests {
         comm0.send_vec(1, xs.clone());
         assert_eq!(comm1.receive_vec(0), xs);
     }
+
+    #[test]
+    fn local_communicator_mixed_types() {
+        let mut comms = get_communicators(2, INITIAL_TAG);
+        let mut comm_a0 = comms.remove(&0).unwrap();
+        let mut comm_a1 = comms.remove(&1).unwrap();
+        let mut comms = get_communicators(2, INITIAL_TAG + 1);
+        let mut comm_b0 = comms.remove(&0).unwrap();
+        let mut comm_b1 = comms.remove(&1).unwrap();
+        let xs_a: Vec<i32> = vec![1, 2, 3];
+        let xs_b: Vec<f32> = vec![1.0, 2.0, 3.0];
+        comm_a0.send_vec(1, xs_a.clone());
+        comm_b0.send_vec(1, xs_b.clone());
+        assert_eq!(comm_a1.receive_vec(0), xs_a);
+        assert_eq!(comm_b1.receive_vec(0), xs_b);
+    }
 }

@@ -9,7 +9,6 @@ use bevy::prelude::Plugin;
 use bevy::prelude::Query;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
-use bevy::prelude::SystemSet;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 
@@ -18,7 +17,9 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
+use crate::communication::NumRanks;
 use crate::communication::SizedCommunicator;
+use crate::communication::WorldRank;
 
 struct ExchangePluginExists;
 
@@ -52,28 +53,46 @@ where
     fn build(&self, app: &mut bevy::prelude::App) {
         let exists = app.world.get_resource_mut::<ExchangePluginExists>();
         let first = exists.is_none();
+        let rank = app.world.get_resource::<WorldRank>().unwrap().0;
+        let size = app.world.get_resource::<NumRanks>().unwrap().0;
         if first {
             app.insert_resource(ExchangePluginExists)
-                .insert_resource(OutgoingEntities::default())
-                .insert_resource(SpawnedEntities::default())
+                .insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
+                .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
                 .add_plugin(CommunicationPlugin::<NumEntities>::new(
                     CommunicationType::Exchange,
                 ));
         }
-        app.insert_resource(ExchangeBuffers::<T>(DataByRank::default()))
-            .add_plugin(CommunicationPlugin::<T>::new(CommunicationType::Exchange))
-            .add_system_set_to_stage(
-                DomainDecompositionStages::Exchange,
-                SystemSet::new()
-                    .with_system(Self::fill_buffers_system)
-                    .with_system(Self::despawn_outgoing_entities_system)
-                    .with_system(Self::send_buffers_system.after(Self::fill_buffers_system))
-                    .with_system(
-                        Self::receive_buffers_system
-                            .after(Self::send_buffers_system)
-                            .after(spawn_incoming_entities_system),
-                    ),
-            );
+        app.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
+            size, rank,
+        )))
+        .add_plugin(CommunicationPlugin::<T>::new(CommunicationType::Exchange))
+        .add_system_to_stage(
+            DomainDecompositionStages::Exchange,
+            Self::fill_buffers_system,
+        )
+        .add_system_to_stage(
+            DomainDecompositionStages::Exchange,
+            Self::despawn_outgoing_entities_system,
+        )
+        .add_system_to_stage(
+            DomainDecompositionStages::Exchange,
+            Self::send_buffers_system
+                .after(Self::fill_buffers_system)
+                .before(reset_outgoing_entities_system)
+                .before(schedule_system),
+        )
+        .add_system_to_stage(
+            DomainDecompositionStages::Exchange,
+            Self::receive_buffers_system
+                .after(Self::send_buffers_system)
+                .after(spawn_incoming_entities_system)
+                .after(schedule_system),
+        )
+        .add_system_to_stage(
+            DomainDecompositionStages::Exchange,
+            Self::reset_buffers_system.after(Self::receive_buffers_system),
+        );
         if first {
             app.add_system_to_stage(
                 DomainDecompositionStages::Exchange,
@@ -81,12 +100,13 @@ where
             )
             .add_system_to_stage(
                 DomainDecompositionStages::Exchange,
-                reset_outgoing_entities_system,
+                reset_outgoing_entities_system.after(send_num_outgoing_entities_system),
             )
             .add_system_to_stage(
                 DomainDecompositionStages::Exchange,
                 spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
-            );
+            )
+            .add_system_to_stage(DomainDecompositionStages::Exchange, schedule_system);
         }
     }
 }
@@ -104,8 +124,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
                 *rank,
                 entities
                     .iter()
-                    .enumerate()
-                    .map(|(i, entity)| query.get(*entity).unwrap().clone())
+                    .map(|entity| query.get(*entity).unwrap().clone())
                     .collect(),
             );
         }
@@ -144,6 +163,14 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
             commands.insert_or_spawn_batch(iterator);
         }
     }
+
+    fn reset_buffers_system(
+        mut buffers: ResMut<ExchangeBuffers<T>>,
+        size: Res<NumRanks>,
+        rank: Res<WorldRank>,
+    ) {
+        *buffers = ExchangeBuffers(DataByRank::from_size_and_rank(size.0, rank.0));
+    }
 }
 
 fn send_num_outgoing_entities_system(
@@ -151,16 +178,7 @@ fn send_num_outgoing_entities_system(
     num_outgoing: Res<OutgoingEntities>,
 ) {
     for rank in communicator.other_ranks() {
-        communicator.send(
-            rank,
-            NumEntities(
-                num_outgoing
-                    .0
-                    .get(&rank)
-                    .map(|data| data.len())
-                    .unwrap_or(0),
-            ),
-        );
+        communicator.send(rank, NumEntities(num_outgoing.0.get(&rank).unwrap().len()));
     }
 }
 
@@ -182,9 +200,15 @@ fn spawn_incoming_entities_system(
     }
 }
 
-fn reset_outgoing_entities_system(mut outgoing: ResMut<OutgoingEntities>) {
-    *outgoing = OutgoingEntities::default();
+fn reset_outgoing_entities_system(
+    mut outgoing: ResMut<OutgoingEntities>,
+    size: Res<NumRanks>,
+    rank: Res<WorldRank>,
+) {
+    *outgoing = OutgoingEntities(DataByRank::from_size_and_rank(size.0, rank.0));
 }
+
+fn schedule_system() {}
 
 #[cfg(test)]
 #[cfg(feature = "local")]

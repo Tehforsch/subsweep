@@ -46,9 +46,13 @@ where
     T: Default,
 {
     pub fn from_communicator(communicator: &impl SizedCommunicator) -> Self {
+        Self::from_size_and_rank(communicator.size(), communicator.rank())
+    }
+
+    pub fn from_size_and_rank(size: usize, this_rank: Rank) -> Self {
         Self(
-            (0..communicator.size())
-                .filter(|rank| *rank != communicator.rank() as usize)
+            (0..size)
+                .filter(|rank| *rank != this_rank as usize)
                 .map(|rank| (rank as Rank, T::default()))
                 .collect(),
         )
@@ -56,10 +60,6 @@ where
 }
 
 impl<T> DataByRank<Vec<T>> {
-    pub fn push(&mut self, rank: Rank, data: T) {
-        self.0.get_mut(&rank).unwrap().push(data);
-    }
-
     pub fn drain_all(&mut self) -> impl Iterator<Item = (Rank, Vec<T>)> + '_ {
         self.0.iter_mut().map(|(k, v)| (*k, v.drain(..).collect()))
     }

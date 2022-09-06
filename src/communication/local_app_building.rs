@@ -63,6 +63,7 @@ pub fn build_local_communication_app_with_custom_logic<
         num_threads,
         0,
     );
+    let mut handles = vec![];
     for rank in 1..num_threads {
         let receivers = Receivers({
             let all = &mut app
@@ -82,13 +83,17 @@ pub fn build_local_communication_app_with_custom_logic<
                 .collect();
             to_move
         });
-        thread::spawn(move || {
-            let mut app =
+        let handle = thread::spawn(move || {
+            let app =
                 create_and_build_app(build_app, receivers, senders, num_threads, rank as Rank);
             custom_logic(app);
         });
+        handles.push(handle);
     }
     custom_logic(app);
+    for handle in handles {
+        handle.join().unwrap();
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Hash)]

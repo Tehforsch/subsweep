@@ -1,35 +1,28 @@
+use std::marker::PhantomData;
+
 use super::from_communicator::FromCommunicator;
 use super::world_communicator::WorldCommunicator;
 use super::DataByRank;
 use super::Rank;
 use super::SizedCommunicator;
 
+#[derive(Clone)]
 pub struct ExchangeCommunicator<C, T> {
     pub communicator: C,
-    data: DataByRank<Vec<T>>,
+    pending_data: DataByRank<bool>,
+    _marker: PhantomData<T>,
 }
 
-impl<C, T> Clone for ExchangeCommunicator<C, T>
-where
-    C: Clone + WorldCommunicator<T>,
-    T: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            communicator: self.communicator.clone(),
-            data: self.data.clone(),
-        }
-    }
-}
 impl<C, T> FromCommunicator<C> for ExchangeCommunicator<C, T>
 where
     C: SizedCommunicator,
 {
     fn from_communicator(communicator: C) -> Self {
-        let data = DataByRank::from_communicator(&communicator);
+        let pending_data = DataByRank::from_communicator(&communicator);
         Self {
             communicator,
-            data: data,
+            pending_data: pending_data,
+            _marker: PhantomData::default(),
         }
     }
 }
@@ -40,13 +33,10 @@ where
     C: SizedCommunicator,
 {
     pub fn send(&mut self, rank: i32, data: T) {
-        self.data.push(rank, data);
+        self.send_vec(rank, vec![data]);
     }
 
     pub fn receive(&mut self) -> DataByRank<T> {
-        for (_, data) in self.data.iter() {
-            debug_assert_eq!(data.len(), 1);
-        }
         let data = self.receive_vec();
         data.into_iter()
             .map(|(rank, mut data)| {
@@ -57,17 +47,29 @@ where
     }
 
     pub fn send_vec(&mut self, rank: i32, data: Vec<T>) {
-        self.data[rank].extend(data)
+        debug_assert_eq!(self.pending_data[rank], false);
+        self.pending_data[rank] = true;
+        self.communicator.send_vec(rank, data);
+    }
+
+    pub fn empty_send_to_others(&mut self) {
+        for rank in self.communicator.other_ranks() {
+            if !self.pending_data[rank] {
+                self.send_vec(rank, vec![]);
+            }
+        }
     }
 
     pub fn receive_vec(&mut self) -> DataByRank<Vec<T>> {
-        for (rank, data) in self.data.drain_all() {
-            self.communicator.send_vec(rank, data);
-        }
+        self.empty_send_to_others();
         let mut received_data = DataByRank::from_communicator(&self.communicator);
         for rank in self.communicator.other_ranks() {
-            let moved_to_own_domain = self.communicator.receive_vec(rank);
-            received_data.insert(rank, moved_to_own_domain);
+            debug_assert_eq!(self.pending_data[rank], true);
+        }
+        for rank in self.communicator.other_ranks() {
+            let received = self.communicator.receive_vec(rank);
+            received_data.insert(rank, received);
+            self.pending_data[rank] = false;
         }
         received_data
     }
@@ -110,8 +112,7 @@ mod tests {
                 thread::spawn(move || {
                     let wrap = |x: i32| x.rem_euclid(num_threads);
                     let target_rank = wrap(rank + 1);
-                    communicator.send(target_rank, rank);
-                    communicator.send(target_rank, wrap(rank + 1));
+                    communicator.send_vec(target_rank, vec![rank, wrap(rank + 1)]);
                     let received = communicator.receive_vec();
                     for other_rank in communicator.other_ranks() {
                         if other_rank == wrap(rank - 1) {

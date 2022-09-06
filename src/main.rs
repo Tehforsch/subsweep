@@ -34,8 +34,6 @@ use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 use command_line_options::CommandLineOptions;
 use communication::BaseCommunicationPlugin;
-use communication::NumRanks;
-use communication::WorldRank;
 use domain::DomainDecompositionPlugin;
 use initial_conditions::InitialConditionsPlugin;
 use parameters::add_parameter_file_contents;
