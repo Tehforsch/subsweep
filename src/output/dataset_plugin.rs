@@ -37,7 +37,7 @@ impl<T: Clone + H5Type + Component + Sync + Send + 'static> Plugin for DatasetPl
         app.add_system_to_stage(
             OutputStages::Output,
             (move |query: Query<&T>, file: ResMut<OutputFile>| {
-                Self::write_output(&output_name, query, file)
+                Self::write_dataset(&output_name, query, file)
             })
             .after(open_file_system)
             .before(close_file_system)
@@ -47,8 +47,8 @@ impl<T: Clone + H5Type + Component + Sync + Send + 'static> Plugin for DatasetPl
     }
 }
 
-impl<T: Clone + H5Type + Component> DatasetPlugin<T> {
-    fn write_output(name: &str, query: Query<&T>, file: ResMut<OutputFile>) {
+impl<T: Sync + Send + 'static + Clone + H5Type + Component> DatasetPlugin<T> {
+    fn write_dataset(name: &str, query: Query<&T>, file: ResMut<OutputFile>) {
         let f = file.f.as_ref().unwrap();
         let data: Vec<T> = query.iter().cloned().collect();
         f.new_dataset_builder()

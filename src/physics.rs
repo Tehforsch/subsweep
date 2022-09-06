@@ -3,6 +3,7 @@ mod parameters;
 
 use bevy::prelude::*;
 pub use gravity::QuadTree;
+use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
 use self::gravity::construct_quad_tree_system;
@@ -13,6 +14,7 @@ use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::DomainDecompositionStages;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass::Mass;
+use crate::output::AttributePlugin;
 use crate::output::DatasetPlugin;
 use crate::parameters::ParameterPlugin;
 use crate::position::Position;
@@ -28,6 +30,8 @@ pub struct RemoteParticle(pub Rank);
 #[derive(Equivalence)]
 pub(super) struct Timestep(crate::units::Time);
 
+#[derive(H5Type, Clone)]
+#[repr(C)]
 pub struct Time(pub crate::units::Time);
 
 pub struct PhysicsPlugin;
@@ -59,6 +63,7 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(DatasetPlugin::<Position>::new("position"))
             .add_plugin(DatasetPlugin::<Velocity>::new("velocity"))
             .add_plugin(DatasetPlugin::<Mass>::new("mass"))
+            .add_plugin(AttributePlugin::<Time>::new("time"))
             .insert_resource(Timestep(units::Time::second(0.01)))
             .insert_resource(Time(units::Time::second(0.00)))
             .add_system_to_stage(

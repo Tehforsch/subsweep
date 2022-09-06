@@ -14,6 +14,7 @@ use bevy::prelude::StageLabel;
 use bevy::prelude::SystemStage;
 use hdf5::File;
 
+pub use self::attribute_plugin::AttributePlugin;
 pub use self::dataset_plugin::DatasetPlugin;
 use self::parameters::Parameters;
 use self::timer::Timer;
