@@ -21,6 +21,7 @@ use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::parameters::ParameterPlugin;
 use crate::physics::PhysicsStages;
+use crate::plugin_utils::run_once;
 
 #[derive(AmbiguitySetLabel)]
 struct OutputSystemsAmbiguitySet;
@@ -85,4 +86,16 @@ fn open_file_system(
 
 fn close_file_system(mut file: ResMut<OutputFile>) {
     file.f = None;
+}
+
+fn add_output_system<P>(app: &mut App, system: impl ParallelSystemDescriptorCoercion<P>) {
+    run_once("output_plugin", app, |app| output_setup(app));
+    app.add_system_to_stage(
+        OutputStages::Output,
+        system
+            .after(open_file_system)
+            .before(close_file_system)
+            .in_ambiguity_set(OutputSystemsAmbiguitySet)
+            .with_run_criteria(Timer::run_criterion),
+    );
 }
