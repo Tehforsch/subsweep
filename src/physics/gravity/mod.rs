@@ -29,7 +29,7 @@ pub struct ParticleData {
     pub mass: units::Mass,
 }
 
-pub type LocalQuadTree = quadtree::QuadTree<MassMoments, ParticleData>;
+pub type LocalQuadTree = quadtree::QuadTree<MassMoments, VecLength, ParticleData>;
 
 #[derive(Debug)]
 pub struct RemoteSegmentData {
@@ -38,7 +38,7 @@ pub struct RemoteSegmentData {
     moments: MassMoments,
 }
 
-pub type RemoteQuadTree = quadtree::QuadTree<MassMoments, RemoteSegmentData>;
+pub type RemoteQuadTree = quadtree::QuadTree<MassMoments, VecLength, RemoteSegmentData>;
 
 struct Solver {
     softening_length: Length,
