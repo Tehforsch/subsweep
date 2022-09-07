@@ -1,4 +1,4 @@
-mod insertion_data;
+pub mod insertion_data;
 
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -52,7 +52,7 @@ pub struct QuadTree<N, P, L> {
     pub extents: Extent,
 }
 
-impl<N, L, P> QuadTree<N, P, L>
+impl<N, P, L> QuadTree<N, P, L>
 where
     N: Default + NodeDataType<P, L>,
     L: Clone,
@@ -82,8 +82,13 @@ where
         }
         if let Node::Tree(ref mut children) = self.node {
             let index = data.0.get_quadrant_index(&self.extents);
-            let quadrant = &mut children[index];
-            quadrant.insert_new(&config, data, depth + 1);
+            match index {
+                Some(index) => {
+                    let quadrant = &mut children[index];
+                    quadrant.insert_new(&config, data, depth + 1);
+                }
+                None => todo!(),
+            }
         }
     }
 

@@ -4,13 +4,10 @@ use self::mass_moments::MassMoments;
 use super::parameters::Parameters;
 use super::LocalParticle;
 use super::Timestep;
-use crate::communication::Rank;
 use crate::domain::quadtree;
 use crate::domain::quadtree::Node;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::GlobalExtent;
-use crate::domain::Segment;
-use crate::domain::Segments;
 use crate::mass::Mass;
 use crate::position::Position;
 use crate::units;
@@ -22,6 +19,10 @@ use crate::units::GRAVITY_CONSTANT;
 use crate::velocity::Velocity;
 
 mod mass_moments;
+mod remote_segment_data;
+mod remote_solver;
+
+pub use remote_solver::construct_remote_quad_tree_system;
 
 #[derive(Debug, Clone)]
 pub struct ParticleData {
@@ -30,15 +31,6 @@ pub struct ParticleData {
 }
 
 pub type LocalQuadTree = quadtree::QuadTree<MassMoments, VecLength, ParticleData>;
-
-#[derive(Debug)]
-pub struct RemoteSegmentData {
-    segment: Segment,
-    rank: Rank,
-    moments: MassMoments,
-}
-
-pub type RemoteQuadTree = quadtree::QuadTree<MassMoments, VecLength, RemoteSegmentData>;
 
 struct Solver {
     softening_length: Length,
@@ -112,17 +104,6 @@ pub(super) fn construct_local_quad_tree_system(
         .collect();
     let quadtree = LocalQuadTree::new(&extent.0, &config, particles);
     commands.insert_resource(quadtree);
-}
-
-pub(super) fn construct_remote_quad_tree_system(
-    mut commands: Commands,
-    config: Res<QuadTreeConfig>,
-    segments: Res<Segments>,
-    extent: Res<GlobalExtent>,
-) {
-    todo!()
-    // let quadtree = RemoteQuadTree::new(&extent.0, &config, particles);
-    // commands.insert_resource(quadtree);
 }
 
 pub(super) fn gravity_system(

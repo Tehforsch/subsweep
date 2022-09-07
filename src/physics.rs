@@ -7,6 +7,7 @@ pub use gravity::LocalQuadTree;
 use mpi::traits::Equivalence;
 
 use self::gravity::construct_local_quad_tree_system;
+use self::gravity::construct_remote_quad_tree_system;
 use self::gravity::gravity_system;
 use self::parameters::Parameters;
 pub use self::time::Time;
@@ -66,6 +67,10 @@ impl Plugin for PhysicsPlugin {
             .add_system_to_stage(
                 PhysicsStages::QuadTreeConstruction,
                 construct_local_quad_tree_system,
+            )
+            .add_system_to_stage(
+                PhysicsStages::QuadTreeConstruction,
+                construct_remote_quad_tree_system,
             )
             .add_system_to_stage(PhysicsStages::Gravity, gravity_system)
             .add_system(integrate_motion_system)

@@ -115,6 +115,10 @@ impl Extent {
             && pos.y() <= self.max.y()
     }
 
+    pub fn encompasses(&self, extent: &Extent) -> bool {
+        self.contains(&extent.min) && self.contains(&extent.max)
+    }
+
     pub fn get_quadrants(&self) -> [Self; 4] {
         let lower_left = Self::new(self.min.x(), self.center.x(), self.min.y(), self.center.y());
         let lower_right = Self::new(self.center.x(), self.max.x(), self.min.y(), self.center.y());

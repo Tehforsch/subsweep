@@ -32,7 +32,15 @@ use crate::velocity::Velocity;
 
 const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
 
-pub struct Segments(Vec<Segment>);
+#[derive(Debug)]
+pub struct AssignedSegment {
+    segment: Segment,
+    rank: Rank,
+    pub extent: Option<Extent>,
+}
+
+#[derive(Default)]
+pub struct Segments(pub Vec<AssignedSegment>);
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
@@ -44,7 +52,8 @@ pub struct DomainDecompositionPlugin;
 
 impl Plugin for DomainDecompositionPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(GlobalExtent(Extent::sentinel()));
+        app.insert_resource(GlobalExtent(Extent::sentinel()))
+            .insert_resource(Segments::default());
         app.add_stage_after(
             CoreStage::Update,
             DomainDecompositionStages::Decomposition,
@@ -177,12 +186,12 @@ fn domain_decomposition_system(
     let particles = get_sorted_peano_hilbert_keys(&extent.0, &particles);
     let num_particles_total =
         get_total_number_particles(particles.len(), &mut num_particle_communicator);
-    segments.0 = get_global_segments_from_peano_hilbert_keys(
+    let segment_list = get_global_segments_from_peano_hilbert_keys(
         &mut segment_communicator,
         &particles,
         num_particles_total,
     );
-    let key_cutoffs_by_rank = find_key_cutoffs(num_ranks.0, num_particles_total, &segments.0);
+    let key_cutoffs_by_rank = find_key_cutoffs(num_ranks.0, num_particles_total, &segment_list);
     let target_rank = |key: &PeanoHilbertKey| {
         key_cutoffs_by_rank
             .binary_search(&key)
@@ -194,6 +203,21 @@ fn domain_decomposition_system(
             outgoing_entities.add(target_rank, *entity);
         }
     }
+    segments.0 = segment_list
+        .iter()
+        .map(|segment| {
+            let rank = target_rank(&segment.start());
+            debug_assert_eq!(
+                target_rank(&segment.start()),
+                target_rank(&PeanoHilbertKey(segment.end().0 - 1))
+            );
+            AssignedSegment {
+                segment: segment.clone(),
+                rank: rank,
+                extent: None,
+            }
+        })
+        .collect()
 }
 
 #[derive(Equivalence, Clone)]
