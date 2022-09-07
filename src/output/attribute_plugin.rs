@@ -10,14 +10,14 @@ use super::OutputFile;
 
 pub struct AttributePlugin<T> {
     _marker: PhantomData<T>,
-    output_name: String,
+    ame: String,
 }
 
 impl<T> AttributePlugin<T> {
     pub fn new(name: &str) -> Self {
         Self {
             _marker: PhantomData::default(),
-            output_name: name.into(),
+            ame: name.into(),
         }
     }
 }
@@ -27,10 +27,14 @@ where
     T: Attribute + Sync + Send + 'static,
 {
     fn build(&self, app: &mut bevy::prelude::App) {
-        let output_name = self.output_name.clone();
-        add_output_system(app, move |res: Res<T>, file: ResMut<OutputFile>| {
-            Self::write_attribute(&output_name, res, file)
-        });
+        let output_name = self.ame.clone();
+        add_output_system(
+            app,
+            &self.ame,
+            move |res: Res<T>, file: ResMut<OutputFile>| {
+                Self::write_attribute(&output_name, res, file)
+            },
+        );
     }
 }
 

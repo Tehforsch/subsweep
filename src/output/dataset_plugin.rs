@@ -11,24 +11,28 @@ use super::OutputFile;
 
 pub struct DatasetPlugin<T> {
     _marker: PhantomData<T>,
-    output_name: String,
+    name: String,
 }
 
 impl<T> DatasetPlugin<T> {
     pub fn new(name: &str) -> Self {
         Self {
             _marker: PhantomData::default(),
-            output_name: name.into(),
+            name: name.into(),
         }
     }
 }
 
 impl<T: Clone + H5Type + Component + Sync + Send + 'static> Plugin for DatasetPlugin<T> {
     fn build(&self, app: &mut bevy::prelude::App) {
-        let output_name = self.output_name.clone();
-        add_output_system(app, move |query: Query<&T>, file: ResMut<OutputFile>| {
-            Self::write_dataset(&output_name, query, file)
-        })
+        let output_name = self.name.clone();
+        add_output_system(
+            app,
+            &self.name,
+            move |query: Query<&T>, file: ResMut<OutputFile>| {
+                Self::write_dataset(&output_name, query, file)
+            },
+        )
     }
 }
 

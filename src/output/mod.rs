@@ -90,14 +90,28 @@ fn close_file_system(mut file: ResMut<OutputFile>) {
     file.f = None;
 }
 
-fn add_output_system<P>(app: &mut App, system: impl ParallelSystemDescriptorCoercion<P>) {
+fn add_output_system<P>(
+    app: &mut App,
+    name: &String,
+    system: impl ParallelSystemDescriptorCoercion<P>,
+) {
     run_once("output_plugin", app, |app| output_setup(app));
-    app.add_system_to_stage(
-        OutputStages::Output,
-        system
-            .after(open_file_system)
-            .before(close_file_system)
-            .in_ambiguity_set(OutputSystemsAmbiguitySet)
-            .with_run_criteria(Timer::run_criterion),
-    );
+    if is_desired_field(app, name) {
+        app.add_system_to_stage(
+            OutputStages::Output,
+            system
+                .after(open_file_system)
+                .before(close_file_system)
+                .in_ambiguity_set(OutputSystemsAmbiguitySet)
+                .with_run_criteria(Timer::run_criterion),
+        );
+    }
+}
+
+fn is_desired_field(app: &App, name: &String) -> bool {
+    app.world
+        .get_resource::<Parameters>()
+        .unwrap()
+        .fields
+        .contains(&name)
 }
