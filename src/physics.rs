@@ -1,14 +1,15 @@
 mod gravity;
 mod parameters;
+mod time;
 
 use bevy::prelude::*;
 pub use gravity::QuadTree;
-use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
 use self::gravity::construct_quad_tree_system;
 use self::gravity::gravity_system;
 use self::parameters::Parameters;
+pub use self::time::Time;
 use crate::communication::Rank;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::DomainDecompositionStages;
@@ -29,10 +30,6 @@ pub struct RemoteParticle(pub Rank);
 
 #[derive(Equivalence)]
 pub(super) struct Timestep(crate::units::Time);
-
-#[derive(H5Type, Clone)]
-#[repr(C)]
-pub struct Time(pub crate::units::Time);
 
 pub struct PhysicsPlugin;
 
