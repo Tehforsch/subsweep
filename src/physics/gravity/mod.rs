@@ -7,7 +7,7 @@ use super::Timestep;
 use crate::domain::quadtree;
 use crate::domain::quadtree::Node;
 use crate::domain::quadtree::QuadTreeConfig;
-use crate::domain::quadtree::QuadTreeConstructionError;
+use crate::domain::GlobalExtent;
 use crate::mass::Mass;
 use crate::position::Position;
 use crate::units;
@@ -84,6 +84,7 @@ pub(super) fn construct_quad_tree_system(
     mut commands: Commands,
     config: Res<QuadTreeConfig>,
     particles: Query<(Entity, &Position, &Mass)>,
+    extent: Res<GlobalExtent>,
 ) {
     let particles: Vec<_> = particles
         .iter()
@@ -97,13 +98,8 @@ pub(super) fn construct_quad_tree_system(
             )
         })
         .collect();
-    let quadtree = QuadTree::new(&config, particles);
-    match quadtree {
-        Err(QuadTreeConstructionError::NotEnoughParticles) => {
-            error!("Failed to construct quadtree - not enough particles")
-        }
-        Ok(quadtree) => commands.insert_resource(quadtree),
-    }
+    let quadtree = QuadTree::new(&extent.0, &config, particles);
+    commands.insert_resource(quadtree);
 }
 
 pub(super) fn gravity_system(
@@ -134,6 +130,7 @@ mod tests {
     use super::QuadTree;
     use crate::domain::quadtree::QuadTreeConfig;
     use crate::domain::quadtree::{self};
+    use crate::domain::Extent;
     use crate::physics::gravity::Solver;
     use crate::units::assert_is_close;
     use crate::units::Dimensionless;
@@ -158,9 +155,15 @@ mod tests {
             .collect()
     }
 
+    fn get_quadtree(n: i32) -> QuadTree {
+        let positions = get_positions(n);
+        let extent = Extent::from_positions(positions.iter().map(|(pos, _)| pos)).unwrap();
+        QuadTree::new(&extent, &QuadTreeConfig::default(), positions)
+    }
+
     #[test]
     fn mass_sum() {
-        let quadtree = QuadTree::new(&QuadTreeConfig::default(), get_positions(7)).unwrap();
+        let quadtree = get_quadtree(7);
         check_all_sub_trees(&quadtree);
     }
 
@@ -185,7 +188,7 @@ mod tests {
     #[test]
     fn compare_quadtree_gravity_to_direct_sum() {
         let n_particles = 50;
-        let tree = QuadTree::new(&QuadTreeConfig::default(), get_positions(n_particles)).unwrap();
+        let tree = get_quadtree(n_particles);
         let pos = Vec2Length::meter(3.5, 3.5);
         let solver = Solver {
             opening_angle: Dimensionless::zero(),

@@ -9,7 +9,7 @@ mod segment;
 
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
-use self::extent::Extent;
+pub use self::extent::Extent;
 use self::peano_hilbert::PeanoHilbertKey;
 use self::segment::get_segments;
 use self::segment::Segment;
@@ -72,7 +72,7 @@ impl Plugin for DomainDecompositionPlugin {
 }
 
 #[derive(Debug)]
-struct GlobalExtent(Extent);
+pub struct GlobalExtent(pub Extent);
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct ParticleData {
