@@ -174,6 +174,10 @@ unit_functions!(
     {
         newton, 1.0, "N"
     },
+    ENERGY, Energy, mass: 1, length: 2, time: -2,
+    {
+        joule, 1.0, "J"
+    },
     LENGTHMASS, LengthMass, mass: 1, length: 1,
     {
     }

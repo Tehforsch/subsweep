@@ -12,6 +12,7 @@ bevy = { version = "0.8.0", default-features = false, features = ["render", "x11
 bevy_prototype_lyon = "0.6.0"
 clap = {version = "3.2.17", features = ["derive"]}
 glam = "0.21.3"
+hdf5 = "0.8.1"
 lazy_static = "1.4.0"
 
 # Use the system feature which uses the system library.

@@ -1,6 +1,7 @@
 mod constants;
 mod deserialize;
 mod dimension;
+mod hdf5;
 mod mpi;
 mod quantities_and_units;
 mod quantity;

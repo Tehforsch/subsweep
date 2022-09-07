@@ -10,7 +10,7 @@ use super::dimension::Dimension;
 use crate::units::NONE;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
-pub struct Quantity<S, const D: Dimension>(pub(super) S);
+pub struct Quantity<S: 'static, const D: Dimension>(pub(super) S);
 
 impl<S> Quantity<S, { NONE }> {
     /// Get the value of a dimensionless quantity

@@ -22,7 +22,9 @@ use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::physics::LocalParticle;
+use crate::plugin_utils::run_once;
 
+#[derive(Default)]
 struct ExchangePluginExists;
 
 #[derive(Default)]
@@ -59,18 +61,34 @@ where
     <T as Equivalence>::Out: MatchesRaw,
 {
     fn build(&self, app: &mut bevy::prelude::App) {
-        let exists = app.world.get_resource_mut::<ExchangePluginExists>();
-        let first = exists.is_none();
         let rank = app.world.get_resource::<WorldRank>().unwrap().0;
         let size = app.world.get_resource::<WorldSize>().unwrap().0;
-        if first {
-            app.insert_resource(ExchangePluginExists)
-                .insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
+        run_once("exchange_data_plugin", app, |app| {
+            app.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
                 .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
                 .add_plugin(CommunicationPlugin::<NumEntities>::new(
                     CommunicationType::Exchange,
-                ));
-        }
+                ))
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    send_num_outgoing_entities_system,
+                )
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    despawn_outgoing_entities_system,
+                )
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    reset_outgoing_entities_system
+                        .after(send_num_outgoing_entities_system)
+                        .after(despawn_outgoing_entities_system),
+                )
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
+                )
+                .add_system_to_stage(DomainDecompositionStages::Exchange, schedule_system);
+        });
         app.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
             size, rank,
         )))
@@ -97,25 +115,6 @@ where
             DomainDecompositionStages::Exchange,
             Self::reset_buffers_system.after(Self::receive_buffers_system),
         );
-        if first {
-            app.add_system_to_stage(
-                DomainDecompositionStages::Exchange,
-                send_num_outgoing_entities_system,
-            )
-            .add_system_to_stage(
-                DomainDecompositionStages::Exchange,
-                despawn_outgoing_entities_system,
-            )
-            .add_system_to_stage(
-                DomainDecompositionStages::Exchange,
-                reset_outgoing_entities_system.after(send_num_outgoing_entities_system),
-            )
-            .add_system_to_stage(
-                DomainDecompositionStages::Exchange,
-                spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
-            )
-            .add_system_to_stage(DomainDecompositionStages::Exchange, schedule_system);
-        }
     }
 }
 
