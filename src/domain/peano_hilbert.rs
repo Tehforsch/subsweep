@@ -9,7 +9,7 @@ const NUM_BITS_PER_DIMENSION: u32 = 21;
 const NUM_SUBDIVISIONS: u64 = 2u64.pow(NUM_BITS_PER_DIMENSION);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Equivalence)]
-pub(super) struct PeanoHilbertKey(pub u64);
+pub struct PeanoHilbertKey(pub u64);
 
 pub(super) fn get_integer_position(extents: &Extent, pos: &VecLength) -> (u64, u64) {
     let shifted = *pos - extents.lower_left();

@@ -10,7 +10,7 @@ use crate::communication::DataByRank;
 /// A segment of peano hilbert keys corresponding to
 /// the interval including `start` but excluding `end`
 #[derive(Debug, Equivalence, Clone, PartialEq)]
-pub(super) struct Segment {
+pub struct Segment {
     start: PeanoHilbertKey,
     end: PeanoHilbertKey,
     pub num_particles: usize,

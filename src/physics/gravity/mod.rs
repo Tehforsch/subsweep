@@ -4,10 +4,13 @@ use self::mass_moments::MassMoments;
 use super::parameters::Parameters;
 use super::LocalParticle;
 use super::Timestep;
+use crate::communication::Rank;
 use crate::domain::quadtree;
 use crate::domain::quadtree::Node;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::GlobalExtent;
+use crate::domain::Segment;
+use crate::domain::Segments;
 use crate::mass::Mass;
 use crate::position::Position;
 use crate::units;
@@ -26,7 +29,16 @@ pub struct ParticleData {
     pub mass: units::Mass,
 }
 
-pub type QuadTree = quadtree::QuadTree<MassMoments, ParticleData>;
+pub type LocalQuadTree = quadtree::QuadTree<MassMoments, ParticleData>;
+
+#[derive(Debug)]
+pub struct RemoteSegmentData {
+    segment: Segment,
+    rank: Rank,
+    moments: MassMoments,
+}
+
+pub type RemoteQuadTree = quadtree::QuadTree<MassMoments, RemoteSegmentData>;
 
 struct Solver {
     softening_length: Length,
@@ -47,7 +59,7 @@ impl Solver {
 
     pub fn get_acceleration_on_particle(
         &self,
-        tree: &QuadTree,
+        tree: &LocalQuadTree,
         pos: VecLength,
         entity: Entity,
     ) -> VecAcceleration {
@@ -73,14 +85,14 @@ impl Solver {
                 .sum(),
         }
     }
-    fn opening_criterion(&self, child: &QuadTree, pos: VecLength) -> bool {
+    fn opening_criterion(&self, child: &LocalQuadTree, pos: VecLength) -> bool {
         let distance = pos.distance(&child.extents.center());
         let length = child.extents.max_side_length();
         length / distance < self.opening_angle
     }
 }
 
-pub(super) fn construct_quad_tree_system(
+pub(super) fn construct_local_quad_tree_system(
     mut commands: Commands,
     config: Res<QuadTreeConfig>,
     particles: Query<(Entity, &Position, &Mass)>,
@@ -98,13 +110,24 @@ pub(super) fn construct_quad_tree_system(
             )
         })
         .collect();
-    let quadtree = QuadTree::new(&extent.0, &config, particles);
+    let quadtree = LocalQuadTree::new(&extent.0, &config, particles);
     commands.insert_resource(quadtree);
+}
+
+pub(super) fn construct_remote_quad_tree_system(
+    mut commands: Commands,
+    config: Res<QuadTreeConfig>,
+    segments: Res<Segments>,
+    extent: Res<GlobalExtent>,
+) {
+    todo!()
+    // let quadtree = RemoteQuadTree::new(&extent.0, &config, particles);
+    // commands.insert_resource(quadtree);
 }
 
 pub(super) fn gravity_system(
     timestep: Res<Timestep>,
-    tree: Option<Res<QuadTree>>,
+    tree: Option<Res<LocalQuadTree>>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
     parameters: Res<Parameters>,
 ) {
@@ -126,8 +149,8 @@ pub(super) fn gravity_system(
 mod tests {
     use bevy::prelude::Entity;
 
+    use super::LocalQuadTree;
     use super::ParticleData;
-    use super::QuadTree;
     use crate::domain::quadtree::QuadTreeConfig;
     use crate::domain::quadtree::{self};
     use crate::domain::Extent;
@@ -155,10 +178,10 @@ mod tests {
             .collect()
     }
 
-    fn get_quadtree(n: i32) -> QuadTree {
+    fn get_quadtree(n: i32) -> LocalQuadTree {
         let positions = get_positions(n);
         let extent = Extent::from_positions(positions.iter().map(|(pos, _)| pos)).unwrap();
-        QuadTree::new(&extent, &QuadTreeConfig::default(), positions)
+        LocalQuadTree::new(&extent, &QuadTreeConfig::default(), positions)
     }
 
     #[test]
@@ -167,7 +190,7 @@ mod tests {
         check_all_sub_trees(&quadtree);
     }
 
-    fn check_all_sub_trees(tree: &QuadTree) {
+    fn check_all_sub_trees(tree: &LocalQuadTree) {
         check_mass(tree);
         match tree.node {
             quadtree::Node::Tree(ref children) => {
@@ -179,7 +202,7 @@ mod tests {
         }
     }
 
-    fn check_mass(tree: &QuadTree) {
+    fn check_mass(tree: &LocalQuadTree) {
         let mut total = Mass::zero();
         tree.depth_first_map(&mut |_, data| total += data.iter().map(|(_, p)| p.mass).sum());
         assert_is_close(tree.data.total(), total);

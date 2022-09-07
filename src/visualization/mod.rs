@@ -20,8 +20,8 @@ use crate::communication::CommunicationType;
 use crate::communication::WorldRank;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
+use crate::physics::LocalQuadTree;
 use crate::physics::PhysicsStages;
-use crate::physics::QuadTree;
 use crate::physics::RemoteParticle;
 use crate::position::Position;
 use crate::units::Length;
@@ -147,7 +147,7 @@ struct Outline;
 
 fn show_quadtree_system(
     mut commands: Commands,
-    quadtree: Res<QuadTree>,
+    quadtree: Res<LocalQuadTree>,
     outlines: Query<Entity, With<Outline>>,
 ) {
     for entity in outlines.iter() {

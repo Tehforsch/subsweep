@@ -12,7 +12,7 @@ use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
 use self::peano_hilbert::PeanoHilbertKey;
 use self::segment::get_segments;
-use self::segment::Segment;
+pub use self::segment::Segment;
 use crate::communication::AllGatherCommunicator;
 use crate::communication::AllReduceCommunicator;
 use crate::communication::CollectiveCommunicator;
@@ -31,6 +31,8 @@ use crate::position::Position;
 use crate::velocity::Velocity;
 
 const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
+
+pub struct Segments(Vec<Segment>);
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
@@ -144,12 +146,12 @@ fn get_global_segments_from_peano_hilbert_keys(
 fn find_key_cutoffs(
     num_ranks: usize,
     num_particles_total: usize,
-    global_segment_list: Vec<Segment>,
+    global_segment_list: &[Segment],
 ) -> Vec<PeanoHilbertKey> {
     let load_per_rank = num_particles_total / num_ranks;
     let mut load = 0;
     let mut key_cutoffs_by_rank = vec![];
-    for segment in global_segment_list.into_iter() {
+    for segment in global_segment_list.iter() {
         load += segment.num_particles;
         if load >= load_per_rank {
             key_cutoffs_by_rank.push(segment.end());
@@ -166,6 +168,7 @@ fn domain_decomposition_system(
     mut segment_communicator: NonSendMut<ExchangeCommunicator<Segment>>,
     mut num_particle_communicator: NonSendMut<AllReduceCommunicator<usize>>,
     mut outgoing_entities: ResMut<OutgoingEntities>,
+    mut segments: ResMut<Segments>,
     rank: Res<WorldRank>,
     num_ranks: Res<WorldSize>,
     extent: Res<GlobalExtent>,
@@ -174,13 +177,12 @@ fn domain_decomposition_system(
     let particles = get_sorted_peano_hilbert_keys(&extent.0, &particles);
     let num_particles_total =
         get_total_number_particles(particles.len(), &mut num_particle_communicator);
-    let global_segment_list = get_global_segments_from_peano_hilbert_keys(
+    segments.0 = get_global_segments_from_peano_hilbert_keys(
         &mut segment_communicator,
         &particles,
         num_particles_total,
     );
-    let key_cutoffs_by_rank =
-        find_key_cutoffs(num_ranks.0, num_particles_total, global_segment_list);
+    let key_cutoffs_by_rank = find_key_cutoffs(num_ranks.0, num_particles_total, &segments.0);
     let target_rank = |key: &PeanoHilbertKey| {
         key_cutoffs_by_rank
             .binary_search(&key)
