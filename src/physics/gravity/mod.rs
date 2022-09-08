@@ -73,7 +73,6 @@ impl Solver {
                 .sum(),
             Node::Leaf(ref leaf) => leaf
                 .iter()
-                .filter(|(_, particle)| particle.entity != entity)
                 .map(|(pos2, particle)| self.get_gravity_acceleration(&pos, pos2, particle.mass))
                 .sum(),
         }
