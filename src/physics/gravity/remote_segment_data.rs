@@ -6,7 +6,7 @@ use crate::domain::Extent;
 #[derive(Debug, Default)]
 pub struct RemoteSegments {
     segments: Vec<AssignedSegment>,
-    moments: MassMoments,
+    pub moments: MassMoments,
 }
 
 impl NodeDataType<Extent, AssignedSegment> for RemoteSegments {

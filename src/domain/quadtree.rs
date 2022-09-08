@@ -151,6 +151,7 @@ impl<N, P, L> IndexMut<usize> for QuadTree<N, P, L> {
 mod tests {
     use super::*;
     use crate::units::Vec2Length;
+    use crate::units::VecLength;
 
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
@@ -161,6 +162,6 @@ mod tests {
         ];
         let extent = Extent::from_positions(positions.iter().map(|(pos, _)| pos)).unwrap();
         let config = QuadTreeConfig { max_depth: 10 };
-        QuadTree::<(), ()>::new(&extent, &config, positions.into_iter().collect());
+        QuadTree::<(), VecLength, ()>::new(&extent, &config, positions.into_iter().collect());
     }
 }

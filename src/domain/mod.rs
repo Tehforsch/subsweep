@@ -44,7 +44,7 @@ pub struct AssignedSegment {
     pub mass: Mass,
 }
 
-#[derive(Debug, Equivalence)]
+#[derive(Clone, Debug, Equivalence)]
 struct SegmentCommunicationData {
     index: usize,
     extent: Extent,

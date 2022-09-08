@@ -211,15 +211,4 @@ mod tests {
         ];
         assert!(Extent::from_positions(positions.iter()).is_none());
     }
-
-    #[test]
-    #[should_panic]
-    fn invalid_extents() {
-        Extent::new(
-            Length::meter(1.0),
-            Length::meter(-1.0),
-            Length::meter(0.0),
-            Length::meter(1.0),
-        );
-    }
 }
