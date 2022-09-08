@@ -77,6 +77,7 @@ impl Solver {
                 .sum(),
         }
     }
+
     fn opening_criterion(&self, child: &LocalQuadTree, pos: VecLength) -> bool {
         let distance = pos.distance(&child.extents.center());
         let length = child.extents.max_side_length();

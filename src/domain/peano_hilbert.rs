@@ -32,6 +32,10 @@ impl PeanoHilbertKey {
         Self(self.0 + 1)
     }
 
+    pub fn prev(self) -> Self {
+        Self(self.0 - 1)
+    }
+
     // Source: https://en.wikipedia.org/wiki/Hilbert_curve
     fn from_integer_pos((mut x, mut y): (u64, u64)) -> Self {
         let mut s = NUM_SUBDIVISIONS / 2;

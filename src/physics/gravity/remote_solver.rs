@@ -20,7 +20,7 @@ pub fn construct_remote_quad_tree_system(
     let data = segments
         .0
         .iter()
-        .map(|segment| (segment.extent.clone().unwrap(), ()))
+        .filter_map(|segment| segment.extent.clone().map(|segment| (segment, ())))
         .collect();
     let quadtree = RemoteQuadTree::new(&extent.0, &config, data);
     commands.insert_resource(quadtree);

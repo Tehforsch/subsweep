@@ -16,7 +16,7 @@ pub struct Segment {
     pub num_particles: usize,
 }
 
-fn get_position<T>(
+pub(super) fn get_position<T>(
     items: &[T],
     map: impl Fn(&T) -> PeanoHilbertKey,
     key: &PeanoHilbertKey,

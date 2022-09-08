@@ -2,6 +2,8 @@ use std::collections::HashSet;
 
 use bevy::prelude::App;
 
+use crate::communication::WorldRank;
+
 #[derive(Default)]
 struct Labels(HashSet<&'static str>);
 
@@ -16,4 +18,8 @@ pub fn run_once(label: &'static str, app: &mut App, f: impl Fn(&mut App) -> ()) 
     if !contains_label {
         f(app);
     }
+}
+
+pub fn is_main_rank(app: &App) -> bool {
+    app.world.get_resource::<WorldRank>().unwrap().is_main()
 }

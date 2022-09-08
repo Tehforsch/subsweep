@@ -12,8 +12,6 @@ pub struct Extent {
 
 impl Extent {
     pub fn new(min_x: Length, max_x: Length, min_y: Length, max_y: Length) -> Self {
-        debug_assert!(min_x < max_x);
-        debug_assert!(min_y < max_y);
         let min = VecLength::new(min_x, min_y);
         let max = VecLength::new(max_x, max_y);
         Self {
@@ -71,6 +69,19 @@ impl Extent {
     }
 
     pub fn from_positions<'a>(positions: impl Iterator<Item = &'a VecLength>) -> Option<Self> {
+        Self::from_positions_with_or_without_empty(positions, false)
+    }
+
+    pub fn from_positions_allow_empty<'a>(
+        positions: impl Iterator<Item = &'a VecLength>,
+    ) -> Option<Self> {
+        Self::from_positions_with_or_without_empty(positions, true)
+    }
+
+    fn from_positions_with_or_without_empty<'a>(
+        positions: impl Iterator<Item = &'a VecLength>,
+        allow_empty: bool,
+    ) -> Option<Self> {
         let mut min_x = None;
         let mut max_x = None;
         let mut min_y = None;
@@ -91,7 +102,7 @@ impl Extent {
             update_min(&mut min_y, pos.y());
             update_max(&mut max_y, pos.y());
         }
-        if min_x == max_x || min_y == max_y {
+        if !allow_empty && (min_x == max_x || min_y == max_y) {
             None
         } else {
             Some(Self::new(min_x?, max_x?, min_y?, max_y?))

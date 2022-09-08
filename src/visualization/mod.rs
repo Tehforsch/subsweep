@@ -7,6 +7,7 @@ use bevy_prototype_lyon::prelude::ShapePlugin;
 pub use drawing::DrawCircle;
 pub use drawing::DrawRect;
 use lazy_static::lazy_static;
+use mpi::Rank;
 
 use self::drawing::draw_translation_system;
 use self::drawing::DrawBundlePlugin;
@@ -18,11 +19,13 @@ use self::remote::ParticleVisualizationExchangeData;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::WorldRank;
+use crate::domain::show_segment_extent_system;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::LocalQuadTree;
 use crate::physics::PhysicsStages;
 use crate::physics::RemoteParticle;
+use crate::plugin_utils::is_main_rank;
 use crate::position::Position;
 use crate::units::Length;
 
@@ -44,9 +47,8 @@ pub struct VisualizationPlugin;
 
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
-        let rank = *app.world.get_resource::<WorldRank>().unwrap();
-        app.add_stage_after(
-            PhysicsStages::Gravity,
+        app.add_stage_before(
+            CoreStage::PostUpdate,
             VisualizationStage::Synchronize,
             SystemStage::parallel(),
         );
@@ -65,9 +67,8 @@ impl Plugin for VisualizationPlugin {
             VisualizationStage::Draw,
             SystemStage::parallel(),
         );
-        if rank.is_main() {
+        if is_main_rank(app) {
             app.add_plugin(ParameterPlugin::<Parameters>::new("visualization"))
-                .add_plugin(ShapePlugin)
                 .add_plugin(DrawBundlePlugin::<DrawRect>::default())
                 .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
                 .add_plugin(ShapePlugin)
@@ -95,6 +96,10 @@ impl Plugin for VisualizationPlugin {
             {
                 app.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
             }
+            app.add_system_to_stage(
+                VisualizationStage::AddVisualization,
+                show_segment_extent_system,
+            );
         } else {
             app.add_plugin(
                 CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
@@ -107,6 +112,10 @@ impl Plugin for VisualizationPlugin {
             );
         }
     }
+}
+
+pub fn get_color(rank: Rank) -> Color {
+    COLORS[(rank as usize).rem_euclid(COLORS.len())]
 }
 
 fn spawn_sprites_system(
@@ -133,7 +142,7 @@ fn spawn_sprites_system(
                 .map(|(entity, pos, rank)| (entity, pos, rank.0)),
         )
     {
-        let color = COLORS[(rank as usize).rem_euclid(COLORS.len())];
+        let color = get_color(rank);
         commands.entity(entity).insert(DrawCircle {
             position: pos.0,
             radius: Length::meter(0.05),

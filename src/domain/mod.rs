@@ -11,6 +11,7 @@ pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
 use self::peano_hilbert::PeanoHilbertKey;
+use self::segment::get_position;
 use self::segment::get_segments;
 pub use self::segment::Segment;
 use crate::communication::AllGatherCommunicator;
@@ -29,6 +30,8 @@ use crate::mass::Mass;
 use crate::physics::LocalParticle;
 use crate::position::Position;
 use crate::velocity::Velocity;
+use crate::visualization::get_color;
+use crate::visualization::DrawRect;
 
 const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
 
@@ -39,6 +42,13 @@ pub struct AssignedSegment {
     pub extent: Option<Extent>,
 }
 
+#[derive(Debug, Equivalence)]
+struct SegmentExtentCommunicationData {
+    index: usize,
+    extent: Extent,
+    valid_extent: bool,
+}
+
 #[derive(Default)]
 pub struct Segments(pub Vec<AssignedSegment>);
 
@@ -46,6 +56,7 @@ pub struct Segments(pub Vec<AssignedSegment>);
 pub enum DomainDecompositionStages {
     Decomposition,
     Exchange,
+    AfterExchange,
 }
 
 pub struct DomainDecompositionPlugin;
@@ -64,6 +75,11 @@ impl Plugin for DomainDecompositionPlugin {
             DomainDecompositionStages::Exchange,
             SystemStage::parallel(),
         );
+        app.add_stage_after(
+            DomainDecompositionStages::Exchange,
+            DomainDecompositionStages::AfterExchange,
+            SystemStage::parallel(),
+        );
         app.add_system_to_stage(
             DomainDecompositionStages::Decomposition,
             determine_global_extent_system,
@@ -72,10 +88,17 @@ impl Plugin for DomainDecompositionPlugin {
             DomainDecompositionStages::Decomposition,
             domain_decomposition_system.after(determine_global_extent_system),
         )
+        .add_system_to_stage(
+            DomainDecompositionStages::AfterExchange,
+            communicate_segment_extent_system,
+        )
         .add_plugin(CommunicationPlugin::<Extent>::new(
             CommunicationType::AllGather,
         ))
         .add_plugin(CommunicationPlugin::<usize>::new(CommunicationType::Sum))
+        .add_plugin(CommunicationPlugin::<SegmentExtentCommunicationData>::new(
+            CommunicationType::AllGather,
+        ))
         .add_plugin(CommunicationPlugin::<Segment>::new(
             CommunicationType::Exchange,
         ));
@@ -163,7 +186,11 @@ fn find_key_cutoffs(
     for segment in global_segment_list.iter() {
         load += segment.num_particles;
         if load >= load_per_rank {
-            key_cutoffs_by_rank.push(segment.end());
+            // We want the keys to be inclusive, so that
+            // the range of keys for a given rank is given by the half open interval
+            // [key_cutoff[i], key_cutoff[i+1])
+            // so we need to subtract one here.
+            key_cutoffs_by_rank.push(segment.end().prev());
             if key_cutoffs_by_rank.len() == num_ranks - 1 {
                 break;
             }
@@ -195,6 +222,7 @@ fn domain_decomposition_system(
     let target_rank = |key: &PeanoHilbertKey| {
         key_cutoffs_by_rank
             .binary_search(&key)
+            .map(|found| found)
             .unwrap_or_else(|e| e) as Rank
     };
     for ParticleData { key, entity } in particles.iter() {
@@ -218,6 +246,87 @@ fn domain_decomposition_system(
             }
         })
         .collect()
+}
+
+fn communicate_segment_extent_system(
+    mut segment_extent_communicator: NonSendMut<
+        AllGatherCommunicator<SegmentExtentCommunicationData>,
+    >,
+    mut segments: ResMut<Segments>,
+    particles: Query<(Entity, &Position), With<LocalParticle>>,
+    rank: Res<WorldRank>,
+    world_size: Res<WorldSize>,
+    extent: Res<GlobalExtent>,
+) {
+    let keys = get_sorted_peano_hilbert_keys(&extent.0, &particles);
+    let get_extents = |segment: &AssignedSegment| {
+        let start = get_position(&keys, |p: &ParticleData| p.key, &segment.segment.start());
+        let end = get_position(&keys, |p: &ParticleData| p.key, &segment.segment.end());
+        Extent::from_positions_allow_empty(
+            keys[start..end]
+                .iter()
+                .map(|p| &particles.get(p.entity).unwrap().1 .0),
+        )
+    };
+    let extents: Vec<_> = segments
+        .0
+        .iter()
+        .enumerate()
+        .filter(|(_, segment)| segment.rank == rank.0)
+        .map(|(index, segment)| {
+            let extent = get_extents(segment);
+            let (extent, valid_extent) = match extent {
+                Some(extent) => (extent, true),
+                None => (Extent::sentinel(), false),
+            };
+            SegmentExtentCommunicationData {
+                index,
+                extent,
+                valid_extent,
+            }
+        })
+        .collect();
+    let mut num_segments_by_rank = vec![0i32; world_size.0];
+    // This is slow and unnecessarily O(n^2) but it probably doesn't
+    // matter performance wise - replace if ever necessary
+    for rank in 0..world_size.0 {
+        num_segments_by_rank[rank] = segments
+            .0
+            .iter()
+            .filter(|segment| segment.rank == rank as i32)
+            .count() as i32;
+    }
+    let all = (*segment_extent_communicator).all_gather_varcount(&extents, &num_segments_by_rank);
+    for seg_data in all {
+        if seg_data.valid_extent {
+            segments.0[seg_data.index].extent = Some(seg_data.extent);
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct SegmentOutline;
+
+pub fn show_segment_extent_system(
+    mut commands: Commands,
+    segments: Res<Segments>,
+    outlines: Query<Entity, With<SegmentOutline>>,
+) {
+    for entity in outlines.iter() {
+        commands.entity(entity).despawn();
+    }
+    for seg in segments.0.iter() {
+        match seg.extent.as_ref() {
+            Some(extent) => {
+                commands.spawn().insert(SegmentOutline).insert(DrawRect {
+                    lower_left: extent.min,
+                    upper_right: extent.max,
+                    color: get_color(seg.rank),
+                });
+            }
+            _ => {}
+        }
+    }
 }
 
 #[derive(Equivalence, Clone)]
