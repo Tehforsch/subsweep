@@ -26,6 +26,7 @@ use crate::communication::SumCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::domain::segment::merge_and_split_segments;
+use crate::mass;
 use crate::physics::LocalParticle;
 use crate::position::Position;
 use crate::units::Mass;
@@ -44,10 +45,11 @@ pub struct AssignedSegment {
 }
 
 #[derive(Debug, Equivalence)]
-struct SegmentExtentCommunicationData {
+struct SegmentCommunicationData {
     index: usize,
     extent: Extent,
     valid_extent: bool,
+    mass: Mass,
 }
 
 #[derive(Default)]
@@ -97,7 +99,7 @@ impl Plugin for DomainDecompositionPlugin {
             CommunicationType::AllGather,
         ))
         .add_plugin(CommunicationPlugin::<usize>::new(CommunicationType::Sum))
-        .add_plugin(CommunicationPlugin::<SegmentExtentCommunicationData>::new(
+        .add_plugin(CommunicationPlugin::<SegmentCommunicationData>::new(
             CommunicationType::AllGather,
         ))
         .add_plugin(CommunicationPlugin::<Segment>::new(
@@ -250,41 +252,52 @@ fn domain_decomposition_system(
         .collect()
 }
 
+fn get_extent_and_mass_of_segment(
+    particles: &Query<(Entity, &mass::Mass, &Position), With<LocalParticle>>,
+    keys: &[ParticleData],
+    segment: &AssignedSegment,
+) -> (Option<Extent>, Mass) {
+    let start = get_position(&keys, |p: &ParticleData| p.key, &segment.segment.start());
+    let end = get_position(&keys, |p: &ParticleData| p.key, &segment.segment.end());
+    let extent = Extent::from_positions_allow_empty(
+        keys[start..end]
+            .iter()
+            .map(|p| &particles.get(p.entity).unwrap().2 .0),
+    );
+    let mass = keys[start..end]
+        .iter()
+        .map(|p| particles.get(p.entity).unwrap().1 .0)
+        .sum();
+    (extent, mass)
+}
+
 fn communicate_segment_extent_system(
-    mut segment_extent_communicator: NonSendMut<
-        AllGatherCommunicator<SegmentExtentCommunicationData>,
-    >,
+    mut segment_extent_communicator: NonSendMut<AllGatherCommunicator<SegmentCommunicationData>>,
     mut segments: ResMut<Segments>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
+    particles_with_mass: Query<(Entity, &mass::Mass, &Position), With<LocalParticle>>,
     rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
     extent: Res<GlobalExtent>,
 ) {
     let keys = get_sorted_peano_hilbert_keys(&extent.0, &particles);
-    let get_extents = |segment: &AssignedSegment| {
-        let start = get_position(&keys, |p: &ParticleData| p.key, &segment.segment.start());
-        let end = get_position(&keys, |p: &ParticleData| p.key, &segment.segment.end());
-        Extent::from_positions_allow_empty(
-            keys[start..end]
-                .iter()
-                .map(|p| &particles.get(p.entity).unwrap().1 .0),
-        )
-    };
     let extents: Vec<_> = segments
         .0
         .iter()
         .enumerate()
         .filter(|(_, segment)| segment.rank == rank.0)
         .map(|(index, segment)| {
-            let extent = get_extents(segment);
+            let (extent, mass) =
+                get_extent_and_mass_of_segment(&particles_with_mass, &keys, segment);
             let (extent, valid_extent) = match extent {
                 Some(extent) => (extent, true),
                 None => (Extent::sentinel(), false),
             };
-            SegmentExtentCommunicationData {
+            SegmentCommunicationData {
                 index,
                 extent,
                 valid_extent,
+                mass,
             }
         })
         .collect();
@@ -303,6 +316,7 @@ fn communicate_segment_extent_system(
         if seg_data.valid_extent {
             segments.0[seg_data.index].extent = Some(seg_data.extent);
         }
+        segments.0[seg_data.index].mass = seg_data.mass;
     }
 }
 
