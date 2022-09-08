@@ -14,7 +14,7 @@ impl NodeDataType<Extent, AssignedSegment> for RemoteSegments {
         self.moments.add_mass_at(&extent.center, &new.mass)
     }
 
-    fn add_to_final_node(&mut self, extent: &Extent, new: &AssignedSegment) {
+    fn add_to_final_node(&mut self, _extent: &Extent, new: &AssignedSegment) {
         self.segments.push(new.clone())
     }
 }

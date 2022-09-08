@@ -18,12 +18,10 @@ use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
-use crate::communication::WorldRank;
 use crate::domain::show_segment_extent_system;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::LocalQuadTree;
-use crate::physics::PhysicsStages;
 use crate::physics::RemoteParticle;
 use crate::physics::RemoteQuadTree;
 use crate::plugin_utils::is_main_rank;
@@ -93,9 +91,23 @@ impl Plugin for VisualizationPlugin {
                 .world
                 .get_resource::<Parameters>()
                 .unwrap()
-                .show_quadtree
+                .show_remote_quadtree
             {
-                app.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
+                app.add_system_to_stage(
+                    VisualizationStage::AddVisualization,
+                    show_remote_quadtree_system,
+                );
+            }
+            if app
+                .world
+                .get_resource::<Parameters>()
+                .unwrap()
+                .show_local_quadtree
+            {
+                app.add_system_to_stage(
+                    VisualizationStage::AddVisualization,
+                    show_local_quadtree_system,
+                );
             }
             if app
                 .world
@@ -161,10 +173,40 @@ fn spawn_sprites_system(
 
 #[derive(Component)]
 struct Outline;
+#[derive(Component)]
+struct RemoteOutline;
 
-fn show_quadtree_system(
+fn show_remote_quadtree_system(
     mut commands: Commands,
     quadtree: Res<RemoteQuadTree>,
+    outlines: Query<Entity, With<RemoteOutline>>,
+) {
+    for entity in outlines.iter() {
+        commands.entity(entity).despawn();
+    }
+    quadtree.depth_first_map(&mut |extents, l| {
+        let color = {
+            if l.len() == 1 {
+                Some(get_color(l.first().unwrap().1.rank))
+            } else if l.len() > 1 {
+                Some(Color::WHITE)
+            } else {
+                None
+            }
+        };
+        if let Some(color) = color {
+            commands.spawn().insert(RemoteOutline).insert(DrawRect {
+                lower_left: extents.min,
+                upper_right: extents.max,
+                color,
+            });
+        }
+    });
+}
+
+fn show_local_quadtree_system(
+    mut commands: Commands,
+    quadtree: Res<LocalQuadTree>,
     outlines: Query<Entity, With<Outline>>,
 ) {
     for entity in outlines.iter() {
@@ -174,7 +216,7 @@ fn show_quadtree_system(
         commands.spawn().insert(Outline).insert(DrawRect {
             lower_left: extents.min,
             upper_right: extents.max,
-            color: Color::GREEN,
+            color: get_color(0),
         });
     });
 }

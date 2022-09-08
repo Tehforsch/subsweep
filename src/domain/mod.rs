@@ -28,7 +28,6 @@ use crate::communication::WorldSize;
 use crate::domain::segment::merge_and_split_segments;
 use crate::physics::LocalParticle;
 use crate::position::Position;
-use crate::units;
 use crate::units::Mass;
 use crate::velocity::Velocity;
 use crate::visualization::get_color;

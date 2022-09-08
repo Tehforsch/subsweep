@@ -34,10 +34,11 @@ pub fn construct_remote_quad_tree_system(
 
 impl InsertionData for Extent {
     fn get_quadrant_index(&self, extent: &Extent) -> Option<usize> {
-        self.get_quadrants()
+        extent
+            .get_quadrants()
             .iter()
             .enumerate()
-            .find(|(_, quad)| quad.encompasses(extent))
+            .find(|(_, quad)| quad.encompasses(self))
             .map(|(i, _)| i)
     }
 }
