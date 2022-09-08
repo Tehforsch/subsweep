@@ -23,6 +23,7 @@ mod remote_segment_data;
 mod remote_solver;
 
 pub use remote_solver::construct_remote_quad_tree_system;
+pub use remote_solver::RemoteQuadTree;
 
 #[derive(Debug, Clone)]
 pub struct ParticleData {

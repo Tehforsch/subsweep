@@ -10,6 +10,7 @@ use super::Extent;
 
 pub trait NodeDataType<P, L> {
     fn add_new_leaf_data(&mut self, _p: &P, _l: &L) {}
+    fn add_to_final_node(&mut self, _p: &P, _l: &L) {}
 }
 
 impl<P, L> NodeDataType<P, L> for () {}
@@ -87,7 +88,7 @@ where
                     let quadrant = &mut children[index];
                     quadrant.insert_new(&config, data, depth + 1);
                 }
-                None => todo!(),
+                None => self.data.add_to_final_node(&data.0, &data.1),
             }
         }
     }

@@ -22,12 +22,16 @@ impl MassMoments {
         }
         self.weighted_position_sum / self.total
     }
+
+    pub fn add_mass_at(&mut self, pos: &VecLength, mass: &Mass) {
+        self.count += 1;
+        self.total += *mass;
+        self.weighted_position_sum += *pos * *mass;
+    }
 }
 
 impl NodeDataType<VecLength, ParticleData> for MassMoments {
     fn add_new_leaf_data(&mut self, pos: &VecLength, data: &ParticleData) {
-        self.count += 1;
-        self.total += data.mass;
-        self.weighted_position_sum += *pos * data.mass;
+        self.add_mass_at(pos, &data.mass);
     }
 }

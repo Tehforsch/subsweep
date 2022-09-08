@@ -26,20 +26,22 @@ use crate::communication::SumCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::domain::segment::merge_and_split_segments;
-use crate::mass::Mass;
 use crate::physics::LocalParticle;
 use crate::position::Position;
+use crate::units;
+use crate::units::Mass;
 use crate::velocity::Velocity;
 use crate::visualization::get_color;
 use crate::visualization::DrawRect;
 
 const NUM_DESIRED_SEGMENTS_PER_RANK: usize = 50;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AssignedSegment {
-    segment: Segment,
-    rank: Rank,
+    pub segment: Segment,
+    pub rank: Rank,
     pub extent: Option<Extent>,
+    pub mass: Mass,
 }
 
 #[derive(Debug, Equivalence)]
@@ -243,6 +245,7 @@ fn domain_decomposition_system(
                 segment: segment.clone(),
                 rank: rank,
                 extent: None,
+                mass: Mass::zero(),
             }
         })
         .collect()

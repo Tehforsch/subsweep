@@ -25,6 +25,7 @@ use crate::physics::LocalParticle;
 use crate::physics::LocalQuadTree;
 use crate::physics::PhysicsStages;
 use crate::physics::RemoteParticle;
+use crate::physics::RemoteQuadTree;
 use crate::plugin_utils::is_main_rank;
 use crate::position::Position;
 use crate::units::Length;
@@ -96,10 +97,17 @@ impl Plugin for VisualizationPlugin {
             {
                 app.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
             }
-            app.add_system_to_stage(
-                VisualizationStage::AddVisualization,
-                show_segment_extent_system,
-            );
+            if app
+                .world
+                .get_resource::<Parameters>()
+                .unwrap()
+                .show_segment_extent
+            {
+                app.add_system_to_stage(
+                    VisualizationStage::AddVisualization,
+                    show_segment_extent_system,
+                );
+            }
         } else {
             app.add_plugin(
                 CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
@@ -156,7 +164,7 @@ struct Outline;
 
 fn show_quadtree_system(
     mut commands: Commands,
-    quadtree: Res<LocalQuadTree>,
+    quadtree: Res<RemoteQuadTree>,
     outlines: Query<Entity, With<Outline>>,
 ) {
     for entity in outlines.iter() {
@@ -170,6 +178,7 @@ fn show_quadtree_system(
         });
     });
 }
+
 pub fn setup_camera_system(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
 }

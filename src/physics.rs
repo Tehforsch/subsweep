@@ -4,6 +4,7 @@ mod time;
 
 use bevy::prelude::*;
 pub use gravity::LocalQuadTree;
+pub use gravity::RemoteQuadTree;
 use mpi::traits::Equivalence;
 
 use self::gravity::construct_local_quad_tree_system;
@@ -44,7 +45,7 @@ pub enum PhysicsStages {
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_stage_after(
-            DomainDecompositionStages::Decomposition,
+            DomainDecompositionStages::AfterExchange,
             PhysicsStages::QuadTreeConstruction,
             SystemStage::parallel(),
         );
