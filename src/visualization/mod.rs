@@ -18,12 +18,12 @@ use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
+use crate::domain::remote_quadtree::RemoteQuadTree;
 use crate::domain::show_segment_extent_system;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::LocalQuadTree;
 use crate::physics::RemoteParticle;
-use crate::physics::RemoteQuadTree;
 use crate::plugin_utils::is_main_rank;
 use crate::position::Position;
 use crate::units::Length;
@@ -184,11 +184,11 @@ fn show_remote_quadtree_system(
     for entity in outlines.iter() {
         commands.entity(entity).despawn();
     }
-    quadtree.depth_first_map_leaf(&mut |extents, l| {
+    quadtree.depth_first_map_node(&mut |extent, particles, _| {
         let color = {
-            if l.len() == 1 {
-                Some(get_color(l.first().unwrap().1.rank))
-            } else if l.len() > 1 {
+            if particles.len() == 1 {
+                Some(get_color(particles.first().unwrap().1.rank))
+            } else if particles.len() > 1 {
                 Some(Color::WHITE)
             } else {
                 None
@@ -196,8 +196,8 @@ fn show_remote_quadtree_system(
         };
         if let Some(color) = color {
             commands.spawn().insert(RemoteOutline).insert(DrawRect {
-                lower_left: extents.min,
-                upper_right: extents.max,
+                lower_left: extent.min,
+                upper_right: extent.max,
                 color,
             });
         }

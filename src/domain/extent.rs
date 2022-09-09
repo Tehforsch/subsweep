@@ -119,6 +119,15 @@ impl Extent {
         }
     }
 
+    pub fn get_quadrant_index_for_extent(&self, extent: &Extent) -> Option<usize> {
+        extent
+            .get_quadrants()
+            .iter()
+            .enumerate()
+            .find(|(_, quad)| quad.encompasses(self))
+            .map(|(i, _)| i)
+    }
+
     pub fn contains(&self, pos: &VecLength) -> bool {
         self.min.x() <= pos.x()
             && pos.x() <= self.max.x()

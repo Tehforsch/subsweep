@@ -51,17 +51,17 @@ fn spawn_particles_system(
         ));
     }
 
-    // for _ in 0..n_particles {
-    //     let x = rand::thread_rng().gen_range(4.0..5.0);
-    //     let y = rand::thread_rng().gen_range(-1.0..1.0);
-    //     let pos = Vec2Length::meter(x, y);
-    //     let x = 0.0;
-    //     let y = -0.1;
-    //     let vel = Vec2Velocity::meters_per_second(x, y) * 1.0;
-    //     commands.spawn().insert_bundle(LocalParticleBundle::new(
-    //         Position(pos),
-    //         Velocity(vel),
-    //         Mass(units::Mass::kilogram(2.0)),
-    //     ));
-    // }
+    for _ in 0..n_particles {
+        let x = rand::thread_rng().gen_range(4.0..5.0);
+        let y = rand::thread_rng().gen_range(-1.0..1.0);
+        let pos = Vec2Length::meter(x, y);
+        let x = 0.0;
+        let y = -0.1;
+        let vel = Vec2Velocity::meters_per_second(x, y) * 1.0;
+        commands.spawn().insert_bundle(LocalParticleBundle::new(
+            Position(pos),
+            Velocity(vel),
+            Mass(units::Mass::kilogram(2.0)),
+        ));
+    }
 }

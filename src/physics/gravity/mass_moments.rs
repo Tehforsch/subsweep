@@ -4,7 +4,6 @@ use mpi::traits::Equivalence;
 
 use super::ParticleData;
 use crate::domain::quadtree::NodeDataType;
-use crate::units::Length;
 use crate::units::Mass;
 use crate::units::Vec2Length;
 use crate::units::VecLength;

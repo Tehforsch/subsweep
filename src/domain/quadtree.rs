@@ -75,14 +75,11 @@ where
     fn insert(&mut self, config: &QuadTreeConfig, data: (P, L), depth: usize) {
         if let Node::Leaf(ref mut leaf) = self.node {
             if leaf.is_empty() || depth == config.max_depth {
-                dbg!("From B");
                 self.data.add_to_final_node(&data.0, &data.1);
                 leaf.push(data);
                 return;
             } else {
-                dbg!(&self.data);
                 self.subdivide(config, depth);
-                dbg!(&self.data);
             }
         }
         if let Node::Tree(ref mut children) = self.node {

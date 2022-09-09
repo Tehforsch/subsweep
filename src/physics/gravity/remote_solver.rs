@@ -1,17 +1,11 @@
 use bevy::prelude::Commands;
 use bevy::prelude::Res;
 
-use super::remote_segment_data::RemoteSegments;
 use crate::communication::WorldRank;
-use crate::domain::quadtree::insertion_data::InsertionData;
 use crate::domain::quadtree::QuadTreeConfig;
-use crate::domain::quadtree::{self};
-use crate::domain::AssignedSegment;
-use crate::domain::Extent;
+use crate::domain::remote_quadtree::RemoteQuadTree;
 use crate::domain::GlobalExtent;
 use crate::domain::Segments;
-
-pub type RemoteQuadTree = quadtree::QuadTree<RemoteSegments, Extent, AssignedSegment>;
 
 pub fn construct_remote_quad_tree_system(
     mut commands: Commands,
@@ -37,22 +31,11 @@ pub fn construct_remote_quad_tree_system(
     commands.insert_resource(quadtree);
 }
 
-impl InsertionData for Extent {
-    fn get_quadrant_index(&self, extent: &Extent) -> Option<usize> {
-        extent
-            .get_quadrants()
-            .iter()
-            .enumerate()
-            .find(|(_, quad)| quad.encompasses(self))
-            .map(|(i, _)| i)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::RemoteQuadTree;
-    use crate::domain::quadtree;
     use crate::domain::quadtree::QuadTreeConfig;
+    use crate::domain::remote_quadtree::Node;
+    use crate::domain::remote_quadtree::RemoteQuadTree;
     use crate::domain::AssignedSegment;
     use crate::domain::Extent;
     use crate::domain::Segment;
@@ -99,27 +82,27 @@ mod tests {
 
     fn check_mass(tree: &RemoteQuadTree) {
         let mut total = Mass::zero();
-        tree.depth_first_map_node(&mut |data| {
-            total += data.segments.iter().map(|seg| seg.mass.total()).sum();
+        tree.depth_first_map_node(&mut |_, particles, data| {
+            total += particles.iter().map(|seg| seg.1.mass.total()).sum();
         });
-        assert_is_close(tree.data.moments.total(), total);
+        assert_is_close(tree.data.total(), total);
     }
 
     fn check_mass_of_all_sub_trees(tree: &RemoteQuadTree) {
         check_mass(tree);
         match tree.node {
-            quadtree::Node::Tree(ref children) => {
+            Node::Tree(ref children) => {
                 for child in children.iter() {
                     check_mass_of_all_sub_trees(child)
                 }
             }
-            quadtree::Node::Leaf(_) => {}
+            Node::Leaf => {}
         }
     }
 
     #[test]
     fn remote_quadtree_counts_mass_correctly() {
-        let segments = get_assigned_segments(3);
+        let segments = get_assigned_segments(30);
         let data = segments
             .iter()
             .filter_map(|segment| {
@@ -135,7 +118,6 @@ mod tests {
         let config = QuadTreeConfig { max_depth: 10 };
 
         let quadtree = RemoteQuadTree::new(&extent, &config, data);
-        dbg!(&quadtree);
         check_mass_of_all_sub_trees(&quadtree);
     }
 }

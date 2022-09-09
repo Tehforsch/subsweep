@@ -5,6 +5,7 @@ mod exchange_data_plugin;
 mod extent;
 mod peano_hilbert;
 pub mod quadtree;
+pub mod remote_quadtree;
 mod segment;
 
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
