@@ -9,7 +9,7 @@ use self::insertion_data::InsertionData;
 use super::Extent;
 
 pub trait NodeDataType<P, L> {
-    fn add_new_leaf_data(&mut self, _p: &P, _l: &L) {}
+    fn handle_insertion(&mut self, _p: &P, _l: &L) {}
     fn add_to_final_node(&mut self, _p: &P, _l: &L) {}
 }
 
@@ -55,7 +55,7 @@ pub struct QuadTree<N, P, L> {
 
 impl<N, P, L> QuadTree<N, P, L>
 where
-    N: Default + NodeDataType<P, L>,
+    N: std::fmt::Debug + Default + NodeDataType<P, L>,
     L: Clone,
     P: Clone + InsertionData,
 {
@@ -68,17 +68,21 @@ where
     }
 
     fn insert_new(&mut self, config: &QuadTreeConfig, data: (P, L), depth: usize) {
-        self.data.add_new_leaf_data(&data.0, &data.1);
+        self.data.handle_insertion(&data.0, &data.1);
         self.insert(config, data, depth)
     }
 
     fn insert(&mut self, config: &QuadTreeConfig, data: (P, L), depth: usize) {
         if let Node::Leaf(ref mut leaf) = self.node {
             if leaf.is_empty() || depth == config.max_depth {
+                dbg!("From B");
+                self.data.add_to_final_node(&data.0, &data.1);
                 leaf.push(data);
                 return;
             } else {
+                dbg!(&self.data);
                 self.subdivide(config, depth);
+                dbg!(&self.data);
             }
         }
         if let Node::Tree(ref mut children) = self.node {
@@ -88,7 +92,10 @@ where
                     let quadrant = &mut children[index];
                     quadrant.insert_new(&config, data, depth + 1);
                 }
-                None => self.data.add_to_final_node(&data.0, &data.1),
+                None => {
+                    dbg!("From A");
+                    self.data.add_to_final_node(&data.0, &data.1)
+                }
             }
         }
     }
@@ -111,16 +118,29 @@ where
         }
     }
 
-    pub fn depth_first_map(&self, closure: &mut impl FnMut(&Extent, &LeafData<P, L>) -> ()) {
+    pub fn depth_first_map_leaf(&self, closure: &mut impl FnMut(&Extent, &LeafData<P, L>) -> ()) {
         match self.node {
             Node::Tree(ref node) => {
                 for child in node.iter() {
-                    child.depth_first_map(closure);
+                    child.depth_first_map_leaf(closure);
                 }
             }
             Node::Leaf(ref leaf) => {
                 closure(&self.extents, &leaf);
             }
+        }
+    }
+
+    #[cfg(test)]
+    pub fn depth_first_map_node(&self, closure: &mut impl FnMut(&N) -> ()) {
+        closure(&self.data);
+        match self.node {
+            Node::Tree(ref node) => {
+                for child in node.iter() {
+                    child.depth_first_map_node(closure);
+                }
+            }
+            _ => {}
         }
     }
 }

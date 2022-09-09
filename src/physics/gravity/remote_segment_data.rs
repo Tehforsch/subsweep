@@ -5,12 +5,12 @@ use crate::domain::Extent;
 
 #[derive(Debug, Default)]
 pub struct RemoteSegments {
-    segments: Vec<AssignedSegment>,
+    pub segments: Vec<AssignedSegment>,
     pub moments: MassMoments,
 }
 
 impl NodeDataType<Extent, AssignedSegment> for RemoteSegments {
-    fn add_new_leaf_data(&mut self, _extent: &Extent, new: &AssignedSegment) {
+    fn handle_insertion(&mut self, _extent: &Extent, new: &AssignedSegment) {
         self.moments
             .add_mass_at(&new.mass.center_of_mass(), &new.mass.total())
     }

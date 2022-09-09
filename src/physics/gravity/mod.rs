@@ -186,7 +186,7 @@ pub mod tests {
 
     fn check_mass(tree: &LocalQuadTree) {
         let mut total = Mass::zero();
-        tree.depth_first_map(&mut |_, data| total += data.iter().map(|(_, p)| p.mass).sum());
+        tree.depth_first_map_leaf(&mut |_, data| total += data.iter().map(|(_, p)| p.mass).sum());
         assert_is_close(tree.data.total(), total);
     }
 

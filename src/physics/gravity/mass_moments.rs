@@ -37,7 +37,7 @@ impl MassMoments {
 }
 
 impl NodeDataType<VecLength, ParticleData> for MassMoments {
-    fn add_new_leaf_data(&mut self, pos: &VecLength, data: &ParticleData) {
+    fn handle_insertion(&mut self, pos: &VecLength, data: &ParticleData) {
         self.add_mass_at(pos, &data.mass);
     }
 }

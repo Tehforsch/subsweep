@@ -184,7 +184,7 @@ fn show_remote_quadtree_system(
     for entity in outlines.iter() {
         commands.entity(entity).despawn();
     }
-    quadtree.depth_first_map(&mut |extents, l| {
+    quadtree.depth_first_map_leaf(&mut |extents, l| {
         let color = {
             if l.len() == 1 {
                 Some(get_color(l.first().unwrap().1.rank))
@@ -212,7 +212,7 @@ fn show_local_quadtree_system(
     for entity in outlines.iter() {
         commands.entity(entity).despawn();
     }
-    quadtree.depth_first_map(&mut |extents, _| {
+    quadtree.depth_first_map_leaf(&mut |extents, _| {
         commands.spawn().insert(Outline).insert(DrawRect {
             lower_left: extents.min,
             upper_right: extents.max,

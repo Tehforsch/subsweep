@@ -99,8 +99,8 @@ mod tests {
 
     fn check_mass(tree: &RemoteQuadTree) {
         let mut total = Mass::zero();
-        tree.depth_first_map(&mut |_, data| {
-            total += data.iter().map(|(_, p)| p.mass.total()).sum()
+        tree.depth_first_map_node(&mut |data| {
+            total += data.segments.iter().map(|seg| seg.mass.total()).sum();
         });
         assert_is_close(tree.data.moments.total(), total);
     }
