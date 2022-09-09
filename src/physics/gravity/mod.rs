@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-use self::mass_moments::MassMoments;
 use super::parameters::Parameters;
 use super::LocalParticle;
 use super::Timestep;
@@ -22,6 +21,7 @@ mod mass_moments;
 mod remote_segment_data;
 mod remote_solver;
 
+pub use mass_moments::MassMoments;
 pub use remote_solver::construct_remote_quad_tree_system;
 pub use remote_solver::RemoteQuadTree;
 
@@ -128,7 +128,7 @@ pub(super) fn gravity_system(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use bevy::prelude::Entity;
 
     use super::LocalQuadTree;
@@ -144,7 +144,7 @@ mod tests {
     use crate::units::Vec2Acceleration;
     use crate::units::Vec2Length;
 
-    fn get_positions(n: i32) -> Vec<(Vec2Length, ParticleData)> {
+    pub fn get_positions(n: i32) -> Vec<(Vec2Length, ParticleData)> {
         (1..n)
             .flat_map(move |x| {
                 (1..n).map(move |y| {
@@ -169,15 +169,15 @@ mod tests {
     #[test]
     fn mass_sum() {
         let quadtree = get_quadtree(7);
-        check_all_sub_trees(&quadtree);
+        check_mass_of_all_sub_trees(&quadtree);
     }
 
-    fn check_all_sub_trees(tree: &LocalQuadTree) {
+    fn check_mass_of_all_sub_trees(tree: &LocalQuadTree) {
         check_mass(tree);
         match tree.node {
             quadtree::Node::Tree(ref children) => {
                 for child in children.iter() {
-                    check_all_sub_trees(child)
+                    check_mass_of_all_sub_trees(child)
                 }
             }
             quadtree::Node::Leaf(_) => {}

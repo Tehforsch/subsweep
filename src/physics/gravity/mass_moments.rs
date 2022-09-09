@@ -1,10 +1,16 @@
+use std::iter::Sum;
+
+use mpi::traits::Equivalence;
+
 use super::ParticleData;
 use crate::domain::quadtree::NodeDataType;
+use crate::units::Length;
 use crate::units::Mass;
+use crate::units::Vec2Length;
 use crate::units::VecLength;
 use crate::units::VecLengthMass;
 
-#[derive(Default, Debug)]
+#[derive(Equivalence, Default, Clone)]
 pub struct MassMoments {
     total: Mass,
     weighted_position_sum: VecLengthMass,
@@ -33,5 +39,26 @@ impl MassMoments {
 impl NodeDataType<VecLength, ParticleData> for MassMoments {
     fn add_new_leaf_data(&mut self, pos: &VecLength, data: &ParticleData) {
         self.add_mass_at(pos, &data.mass);
+    }
+}
+
+impl Sum<(Mass, Vec2Length)> for MassMoments {
+    fn sum<I: Iterator<Item = (Mass, Vec2Length)>>(iter: I) -> Self {
+        let mut s = Self::default();
+        for (mass, pos) in iter {
+            s.add_mass_at(&pos, &mass);
+        }
+        s
+    }
+}
+
+impl std::fmt::Debug for MassMoments {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Moments({:.3?} @ {:.3?})",
+            self.total(),
+            self.center_of_mass()
+        )
     }
 }

@@ -28,6 +28,7 @@ use crate::communication::WorldSize;
 use crate::domain::segment::merge_and_split_segments;
 use crate::mass;
 use crate::physics::LocalParticle;
+use crate::physics::MassMoments;
 use crate::position::Position;
 use crate::units::Mass;
 use crate::velocity::Velocity;
@@ -41,7 +42,7 @@ pub struct AssignedSegment {
     pub segment: Segment,
     pub rank: Rank,
     pub extent: Option<Extent>,
-    pub mass: Mass,
+    pub mass: MassMoments,
 }
 
 #[derive(Clone, Debug, Equivalence)]
@@ -49,7 +50,7 @@ struct SegmentCommunicationData {
     index: usize,
     extent: Extent,
     valid_extent: bool,
-    mass: Mass,
+    mass: MassMoments,
 }
 
 #[derive(Default)]
@@ -246,7 +247,7 @@ fn domain_decomposition_system(
                 segment: segment.clone(),
                 rank: rank,
                 extent: None,
-                mass: Mass::zero(),
+                mass: MassMoments::default(),
             }
         })
         .collect()
@@ -256,7 +257,7 @@ fn get_extent_and_mass_of_segment(
     particles: &Query<(Entity, &mass::Mass, &Position), With<LocalParticle>>,
     keys: &[ParticleData],
     segment: &AssignedSegment,
-) -> (Option<Extent>, Mass) {
+) -> (Option<Extent>, MassMoments) {
     let start = get_position(&keys, |p: &ParticleData| p.key, &segment.segment.start());
     let end = get_position(&keys, |p: &ParticleData| p.key, &segment.segment.end());
     let extent = Extent::from_positions_allow_empty(
@@ -266,7 +267,10 @@ fn get_extent_and_mass_of_segment(
     );
     let mass = keys[start..end]
         .iter()
-        .map(|p| particles.get(p.entity).unwrap().1 .0)
+        .map(|p| {
+            let (_, mass, pos) = particles.get(p.entity).unwrap();
+            (mass.0, pos.0)
+        })
         .sum();
     (extent, mass)
 }

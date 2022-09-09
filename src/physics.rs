@@ -4,6 +4,7 @@ mod time;
 
 use bevy::prelude::*;
 pub use gravity::LocalQuadTree;
+pub use gravity::MassMoments;
 pub use gravity::RemoteQuadTree;
 use mpi::traits::Equivalence;
 

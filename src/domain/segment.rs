@@ -9,7 +9,7 @@ use crate::communication::DataByRank;
 
 /// A segment of peano hilbert keys corresponding to
 /// the interval including `start` but excluding `end`
-#[derive(Debug, Equivalence, Clone, PartialEq)]
+#[derive(Equivalence, Clone, PartialEq)]
 pub struct Segment {
     start: PeanoHilbertKey,
     end: PeanoHilbertKey,
@@ -182,6 +182,16 @@ pub(super) fn merge_and_split_segments(
         }
     }
     result
+}
+
+impl std::fmt::Debug for Segment {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Segment({}-{}, {})",
+            self.start.0, self.end.0, self.num_particles
+        )
+    }
 }
 
 #[cfg(test)]
