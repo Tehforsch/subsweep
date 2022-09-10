@@ -1,7 +1,5 @@
 use std::iter::Sum;
 
-use super::ParticleData;
-use crate::domain::quadtree::NodeDataType;
 use crate::units::Mass;
 use crate::units::Vec2Length;
 use crate::units::VecLength;
@@ -30,14 +28,6 @@ impl MassMoments {
         self.count += 1;
         self.total += *mass;
         self.weighted_position_sum += *pos * *mass;
-    }
-}
-
-impl NodeDataType<ParticleData> for MassMoments {
-    fn add_new_leaf_data(&mut self, pos: &VecLength, data: &ParticleData) {
-        self.count += 1;
-        self.total += data.mass;
-        self.weighted_position_sum += *pos * data.mass;
     }
 }
 

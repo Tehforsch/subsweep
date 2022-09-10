@@ -139,7 +139,7 @@ struct Outline;
 
 fn show_quadtree_system(
     mut commands: Commands,
-    quadtree: Res<QuadTree>,
+    _quadtree: Res<QuadTree>,
     outlines: Query<Entity, With<Outline>>,
 ) {
     for entity in outlines.iter() {

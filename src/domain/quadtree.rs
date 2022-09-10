@@ -4,6 +4,7 @@ use std::ops::IndexMut;
 use serde::Deserialize;
 
 use super::Extent;
+use crate::physics::MassMoments;
 use crate::units::Mass;
 use crate::units::VecLength;
 
@@ -24,12 +25,14 @@ pub struct LeafData {
     pos: VecLength,
 }
 
-#[derive(Debug)]
-pub struct NodeData;
+#[derive(Debug, Default)]
+pub struct NodeData {
+    moments: MassMoments,
+}
 
 impl NodeData {
     fn update_with(&mut self, pos: &VecLength, mass: &Mass) {
-        todo!()
+        self.moments.add_mass_at(pos, mass);
     }
 }
 
@@ -60,23 +63,17 @@ pub struct QuadTree {
     pub extent: Extent,
 }
 
-#[derive(Debug)]
-pub enum QuadTreeConstructionError {
-    NotEnoughParticles,
-}
-
 impl QuadTree {
     pub fn new<'a>(
         config: &QuadTreeConfig,
         particles: Vec<(VecLength, Mass)>,
-    ) -> Result<Self, QuadTreeConstructionError> {
-        let extent = Extent::from_positions(particles.iter().map(|particle| &particle.0))
-            .ok_or(QuadTreeConstructionError::NotEnoughParticles)?;
-        let mut tree = Self::make_empty_leaf_from_extent(extent);
+        extent: &Extent,
+    ) -> Self {
+        let mut tree = Self::make_empty_leaf_from_extent(extent.clone());
         for (pos, data) in particles.iter() {
             tree.insert_new(config, pos.clone(), data.clone(), 0);
         }
-        Ok(tree)
+        tree
     }
 
     fn insert_new(&mut self, config: &QuadTreeConfig, pos: VecLength, mass: Mass, depth: usize) {
@@ -112,7 +109,7 @@ impl QuadTree {
     fn make_empty_leaf_from_extent(extent: Extent) -> Self {
         Self {
             node: Node::Leaf(vec![]),
-            data: NodeData,
+            data: NodeData::default(),
             extent,
         }
     }
@@ -148,11 +145,12 @@ mod tests {
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
         let positions = [
-            (Vec2Length::meter(1.0, 1.0), ()),
-            (Vec2Length::meter(1.0, 1.0), ()),
-            (Vec2Length::meter(2.0, 2.0), ()),
+            (Vec2Length::meter(1.0, 1.0), Mass::zero()),
+            (Vec2Length::meter(1.0, 1.0), Mass::zero()),
+            (Vec2Length::meter(2.0, 2.0), Mass::zero()),
         ];
         let config = QuadTreeConfig { max_depth: 10 };
-        QuadTree::new(&config, positions.into_iter().collect()).unwrap();
+        let extent = Extent::from_positions(positions.iter().map(|(pos, _)| pos)).unwrap();
+        QuadTree::new(&config, positions.into_iter().collect(), &extent);
     }
 }

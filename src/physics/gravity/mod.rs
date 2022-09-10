@@ -18,7 +18,7 @@
 // use crate::units::GRAVITY_CONSTANT;
 // use crate::velocity::Velocity;
 
-// mod mass_moments;
+pub(super) mod mass_moments;
 
 // #[derive(Debug, Clone)]
 // pub struct ParticleData {

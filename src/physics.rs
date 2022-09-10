@@ -5,6 +5,7 @@ mod time;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
+pub use self::gravity::mass_moments::MassMoments;
 use self::parameters::Parameters;
 pub use self::time::Time;
 use crate::domain::quadtree::QuadTreeConfig;
