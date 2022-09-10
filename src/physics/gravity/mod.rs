@@ -91,7 +91,7 @@ pub(super) fn construct_quad_tree_system(
             (
                 pos.0,
                 ParticleData {
-                    mass: mass.0,
+                    mass: **mass,
                     entity,
                 },
             )
@@ -121,8 +121,8 @@ pub(super) fn gravity_system(
         opening_angle: parameters.opening_angle,
     };
     for (entity, pos, mut vel) in particles.iter_mut() {
-        let acceleration = gravity.get_acceleration_on_particle(&tree, pos.0, entity);
-        vel.0 += acceleration * timestep.0;
+        let acceleration = gravity.get_acceleration_on_particle(&tree, **pos, entity);
+        **vel += acceleration * **timestep;
     }
 }
 

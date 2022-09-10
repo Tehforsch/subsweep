@@ -2,6 +2,8 @@ use std::marker::PhantomData;
 
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
+use bevy::prelude::Deref;
+use bevy::prelude::DerefMut;
 use bevy::prelude::Entity;
 use bevy::prelude::NonSendMut;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
@@ -27,25 +29,26 @@ use crate::plugin_utils::run_once;
 #[derive(Default)]
 struct ExchangePluginExists;
 
-#[derive(Default)]
+#[derive(Default, Deref, DerefMut)]
 pub(super) struct OutgoingEntities(DataByRank<Vec<Entity>>);
 
 impl OutgoingEntities {
     pub fn add(&mut self, rank: Rank, entity: Entity) {
-        self.0[rank].push(entity);
+        self[rank].push(entity);
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Deref, DerefMut)]
 struct SpawnedEntities(DataByRank<Vec<Entity>>);
 
+#[derive(Deref, DerefMut)]
 struct ExchangeBuffers<T>(DataByRank<Vec<T>>);
 
 pub struct ExchangeDataPlugin<T> {
     _marker: PhantomData<T>,
 }
 
-#[derive(Equivalence)]
+#[derive(Equivalence, Deref, DerefMut)]
 struct NumEntities(usize);
 
 impl<T> Default for ExchangeDataPlugin<T> {
@@ -61,8 +64,8 @@ where
     <T as Equivalence>::Out: MatchesRaw,
 {
     fn build(&self, app: &mut bevy::prelude::App) {
-        let rank = app.world.get_resource::<WorldRank>().unwrap().0;
-        let size = app.world.get_resource::<WorldSize>().unwrap().0;
+        let rank = **app.world.get_resource::<WorldRank>().unwrap();
+        let size = **app.world.get_resource::<WorldSize>().unwrap();
         run_once("exchange_data_plugin", app, |app| {
             app.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
                 .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
@@ -124,10 +127,10 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         query: Query<&T>,
         mut buffer: ResMut<ExchangeBuffers<T>>,
     ) {
-        for (rank, entities) in entity_exchange.0.iter() {
+        for (rank, entities) in entity_exchange.iter() {
             // This allocates a new buffer every time. An alternative would be
             // to keep this at maximum size, trading performance for memory overhead
-            buffer.0.insert(
+            buffer.insert(
                 *rank,
                 entities
                     .iter()
@@ -141,7 +144,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         mut communicator: NonSendMut<ExchangeCommunicator<T>>,
         mut buffers: ResMut<ExchangeBuffers<T>>,
     ) {
-        for (rank, data) in buffers.0.drain_all() {
+        for (rank, data) in buffers.drain_all() {
             communicator.send_vec(rank, data);
         }
     }
@@ -152,7 +155,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         spawned_entities: Res<SpawnedEntities>,
     ) {
         for (rank, data) in communicator.receive_vec() {
-            let spawned_entities = spawned_entities.0[rank].clone();
+            let spawned_entities = spawned_entities[rank].clone();
             for (entity, component) in spawned_entities.iter().zip(data.into_iter()) {
                 commands.entity(*entity).insert(component);
             }
@@ -164,7 +167,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         size: Res<WorldSize>,
         rank: Res<WorldRank>,
     ) {
-        *buffers = ExchangeBuffers(DataByRank::from_size_and_rank(size.0, rank.0));
+        *buffers = ExchangeBuffers(DataByRank::from_size_and_rank(**size, **rank));
     }
 }
 
@@ -173,7 +176,7 @@ fn send_num_outgoing_entities_system(
     num_outgoing: Res<OutgoingEntities>,
 ) {
     for rank in communicator.other_ranks() {
-        communicator.send(rank, NumEntities(num_outgoing.0.get(&rank).unwrap().len()));
+        communicator.send(rank, NumEntities(num_outgoing.get(&rank).unwrap().len()));
     }
 }
 
@@ -183,9 +186,9 @@ fn spawn_incoming_entities_system(
     mut spawned_entities: ResMut<SpawnedEntities>,
 ) {
     for (rank, num_incoming) in communicator.receive() {
-        spawned_entities.0.insert(
+        spawned_entities.insert(
             rank,
-            (0..num_incoming.0)
+            (0..*num_incoming)
                 .map(|_| {
                     let id = commands.spawn().insert(LocalParticle).id();
                     id
@@ -200,14 +203,14 @@ fn reset_outgoing_entities_system(
     size: Res<WorldSize>,
     rank: Res<WorldRank>,
 ) {
-    *outgoing = OutgoingEntities(DataByRank::from_size_and_rank(size.0, rank.0));
+    *outgoing = OutgoingEntities(DataByRank::from_size_and_rank(**size, **rank));
 }
 
 fn despawn_outgoing_entities_system(
     mut commands: Commands,
     entity_exchange: Res<OutgoingEntities>,
 ) {
-    for (_, entities) in entity_exchange.0.iter() {
+    for (_, entities) in entity_exchange.iter() {
         for entity in entities {
             commands.entity(*entity).despawn();
         }

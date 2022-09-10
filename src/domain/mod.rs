@@ -71,7 +71,7 @@ impl Plugin for DomainDecompositionPlugin {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deref, DerefMut)]
 struct GlobalExtent(Extent);
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -109,7 +109,7 @@ fn get_sorted_peano_hilbert_keys(
         .iter()
         .map(|(entity, pos)| ParticleData {
             entity,
-            key: PeanoHilbertKey::new(extent, &pos.0),
+            key: PeanoHilbertKey::new(extent, pos),
         })
         .collect();
     particles.sort();
@@ -171,7 +171,7 @@ fn domain_decomposition_system(
     extent: Res<GlobalExtent>,
     particles: Query<(Entity, &Position), With<LocalParticle>>,
 ) {
-    let particles = get_sorted_peano_hilbert_keys(&extent.0, &particles);
+    let particles = get_sorted_peano_hilbert_keys(&extent, &particles);
     let num_particles_total =
         get_total_number_particles(particles.len(), &mut num_particle_communicator);
     let global_segment_list = get_global_segments_from_peano_hilbert_keys(
@@ -180,7 +180,7 @@ fn domain_decomposition_system(
         num_particles_total,
     );
     let key_cutoffs_by_rank =
-        find_key_cutoffs(num_ranks.0, num_particles_total, global_segment_list);
+        find_key_cutoffs(**num_ranks, num_particles_total, global_segment_list);
     let target_rank = |key: &PeanoHilbertKey| {
         key_cutoffs_by_rank
             .binary_search(&key)
@@ -188,7 +188,7 @@ fn domain_decomposition_system(
     };
     for ParticleData { key, entity } in particles.iter() {
         let target_rank = target_rank(key);
-        if target_rank != rank.0 {
+        if target_rank != **rank {
             outgoing_entities.add(target_rank, *entity);
         }
     }

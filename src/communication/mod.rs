@@ -1,3 +1,6 @@
+use bevy::prelude::Deref;
+use bevy::prelude::DerefMut;
+
 mod collective_communicator;
 mod data_by_rank;
 mod exchange_communicator;
@@ -69,10 +72,10 @@ mod mpi_reexport {
 
 pub type Rank = mpi::Rank;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Deref, DerefMut)]
 pub struct WorldSize(pub usize);
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Deref, DerefMut)]
 pub struct WorldRank(pub Rank);
 
 impl WorldRank {

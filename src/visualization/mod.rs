@@ -127,7 +127,7 @@ fn spawn_sprites_system<T: Component + GetColor>(
 ) {
     for (entity, pos, colored) in particles.iter() {
         commands.entity(entity).insert(DrawCircle {
-            position: pos.0,
+            position: **pos,
             radius: Length::meter(0.05),
             color: colored.get_color(),
         });
@@ -161,7 +161,7 @@ fn position_to_translation_system<T: Component + IntoBundle>(
     mut query: Query<(&mut T, &Position)>,
 ) {
     for (mut item, position) in query.iter_mut() {
-        item.set_translation(&position.0);
+        item.set_translation(position);
     }
 }
 
