@@ -10,7 +10,6 @@ use self::gravity::construct_quad_tree_system;
 use self::gravity::gravity_system;
 use self::parameters::Parameters;
 pub use self::time::Time;
-use crate::communication::Rank;
 use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::DomainDecompositionStages;
 use crate::domain::ExchangeDataPlugin;
@@ -24,9 +23,6 @@ use crate::velocity::Velocity;
 
 #[derive(Component)]
 pub struct LocalParticle;
-
-#[derive(Component)]
-pub struct RemoteParticle(pub Rank);
 
 #[derive(Equivalence)]
 pub(super) struct Timestep(crate::units::Time);

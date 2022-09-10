@@ -15,6 +15,7 @@ use self::parameters::Parameters;
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
+use self::remote::RemoteParticleVisualization;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Rank;
@@ -23,7 +24,6 @@ use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsStages;
 use crate::physics::QuadTree;
-use crate::physics::RemoteParticle;
 use crate::position::Position;
 use crate::units::Length;
 
@@ -82,7 +82,14 @@ impl Plugin for VisualizationPlugin {
                     VisualizationStage::Synchronize,
                     receive_particles_on_main_thread_system,
                 )
-                .add_system_to_stage(VisualizationStage::AddVisualization, spawn_sprites_system)
+                .add_system_to_stage(
+                    VisualizationStage::AddVisualization,
+                    spawn_sprites_system::<LocalParticle>,
+                )
+                .add_system_to_stage(
+                    VisualizationStage::AddVisualization,
+                    spawn_sprites_system::<RemoteParticleVisualization>,
+                )
                 .add_system_to_stage(
                     VisualizationStage::Draw,
                     position_to_translation_system::<DrawCircle>
@@ -114,35 +121,15 @@ pub fn get_color(rank: Rank) -> Color {
     COLORS[(rank as usize).rem_euclid(COLORS.len())]
 }
 
-fn spawn_sprites_system(
+fn spawn_sprites_system<T: Component + GetColor>(
     mut commands: Commands,
-    local_cells: Query<
-        (Entity, &Position),
-        (
-            With<LocalParticle>,
-            Without<RemoteParticle>,
-            Without<DrawCircle>,
-        ),
-    >,
-    remote_cells: Query<
-        (Entity, &Position, &RemoteParticle),
-        (Without<LocalParticle>, Without<DrawCircle>),
-    >,
+    particles: Query<(Entity, &Position, &T), (With<T>, Without<DrawCircle>)>,
 ) {
-    for (entity, pos, rank) in local_cells
-        .iter()
-        .map(|(entity, pos)| (entity, pos, 0))
-        .chain(
-            remote_cells
-                .iter()
-                .map(|(entity, pos, rank)| (entity, pos, rank.0)),
-        )
-    {
-        let color = get_color(rank);
+    for (entity, pos, colored) in particles.iter() {
         commands.entity(entity).insert(DrawCircle {
             position: pos.0,
             radius: Length::meter(0.05),
-            color,
+            color: colored.get_color(),
         });
     }
 }
@@ -175,5 +162,15 @@ fn position_to_translation_system<T: Component + IntoBundle>(
 ) {
     for (mut item, position) in query.iter_mut() {
         item.set_translation(&position.0);
+    }
+}
+
+trait GetColor {
+    fn get_color(&self) -> Color;
+}
+
+impl GetColor for LocalParticle {
+    fn get_color(&self) -> Color {
+        get_color(0)
     }
 }

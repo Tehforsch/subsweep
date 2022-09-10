@@ -1,13 +1,28 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
+use super::get_color;
+use super::GetColor;
 use crate::communication::Rank;
 use crate::communication::SyncCommunicator;
 use crate::communication::WorldRank;
-use crate::particle::RemoteParticleBundle;
 use crate::physics::LocalParticle;
-use crate::physics::RemoteParticle;
 use crate::position::Position;
+
+#[derive(Component)]
+pub struct RemoteParticleVisualization(Rank);
+
+impl GetColor for RemoteParticleVisualization {
+    fn get_color(&self) -> Color {
+        get_color(self.0)
+    }
+}
+
+#[derive(Bundle)]
+struct RemoteParticleVisualizationBundle {
+    pos: Position,
+    vis: RemoteParticleVisualization,
+}
 
 #[derive(Debug, Equivalence)]
 pub(super) struct ParticleVisualizationExchangeData {
@@ -34,13 +49,16 @@ pub(super) fn receive_particles_on_main_thread_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
     mut communicator: NonSendMut<SyncCommunicator<ParticleVisualizationExchangeData>>,
-    mut particles: Query<&mut Position, With<RemoteParticle>>,
+    mut particles: Query<&mut Position, With<RemoteParticleVisualization>>,
 ) {
     debug_assert!(rank.is_main());
     let spawn_particle = |rank: Rank, data: ParticleVisualizationExchangeData| {
         commands
             .spawn()
-            .insert_bundle(RemoteParticleBundle::new(data.pos.clone(), rank))
+            .insert_bundle(RemoteParticleVisualizationBundle {
+                pos: data.pos.clone(),
+                vis: RemoteParticleVisualization(rank),
+            })
             .id()
     };
     let mut sync = communicator.receive_sync(spawn_particle);
