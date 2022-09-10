@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
+use serde::Deserialize;
+use serde::Serialize;
 
 mod exchange_data_plugin;
 mod extent;
@@ -15,8 +17,22 @@ use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::mass::Mass;
+use crate::parameters::ParameterPlugin;
 use crate::position::Position;
 use crate::velocity::Velocity;
+
+#[derive(Deserialize, Serialize)]
+pub struct Parameters {
+    min_depth_top_level_tree: usize,
+}
+
+impl Default for Parameters {
+    fn default() -> Self {
+        Self {
+            min_depth_top_level_tree: 5,
+        }
+    }
+}
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
@@ -53,6 +69,7 @@ impl Plugin for DomainDecompositionPlugin {
             DomainDecompositionStages::TopLevelTreeConstruction,
             construct_quad_tree_system.after(determine_global_extent_system),
         )
+        .add_plugin(ParameterPlugin::<Parameters>::new("domain"))
         .add_plugin(CommunicationPlugin::<Extent>::new(
             CommunicationType::AllGather,
         ))
