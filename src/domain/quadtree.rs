@@ -1,5 +1,4 @@
 use std::ops::Index;
-use std::ops::IndexMut;
 
 use serde::Deserialize;
 
@@ -7,6 +6,8 @@ use super::Extent;
 use crate::physics::MassMoments;
 use crate::units::Mass;
 use crate::units::VecLength;
+
+pub const MAX_DEPTH: usize = 32;
 
 #[derive(Deserialize)]
 pub struct QuadTreeConfig {
@@ -134,7 +135,6 @@ impl QuadTree {
         }
     }
 
-    #[cfg(test)]
     pub fn depth_first_map_leaf<'a>(
         &'a self,
         closure: &mut impl FnMut(&'a Extent, &'a [LeafData]) -> (),
@@ -147,6 +147,36 @@ impl QuadTree {
             }
             Node::Leaf(ref leaf) => {
                 closure(&self.extent, &leaf);
+            }
+        }
+    }
+}
+
+struct QuadTreeIndex([NodeIndex; MAX_DEPTH]);
+
+enum NodeIndex {
+    ThisNode,
+    Child(u8),
+}
+
+impl Index<&QuadTreeIndex> for QuadTree {
+    type Output = QuadTree;
+
+    fn index(&self, idx: &QuadTreeIndex) -> &Self::Output {
+        self.index_into_depth(idx, 0)
+    }
+}
+
+impl QuadTree {
+    fn index_into_depth(&self, idx: &QuadTreeIndex, depth: usize) -> &Self {
+        match idx.0[depth] {
+            NodeIndex::ThisNode => self,
+            NodeIndex::Child(num) => {
+                if let Node::Tree(ref children) = self.node {
+                    children[num as usize].index_into_depth(idx, depth + 1)
+                } else {
+                    panic!("Invalid index");
+                }
             }
         }
     }
@@ -173,10 +203,8 @@ mod tests {
         QuadTree::new(&config, positions.into_iter().collect(), &extent);
     }
 
-    #[test]
-    fn min_depth_works() {
-        let positions = [(Vec2Length::meter(0.5, 0.5), Mass::zero())];
-        let min_depth = 0;
+    fn get_min_depth_quadtree(min_depth: usize) -> QuadTree {
+        let positions = [];
         let config = QuadTreeConfig {
             min_depth,
             max_depth: 10,
@@ -188,12 +216,19 @@ mod tests {
             Length::meter(0.0),
             Length::meter(1.0),
         );
-        let tree = QuadTree::new(&config, positions.into_iter().collect(), &extent);
-        let mut num_nodes = 0;
-        let mut count = |_, _| {
-            num_nodes += 1;
-        };
-        tree.depth_first_map_leaf(&mut count);
-        assert_eq!(num_nodes, 4usize.pow(1 + min_depth as u32));
+        QuadTree::new(&config, positions.into_iter().collect(), &extent)
+    }
+
+    #[test]
+    fn min_depth_works() {
+        for min_depth in 0..5 {
+            let mut num_nodes = 0;
+            let mut count = |_, _| {
+                num_nodes += 1;
+            };
+            let tree = get_min_depth_quadtree(min_depth);
+            tree.depth_first_map_leaf(&mut count);
+            assert_eq!(num_nodes, 4usize.pow(1 + min_depth as u32));
+        }
     }
 }

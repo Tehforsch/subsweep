@@ -139,20 +139,19 @@ struct Outline;
 
 fn show_quadtree_system(
     mut commands: Commands,
-    _quadtree: Res<QuadTree>,
+    quadtree: Res<QuadTree>,
     outlines: Query<Entity, With<Outline>>,
 ) {
     for entity in outlines.iter() {
         commands.entity(entity).despawn();
     }
-    todo!()
-    // quadtree.depth_first_map(&mut |extent, _| {
-    //     commands.spawn().insert(Outline).insert(DrawRect {
-    //         lower_left: extent.min,
-    //         upper_right: extent.max,
-    //         color: Color::GREEN,
-    //     });
-    // });
+    quadtree.depth_first_map_leaf(&mut |extent, _| {
+        commands.spawn().insert(Outline).insert(DrawRect {
+            lower_left: extent.min,
+            upper_right: extent.max,
+            color: Color::GREEN,
+        });
+    });
 }
 
 pub fn setup_camera_system(mut commands: Commands) {

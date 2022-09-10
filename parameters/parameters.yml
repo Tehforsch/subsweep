@@ -3,8 +3,10 @@ physics:
   opening_angle: "0.5"
 tree:
   max_depth: 20
+  min_depth: 3
+  max_num_particles_per_leaf: 1
 visualization:
-  show_quadtree: false
+  show_quadtree: true
 initial_conditions:
   num_particles: 100
 output:
