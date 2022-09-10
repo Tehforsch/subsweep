@@ -55,14 +55,14 @@ impl Solver {
             Node::Tree(ref children) => children
                 .iter()
                 .map(|child| {
-                    if self.opening_criterion(child, pos) {
+                    if self.should_be_opened(child, pos) {
+                        self.get_acceleration_on_particle(child, pos, entity)
+                    } else {
                         self.get_gravity_acceleration(
                             &pos,
                             &child.data.center_of_mass(),
                             child.data.total(),
                         )
-                    } else {
-                        self.get_acceleration_on_particle(child, pos, entity)
                     }
                 })
                 .sum(),
@@ -73,10 +73,10 @@ impl Solver {
                 .sum(),
         }
     }
-    fn opening_criterion(&self, child: &QuadTree, pos: VecLength) -> bool {
+    fn should_be_opened(&self, child: &QuadTree, pos: VecLength) -> bool {
         let distance = pos.distance(&child.extents.center());
         let length = child.extents.max_side_length();
-        length / distance < self.opening_angle
+        length / distance > self.opening_angle
     }
 }
 
