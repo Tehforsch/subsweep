@@ -152,28 +152,6 @@ impl QuadTree {
     }
 }
 
-impl Index<usize> for QuadTree {
-    type Output = QuadTree;
-
-    fn index(&self, idx: usize) -> &Self::Output {
-        if let Node::Tree(ref children) = self.node {
-            &children[idx]
-        } else {
-            panic!("index called on leaf node");
-        }
-    }
-}
-
-impl IndexMut<usize> for QuadTree {
-    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
-        if let Node::Tree(ref mut children) = self.node {
-            &mut children[idx]
-        } else {
-            panic!("index_mut called on leaf node");
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
