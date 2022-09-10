@@ -23,7 +23,7 @@ impl Extent {
         }
     }
 
-    /// A sentinel value used for communicating that there are not enough particles to construct extents
+    /// A sentinel value used for communicating that there are not enough particles to construct extent
     pub fn sentinel() -> Self {
         Self {
             min: VecLength::meter(0.0, 0.0),
@@ -32,9 +32,9 @@ impl Extent {
         }
     }
 
-    pub fn get_all_encompassing<'a>(extents: impl Iterator<Item = &'a Extent>) -> Option<Self> {
+    pub fn get_all_encompassing<'a>(extent: impl Iterator<Item = &'a Extent>) -> Option<Self> {
         Self::from_positions(
-            extents
+            extent
                 .filter(|extent| *extent != &Self::sentinel())
                 .flat_map(|extent: &Extent| [&extent.min, &extent.max].into_iter()),
         )
@@ -145,13 +145,13 @@ mod tests {
 
     #[test]
     fn extent_quadrants() {
-        let root_extents = Extent::new(
+        let root_extent = Extent::new(
             Length::meter(-1.0),
             Length::meter(1.0),
             Length::meter(-2.0),
             Length::meter(2.0),
         );
-        let quadrants = root_extents.get_quadrants();
+        let quadrants = root_extent.get_quadrants();
         assert_is_close(quadrants[0].min, Vec2::new(-1.0, -2.0));
         assert_is_close(quadrants[0].max, Vec2::new(0.0, 0.0));
 
@@ -173,9 +173,9 @@ mod tests {
             VecLength::meter(0.0, -2.0),
             VecLength::meter(0.0, 2.0),
         ];
-        let extents = Extent::from_positions(positions.iter()).unwrap();
-        assert_is_close(extents.min, Vec2::new(-1.0, -2.0));
-        assert_is_close(extents.max, Vec2::new(1.0, 2.0));
+        let extent = Extent::from_positions(positions.iter()).unwrap();
+        assert_is_close(extent.min, Vec2::new(-1.0, -2.0));
+        assert_is_close(extent.max, Vec2::new(1.0, 2.0));
     }
 
     #[test]
@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn invalid_extents() {
+    fn invalid_extent() {
         Extent::new(
             Length::meter(1.0),
             Length::meter(-1.0),

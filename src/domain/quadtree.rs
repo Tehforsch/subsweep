@@ -47,7 +47,7 @@ impl<N, L> Node<N, L> {
 pub struct QuadTree<N, L> {
     pub node: Node<N, L>,
     pub data: N,
-    pub extents: Extent,
+    pub extent: Extent,
 }
 
 #[derive(Debug)]
@@ -60,9 +60,9 @@ impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
         config: &QuadTreeConfig,
         particles: Vec<(VecLength, L)>,
     ) -> Result<Self, QuadTreeConstructionError> {
-        let extents = Extent::from_positions(particles.iter().map(|particle| &particle.0))
+        let extent = Extent::from_positions(particles.iter().map(|particle| &particle.0))
             .ok_or(QuadTreeConstructionError::NotEnoughParticles)?;
-        let mut tree = Self::make_empty_leaf_from_extents(extents);
+        let mut tree = Self::make_empty_leaf_from_extent(extent);
         for (pos, data) in particles.iter() {
             tree.insert_new(config, (pos.clone(), data.clone()), 0);
         }
@@ -84,26 +84,26 @@ impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
             }
         }
         if let Node::Tree(ref mut children) = self.node {
-            let quadrant = &mut children[self.extents.get_quadrant_index(&data.0)];
+            let quadrant = &mut children[self.extent.get_quadrant_index(&data.0)];
             quadrant.insert_new(&config, data, depth + 1);
         }
     }
 
     fn subdivide(&mut self, config: &QuadTreeConfig, depth: usize) {
         debug_assert!(matches!(self.node, Node::Leaf(_)));
-        let quadrants = self.extents.get_quadrants();
-        let children = Box::new(quadrants.map(Self::make_empty_leaf_from_extents));
+        let quadrants = self.extent.get_quadrants();
+        let children = Box::new(quadrants.map(Self::make_empty_leaf_from_extent));
         let particles = self.node.make_node(children);
         for particle in particles.into_iter() {
             self.insert(config, particle, depth);
         }
     }
 
-    fn make_empty_leaf_from_extents(extents: Extent) -> Self {
+    fn make_empty_leaf_from_extent(extent: Extent) -> Self {
         Self {
             node: Node::Leaf(vec![]),
             data: N::default(),
-            extents,
+            extent,
         }
     }
 
@@ -115,7 +115,7 @@ impl<N: Default + NodeDataType<L>, L: Clone> QuadTree<N, L> {
                 }
             }
             Node::Leaf(ref leaf) => {
-                closure(&self.extents, &leaf);
+                closure(&self.extent, &leaf);
             }
         }
     }

@@ -96,7 +96,7 @@ fn determine_global_extent_system(
     let all_extents = (*extent_communicator).all_gather(&extent);
     *global_extent = GlobalExtent(
         Extent::get_all_encompassing(all_extents.iter())
-            .expect("Failed to find simulation extents - are there no particles?")
+            .expect("Failed to find simulation extent - are there no particles?")
             .pad(),
     );
 }

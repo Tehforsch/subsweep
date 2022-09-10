@@ -11,9 +11,9 @@ const NUM_SUBDIVISIONS: u64 = 2u64.pow(NUM_BITS_PER_DIMENSION);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Equivalence)]
 pub(super) struct PeanoHilbertKey(pub u64);
 
-pub(super) fn get_integer_position(extents: &Extent, pos: &VecLength) -> (u64, u64) {
-    let shifted = *pos - extents.lower_left();
-    let fraction = shifted / extents.side_lengths();
+pub(super) fn get_integer_position(extent: &Extent, pos: &VecLength) -> (u64, u64) {
+    let shifted = *pos - extent.lower_left();
+    let fraction = shifted / extent.side_lengths();
     let fraction = fraction.value();
     (
         (fraction.x * NUM_SUBDIVISIONS as f32) as u64,
@@ -22,9 +22,9 @@ pub(super) fn get_integer_position(extents: &Extent, pos: &VecLength) -> (u64, u
 }
 
 impl PeanoHilbertKey {
-    pub fn new(extents: &Extent, pos: &VecLength) -> Self {
-        debug_assert!(extents.contains(pos));
-        let integer_pos = get_integer_position(extents, pos);
+    pub fn new(extent: &Extent, pos: &VecLength) -> Self {
+        debug_assert!(extent.contains(pos));
+        let integer_pos = get_integer_position(extent, pos);
         Self::from_integer_pos(integer_pos)
     }
 

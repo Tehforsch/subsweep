@@ -74,8 +74,8 @@ impl Solver {
         }
     }
     fn should_be_opened(&self, child: &QuadTree, pos: VecLength) -> bool {
-        let distance = pos.distance(&child.extents.center());
-        let length = child.extents.max_side_length();
+        let distance = pos.distance(&child.extent.center());
+        let length = child.extent.max_side_length();
         length / distance > self.opening_angle
     }
 }

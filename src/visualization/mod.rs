@@ -158,10 +158,10 @@ fn show_quadtree_system(
     for entity in outlines.iter() {
         commands.entity(entity).despawn();
     }
-    quadtree.depth_first_map(&mut |extents, _| {
+    quadtree.depth_first_map(&mut |extent, _| {
         commands.spawn().insert(Outline).insert(DrawRect {
-            lower_left: extents.min,
-            upper_right: extents.max,
+            lower_left: extent.min,
+            upper_right: extent.max,
             color: Color::GREEN,
         });
     });
