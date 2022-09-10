@@ -1,7 +1,9 @@
 use std::marker::PhantomData;
+use std::mem::MaybeUninit;
 
 use lazy_static::lazy_static;
 use mpi::collective::SystemOperation;
+use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
 use mpi::topology::Rank;
@@ -11,6 +13,7 @@ use mpi::traits::CommunicatorCollectives;
 use mpi::traits::Destination;
 use mpi::traits::Equivalence;
 use mpi::traits::Source;
+use mpi::Count;
 use mpi::Tag;
 use mpi::Threading;
 
@@ -79,12 +82,33 @@ impl<T> SizedCommunicator for MpiWorld<T> {
     }
 }
 
-impl<T: Equivalence + Clone> CollectiveCommunicator<T> for MpiWorld<T> {
+unsafe fn get_buffer<T>(num_elements: usize) -> Vec<T> {
+    let mut buffer = Vec::with_capacity(num_elements);
+    buffer.set_len(num_elements);
+    buffer
+}
+
+impl<T: Equivalence> CollectiveCommunicator<T> for MpiWorld<T> {
     fn all_gather(&mut self, send: &T) -> Vec<T> {
         let count = self.world.size() as usize;
-        // we can replace this by MaybeUninit at some point, but that will require unsafe
-        let mut result_buffer = vec![send.clone(); count];
+        let mut result_buffer = unsafe { get_buffer(count) };
         self.world.all_gather_into(send, &mut result_buffer[..]);
+        result_buffer
+    }
+
+    fn all_gather_varcount(&mut self, send: &[T], counts: &[Count]) -> Vec<T> {
+        let mut result_buffer: Vec<T> =
+            unsafe { get_buffer(counts.iter().map(|x| *x as usize).sum()) };
+        let displacements: Vec<Count> = counts
+            .iter()
+            .scan(0, |acc, &x| {
+                let tmp = *acc;
+                *acc += x;
+                Some(tmp)
+            })
+            .collect();
+        let mut partition = PartitionMut::new(&mut result_buffer, counts, &displacements[..]);
+        self.world.all_gather_varcount_into(send, &mut partition);
         result_buffer
     }
 }
@@ -105,5 +129,15 @@ impl<T> From<MpiWorld<T>> for MpiWorld<Identified<T>> {
             marker: PhantomData::default(),
             tag: other.tag,
         }
+    }
+}
+
+struct UninitMsg<M>(MaybeUninit<M>);
+
+unsafe impl<M: Equivalence> Equivalence for UninitMsg<M> {
+    type Out = M::Out;
+
+    fn equivalent_datatype() -> Self::Out {
+        M::equivalent_datatype()
     }
 }

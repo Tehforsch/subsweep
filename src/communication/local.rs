@@ -6,6 +6,7 @@ use std::slice;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
+use mpi::Count;
 use mpi::Tag;
 
 use super::collective_communicator::SumCommunicator;
@@ -99,6 +100,22 @@ impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> 
             } else {
                 let received = self.receive_vec(rank);
                 assert_eq!(received.len(), 1);
+                result.extend(received.into_iter());
+            }
+        }
+        result
+    }
+
+    fn all_gather_varcount(&mut self, data: &[T], _counts: &[Count]) -> Vec<T> {
+        for rank in self.other_ranks() {
+            self.send_vec(rank, data.to_vec());
+        }
+        let mut result = vec![];
+        for rank in self.all_ranks() {
+            if rank == self.rank {
+                result.extend(data.to_vec());
+            } else {
+                let received = self.receive_vec(rank);
                 result.extend(received.into_iter());
             }
         }
