@@ -17,6 +17,7 @@ use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
+use crate::communication::Rank;
 use crate::communication::WorldRank;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
@@ -109,6 +110,10 @@ impl Plugin for VisualizationPlugin {
     }
 }
 
+pub fn get_color(rank: Rank) -> Color {
+    COLORS[(rank as usize).rem_euclid(COLORS.len())]
+}
+
 fn spawn_sprites_system(
     mut commands: Commands,
     local_cells: Query<
@@ -133,7 +138,7 @@ fn spawn_sprites_system(
                 .map(|(entity, pos, rank)| (entity, pos, rank.0)),
         )
     {
-        let color = COLORS[(rank as usize).rem_euclid(COLORS.len())];
+        let color = get_color(rank);
         commands.entity(entity).insert(DrawCircle {
             position: pos.0,
             radius: Length::meter(0.05),
