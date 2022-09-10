@@ -6,10 +6,13 @@ use std::ops::Neg;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
+use glam::Vec2;
+
 use super::dimension::Dimension;
+use super::UNIT_NAMES;
 use crate::units::NONE;
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Default)]
 pub struct Quantity<S: 'static, const D: Dimension>(pub(super) S);
 
 impl<S> Quantity<S, { NONE }> {
@@ -174,5 +177,35 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.value())
+    }
+}
+
+impl<const D: Dimension> std::fmt::Debug for Quantity<f32, D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let unit_name = UNIT_NAMES
+            .iter()
+            .filter(|(d, _, _)| d == &D)
+            .filter(|(_, _, val)| *val == 1.0)
+            .map(|(_, name, _)| name)
+            .next()
+            .unwrap_or(&"unknown unit");
+        self.0.fmt(f).and_then(|_| write!(f, " {}", unit_name))
+    }
+}
+
+impl<const D: Dimension> std::fmt::Debug for Quantity<Vec2, D> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let unit_name = UNIT_NAMES
+            .iter()
+            .filter(|(d, _, _)| d == &D)
+            .filter(|(_, _, val)| *val == 1.0)
+            .map(|(_, name, _)| name)
+            .next()
+            .unwrap_or(&"unknown unit");
+        write!(f, "[")?;
+        self.0.x.fmt(f)?;
+        write!(f, " ")?;
+        self.0.y.fmt(f)?;
+        write!(f, "] {}", unit_name)
     }
 }
