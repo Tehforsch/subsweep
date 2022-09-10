@@ -33,7 +33,7 @@ lazy_static! {
 #[derive(Clone)]
 pub struct MpiWorld<T> {
     world: SystemCommunicator,
-    marker: PhantomData<T>,
+    _marker: PhantomData<T>,
     tag: Tag,
 }
 
@@ -43,7 +43,7 @@ impl<T> MpiWorld<T> {
         Self {
             world,
             tag,
-            marker: PhantomData::default(),
+            _marker: PhantomData::default(),
         }
     }
 }
@@ -126,7 +126,7 @@ impl<T> From<MpiWorld<T>> for MpiWorld<Identified<T>> {
     fn from(other: MpiWorld<T>) -> Self {
         Self {
             world: other.world,
-            marker: PhantomData::default(),
+            _marker: PhantomData::default(),
             tag: other.tag,
         }
     }

@@ -80,13 +80,13 @@ impl IntoBundle for DrawRect {
 }
 
 pub(super) struct DrawBundlePlugin<T> {
-    marker: PhantomData<T>,
+    _marker: PhantomData<T>,
 }
 
 impl<T> Default for DrawBundlePlugin<T> {
     fn default() -> Self {
         Self {
-            marker: PhantomData::default(),
+            _marker: PhantomData::default(),
         }
     }
 }
