@@ -40,6 +40,7 @@ use domain::DomainDecompositionPlugin;
 use initial_conditions::InitialConditionsPlugin;
 use parameters::add_parameter_file_contents;
 use physics::PhysicsPlugin;
+use plugin_utils::is_main_rank;
 use visualization::VisualizationPlugin;
 
 use crate::physics::time_system;
@@ -87,7 +88,7 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin);
-    if rank == 0 {
+    if is_main_rank(app) {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
             app.add_plugins(MinimalPlugins).add_plugin(LogPlugin);
