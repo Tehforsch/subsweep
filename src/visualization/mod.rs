@@ -20,10 +20,10 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Rank;
 use crate::communication::WorldRank;
+use crate::domain::quadtree::QuadTree;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsStages;
-use crate::physics::QuadTree;
 use crate::position::Position;
 use crate::units::Length;
 
@@ -145,14 +145,16 @@ fn show_quadtree_system(
     for entity in outlines.iter() {
         commands.entity(entity).despawn();
     }
-    quadtree.depth_first_map(&mut |extent, _| {
-        commands.spawn().insert(Outline).insert(DrawRect {
-            lower_left: extent.min,
-            upper_right: extent.max,
-            color: Color::GREEN,
-        });
-    });
+    todo!()
+    // quadtree.depth_first_map(&mut |extent, _| {
+    //     commands.spawn().insert(Outline).insert(DrawRect {
+    //         lower_left: extent.min,
+    //         upper_right: extent.max,
+    //         color: Color::GREEN,
+    //     });
+    // });
 }
+
 pub fn setup_camera_system(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
 }

@@ -3,11 +3,8 @@ mod parameters;
 mod time;
 
 use bevy::prelude::*;
-pub use gravity::QuadTree;
 use mpi::traits::Equivalence;
 
-use self::gravity::construct_quad_tree_system;
-use self::gravity::gravity_system;
 use self::parameters::Parameters;
 pub use self::time::Time;
 use crate::domain::quadtree::QuadTreeConfig;
@@ -59,11 +56,6 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(AttributePlugin::<Time>::new("time"))
             .insert_resource(Timestep(units::Time::second(0.01)))
             .insert_resource(Time(units::Time::second(0.00)))
-            .add_system_to_stage(
-                PhysicsStages::QuadTreeConstruction,
-                construct_quad_tree_system,
-            )
-            .add_system_to_stage(PhysicsStages::Gravity, gravity_system)
             .add_system(integrate_motion_system)
             .add_system(time_system);
     }
