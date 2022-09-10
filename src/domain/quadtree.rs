@@ -8,6 +8,8 @@ use crate::units::Mass;
 use crate::units::VecLength;
 
 pub const MAX_DEPTH: usize = 32;
+pub const NUM_DIMENSIONS: usize = 2;
+pub const NUM_SUBDIVISIONS: usize = 2usize.pow(NUM_DIMENSIONS as u32);
 
 #[derive(Deserialize)]
 pub struct QuadTreeConfig {
@@ -85,15 +87,15 @@ impl QuadTree {
     }
 
     fn subdivide_to_depth(&mut self, config: &QuadTreeConfig, depth: usize) {
-        self.subdivide(config, depth);
-        if let Node::Tree(ref mut children) = self.node {
-            for child in children.iter_mut() {
-                if depth > 0 {
+        if depth > 0 {
+            self.subdivide(config, depth);
+            if let Node::Tree(ref mut children) = self.node {
+                for child in children.iter_mut() {
                     child.subdivide_to_depth(config, depth - 1);
                 }
+            } else {
+                unreachable!()
             }
-        } else {
-            unreachable!()
         }
     }
 
@@ -152,9 +154,35 @@ impl QuadTree {
     }
 }
 
+#[derive(Clone, Copy, Default)]
 struct QuadTreeIndex([NodeIndex; MAX_DEPTH]);
 
+impl QuadTreeIndex {
+    fn internal_iter_all_at_depth(
+        depth: usize,
+        mut current_index: QuadTreeIndex,
+        current_depth: usize,
+    ) -> Box<dyn Iterator<Item = Self>> {
+        if current_depth < depth {
+            Box::new((0..NUM_SUBDIVISIONS).flat_map(move |num_child| {
+                current_index.0[current_depth] = NodeIndex::Child(num_child as u8);
+                Self::internal_iter_all_at_depth(depth, current_index, current_depth + 1)
+            }))
+        } else {
+            let mut current_index = current_index.clone();
+            current_index.0[current_depth] = NodeIndex::ThisNode;
+            Box::new(std::iter::once(current_index))
+        }
+    }
+
+    pub fn iter_all_nodes_at_depth(depth: usize) -> Box<dyn Iterator<Item = Self>> {
+        Self::internal_iter_all_at_depth(depth, QuadTreeIndex::default(), 0)
+    }
+}
+
+#[derive(Clone, Copy, Default)]
 enum NodeIndex {
+    #[default]
     ThisNode,
     Child(u8),
 }
@@ -222,13 +250,37 @@ mod tests {
     #[test]
     fn min_depth_works() {
         for min_depth in 0..5 {
+            let tree = get_min_depth_quadtree(min_depth);
             let mut num_nodes = 0;
             let mut count = |_, _| {
                 num_nodes += 1;
             };
-            let tree = get_min_depth_quadtree(min_depth);
             tree.depth_first_map_leaf(&mut count);
-            assert_eq!(num_nodes, 4usize.pow(1 + min_depth as u32));
+            assert_eq!(num_nodes, 4usize.pow(min_depth as u32));
+        }
+    }
+
+    #[test]
+    fn quadtree_index() {
+        let min_depth = 5;
+        let mut tree = get_min_depth_quadtree(min_depth);
+        // obtain a list of particles we can add into the quadtree
+        // from the centers of all the leaf ectents
+        let config = QuadTreeConfig::default();
+        let mut particles = vec![];
+        tree.depth_first_map_leaf(&mut |extent: &Extent, _| {
+            particles.push(extent.center());
+        });
+        for pos in particles.into_iter() {
+            tree.insert_new(&config, pos, Mass::zero(), 0);
+        }
+        for index in QuadTreeIndex::iter_all_nodes_at_depth(min_depth) {
+            let tree = &tree[&index];
+            if let Node::Leaf(ref leaf) = tree.node {
+                assert_eq!(leaf.len(), 1);
+            } else {
+                panic!("This should be a leaf")
+            }
         }
     }
 }

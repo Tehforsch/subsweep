@@ -48,10 +48,14 @@ impl Plugin for DomainDecompositionPlugin {
         app.add_system_to_stage(
             DomainDecompositionStages::TopLevelTreeConstruction,
             determine_global_extent_system,
-        );
-        app.add_system_to_stage(
+        )
+        .add_system_to_stage(
             DomainDecompositionStages::TopLevelTreeConstruction,
             construct_quad_tree_system.after(determine_global_extent_system),
+        )
+        .add_system_to_stage(
+            DomainDecompositionStages::Decomposition,
+            domain_decomposition_system,
         )
         .add_plugin(CommunicationPlugin::<Extent>::new(
             CommunicationType::AllGather,
@@ -97,4 +101,10 @@ fn construct_quad_tree_system(
         .collect();
     let quadtree = QuadTree::new(&config, particles, &extent);
     commands.insert_resource(quadtree);
+}
+
+fn domain_decomposition_system(tree: Res<QuadTree>, config: Res<QuadTreeConfig>) {
+    // Use the particle counts at depth config.min_depth for
+    // decomposition for now. This obviously needs to be fixed and
+    // replaced by a proper peano hilbert curve on an actual tree
 }
