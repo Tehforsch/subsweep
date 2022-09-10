@@ -52,6 +52,12 @@ where
         self.communicator.send_vec(rank, data);
     }
 
+    pub fn send_data_by_rank(&mut self, mut data: DataByRank<Vec<T>>) {
+        for (rank, data) in data.drain_all() {
+            self.send_vec(rank, data)
+        }
+    }
+
     pub fn empty_send_to_others(&mut self) {
         for rank in self.communicator.other_ranks() {
             if !self.pending_data[rank] {
