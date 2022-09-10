@@ -3,7 +3,7 @@ use mpi::traits::Equivalence;
 use crate::units::Length;
 use crate::units::VecLength;
 
-#[derive(Clone, Debug, Equivalence, PartialEq)]
+#[derive(Clone, Equivalence, PartialEq)]
 pub struct Extent {
     pub min: VecLength,
     pub max: VecLength,
@@ -121,6 +121,12 @@ impl Extent {
         let upper_right = Self::new(self.center.x(), self.max.x(), self.center.y(), self.max.y());
         let upper_left = Self::new(self.min.x(), self.center.x(), self.center.y(), self.max.y());
         [lower_left, lower_right, upper_right, upper_left]
+    }
+}
+
+impl std::fmt::Debug for Extent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Extent({:.3?} {:.3?})", self.min, self.max)
     }
 }
 
