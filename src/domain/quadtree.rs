@@ -165,7 +165,7 @@ impl QuadTree {
     }
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) struct QuadTreeIndex([NodeIndex; MAX_DEPTH]);
 
 impl QuadTreeIndex {
@@ -195,7 +195,7 @@ impl QuadTreeIndex {
     }
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum NodeIndex {
     #[default]
     ThisNode,
@@ -234,15 +234,27 @@ mod tests {
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
         let positions = [
-            (Vec2Length::meter(1.0, 1.0), Mass::zero()),
-            (Vec2Length::meter(1.0, 1.0), Mass::zero()),
-            (Vec2Length::meter(2.0, 2.0), Mass::zero()),
+            (
+                Entity::from_raw(0),
+                Vec2Length::meter(1.0, 1.0),
+                Mass::zero(),
+            ),
+            (
+                Entity::from_raw(0),
+                Vec2Length::meter(1.0, 1.0),
+                Mass::zero(),
+            ),
+            (
+                Entity::from_raw(0),
+                Vec2Length::meter(2.0, 2.0),
+                Mass::zero(),
+            ),
         ];
         let config = QuadTreeConfig {
             max_depth: 10,
             ..Default::default()
         };
-        let extent = Extent::from_positions(positions.iter().map(|(pos, _)| pos)).unwrap();
+        let extent = Extent::from_positions(positions.iter().map(|(_, pos, _)| pos)).unwrap();
         QuadTree::new(&config, positions.into_iter().collect(), &extent);
     }
 
@@ -287,7 +299,12 @@ mod tests {
             particles.push(extent.center());
         });
         for pos in particles.into_iter() {
-            tree.insert_new(&config, pos, Mass::zero(), 0);
+            let data = LeafData {
+                pos,
+                mass: Mass::zero(),
+                entity: Entity::from_raw(0),
+            };
+            tree.insert_new(&config, data, 0);
         }
         for index in QuadTreeIndex::iter_all_nodes_at_depth(min_depth) {
             let tree = &tree[&index];
