@@ -7,13 +7,17 @@ mod extent;
 pub mod quadtree;
 
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
+use self::exchange_data_plugin::OutgoingEntities;
 use self::extent::Extent;
 use self::quadtree::QuadTree;
 use self::quadtree::QuadTreeConfig;
+use self::quadtree::QuadTreeIndex;
 use crate::communication::AllGatherCommunicator;
 use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
+use crate::communication::DataByRank;
+use crate::communication::WorldSize;
 use crate::mass::Mass;
 use crate::position::Position;
 use crate::velocity::Velocity;
@@ -92,19 +96,64 @@ pub(super) struct ParticleExchangeData {
 fn construct_quad_tree_system(
     mut commands: Commands,
     config: Res<QuadTreeConfig>,
-    particles: Query<(&Position, &Mass)>,
+    particles: Query<(Entity, &Position, &Mass)>,
     extent: Res<GlobalExtent>,
 ) {
     let particles: Vec<_> = particles
         .iter()
-        .map(|(pos, mass)| (pos.0, **mass))
+        .map(|(entity, pos, mass)| (entity, pos.0, **mass))
         .collect();
     let quadtree = QuadTree::new(&config, particles, &extent);
     commands.insert_resource(quadtree);
 }
 
-fn domain_decomposition_system(tree: Res<QuadTree>, config: Res<QuadTreeConfig>) {
+fn sum_vecs(mut data: DataByRank<Vec<usize>>) -> Vec<usize> {
+    let mut sum = data.remove(&0).unwrap();
+    for (_, other_result) in data.drain_all() {
+        debug_assert_eq!(sum.len(), other_result.len());
+        for i in 0..other_result.len() {
+            sum[i] += other_result[i];
+        }
+    }
+    sum
+}
+
+fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
+    let total_work: usize = particle_counts.iter().sum();
+    let work_per_rank = total_work / num_ranks;
+    let mut key_cutoffs_by_rank = vec![];
+    let mut load = 0;
+    for (i, count) in particle_counts.iter().enumerate() {
+        load += count;
+        if load >= work_per_rank {
+            key_cutoffs_by_rank.push(i);
+            if key_cutoffs_by_rank.len() == num_ranks - 1 {
+                break;
+            }
+            load = 0;
+        }
+    }
+    key_cutoffs_by_rank
+}
+
+fn domain_decomposition_system(
+    tree: Res<QuadTree>,
+    mut outgoing_entities: ResMut<OutgoingEntities>,
+    config: Res<QuadTreeConfig>,
+    num_ranks: Res<WorldSize>,
+    mut comm: NonSendMut<AllGatherCommunicator<usize>>,
+) {
     // Use the particle counts at depth config.min_depth for
     // decomposition for now. This obviously needs to be fixed and
     // replaced by a proper peano hilbert curve on an actual tree
+    let top_level_tree_leaf_indices: Vec<_> =
+        QuadTreeIndex::iter_all_nodes_at_depth(config.min_depth).collect();
+    let buffer: Vec<_> = top_level_tree_leaf_indices
+        .iter()
+        .map(|index| tree[&index].data.num_particles())
+        .collect();
+    // replace with allreduce over buffer at some point
+    let particles_per_leaf = sum_vecs(comm.all_gather_vec(&buffer));
+    let cutoffs = get_cutoffs(&particles_per_leaf, **num_ranks);
+    todo!()
 }

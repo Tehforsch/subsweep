@@ -20,6 +20,7 @@ use mpi::Threading;
 use super::collective_communicator::SumCommunicator;
 use super::world_communicator::WorldCommunicator;
 use super::CollectiveCommunicator;
+use super::DataByRank;
 use super::Identified;
 use super::SizedCommunicator;
 
@@ -90,10 +91,22 @@ unsafe fn get_buffer<T>(num_elements: usize) -> Vec<T> {
 
 impl<T: Equivalence> CollectiveCommunicator<T> for MpiWorld<T> {
     fn all_gather(&mut self, send: &T) -> Vec<T> {
-        let count = self.world.size() as usize;
-        let mut result_buffer = unsafe { get_buffer(count) };
+        let world_size = self.world.size() as usize;
+        let mut result_buffer = unsafe { get_buffer(world_size) };
         self.world.all_gather_into(send, &mut result_buffer[..]);
         result_buffer
+    }
+
+    fn all_gather_vec(&mut self, send: &[T]) -> DataByRank<Vec<T>> {
+        let world_size = self.world.size() as usize;
+        let num_elements = send.len();
+        let mut result_buffer = unsafe { get_buffer::<T>(world_size * num_elements) };
+        self.world.all_gather_into(send, &mut result_buffer[..]);
+        let mut data = DataByRank::empty();
+        for i in 0..world_size {
+            data.insert(i as Rank, result_buffer.drain(0..num_elements).collect())
+        }
+        data
     }
 
     fn all_gather_varcount(&mut self, send: &[T], counts: &[Count]) -> Vec<T> {

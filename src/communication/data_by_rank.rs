@@ -35,7 +35,6 @@ where
 }
 
 impl<T> DataByRank<T> {
-    #[cfg(any(feature = "local", test))]
     pub fn empty() -> Self {
         Self(HashMap::new())
     }
@@ -88,8 +87,6 @@ impl<T> DataByRank<T> {
         self.0.get_mut(rank)
     }
 
-    #[cfg(feature = "local")]
-    #[cfg(test)]
     pub fn remove(&mut self, rank: &Rank) -> Option<T> {
         self.0.remove(rank)
     }

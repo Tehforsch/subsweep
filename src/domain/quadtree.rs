@@ -1,5 +1,6 @@
 use std::ops::Index;
 
+use bevy::prelude::Entity;
 use serde::Deserialize;
 
 use super::Extent;
@@ -30,6 +31,7 @@ impl Default for QuadTreeConfig {
 
 #[derive(Debug)]
 pub struct LeafData {
+    entity: Entity,
     mass: Mass,
     pos: VecLength,
 }
@@ -42,6 +44,10 @@ pub struct NodeData {
 impl NodeData {
     fn update_with(&mut self, pos: &VecLength, mass: &Mass) {
         self.moments.add_mass_at(pos, mass);
+    }
+
+    pub fn num_particles(&self) -> usize {
+        self.moments.count()
     }
 }
 
@@ -75,13 +81,18 @@ pub struct QuadTree {
 impl QuadTree {
     pub fn new<'a>(
         config: &QuadTreeConfig,
-        particles: Vec<(VecLength, Mass)>,
+        particles: Vec<(Entity, VecLength, Mass)>,
         extent: &Extent,
     ) -> Self {
         let mut tree = Self::make_empty_leaf_from_extent(extent.clone());
         tree.subdivide_to_depth(&config, config.min_depth);
-        for (pos, data) in particles.iter() {
-            tree.insert_new(config, pos.clone(), data.clone(), 0);
+        for (entity, pos, mass) in particles.iter() {
+            let leaf_data = LeafData {
+                entity: *entity,
+                pos: *pos,
+                mass: *mass,
+            };
+            tree.insert_new(config, leaf_data, 0);
         }
         tree
     }
@@ -99,23 +110,23 @@ impl QuadTree {
         }
     }
 
-    fn insert_new(&mut self, config: &QuadTreeConfig, pos: VecLength, mass: Mass, depth: usize) {
-        self.data.update_with(&pos, &mass);
-        self.insert(config, pos, mass, depth)
+    fn insert_new(&mut self, config: &QuadTreeConfig, leaf_data: LeafData, depth: usize) {
+        self.data.update_with(&leaf_data.pos, &leaf_data.mass);
+        self.insert(config, leaf_data, depth)
     }
 
-    fn insert(&mut self, config: &QuadTreeConfig, pos: VecLength, mass: Mass, depth: usize) {
+    fn insert(&mut self, config: &QuadTreeConfig, leaf_data: LeafData, depth: usize) {
         if let Node::Leaf(ref mut leaf) = self.node {
             if depth < config.max_depth && leaf.len() > config.max_num_particles_per_leaf {
                 self.subdivide(config, depth);
             } else {
-                leaf.push(LeafData { mass, pos });
+                leaf.push(leaf_data);
                 return;
             }
         }
         if let Node::Tree(ref mut children) = self.node {
-            let quadrant = &mut children[self.extent.get_quadrant_index(&pos)];
-            quadrant.insert_new(&config, pos, mass, depth + 1);
+            let quadrant = &mut children[self.extent.get_quadrant_index(&leaf_data.pos)];
+            quadrant.insert_new(&config, leaf_data, depth + 1);
         }
     }
 
@@ -125,7 +136,7 @@ impl QuadTree {
         let children = Box::new(quadrants.map(Self::make_empty_leaf_from_extent));
         let particles = self.node.make_node(children);
         for particle in particles.into_iter() {
-            self.insert(config, particle.pos, particle.mass, depth);
+            self.insert(config, particle, depth);
         }
     }
 
@@ -155,7 +166,7 @@ impl QuadTree {
 }
 
 #[derive(Clone, Copy, Default)]
-struct QuadTreeIndex([NodeIndex; MAX_DEPTH]);
+pub(super) struct QuadTreeIndex([NodeIndex; MAX_DEPTH]);
 
 impl QuadTreeIndex {
     fn internal_iter_all_at_depth(
@@ -178,10 +189,14 @@ impl QuadTreeIndex {
     pub fn iter_all_nodes_at_depth(depth: usize) -> Box<dyn Iterator<Item = Self>> {
         Self::internal_iter_all_at_depth(depth, QuadTreeIndex::default(), 0)
     }
+
+    pub fn max_num_leaves_at_depth(depth: usize) -> usize {
+        NUM_SUBDIVISIONS.pow(depth as u32)
+    }
 }
 
 #[derive(Clone, Copy, Default)]
-enum NodeIndex {
+pub(super) enum NodeIndex {
     #[default]
     ThisNode,
     Child(u8),
