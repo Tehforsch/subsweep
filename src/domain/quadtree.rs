@@ -190,6 +190,9 @@ impl QuadTreeIndex {
         Self::internal_iter_all_at_depth(depth, QuadTreeIndex::default(), 0)
     }
 
+    // I implemented this thinking I'd need it immediately but didn't,
+    // however this will definitely become useful at some point
+    #[allow(dead_code)]
     pub fn belongs_to(&self, other_index: &QuadTreeIndex) -> bool {
         for depth in 0..MAX_DEPTH {
             if let NodeIndex::Child(num1) = other_index.0[depth] {
@@ -312,7 +315,7 @@ mod tests {
         let config = QuadTreeConfig::default();
         let mut particles = vec![];
         tree.depth_first_map_leaf(&mut |extent: &Extent, _| {
-            particles.push(extent.center());
+            particles.push(extent.center);
         });
         for pos in particles.into_iter() {
             let data = LeafData {

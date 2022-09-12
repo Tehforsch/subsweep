@@ -38,6 +38,8 @@ mod local_reexport {
     pub use super::local_app_building::build_local_communication_app;
     pub use super::local_app_building::build_local_communication_app_with_custom_logic;
 
+    // Will be used eventually, so allow dead code for now
+    #[allow(dead_code)]
     pub type AllReduceCommunicator<T> = super::local::LocalCommunicator<T>;
     pub type AllGatherCommunicator<T> = super::local::LocalCommunicator<T>;
     pub type ExchangeCommunicator<T> =
@@ -59,6 +61,8 @@ pub use mpi_reexport::*;
 #[path = ""]
 mod mpi_reexport {
     use super::identified::Identified;
+    // Will be used eventually, so allow dead code for now
+    #[allow(dead_code)]
     pub type AllReduceCommunicator<T> = super::mpi_world::MpiWorld<T>;
     pub type AllGatherCommunicator<T> = super::mpi_world::MpiWorld<T>;
     pub type ExchangeCommunicator<T> =
