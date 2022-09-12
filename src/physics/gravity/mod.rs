@@ -72,14 +72,10 @@ impl Solver {
 
 pub(super) fn gravity_system(
     timestep: Res<Timestep>,
-    tree: Option<Res<QuadTree>>,
+    tree: Res<QuadTree>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
     parameters: Res<Parameters>,
 ) {
-    if tree.is_none() {
-        return;
-    }
-    let tree = tree.unwrap();
     let gravity = Solver {
         softening_length: parameters.softening_length,
         opening_angle: parameters.opening_angle,
