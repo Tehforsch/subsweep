@@ -31,7 +31,7 @@ impl Default for QuadTreeConfig {
 
 #[derive(Debug)]
 pub struct LeafData {
-    entity: Entity,
+    pub entity: Entity,
     mass: Mass,
     pos: VecLength,
 }

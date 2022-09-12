@@ -17,6 +17,7 @@ use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
+use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::mass::Mass;
 use crate::position::Position;
@@ -33,7 +34,8 @@ pub struct DomainDecompositionPlugin;
 
 impl Plugin for DomainDecompositionPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(GlobalExtent(Extent::sentinel()));
+        app.insert_resource(GlobalExtent(Extent::sentinel()))
+            .insert_resource(TopLevelIndices::default());
         app.add_stage_after(
             CoreStage::Update,
             DomainDecompositionStages::TopLevelTreeConstruction,
@@ -59,7 +61,11 @@ impl Plugin for DomainDecompositionPlugin {
         )
         .add_system_to_stage(
             DomainDecompositionStages::Decomposition,
-            domain_decomposition_system,
+            distribute_top_level_nodes_system,
+        )
+        .add_system_to_stage(
+            DomainDecompositionStages::Decomposition,
+            domain_decomposition_system.after(distribute_top_level_nodes_system),
         )
         .add_plugin(CommunicationPlugin::<Extent>::new(
             CommunicationType::AllGather,
@@ -121,26 +127,36 @@ fn sum_vecs(mut data: DataByRank<Vec<usize>>) -> Vec<usize> {
 fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     let total_work: usize = particle_counts.iter().sum();
     let work_per_rank = total_work / num_ranks;
-    let mut key_cutoffs_by_rank = vec![];
+    let mut key_cutoffs_by_rank = vec![0];
     let mut load = 0;
     for (i, count) in particle_counts.iter().enumerate() {
         load += count;
         if load >= work_per_rank {
             key_cutoffs_by_rank.push(i);
-            if key_cutoffs_by_rank.len() == num_ranks - 1 {
+            if key_cutoffs_by_rank.len() == num_ranks {
                 break;
             }
             load = 0;
         }
     }
+    let num_entries_to_fill = num_ranks - key_cutoffs_by_rank.len();
+    if num_entries_to_fill > 0 {
+        panic!("One rank has no work");
+    }
+    // Even if num_entries_to_fill is zero, we add the final index once to make calculating the index
+    // ranges later easier (since we can just use cutoffs[rank]..cutoffs[rank+1], even for the last rank)
+    key_cutoffs_by_rank.extend((0..1 + num_entries_to_fill).map(|_| particle_counts.len()));
     key_cutoffs_by_rank
 }
 
-fn domain_decomposition_system(
+#[derive(Default, Deref, DerefMut)]
+struct TopLevelIndices(DataByRank<Vec<QuadTreeIndex>>);
+
+fn distribute_top_level_nodes_system(
     tree: Res<QuadTree>,
-    mut outgoing_entities: ResMut<OutgoingEntities>,
     config: Res<QuadTreeConfig>,
     num_ranks: Res<WorldSize>,
+    mut indices: ResMut<TopLevelIndices>,
     mut comm: NonSendMut<AllGatherCommunicator<usize>>,
 ) {
     // Use the particle counts at depth config.min_depth for
@@ -155,5 +171,38 @@ fn domain_decomposition_system(
     // replace with allreduce over buffer at some point
     let particles_per_leaf = sum_vecs(comm.all_gather_vec(&buffer));
     let cutoffs = get_cutoffs(&particles_per_leaf, **num_ranks);
-    todo!()
+    *indices = TopLevelIndices(
+        (0..**num_ranks)
+            .map(|rank| {
+                let start = cutoffs[rank];
+                let end = cutoffs[rank + 1];
+                (
+                    rank as i32,
+                    top_level_tree_leaf_indices[start..end]
+                        .iter()
+                        .map(|x| *x)
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .collect(),
+    );
+}
+
+fn domain_decomposition_system(
+    mut outgoing_entities: ResMut<OutgoingEntities>,
+    tree: Res<QuadTree>,
+    indices: Res<TopLevelIndices>,
+    world_rank: Res<WorldRank>,
+) {
+    for (rank, indices) in indices.iter() {
+        if *rank != **world_rank {
+            for index in indices.iter() {
+                tree[index].depth_first_map_leaf(&mut |_, leaf| {
+                    for particle in leaf.iter() {
+                        outgoing_entities.add(*rank, particle.entity);
+                    }
+                });
+            }
+        }
+    }
 }
