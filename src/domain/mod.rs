@@ -3,7 +3,6 @@ use mpi::traits::Equivalence;
 
 mod exchange_data_plugin;
 mod extent;
-// mod peano_hilbert;
 pub mod quadtree;
 pub mod visualization;
 
