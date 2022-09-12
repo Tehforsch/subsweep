@@ -60,7 +60,7 @@ where
 
     pub fn receive_sync(&mut self, mut f: impl FnMut(Rank, T) -> Entity) -> SyncResult<T> {
         for (rank, data) in self.to_sync.drain_all() {
-            self.communicator.send_vec(rank, data);
+            self.communicator.blocking_send_vec(rank, data);
         }
         let data = self.communicator.receive_vec();
         let mut result = SyncResult::from_communicator(&self.communicator);

@@ -145,7 +145,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         mut buffers: ResMut<ExchangeBuffers<T>>,
     ) {
         for (rank, data) in buffers.drain_all() {
-            communicator.send_vec(rank, data);
+            communicator.blocking_send_vec(rank, data);
         }
     }
 

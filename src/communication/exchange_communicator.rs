@@ -33,7 +33,7 @@ where
     C: SizedCommunicator,
 {
     pub fn send(&mut self, rank: i32, data: T) {
-        self.send_vec(rank, vec![data]);
+        self.blocking_send_vec(rank, vec![data]);
     }
 
     pub fn receive(&mut self) -> DataByRank<T> {
@@ -46,23 +46,23 @@ where
             .collect()
     }
 
-    pub fn send_vec(&mut self, rank: i32, data: Vec<T>) {
+    pub fn blocking_send_vec(&mut self, rank: i32, data: Vec<T>) {
         debug_assert_eq!(self.pending_data[rank], false);
         self.pending_data[rank] = true;
-        self.communicator.send_vec(rank, data);
+        self.communicator.blocking_send_vec(rank, data);
     }
 
     pub fn empty_send_to_others(&mut self) {
         for rank in self.communicator.other_ranks() {
             if !self.pending_data[rank] {
-                self.send_vec(rank, vec![]);
+                self.blocking_send_vec(rank, vec![]);
             }
         }
     }
 
     pub fn exchange_all(&mut self, mut data: DataByRank<Vec<T>>) -> DataByRank<Vec<T>> {
         for (rank, items) in data.drain_all() {
-            self.send_vec(rank, items);
+            self.blocking_send_vec(rank, items);
         }
         let r = self.receive_vec();
         r
@@ -120,7 +120,7 @@ mod tests {
                 thread::spawn(move || {
                     let wrap = |x: i32| x.rem_euclid(num_threads);
                     let target_rank = wrap(rank + 1);
-                    communicator.send_vec(target_rank, vec![rank, wrap(rank + 1)]);
+                    communicator.blocking_send_vec(target_rank, vec![rank, wrap(rank + 1)]);
                     let received = communicator.receive_vec();
                     for other_rank in communicator.other_ranks() {
                         if other_rank == wrap(rank - 1) {
