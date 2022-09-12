@@ -190,8 +190,24 @@ impl QuadTreeIndex {
         Self::internal_iter_all_at_depth(depth, QuadTreeIndex::default(), 0)
     }
 
-    pub fn max_num_leaves_at_depth(depth: usize) -> usize {
-        NUM_SUBDIVISIONS.pow(depth as u32)
+    pub fn belongs_to(&self, other_index: &QuadTreeIndex) -> bool {
+        for depth in 0..MAX_DEPTH {
+            if let NodeIndex::Child(num1) = other_index.0[depth] {
+                match self.0[depth] {
+                    NodeIndex::Child(num2) => {
+                        if num1 != num2 {
+                            return false;
+                        }
+                    }
+                    NodeIndex::ThisNode => {
+                        return false;
+                    }
+                }
+            } else {
+                return true;
+            }
+        }
+        panic!("Invalid quad tree index which does not terminate before MAX_DEPTH")
     }
 }
 
@@ -314,5 +330,27 @@ mod tests {
                 panic!("This should be a leaf")
             }
         }
+    }
+
+    fn get_quadtree_index(nodes: &[NodeIndex]) -> QuadTreeIndex {
+        let mut index = QuadTreeIndex::default();
+        for (depth, n) in nodes.iter().enumerate() {
+            index.0[depth] = *n;
+        }
+        index
+    }
+
+    #[test]
+    fn quadtree_index_belongs_to() {
+        use NodeIndex::*;
+        let index1 = get_quadtree_index(&[Child(0), Child(1), Child(2)]);
+        let index2 = get_quadtree_index(&[Child(0), Child(1), ThisNode]);
+        let index3 = get_quadtree_index(&[Child(1), Child(2), Child(3)]);
+        assert_eq!(index1.belongs_to(&index1), true);
+        assert_eq!(index1.belongs_to(&index2), true);
+        assert_eq!(index2.belongs_to(&index1), false);
+        assert_eq!(index2.belongs_to(&index2), true);
+        assert_eq!(index1.belongs_to(&index3), false);
+        assert_eq!(index3.belongs_to(&index1), false);
     }
 }
