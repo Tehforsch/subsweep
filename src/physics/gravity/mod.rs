@@ -1,10 +1,17 @@
 use bevy::prelude::*;
+use mpi::traits::Equivalence;
 
 use super::parameters::Parameters;
 use super::LocalParticle;
+use super::MassMoments;
 use super::Timestep;
+use crate::communication::DataByRank;
+use crate::communication::ExchangeCommunicator;
+use crate::communication::WorldRank;
 use crate::domain::quadtree::Node;
 use crate::domain::quadtree::QuadTree;
+use crate::domain::quadtree::QuadTreeIndex;
+use crate::domain::TopLevelIndices;
 use crate::position::Position;
 use crate::units;
 use crate::units::Dimensionless;
@@ -35,10 +42,18 @@ impl Solver {
         -distance_vector * GRAVITY_CONSTANT * mass2 / distance.cubed()
     }
 
+    pub fn calc_gravity_acceleration_for_moments(
+        &self,
+        pos: &VecLength,
+        moments: &MassMoments,
+    ) -> VecAcceleration {
+        self.calc_gravity_acceleration(pos, &moments.center_of_mass(), moments.total())
+    }
+
     pub fn traverse_tree(
         &self,
         tree: &QuadTree,
-        pos: VecLength,
+        pos: &VecLength,
         entity: Entity,
     ) -> VecAcceleration {
         match tree.node {
@@ -48,11 +63,7 @@ impl Solver {
                     if self.should_be_opened(child, pos) {
                         self.traverse_tree(child, pos, entity)
                     } else {
-                        self.calc_gravity_acceleration(
-                            &pos,
-                            &child.data.moments.center_of_mass(),
-                            child.data.moments.total(),
-                        )
+                        self.calc_gravity_acceleration_for_moments(pos, &child.data.moments)
                     }
                 })
                 .sum(),
@@ -63,27 +74,60 @@ impl Solver {
         }
     }
 
-    fn should_be_opened(&self, child: &QuadTree, pos: VecLength) -> bool {
+    fn should_be_opened(&self, child: &QuadTree, pos: &VecLength) -> bool {
         let distance = pos.distance(&child.extent.center());
         let length = child.extent.max_side_length();
         length / distance > self.opening_angle
     }
 }
 
+#[derive(Equivalence, Debug)]
+pub(super) struct ExportData {
+    pos: VecLength,
+    index: QuadTreeIndex,
+}
+
 pub(super) fn gravity_system(
     timestep: Res<Timestep>,
     tree: Res<QuadTree>,
+    world_rank: Res<WorldRank>,
+    indices: Res<TopLevelIndices>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
     parameters: Res<Parameters>,
+    mut comm: NonSendMut<ExchangeCommunicator<ExportData>>,
 ) {
     let gravity = Solver {
         softening_length: parameters.softening_length,
         opening_angle: parameters.opening_angle,
     };
+    let mut to_export = DataByRank::from_communicator(&*comm);
     for (entity, pos, mut vel) in particles.iter_mut() {
-        let acceleration = gravity.traverse_tree(&tree, **pos, entity);
-        **vel += acceleration * **timestep;
+        let mut add_acceleration = |acceleration| {
+            **vel += acceleration * **timestep;
+        };
+        for (rank, index) in indices.flat_iter() {
+            let sub_tree = &tree[index];
+            if rank == **world_rank {
+                add_acceleration(gravity.traverse_tree(sub_tree, &**pos, entity));
+            } else {
+                if gravity.should_be_opened(sub_tree, pos) {
+                    to_export.push(
+                        rank,
+                        ExportData {
+                            index: index.clone(),
+                            pos: *pos.clone(),
+                        },
+                    );
+                } else {
+                    add_acceleration(
+                        gravity
+                            .calc_gravity_acceleration_for_moments(&**pos, &sub_tree.data.moments),
+                    );
+                }
+            }
+        }
     }
+    let imported = comm.exchange_all(to_export);
 }
 
 #[cfg(test)]
@@ -154,7 +198,7 @@ mod tests {
             opening_angle: Dimensionless::zero(),
             softening_length: Length::zero(),
         };
-        let acc1 = solver.traverse_tree(&tree, pos, Entity::from_raw(0));
+        let acc1 = solver.traverse_tree(&tree, &pos, Entity::from_raw(0));
         let acc2 = direct_sum(&solver, &pos, get_particles(n_particles).iter().collect());
         let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length());
         // Precision is pretty low with f32, so change this to f64 once variable precision is implemented

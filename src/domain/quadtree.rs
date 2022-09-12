@@ -1,6 +1,7 @@
 use std::ops::Index;
 
 use bevy::prelude::Entity;
+use mpi::traits::Equivalence;
 use serde::Deserialize;
 
 use super::Extent;
@@ -156,8 +157,8 @@ impl QuadTree {
     }
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) struct QuadTreeIndex([NodeIndex; MAX_DEPTH]);
+#[derive(Equivalence, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct QuadTreeIndex([NodeIndex; MAX_DEPTH]);
 
 impl QuadTreeIndex {
     fn internal_iter_all_at_depth(
@@ -205,11 +206,20 @@ impl QuadTreeIndex {
     }
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub(super) enum NodeIndex {
     #[default]
     ThisNode,
     Child(u8),
+}
+
+// This is probably literally unsafe. Will be fixed soon
+unsafe impl Equivalence for NodeIndex {
+    type Out = <u8 as Equivalence>::Out;
+
+    fn equivalent_datatype() -> Self::Out {
+        u8::equivalent_datatype()
+    }
 }
 
 impl Index<&QuadTreeIndex> for QuadTree {

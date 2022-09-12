@@ -60,6 +60,14 @@ where
         }
     }
 
+    pub fn exchange_all(&mut self, mut data: DataByRank<Vec<T>>) -> DataByRank<Vec<T>> {
+        for (rank, items) in data.drain_all() {
+            self.send_vec(rank, items);
+        }
+        let r = self.receive_vec();
+        r
+    }
+
     pub fn receive_vec(&mut self) -> DataByRank<Vec<T>> {
         self.empty_send_to_others();
         let mut received_data = DataByRank::from_communicator(&self.communicator);

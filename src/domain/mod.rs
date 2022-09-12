@@ -18,6 +18,7 @@ use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
+use crate::communication::Rank;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::mass::Mass;
@@ -155,7 +156,15 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
 }
 
 #[derive(Default, Deref, DerefMut)]
-struct TopLevelIndices(DataByRank<Vec<QuadTreeIndex>>);
+pub struct TopLevelIndices(DataByRank<Vec<QuadTreeIndex>>);
+
+impl TopLevelIndices {
+    pub fn flat_iter(&self) -> impl Iterator<Item = (Rank, &QuadTreeIndex)> {
+        self.0
+            .iter()
+            .flat_map(|(rank, indices)| indices.iter().map(|index| (*rank, index)))
+    }
+}
 
 fn distribute_top_level_nodes_system(
     tree: Res<QuadTree>,

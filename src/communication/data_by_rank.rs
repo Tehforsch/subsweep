@@ -62,6 +62,10 @@ impl<T> DataByRank<Vec<T>> {
     pub fn drain_all(&mut self) -> impl Iterator<Item = (Rank, Vec<T>)> + '_ {
         self.0.iter_mut().map(|(k, v)| (*k, v.drain(..).collect()))
     }
+
+    pub fn push(&mut self, rank: Rank, item: T) {
+        self[rank].push(item);
+    }
 }
 
 impl<T> Index<Rank> for DataByRank<T> {
