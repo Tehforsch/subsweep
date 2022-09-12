@@ -5,6 +5,7 @@ mod exchange_data_plugin;
 mod extent;
 // mod peano_hilbert;
 pub mod quadtree;
+pub mod visualization;
 
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
@@ -139,9 +140,9 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
             load = 0;
         }
     }
-    let num_entries_to_fill = num_ranks - key_cutoffs_by_rank.len();
+    let num_entries_to_fill = num_ranks as i32 - key_cutoffs_by_rank.len() as i32;
     if num_entries_to_fill > 0 {
-        panic!("One rank has no work");
+        error!("One rank has no work - increase domain min_depth");
     }
     // Even if num_entries_to_fill is zero, we add the final index once to make calculating the index
     // ranges later easier (since we can just use cutoffs[rank]..cutoffs[rank+1], even for the last rank)

@@ -1,5 +1,5 @@
 mod drawing;
-mod parameters;
+pub mod parameters;
 pub mod remote;
 
 use bevy::prelude::*;
@@ -20,7 +20,7 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Rank;
 use crate::communication::WorldRank;
-use crate::domain::quadtree::QuadTree;
+use crate::domain::visualization::DomainVisualizationPlugin;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsStages;
@@ -71,7 +71,7 @@ impl Plugin for VisualizationPlugin {
                 .add_plugin(ShapePlugin)
                 .add_plugin(DrawBundlePlugin::<DrawRect>::default())
                 .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
-                .add_plugin(ShapePlugin)
+                .add_plugin(DomainVisualizationPlugin)
                 .add_plugin(
                     CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
                         CommunicationType::Sync,
@@ -95,14 +95,6 @@ impl Plugin for VisualizationPlugin {
                     position_to_translation_system::<DrawCircle>
                         .before(draw_translation_system::<DrawCircle>),
                 );
-            if app
-                .world
-                .get_resource::<Parameters>()
-                .unwrap()
-                .show_quadtree
-            {
-                app.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
-            }
         } else {
             app.add_plugin(
                 CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
@@ -132,26 +124,6 @@ fn spawn_sprites_system<T: Component + GetColor>(
             color: colored.get_color(),
         });
     }
-}
-
-#[derive(Component)]
-struct Outline;
-
-fn show_quadtree_system(
-    mut commands: Commands,
-    quadtree: Res<QuadTree>,
-    outlines: Query<Entity, With<Outline>>,
-) {
-    for entity in outlines.iter() {
-        commands.entity(entity).despawn();
-    }
-    quadtree.depth_first_map_leaf(&mut |extent, _| {
-        commands.spawn().insert(Outline).insert(DrawRect {
-            lower_left: extent.min,
-            upper_right: extent.max,
-            color: Color::GREEN,
-        });
-    });
 }
 
 pub fn setup_camera_system(mut commands: Commands) {
