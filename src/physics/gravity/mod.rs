@@ -24,7 +24,7 @@ struct Solver {
 }
 
 impl Solver {
-    fn get_gravity_acceleration(
+    fn calc_gravity_acceleration(
         &self,
         pos1: &VecLength,
         pos2: &VecLength,
@@ -35,7 +35,7 @@ impl Solver {
         -distance_vector * GRAVITY_CONSTANT * mass2 / distance.cubed()
     }
 
-    pub fn get_acceleration_on_particle(
+    pub fn traverse_tree(
         &self,
         tree: &QuadTree,
         pos: VecLength,
@@ -46,9 +46,9 @@ impl Solver {
                 .iter()
                 .map(|child| {
                     if self.should_be_opened(child, pos) {
-                        self.get_acceleration_on_particle(child, pos, entity)
+                        self.traverse_tree(child, pos, entity)
                     } else {
-                        self.get_gravity_acceleration(
+                        self.calc_gravity_acceleration(
                             &pos,
                             &child.data.moments.center_of_mass(),
                             child.data.moments.total(),
@@ -58,7 +58,7 @@ impl Solver {
                 .sum(),
             Node::Leaf(ref leaf) => leaf
                 .iter()
-                .map(|particle| self.get_gravity_acceleration(&pos, &particle.pos, particle.mass))
+                .map(|particle| self.calc_gravity_acceleration(&pos, &particle.pos, particle.mass))
                 .sum(),
         }
     }
@@ -85,7 +85,7 @@ pub(super) fn gravity_system(
         opening_angle: parameters.opening_angle,
     };
     for (entity, pos, mut vel) in particles.iter_mut() {
-        let acceleration = gravity.get_acceleration_on_particle(&tree, **pos, entity);
+        let acceleration = gravity.traverse_tree(&tree, **pos, entity);
         **vel += acceleration * **timestep;
     }
 }
@@ -158,7 +158,7 @@ mod tests {
             opening_angle: Dimensionless::zero(),
             softening_length: Length::zero(),
         };
-        let acc1 = solver.get_acceleration_on_particle(&tree, pos, Entity::from_raw(0));
+        let acc1 = solver.traverse_tree(&tree, pos, Entity::from_raw(0));
         let acc2 = direct_sum(&solver, &pos, get_particles(n_particles).iter().collect());
         let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length());
         // Precision is pretty low with f32, so change this to f64 once variable precision is implemented
@@ -172,7 +172,7 @@ mod tests {
     ) -> Vec2Acceleration {
         let mut total = Vec2Acceleration::zero();
         for particle in other_positions.iter() {
-            total += solver.get_gravity_acceleration(pos1, &particle.pos, particle.mass);
+            total += solver.calc_gravity_acceleration(pos1, &particle.pos, particle.mass);
         }
         total
     }
