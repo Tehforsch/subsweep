@@ -29,16 +29,16 @@ impl Default for QuadTreeConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LeafData {
     pub entity: Entity,
-    mass: Mass,
-    pos: VecLength,
+    pub mass: Mass,
+    pub pos: VecLength,
 }
 
 #[derive(Debug, Default)]
 pub struct NodeData {
-    moments: MassMoments,
+    pub moments: MassMoments,
 }
 
 impl NodeData {
@@ -79,20 +79,11 @@ pub struct QuadTree {
 }
 
 impl QuadTree {
-    pub fn new<'a>(
-        config: &QuadTreeConfig,
-        particles: Vec<(Entity, VecLength, Mass)>,
-        extent: &Extent,
-    ) -> Self {
+    pub fn new<'a>(config: &QuadTreeConfig, particles: Vec<LeafData>, extent: &Extent) -> Self {
         let mut tree = Self::make_empty_leaf_from_extent(extent.clone());
         tree.subdivide_to_depth(&config, config.min_depth);
-        for (entity, pos, mass) in particles.iter() {
-            let leaf_data = LeafData {
-                entity: *entity,
-                pos: *pos,
-                mass: *mass,
-            };
-            tree.insert_new(config, leaf_data, 0);
+        for particle in particles.iter() {
+            tree.insert_new(config, particle.clone(), 0);
         }
         tree
     }
@@ -253,27 +244,28 @@ mod tests {
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
         let positions = [
-            (
-                Entity::from_raw(0),
-                Vec2Length::meter(1.0, 1.0),
-                Mass::zero(),
-            ),
-            (
-                Entity::from_raw(0),
-                Vec2Length::meter(1.0, 1.0),
-                Mass::zero(),
-            ),
-            (
-                Entity::from_raw(0),
-                Vec2Length::meter(2.0, 2.0),
-                Mass::zero(),
-            ),
+            LeafData {
+                entity: Entity::from_raw(0),
+                pos: Vec2Length::meter(1.0, 1.0),
+                mass: Mass::zero(),
+            },
+            LeafData {
+                entity: Entity::from_raw(0),
+                pos: Vec2Length::meter(1.0, 1.0),
+                mass: Mass::zero(),
+            },
+            LeafData {
+                entity: Entity::from_raw(0),
+                pos: Vec2Length::meter(2.0, 2.0),
+                mass: Mass::zero(),
+            },
         ];
         let config = QuadTreeConfig {
             max_depth: 10,
             ..Default::default()
         };
-        let extent = Extent::from_positions(positions.iter().map(|(_, pos, _)| pos)).unwrap();
+        let extent =
+            Extent::from_positions(positions.iter().map(|particle| &particle.pos)).unwrap();
         QuadTree::new(&config, positions.into_iter().collect(), &extent);
     }
 

@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
 pub use self::gravity::mass_moments::MassMoments;
+use self::gravity::plugin::GravityPlugin;
 use self::parameters::Parameters;
 pub use self::time::Time;
 use crate::domain::quadtree::QuadTreeConfig;
@@ -55,6 +56,7 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(DatasetPlugin::<Velocity>::new("velocity"))
             .add_plugin(DatasetPlugin::<Mass>::new("mass"))
             .add_plugin(AttributePlugin::<Time>::new("time"))
+            .add_plugin(GravityPlugin)
             .insert_resource(Timestep(units::Time::second(0.01)))
             .insert_resource(Time(units::Time::second(0.00)))
             .add_system(integrate_motion_system)

@@ -2,13 +2,14 @@ use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
 mod exchange_data_plugin;
-mod extent;
+pub mod extent;
 pub mod quadtree;
 pub mod visualization;
 
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 use self::extent::Extent;
+use self::quadtree::LeafData;
 use self::quadtree::QuadTree;
 use self::quadtree::QuadTreeConfig;
 use self::quadtree::QuadTreeIndex;
@@ -107,7 +108,11 @@ fn construct_quad_tree_system(
 ) {
     let particles: Vec<_> = particles
         .iter()
-        .map(|(entity, pos, mass)| (entity, pos.0, **mass))
+        .map(|(entity, pos, mass)| LeafData {
+            entity,
+            pos: pos.0,
+            mass: **mass,
+        })
         .collect();
     let quadtree = QuadTree::new(&config, particles, &extent);
     commands.insert_resource(quadtree);
