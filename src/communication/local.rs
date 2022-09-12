@@ -152,8 +152,11 @@ impl<T> From<LocalCommunicator<T>> for LocalCommunicator<Identified<T>> {
 
 #[cfg(test)]
 mod tests {
+    use std::thread;
+
     use crate::communication::plugin::INITIAL_TAG;
     use crate::communication::sync_communicator::tests::get_communicators;
+    use crate::communication::CollectiveCommunicator;
     use crate::communication::WorldCommunicator;
 
     #[derive(Clone, Debug, PartialEq)]
@@ -204,5 +207,29 @@ mod tests {
         comm_b0.send_vec(1, xs_b.clone());
         assert_eq!(comm_a1.receive_vec(0), xs_a);
         assert_eq!(comm_b1.receive_vec(0), xs_b);
+    }
+
+    #[test]
+    fn local_communicator_allgather_vec() {
+        let mut comms = get_communicators(2, INITIAL_TAG);
+        let mut comm0 = comms.remove(&0).unwrap();
+        let mut comm1 = comms.remove(&1).unwrap();
+        let xs_0: Vec<f32> = vec![1.0, 3.0, 5.0];
+        let xs_1: Vec<f32> = vec![1.0, 2.0, 3.0];
+        let xs_0_cloned: Vec<f32> = vec![1.0, 3.0, 5.0];
+        let xs_1_cloned: Vec<f32> = vec![1.0, 2.0, 3.0];
+        let h = thread::spawn(move || {
+            let result = comm0.all_gather_vec(&xs_0.clone());
+            assert_eq!(result[0], xs_0);
+            assert_eq!(result[1], xs_1);
+        });
+        thread::spawn(move || {
+            let result = comm1.all_gather_vec(&xs_1_cloned.clone());
+            assert_eq!(result[0], xs_0_cloned);
+            assert_eq!(result[1], xs_1_cloned);
+        })
+        .join()
+        .unwrap();
+        h.join().unwrap();
     }
 }
