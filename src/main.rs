@@ -13,6 +13,7 @@ mod config;
 mod domain;
 mod initial_conditions;
 mod mass;
+pub mod mpi_log;
 mod output;
 mod parameters;
 mod particle;
@@ -118,6 +119,7 @@ fn main() {
 
     let opts = CommandLineOptions::parse();
     let world: MpiWorld<usize> = MpiWorld::new(0);
+    mpi_log::initialize(world.rank());
     let mut app = App::new();
     build_app(&mut app, &opts, world.size(), world.rank());
     app.run();
