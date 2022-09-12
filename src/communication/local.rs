@@ -90,17 +90,23 @@ impl<T> SizedCommunicator for LocalCommunicator<T> {
 
 impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> {
     fn all_gather(&mut self, data: &T) -> Vec<T> {
+        self.all_gather_vec(&[data.clone()])
+            .drain_all()
+            .flat_map(|(_, data)| data)
+            .collect()
+    }
+
+    fn all_gather_vec(&mut self, data: &[T]) -> DataByRank<Vec<T>> {
         for rank in self.other_ranks() {
-            self.send_vec(rank, vec![data.clone()]);
+            self.send_vec(rank, data.to_vec());
         }
-        let mut result = vec![];
+        let mut result = DataByRank::empty();
         for rank in self.all_ranks() {
             if rank == self.rank {
-                result.push(data.clone());
+                result.insert(rank, data.to_vec());
             } else {
                 let received = self.receive_vec(rank);
-                assert_eq!(received.len(), 1);
-                result.extend(received.into_iter());
+                result.insert(rank, received);
             }
         }
         result
