@@ -63,15 +63,16 @@ where
     }
 
     pub fn exchange_all(&mut self, data: DataByRank<Vec<T>>) -> DataByRank<Vec<T>> {
-        scope(|scope| {
+        let res = scope(|scope| {
             let mut guards = vec![];
             for (rank, items) in data.iter() {
                 let guard = self.communicator.immediate_send_vec(scope, *rank, &items);
-                guards.push(guard);
+                guards.extend(guard.into_iter());
             }
             let r = self.receive_vec();
             r
-        })
+        });
+        res
     }
 
     pub fn receive_vec(&mut self) -> DataByRank<Vec<T>> {
