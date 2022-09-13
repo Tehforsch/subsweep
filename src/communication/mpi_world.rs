@@ -6,6 +6,8 @@ use mpi::collective::SystemOperation;
 use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
+use mpi::request::Scope;
+use mpi::request::WaitGuard;
 use mpi::topology::Rank;
 use mpi::topology::SystemCommunicator;
 use mpi::traits::Communicator;
@@ -70,6 +72,24 @@ where
             return data;
         }
         vec![]
+    }
+
+    fn immediate_send_vec<'a, Sc: Scope<'a>>(
+        &mut self,
+        scope: Sc,
+        rank: Rank,
+        data: &'a [S],
+    ) -> Option<WaitGuard<'a, [S], Sc>> {
+        let num = data.len();
+        let process = self.world.process_at_rank(rank);
+        process.buffered_send_with_tag(&num, self.tag);
+        if num > 0 {
+            Some(WaitGuard::from(
+                process.immediate_send_with_tag(scope, data, self.tag),
+            ))
+        } else {
+            None
+        }
     }
 }
 
@@ -152,5 +172,25 @@ unsafe impl<M: Equivalence> Equivalence for UninitMsg<M> {
 
     fn equivalent_datatype() -> Self::Out {
         M::equivalent_datatype()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use mpi::request::scope;
+    use mpi::Tag;
+
+    use super::MpiWorld;
+    use crate::communication::WorldCommunicator;
+
+    #[test]
+    fn immediate_send_receive() {
+        let mut world = MpiWorld::<i32>::new(Tag::default());
+        let x: [i32; 3] = [1, 2, 3];
+        let result: Vec<i32> = scope(|scope| {
+            let _guard = world.immediate_send_vec(scope, 0, &x);
+            world.receive_vec(0)
+        });
+        assert_eq!(result, &[1, 2, 3]);
     }
 }
