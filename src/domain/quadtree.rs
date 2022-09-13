@@ -157,8 +157,14 @@ impl QuadTree {
     }
 }
 
-#[derive(Equivalence, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct QuadTreeIndex([NodeIndex; MAX_DEPTH]);
+#[derive(Equivalence, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct QuadTreeIndex([u8; MAX_DEPTH]);
+
+impl Default for QuadTreeIndex {
+    fn default() -> Self {
+        Self([NodeIndex::ThisNode.into(); MAX_DEPTH])
+    }
+}
 
 impl QuadTreeIndex {
     fn internal_iter_all_at_depth(
@@ -168,12 +174,12 @@ impl QuadTreeIndex {
     ) -> Box<dyn Iterator<Item = Self>> {
         if current_depth < depth {
             Box::new((0..NUM_SUBDIVISIONS).flat_map(move |num_child| {
-                current_index.0[current_depth] = NodeIndex::Child(num_child as u8);
+                current_index.0[current_depth] = NodeIndex::Child(num_child as u8).into();
                 Self::internal_iter_all_at_depth(depth, current_index, current_depth + 1)
             }))
         } else {
             let mut current_index = current_index.clone();
-            current_index.0[current_depth] = NodeIndex::ThisNode;
+            current_index.0[current_depth] = NodeIndex::ThisNode.into();
             Box::new(std::iter::once(current_index))
         }
     }
@@ -187,8 +193,8 @@ impl QuadTreeIndex {
     #[allow(dead_code)]
     pub fn belongs_to(&self, other_index: &QuadTreeIndex) -> bool {
         for depth in 0..MAX_DEPTH {
-            if let NodeIndex::Child(num1) = other_index.0[depth] {
-                match self.0[depth] {
+            if let NodeIndex::Child(num1) = other_index.0[depth].into() {
+                match self.0[depth].into() {
                     NodeIndex::Child(num2) => {
                         if num1 != num2 {
                             return false;
@@ -206,19 +212,29 @@ impl QuadTreeIndex {
     }
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub(super) enum NodeIndex {
     #[default]
     ThisNode,
     Child(u8),
 }
 
-// This is probably literally unsafe. Will be fixed soon
-unsafe impl Equivalence for NodeIndex {
-    type Out = <u8 as Equivalence>::Out;
+impl From<u8> for NodeIndex {
+    fn from(val: u8) -> Self {
+        if val == NUM_SUBDIVISIONS as u8 {
+            Self::ThisNode
+        } else {
+            Self::Child(val)
+        }
+    }
+}
 
-    fn equivalent_datatype() -> Self::Out {
-        u8::equivalent_datatype()
+impl From<NodeIndex> for u8 {
+    fn from(val: NodeIndex) -> Self {
+        match val {
+            NodeIndex::ThisNode => NUM_SUBDIVISIONS as u8,
+            NodeIndex::Child(num) => num,
+        }
     }
 }
 
@@ -232,7 +248,7 @@ impl Index<&QuadTreeIndex> for QuadTree {
 
 impl QuadTree {
     fn index_into_depth(&self, idx: &QuadTreeIndex, depth: usize) -> &Self {
-        match idx.0[depth] {
+        match idx.0[depth].into() {
             NodeIndex::ThisNode => self,
             NodeIndex::Child(num) => {
                 if let Node::Tree(ref children) = self.node {
@@ -340,7 +356,7 @@ mod tests {
     fn get_quadtree_index(nodes: &[NodeIndex]) -> QuadTreeIndex {
         let mut index = QuadTreeIndex::default();
         for (depth, n) in nodes.iter().enumerate() {
-            index.0[depth] = *n;
+            index.0[depth] = (*n).into();
         }
         index
     }
@@ -357,5 +373,19 @@ mod tests {
         assert_eq!(index2.belongs_to(&index2), true);
         assert_eq!(index1.belongs_to(&index3), false);
         assert_eq!(index3.belongs_to(&index1), false);
+    }
+
+    #[test]
+    fn node_index_from_into() {
+        use NodeIndex::*;
+        let check = |n: NodeIndex| {
+            let to: u8 = n.into();
+            let converted: NodeIndex = to.into();
+            assert_eq!(n, converted);
+        };
+        check(ThisNode);
+        for i in 0..NUM_SUBDIVISIONS {
+            check(Child(i as u8));
+        }
     }
 }

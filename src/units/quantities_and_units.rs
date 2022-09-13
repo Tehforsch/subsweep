@@ -168,7 +168,7 @@ unit_functions!(
     },
     ACCELERATION, Acceleration, length: 1, time: -2,
     {
-        meters_per_second_squared, 1.0,
+        meters_per_second_squared, 1.0, "m/s^2"
     },
     FORCE, Force, mass: 1, length: 1, time: -2,
     {

@@ -7,6 +7,7 @@ use super::MassMoments;
 use super::Timestep;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
+use crate::communication::Identified;
 use crate::communication::WorldRank;
 use crate::domain::quadtree::Node;
 use crate::domain::quadtree::QuadTree;
@@ -50,18 +51,13 @@ impl Solver {
         self.calc_gravity_acceleration(pos, &moments.center_of_mass(), moments.total())
     }
 
-    pub fn traverse_tree(
-        &self,
-        tree: &QuadTree,
-        pos: &VecLength,
-        entity: Entity,
-    ) -> VecAcceleration {
+    pub fn traverse_tree(&self, tree: &QuadTree, pos: &VecLength) -> VecAcceleration {
         match tree.node {
             Node::Tree(ref children) => children
                 .iter()
                 .map(|child| {
                     if self.should_be_opened(child, pos) {
-                        self.traverse_tree(child, pos, entity)
+                        self.traverse_tree(child, pos)
                     } else {
                         self.calc_gravity_acceleration_for_moments(pos, &child.data.moments)
                     }
@@ -87,6 +83,11 @@ pub(super) struct ExportData {
     index: QuadTreeIndex,
 }
 
+#[derive(Equivalence, Debug)]
+pub(super) struct ImportData {
+    acc: VecAcceleration,
+}
+
 pub(super) fn gravity_system(
     timestep: Res<Timestep>,
     tree: Res<QuadTree>,
@@ -94,32 +95,37 @@ pub(super) fn gravity_system(
     indices: Res<TopLevelIndices>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
     parameters: Res<Parameters>,
-    mut comm: NonSendMut<ExchangeCommunicator<ExportData>>,
+    mut export_comm: NonSendMut<ExchangeCommunicator<Identified<ExportData>>>,
+    mut import_comm: NonSendMut<ExchangeCommunicator<Identified<ImportData>>>,
 ) {
     let gravity = Solver {
         softening_length: parameters.softening_length,
         opening_angle: parameters.opening_angle,
     };
-    let mut to_export = DataByRank::from_communicator(&*comm);
+    let mut to_export = DataByRank::from_communicator(&*export_comm);
+    let add_acceleration = |vel: &mut Velocity, acceleration| {
+        **vel += acceleration * **timestep;
+    };
     for (entity, pos, mut vel) in particles.iter_mut() {
-        let mut add_acceleration = |acceleration| {
-            **vel += acceleration * **timestep;
-        };
         for (rank, index) in indices.flat_iter() {
             let sub_tree = &tree[index];
             if rank == **world_rank {
-                add_acceleration(gravity.traverse_tree(sub_tree, &**pos, entity));
+                add_acceleration(&mut vel, gravity.traverse_tree(sub_tree, &**pos));
             } else {
                 if gravity.should_be_opened(sub_tree, pos) {
                     to_export.push(
                         rank,
-                        ExportData {
-                            index: index.clone(),
-                            pos: *pos.clone(),
-                        },
+                        Identified::new(
+                            entity,
+                            ExportData {
+                                index: index.clone(),
+                                pos: *pos.clone(),
+                            },
+                        ),
                     );
                 } else {
                     add_acceleration(
+                        &mut vel,
                         gravity
                             .calc_gravity_acceleration_for_moments(&**pos, &sub_tree.data.moments),
                     );
@@ -127,7 +133,29 @@ pub(super) fn gravity_system(
             }
         }
     }
-    let imported = comm.exchange_all(to_export);
+    let imported = export_comm.exchange_all(to_export);
+    let mut result = DataByRank::from_communicator(&*import_comm);
+    for (rank, requests) in imported {
+        for request in requests {
+            let tree = &tree[&request.data.index];
+            let acc = gravity.traverse_tree(tree, &request.data.pos);
+            result.push(
+                rank,
+                Identified {
+                    key: request.key,
+                    data: ImportData { acc },
+                },
+            );
+        }
+    }
+    let accelerations = import_comm.exchange_all(result);
+    for (_, accelerations) in accelerations.iter() {
+        for acc in accelerations {
+            let entity = acc.entity();
+            let (_, _, mut vel) = particles.get_mut(entity).unwrap();
+            add_acceleration(&mut vel, acc.data.acc);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -198,7 +226,7 @@ mod tests {
             opening_angle: Dimensionless::zero(),
             softening_length: Length::zero(),
         };
-        let acc1 = solver.traverse_tree(&tree, &pos, Entity::from_raw(0));
+        let acc1 = solver.traverse_tree(&tree, &pos);
         let acc2 = direct_sum(&solver, &pos, get_particles(n_particles).iter().collect());
         let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length());
         // Precision is pretty low with f32, so change this to f64 once variable precision is implemented

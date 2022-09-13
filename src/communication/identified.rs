@@ -6,6 +6,19 @@ pub struct Identified<T> {
     pub data: T,
 }
 
+impl<T> Identified<T> {
+    pub fn new(entity: Entity, data: T) -> Identified<T> {
+        Self {
+            key: entity.to_bits(),
+            data,
+        }
+    }
+
+    pub fn entity(&self) -> Entity {
+        Entity::from_bits(self.key)
+    }
+}
+
 #[cfg(not(feature = "local"))]
 #[path = ""]
 mod identified_mpi_impl {
@@ -29,8 +42,8 @@ mod identified_mpi_impl {
             UserDatatype::structured(
                 &[1, 1],
                 &[
-                    offset_of!(Identified<i32>, key) as Address,
-                    offset_of!(Identified<i32>, data) as Address,
+                    offset_of!(Identified<T>, key) as Address,
+                    offset_of!(Identified<T>, data) as Address,
                 ],
                 &[
                     UserDatatype::contiguous(1, &EntityKey::equivalent_datatype()),
@@ -41,46 +54,59 @@ mod identified_mpi_impl {
     }
 }
 
+use bevy::prelude::Entity;
 #[cfg(not(feature = "local"))]
 pub use identified_mpi_impl::*;
 
 #[cfg(test)]
 #[cfg(not(feature = "local"))]
 mod tests {
+    use bevy::prelude::Entity;
     use mpi::traits::Communicator;
     use mpi::traits::Equivalence;
+    use mpi::traits::MatchesRaw;
 
     use super::Identified;
     use crate::communication::MPI_UNIVERSE;
+    use crate::units::VecLength;
 
-    #[derive(Equivalence, PartialEq, Eq, Debug)]
+    #[derive(Clone, Default, Equivalence, PartialEq, Eq, Debug)]
     struct ComplexStruct {
         i: [i32; 3],
         b: bool,
     }
 
-    #[test]
-    fn pack_unpack_identified() {
+    #[derive(Clone, Default, Debug, Equivalence, PartialEq)]
+    struct A {
+        pos: VecLength,
+    }
+
+    fn test_pack_unpack<T>(data: T)
+    where
+        T: Clone + Default + Equivalence + core::fmt::Debug + PartialEq,
+        <T as Equivalence>::Out: MatchesRaw,
+    {
         let world = MPI_UNIVERSE.world();
 
-        let q1 = Identified {
-            key: 0,
-            data: ComplexStruct {
-                i: [1, 2, 3],
-                b: false,
-            },
-        };
-        let mut q2 = Identified {
-            key: 0,
-            data: ComplexStruct {
-                i: [4, 5, 6],
-                b: true,
-            },
-        };
-        let a = world.pack(&q1);
-        unsafe {
-            world.unpack_into(&a, &mut q2, 0);
+        for num in [0, 50, 100, 1000000].iter() {
+            let q1 = Identified::new(Entity::from_raw(*num), data.clone());
+            let mut q2 = Identified::new(Entity::from_raw(0), T::default());
+            let a = world.pack(&q1);
+            unsafe {
+                world.unpack_into(&a, &mut q2, 0);
+            }
+            assert_eq!(q1, q2);
         }
-        assert_eq!(q1, q2);
+    }
+
+    #[test]
+    fn pack_unpack_identified() {
+        test_pack_unpack(ComplexStruct {
+            i: [15, 19, 50],
+            b: false,
+        });
+        test_pack_unpack(A {
+            pos: VecLength::zero(),
+        })
     }
 }
