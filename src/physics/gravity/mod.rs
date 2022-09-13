@@ -133,6 +133,7 @@ pub(super) fn gravity_system(
             }
         }
     }
+    let num_export = to_export.size();
     let imported = export_comm.exchange_all(to_export);
     let mut result = DataByRank::from_communicator(&*import_comm);
     for (rank, requests) in imported {
@@ -149,6 +150,7 @@ pub(super) fn gravity_system(
         }
     }
     let accelerations = import_comm.exchange_all(result);
+    assert_eq!(accelerations.size(), num_export);
     for (_, accelerations) in accelerations.iter() {
         for acc in accelerations {
             let entity = acc.entity();
