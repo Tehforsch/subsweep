@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use bevy::ecs::schedule::SystemLabelId;
+use bevy::ecs::system::AsSystemLabel;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Deref;
@@ -29,6 +31,9 @@ use crate::plugin_utils::run_once;
 #[derive(Default)]
 struct ExchangePluginExists;
 
+#[derive(Default)]
+struct ExchangeOrder(Vec<SystemLabelId>);
+
 #[derive(Default, Deref, DerefMut)]
 pub(super) struct OutgoingEntities(DataByRank<Vec<Entity>>);
 
@@ -43,6 +48,12 @@ struct SpawnedEntities(DataByRank<Vec<Entity>>);
 
 #[derive(Deref, DerefMut)]
 struct ExchangeBuffers<T>(DataByRank<Vec<T>>);
+
+impl<T> ExchangeBuffers<T> {
+    fn take(&mut self) -> DataByRank<Vec<T>> {
+        std::mem::take(&mut self.0)
+    }
+}
 
 pub struct ExchangeDataPlugin<T> {
     _marker: PhantomData<T>,
@@ -69,6 +80,7 @@ where
         run_once("exchange_data_plugin", app, |app| {
             app.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
                 .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
+                .insert_resource(ExchangeOrder::default())
                 .add_plugin(CommunicationPlugin::<NumEntities>::new(
                     CommunicationType::Exchange,
                 ))
@@ -89,12 +101,22 @@ where
                 .add_system_to_stage(
                     DomainDecompositionStages::Exchange,
                     spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
-                )
-                .add_system_to_stage(DomainDecompositionStages::Exchange, schedule_system);
+                );
         });
+        let labels = app.world.get_resource_mut::<ExchangeOrder>();
+        let mut exchange_buffers_system = Self::exchange_buffers_system
+            .after(Self::fill_buffers_system)
+            .after(spawn_incoming_entities_system)
+            .before(reset_outgoing_entities_system);
+        for label in labels.as_ref().unwrap().0.iter() {
+            exchange_buffers_system = exchange_buffers_system.after(*label);
+        }
+        let label = Self::exchange_buffers_system.as_system_label();
+        labels.unwrap().0.push(label);
         app.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
             size, rank,
         )))
+        .add_system_to_stage(DomainDecompositionStages::Exchange, exchange_buffers_system)
         .add_plugin(CommunicationPlugin::<T>::new(CommunicationType::Exchange))
         .add_system_to_stage(
             DomainDecompositionStages::Exchange,
@@ -102,21 +124,7 @@ where
         )
         .add_system_to_stage(
             DomainDecompositionStages::Exchange,
-            Self::send_buffers_system
-                .after(Self::fill_buffers_system)
-                .before(reset_outgoing_entities_system)
-                .before(schedule_system),
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::Exchange,
-            Self::receive_buffers_system
-                .after(Self::send_buffers_system)
-                .after(spawn_incoming_entities_system)
-                .after(schedule_system),
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::Exchange,
-            Self::reset_buffers_system.after(Self::receive_buffers_system),
+            Self::reset_buffers_system.after(Self::exchange_buffers_system),
         );
     }
 }
@@ -140,21 +148,15 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         }
     }
 
-    fn send_buffers_system(
-        mut communicator: NonSendMut<ExchangeCommunicator<T>>,
-        mut buffers: ResMut<ExchangeBuffers<T>>,
-    ) {
-        for (rank, data) in buffers.drain_all() {
-            communicator.blocking_send_vec(rank, data);
-        }
-    }
-
-    fn receive_buffers_system(
+    fn exchange_buffers_system(
         mut commands: Commands,
         mut communicator: NonSendMut<ExchangeCommunicator<T>>,
+        mut buffers: ResMut<ExchangeBuffers<T>>,
         spawned_entities: Res<SpawnedEntities>,
     ) {
-        for (rank, data) in communicator.receive_vec() {
+        let buffers = buffers.take();
+        let mut incoming = communicator.exchange_all(buffers);
+        for (rank, data) in incoming.drain_all() {
             let spawned_entities = spawned_entities[rank].clone();
             for (entity, component) in spawned_entities.iter().zip(data.into_iter()) {
                 commands.entity(*entity).insert(component);
@@ -216,8 +218,6 @@ fn despawn_outgoing_entities_system(
         }
     }
 }
-
-fn schedule_system() {}
 
 #[cfg(test)]
 #[cfg(feature = "local")]

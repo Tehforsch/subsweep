@@ -40,6 +40,12 @@ impl<T> DataByRank<T> {
     }
 }
 
+impl<T> DataByRank<Vec<T>> {
+    pub fn size(&self) -> usize {
+        self.0.iter().map(|(_, x)| x.len()).sum()
+    }
+}
+
 impl<T> DataByRank<T>
 where
     T: Default,
