@@ -119,7 +119,7 @@ fn main() {
 
     let opts = CommandLineOptions::parse();
     let world: MpiWorld<usize> = MpiWorld::new(0);
-    mpi_log::initialize(world.rank());
+    mpi_log::initialize(world.rank(), world.size());
     let mut app = App::new();
     build_app(&mut app, &opts, world.size(), world.rank());
     app.run();
