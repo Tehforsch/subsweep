@@ -89,13 +89,18 @@ mod tests {
         let world = MPI_UNIVERSE.world();
 
         for num in [0, 50, 100, 1000000].iter() {
-            let q1 = Identified::new(Entity::from_raw(*num), data.clone());
-            let mut q2 = Identified::new(Entity::from_raw(0), T::default());
-            let a = world.pack(&q1);
-            unsafe {
-                world.unpack_into(&a, &mut q2, 0);
+            for generation in [0, 50, 100, 1000000].iter() {
+                let q1 = Identified::new(
+                    Entity::from_bits((u32::MAX as u64) * generation + 1 + *num),
+                    data.clone(),
+                );
+                let mut q2 = Identified::new(Entity::from_raw(0), T::default());
+                let a = world.pack(&q1);
+                unsafe {
+                    world.unpack_into(&a, &mut q2, 0);
+                }
+                assert_eq!(q1, q2);
             }
-            assert_eq!(q1, q2);
         }
     }
 
