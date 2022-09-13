@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use mpi::request::scope;
+
 use super::from_communicator::FromCommunicator;
 use super::world_communicator::WorldCommunicator;
 use super::DataByRank;
@@ -60,12 +62,14 @@ where
         }
     }
 
-    pub fn exchange_all(&mut self, mut data: DataByRank<Vec<T>>) -> DataByRank<Vec<T>> {
-        for (rank, items) in data.drain_all() {
-            self.blocking_send_vec(rank, items);
-        }
-        let r = self.receive_vec();
-        r
+    pub fn exchange_all(&mut self, data: DataByRank<Vec<T>>) -> DataByRank<Vec<T>> {
+        scope(|scope| {
+            for (rank, items) in data.iter() {
+                let _guard = self.communicator.immediate_send_vec(scope, *rank, &items);
+            }
+            let r = self.receive_vec();
+            r
+        })
     }
 
     pub fn receive_vec(&mut self) -> DataByRank<Vec<T>> {

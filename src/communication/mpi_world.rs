@@ -74,6 +74,7 @@ where
         vec![]
     }
 
+    #[must_use]
     fn immediate_send_vec<'a, Sc: Scope<'a>>(
         &mut self,
         scope: Sc,
