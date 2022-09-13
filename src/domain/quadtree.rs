@@ -157,8 +157,18 @@ impl QuadTree {
     }
 }
 
-#[derive(Equivalence, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Equivalence, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct QuadTreeIndex([u8; MAX_DEPTH]);
+
+impl std::fmt::Debug for QuadTreeIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self
+            .0
+            .map(|x| <u8 as Into<NodeIndex>>::into(x).to_string())
+            .join("");
+        write!(f, "QuadTreeIndex({})", s)
+    }
+}
 
 impl Default for QuadTreeIndex {
     fn default() -> Self {
@@ -217,6 +227,15 @@ pub(super) enum NodeIndex {
     #[default]
     ThisNode,
     Child(u8),
+}
+
+impl ToString for NodeIndex {
+    fn to_string(&self) -> String {
+        match self {
+            Self::ThisNode => "".into(),
+            Self::Child(num) => num.to_string(),
+        }
+    }
 }
 
 impl From<u8> for NodeIndex {

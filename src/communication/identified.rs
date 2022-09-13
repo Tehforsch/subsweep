@@ -1,6 +1,6 @@
 pub(super) type EntityKey = u64;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct Identified<T> {
     pub key: EntityKey,
     pub data: T,
@@ -16,6 +16,15 @@ impl<T> Identified<T> {
 
     pub fn entity(&self) -> Entity {
         Entity::from_bits(self.key)
+    }
+}
+
+impl<T: std::fmt::Debug> std::fmt::Debug for Identified<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Identified")
+            .field("key", &format_args!("{:?}", Entity::from_bits(self.key)))
+            .field("data", &self.data)
+            .finish()
     }
 }
 
