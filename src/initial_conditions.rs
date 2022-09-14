@@ -80,7 +80,10 @@ fn spawn_particles_system(
     }
 }
 
-fn spawn_solar_system_system(mut commands: Commands) {
+fn spawn_solar_system_system(mut commands: Commands, rank: Res<WorldRank>) {
+    if !rank.is_main() {
+        return;
+    }
     let positions: Vec<VecLength> = vec![
         VecLength::astronomical_unit(0.0, 0.0),
         VecLength::astronomical_unit(0.7, 0.7),

@@ -15,6 +15,7 @@ use self::quadtree::QuadTreeConfig;
 use self::quadtree::QuadTreeIndex;
 use crate::communication::AllGatherCommunicator;
 use crate::communication::CollectiveCommunicator;
+use crate::communication::CommunicatedOption;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
@@ -36,7 +37,7 @@ pub struct DomainDecompositionPlugin;
 
 impl Plugin for DomainDecompositionPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(GlobalExtent(Extent::sentinel()))
+        app.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default());
         app.add_stage_after(
             CoreStage::Update,
@@ -69,7 +70,7 @@ impl Plugin for DomainDecompositionPlugin {
             DomainDecompositionStages::Decomposition,
             domain_decomposition_system.after(distribute_top_level_nodes_system),
         )
-        .add_plugin(CommunicationPlugin::<Extent>::new(
+        .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
             CommunicationType::AllGather,
         ))
         .add_plugin(CommunicationPlugin::<usize>::new(CommunicationType::Sum));
@@ -81,12 +82,12 @@ struct GlobalExtent(Extent);
 
 fn determine_global_extent_system(
     particles: Query<&Position>,
-    mut extent_communicator: NonSendMut<AllGatherCommunicator<Extent>>,
+    mut extent_communicator: NonSendMut<AllGatherCommunicator<CommunicatedOption<Extent>>>,
     mut global_extent: ResMut<GlobalExtent>,
 ) {
-    let extent =
-        Extent::from_positions(particles.iter().map(|x| &x.0)).unwrap_or(Extent::sentinel());
-    let all_extents = (*extent_communicator).all_gather(&extent);
+    let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
+    let all_extents = (*extent_communicator).all_gather(&extent.into());
+    let all_extents: Vec<Extent> = all_extents.into_iter().filter_map(|x| x.into()).collect();
     *global_extent = GlobalExtent(
         Extent::get_all_encompassing(all_extents.iter())
             .expect("Failed to find simulation extent - are there no particles?")
@@ -136,7 +137,6 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     let mut key_cutoffs_by_rank = vec![0];
     let mut load = 0;
     for (i, count) in particle_counts.iter().enumerate() {
-        load += count;
         if load >= work_per_rank {
             key_cutoffs_by_rank.push(i);
             if key_cutoffs_by_rank.len() == num_ranks {
@@ -144,6 +144,7 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
             }
             load = 0;
         }
+        load += count;
     }
     let num_entries_to_fill = num_ranks as i32 - key_cutoffs_by_rank.len() as i32;
     if num_entries_to_fill > 0 {

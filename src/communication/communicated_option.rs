@@ -39,7 +39,6 @@ impl<T> Into<Option<T>> for CommunicatedOption<T> {
 unsafe impl<'a, T> Equivalence for CommunicatedOption<T>
 where
     T: Equivalence,
-    // <T as Equivalence>::Out: MatchesRaw,
 {
     type Out = UserDatatype;
 
