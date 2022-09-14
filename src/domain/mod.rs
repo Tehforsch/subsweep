@@ -78,7 +78,7 @@ impl Plugin for DomainDecompositionPlugin {
 }
 
 #[derive(Debug, Deref, DerefMut)]
-struct GlobalExtent(Extent);
+pub struct GlobalExtent(Extent);
 
 fn determine_global_extent_system(
     particles: Query<&Position>,
