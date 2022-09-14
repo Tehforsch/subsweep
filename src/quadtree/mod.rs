@@ -1,11 +1,12 @@
+mod config;
 mod visualization;
 
 use std::ops::Index;
 use std::ops::IndexMut;
 
 use bevy::prelude::Entity;
+pub use config::QuadTreeConfig;
 use mpi::traits::Equivalence;
-use serde::Deserialize;
 pub use visualization::QuadtreeVisualizationPlugin;
 
 use crate::domain::extent::Extent;
@@ -16,23 +17,6 @@ use crate::units::VecLength;
 pub const MAX_DEPTH: usize = 32;
 pub const NUM_DIMENSIONS: usize = 2;
 pub const NUM_SUBDIVISIONS: usize = 2usize.pow(NUM_DIMENSIONS as u32);
-
-#[derive(Deserialize)]
-pub struct QuadTreeConfig {
-    pub min_depth: usize,
-    pub max_depth: usize,
-    pub max_num_particles_per_leaf: usize,
-}
-
-impl Default for QuadTreeConfig {
-    fn default() -> Self {
-        Self {
-            min_depth: 0,
-            max_depth: 20,
-            max_num_particles_per_leaf: 1,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct LeafData {

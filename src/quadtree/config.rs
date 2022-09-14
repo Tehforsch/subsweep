@@ -1,0 +1,18 @@
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct QuadTreeConfig {
+    pub min_depth: usize,
+    pub max_depth: usize,
+    pub max_num_particles_per_leaf: usize,
+}
+
+impl Default for QuadTreeConfig {
+    fn default() -> Self {
+        Self {
+            min_depth: 0,
+            max_depth: 20,
+            max_num_particles_per_leaf: 1,
+        }
+    }
+}
