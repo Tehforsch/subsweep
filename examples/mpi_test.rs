@@ -1,3 +1,4 @@
+use mpi::traits::Communicator;
 use mpi::Tag;
 use tenet::communication::from_communicator::FromCommunicator;
 use tenet::communication::DataByRank;
@@ -5,6 +6,7 @@ use tenet::communication::ExchangeCommunicator;
 use tenet::communication::MpiWorld;
 use tenet::communication::SizedCommunicator;
 use tenet::communication::WorldCommunicator;
+use tenet::communication::MPI_UNIVERSE;
 
 // This is effectively an MPI test written as an example. This is
 // unfortunate but "necessary" since support for custom test runners
@@ -16,11 +18,19 @@ use tenet::communication::WorldCommunicator;
 // program.  Passing --num-threads 1 and --jobs 1 does not help
 
 fn main() {
-    test_send_receive();
-    test_exchange_all();
+    let fns: &[(&str, fn())] = &[
+        ("exchange_all", exchange_all),
+        ("send_receive", send_receive),
+    ];
+    for (name, f) in fns {
+        f();
+        if MPI_UNIVERSE.world().rank() == 0 {
+            println!("{} ... ok", name);
+        }
+    }
 }
 
-fn test_send_receive() {
+fn send_receive() {
     let mut world = MpiWorld::<i32>::new(Tag::default());
     let rank = world.rank();
     let x0: Vec<i32> = vec![1, 2, 3];
@@ -40,14 +50,13 @@ fn test_send_receive() {
     }
 }
 
-fn test_exchange_all() {
-    let mut world = MpiWorld::<i32>::new(Tag::default());
+fn exchange_all() {
+    let world = MpiWorld::<i32>::new(Tag::default());
     let rank = world.rank();
     let mut exchange_comm = ExchangeCommunicator::from_communicator(world);
-    for i in 0..100 {
-        dbg!(i);
-        let x0: Vec<i32> = vec![1, 2, 3];
-        let x1: Vec<i32> = vec![3, 2, 1];
+    for _ in 0..100 {
+        let x0: Vec<i32> = (0..100).collect();
+        let x1: Vec<i32> = (0..100).rev().collect();
         if rank == 0 {
             let data = DataByRank::from_iter([(1, x0)].into_iter());
             let res = exchange_comm.exchange_all(data);

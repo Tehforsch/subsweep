@@ -66,6 +66,8 @@ where
         let res = scope(|scope| {
             let mut guards = vec![];
             for (rank, items) in data.iter() {
+                debug_assert_eq!(self.pending_data[*rank], false);
+                self.pending_data[*rank] = true;
                 let guard = self.communicator.immediate_send_vec(scope, *rank, &items);
                 guards.extend(guard.into_iter());
             }
