@@ -232,7 +232,7 @@ mod tests {
         let acc2 = direct_sum(&solver, &pos, get_particles(n_particles).iter().collect());
         let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length());
         // Precision is pretty low with f64, so change this to f64 once variable precision is implemented
-        assert!(relative_diff.value() < &1e-5);
+        assert!(relative_diff.value() < &1e-15);
     }
 
     fn direct_sum(
