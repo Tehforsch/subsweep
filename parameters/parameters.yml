@@ -1,6 +1,7 @@
 physics:
-  softening_length: 1e-3 m
+  softening_length: 1 au
   opening_angle: "0.5"
+  timestep: 0.001 yr
 tree:
   max_depth: 20
   min_depth: 3
@@ -9,6 +10,7 @@ visualization:
   show_quadtree: true
 initial_conditions:
   num_particles: 100
+  type: Normal
 output:
   output_dir: "output"
   time_between_snapshots: 1.0 s

@@ -59,24 +59,15 @@ fn spawn_particles_system(
         return;
     }
     let n_particles = parameters.num_particles / 2;
+    let mut rng = rand::thread_rng();
     for _ in 0..n_particles {
-        let x = rand::thread_rng().gen_range(-5.0..-4.0);
-        let y = rand::thread_rng().gen_range(-1.0..1.0);
-        let pos = DVec2Length::meter(x, y);
-        let x = 0.0;
-        let y = 0.1;
-        let vel = DVec2Velocity::meters_per_second(x, y) * 1.0;
-        spawn_particle(&mut commands, pos, vel, Mass::kilogram(10000000.0))
-    }
-
-    for _ in 0..n_particles {
-        let x = rand::thread_rng().gen_range(4.0..5.0);
-        let y = rand::thread_rng().gen_range(-1.0..1.0);
-        let pos = DVec2Length::meter(x, y);
-        let x = 0.0;
-        let y = -0.1;
-        let vel = DVec2Velocity::meters_per_second(x, y) * 1.0;
-        spawn_particle(&mut commands, pos, vel, Mass::kilogram(10000000.0))
+        let x = rng.gen_range(-1.0..1.0);
+        let y = rng.gen_range(-1.0..1.0);
+        let pos = 0.10 * DVec2Length::astronomical_unit(x, y);
+        let x = rng.gen_range(-1.0..1.0);
+        let y = rng.gen_range(-1.0..1.0);
+        let vel = 0.01 * DVec2Velocity::astronomical_unit_per_day(x, y);
+        spawn_particle(&mut commands, pos, vel, Mass::solar(1.0))
     }
 }
 
