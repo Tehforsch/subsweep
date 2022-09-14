@@ -16,6 +16,7 @@ use crate::mass::Mass;
 use crate::output::AttributePlugin;
 use crate::output::DatasetPlugin;
 use crate::parameters::ParameterPlugin;
+use crate::plugin_utils::get_parameters;
 use crate::position::Position;
 use crate::units;
 use crate::velocity::Velocity;
@@ -48,8 +49,9 @@ impl Plugin for PhysicsPlugin {
             SystemStage::parallel(),
         );
         app.add_plugin(ParameterPlugin::<Parameters>::new("physics"))
-            .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("tree"))
-            .add_plugin(ExchangeDataPlugin::<Position>::default())
+            .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("tree"));
+        let parameters = get_parameters::<Parameters>(app).clone();
+        app.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())
             .add_plugin(DatasetPlugin::<Position>::new("position"))
@@ -57,7 +59,7 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(DatasetPlugin::<Mass>::new("mass"))
             .add_plugin(AttributePlugin::<Time>::new("time"))
             .add_plugin(GravityPlugin)
-            .insert_resource(Timestep(units::Time::second(0.01)))
+            .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::second(0.00)))
             .add_system(integrate_motion_system)
             .add_system(time_system);

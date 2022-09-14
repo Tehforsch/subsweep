@@ -2,11 +2,13 @@ use serde::Deserialize;
 
 use crate::units::Dimensionless;
 use crate::units::Length;
+use crate::units::Time;
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(super) struct Parameters {
     pub softening_length: Length,
     pub opening_angle: Dimensionless,
+    pub timestep: Time,
 }
 
 impl Default for Parameters {
@@ -14,6 +16,7 @@ impl Default for Parameters {
         Self {
             softening_length: Length::zero(),
             opening_angle: Dimensionless::dimensionless(0.5),
+            timestep: Time::second(1.0),
         }
     }
 }
