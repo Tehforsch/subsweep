@@ -23,6 +23,7 @@ use crate::communication::Rank;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::mass::Mass;
+use crate::physics::MassMoments;
 use crate::position::Position;
 use crate::velocity::Velocity;
 
@@ -73,7 +74,9 @@ impl Plugin for DomainDecompositionPlugin {
         .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
             CommunicationType::AllGather,
         ))
-        .add_plugin(CommunicationPlugin::<usize>::new(CommunicationType::Sum));
+        .add_plugin(CommunicationPlugin::<MassMoments>::new(
+            CommunicationType::AllGather,
+        ));
     }
 }
 
@@ -120,12 +123,12 @@ fn construct_quad_tree_system(
     commands.insert_resource(quadtree);
 }
 
-fn sum_vecs(mut data: DataByRank<Vec<usize>>) -> Vec<usize> {
+fn sum_vecs(mut data: DataByRank<Vec<MassMoments>>) -> Vec<MassMoments> {
     let mut sum = data.remove(&0).unwrap();
     for (_, other_result) in data.drain_all() {
         debug_assert_eq!(sum.len(), other_result.len());
         for i in 0..other_result.len() {
-            sum[i] += other_result[i];
+            sum[i] += &other_result[i];
         }
     }
     sum
@@ -168,23 +171,33 @@ impl TopLevelIndices {
 }
 
 fn distribute_top_level_nodes_system(
-    tree: Res<QuadTree>,
+    mut tree: ResMut<QuadTree>,
     config: Res<QuadTreeConfig>,
     num_ranks: Res<WorldSize>,
     mut indices: ResMut<TopLevelIndices>,
-    mut comm: NonSendMut<AllGatherCommunicator<usize>>,
+    mut comm: NonSendMut<AllGatherCommunicator<MassMoments>>,
 ) {
     // Use the particle counts at depth config.min_depth for
     // decomposition for now. This obviously needs to be fixed and
     // replaced by a proper peano hilbert curve on an actual tree
     let top_level_tree_leaf_indices: Vec<_> =
         QuadTreeIndex::iter_all_nodes_at_depth(config.min_depth).collect();
-    let buffer: Vec<_> = top_level_tree_leaf_indices
+    let mass_moments: Vec<_> = top_level_tree_leaf_indices
         .iter()
-        .map(|index| tree[&index].data.num_particles())
+        .map(|index| tree[&index].data.moments.clone())
         .collect();
     // replace with allreduce over buffer at some point
-    let particles_per_leaf = sum_vecs(comm.all_gather_vec(&buffer));
+    let total_mass_moments = sum_vecs(comm.all_gather_vec(&mass_moments));
+    for (index, moments) in top_level_tree_leaf_indices
+        .iter()
+        .zip(total_mass_moments.iter())
+    {
+        tree[index].data.moments = moments.clone();
+    }
+    let particles_per_leaf: Vec<usize> = total_mass_moments
+        .iter()
+        .map(|moments| moments.count())
+        .collect();
     let cutoffs = get_cutoffs(&particles_per_leaf, **num_ranks);
     *indices = TopLevelIndices(
         (0..**num_ranks)

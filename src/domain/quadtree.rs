@@ -1,4 +1,5 @@
 use std::ops::Index;
+use std::ops::IndexMut;
 
 use bevy::prelude::Entity;
 use mpi::traits::Equivalence;
@@ -45,10 +46,6 @@ pub struct NodeData {
 impl NodeData {
     fn update_with(&mut self, pos: &VecLength, mass: &Mass) {
         self.moments.add_mass_at(pos, mass);
-    }
-
-    pub fn num_particles(&self) -> usize {
-        self.moments.count()
     }
 }
 
@@ -265,6 +262,12 @@ impl Index<&QuadTreeIndex> for QuadTree {
     }
 }
 
+impl IndexMut<&QuadTreeIndex> for QuadTree {
+    fn index_mut(&mut self, index: &QuadTreeIndex) -> &mut Self::Output {
+        self.index_into_depth_mut(index, 0)
+    }
+}
+
 impl QuadTree {
     fn index_into_depth(&self, idx: &QuadTreeIndex, depth: usize) -> &Self {
         match idx.0[depth].into() {
@@ -272,6 +275,19 @@ impl QuadTree {
             NodeIndex::Child(num) => {
                 if let Node::Tree(ref children) = self.node {
                     children[num as usize].index_into_depth(idx, depth + 1)
+                } else {
+                    panic!("Invalid index");
+                }
+            }
+        }
+    }
+
+    fn index_into_depth_mut(&mut self, idx: &QuadTreeIndex, depth: usize) -> &mut Self {
+        match idx.0[depth].into() {
+            NodeIndex::ThisNode => self,
+            NodeIndex::Child(num) => {
+                if let Node::Tree(ref mut children) = self.node {
+                    children[num as usize].index_into_depth_mut(idx, depth + 1)
                 } else {
                     panic!("Invalid index");
                 }

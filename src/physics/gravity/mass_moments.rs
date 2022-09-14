@@ -1,11 +1,14 @@
 use std::iter::Sum;
+use std::ops::AddAssign;
+
+use mpi::traits::Equivalence;
 
 use crate::units::Mass;
 use crate::units::Vec2Length;
 use crate::units::VecLength;
 use crate::units::VecLengthMass;
 
-#[derive(Default)]
+#[derive(Clone, Default, Equivalence)]
 pub struct MassMoments {
     total: Mass,
     weighted_position_sum: VecLengthMass,
@@ -42,6 +45,14 @@ impl Sum<(Mass, Vec2Length)> for MassMoments {
             s.add_mass_at(&pos, &mass);
         }
         s
+    }
+}
+
+impl AddAssign<&MassMoments> for MassMoments {
+    fn add_assign(&mut self, rhs: &MassMoments) {
+        self.count += rhs.count;
+        self.total += rhs.total;
+        self.weighted_position_sum += rhs.weighted_position_sum;
     }
 }
 
