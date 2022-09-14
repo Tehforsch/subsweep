@@ -29,3 +29,7 @@ serde_yaml = "0.9.9"
 # Optimize dependencies even in a debug build
 [profile.dev.package."*"]
 opt-level = 3
+
+[[example]]
+name = "mpi_test"
+
