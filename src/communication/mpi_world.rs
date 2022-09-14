@@ -64,12 +64,12 @@ impl<S, T> WorldCommunicator<S> for MpiWorld<T>
 where
     S: Equivalence,
 {
-    fn blocking_send_vec(&mut self, rank: Rank, data: Vec<S>) {
+    fn blocking_send_vec(&mut self, rank: Rank, data: &[S]) {
         let num = data.len();
         let process = self.world.process_at_rank(rank);
         process.send_with_tag(&num, self.tag);
         if num > 0 {
-            process.send_with_tag(&data, self.tag);
+            process.send_with_tag(data, self.tag);
         }
     }
 

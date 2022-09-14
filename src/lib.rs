@@ -15,7 +15,10 @@ pub(crate) mod config;
 pub(crate) mod domain;
 pub(crate) mod initial_conditions;
 pub(crate) mod mass;
+
+#[cfg(not(feature = "local"))]
 pub mod mpi_log;
+
 pub(crate) mod output;
 pub(crate) mod parameters;
 pub(crate) mod particle;

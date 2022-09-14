@@ -4,7 +4,7 @@ use mpi::request::WaitGuard;
 use super::Rank;
 
 pub trait WorldCommunicator<T> {
-    fn blocking_send_vec(&mut self, rank: Rank, data: Vec<T>);
+    fn blocking_send_vec(&mut self, rank: Rank, data: &[T]);
     fn receive_vec(&mut self, rank: Rank) -> Vec<T>;
     #[must_use]
     fn immediate_send_vec<'a, Sc: Scope<'a>>(

@@ -6,6 +6,8 @@ use std::slice;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 
+use mpi::request::Scope;
+use mpi::request::WaitGuard;
 use mpi::Count;
 use mpi::Tag;
 
@@ -64,10 +66,10 @@ impl<T: Sync + Send> WorldCommunicator<T> for LocalCommunicator<T> {
             .collect()
     }
 
-    fn blocking_send_vec(&mut self, rank: Rank, data: Vec<T>) {
+    fn blocking_send_vec(&mut self, rank: Rank, data: &[T]) {
         let bytes = unsafe {
             slice::from_raw_parts(
-                (data.as_slice() as *const [T]) as *const u8,
+                (data as *const [T]) as *const u8,
                 data.len() * mem::size_of::<T>(),
             )
         };
@@ -75,6 +77,17 @@ impl<T: Sync + Send> WorldCommunicator<T> for LocalCommunicator<T> {
             bytes: bytes.to_vec(),
         };
         self.senders[rank].send(payload).unwrap();
+    }
+
+    fn immediate_send_vec<'a, Sc: Scope<'a>>(
+        &mut self,
+        _scope: Sc,
+        rank: Rank,
+        data: &'a [T],
+    ) -> Option<WaitGuard<'a, [T], Sc>> {
+        // Local communication does not block anyways
+        self.blocking_send_vec(rank, data);
+        None
     }
 }
 
@@ -98,7 +111,7 @@ impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> 
 
     fn all_gather_vec(&mut self, data: &[T]) -> DataByRank<Vec<T>> {
         for rank in self.other_ranks() {
-            self.blocking_send_vec(rank, data.to_vec());
+            self.blocking_send_vec(rank, data);
         }
         let mut result = DataByRank::empty();
         for rank in self.all_ranks() {
@@ -114,7 +127,7 @@ impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> 
 
     fn all_gather_varcount(&mut self, data: &[T], _counts: &[Count]) -> Vec<T> {
         for rank in self.other_ranks() {
-            self.blocking_send_vec(rank, data.to_vec());
+            self.blocking_send_vec(rank, data);
         }
         let mut result = vec![];
         for rank in self.all_ranks() {
@@ -177,9 +190,9 @@ mod tests {
                 b: num,
             })
             .collect::<Vec<_>>();
-        comm0.blocking_send_vec(1, vec![x.clone()]);
+        comm0.blocking_send_vec(1, &[x.clone()]);
         assert_eq!(comm1.receive_vec(0), vec![x]);
-        comm0.blocking_send_vec(1, xs.clone());
+        comm0.blocking_send_vec(1, &xs.clone());
         assert_eq!(comm1.receive_vec(0), xs.clone());
     }
 
@@ -189,7 +202,7 @@ mod tests {
         let mut comm0 = comms.remove(&0).unwrap();
         let mut comm1 = comms.remove(&1).unwrap();
         let xs: Vec<i32> = vec![42, 0x01020304, 3];
-        comm0.blocking_send_vec(1, xs.clone());
+        comm0.blocking_send_vec(1, &xs.clone());
         assert_eq!(comm1.receive_vec(0), xs);
     }
 
@@ -203,8 +216,8 @@ mod tests {
         let mut comm_b1 = comms.remove(&1).unwrap();
         let xs_a: Vec<i32> = vec![1, 2, 3];
         let xs_b: Vec<f32> = vec![1.0, 2.0, 3.0];
-        comm_a0.blocking_send_vec(1, xs_a.clone());
-        comm_b0.blocking_send_vec(1, xs_b.clone());
+        comm_a0.blocking_send_vec(1, &xs_a.clone());
+        comm_b0.blocking_send_vec(1, &xs_b.clone());
         assert_eq!(comm_a1.receive_vec(0), xs_a);
         assert_eq!(comm_b1.receive_vec(0), xs_b);
     }

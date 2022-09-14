@@ -103,7 +103,8 @@ pub fn main() {
 #[cfg(feature = "local")]
 pub fn main() {
     use clap::Parser;
-    use communication::build_local_communication_app;
+
+    use crate::communication::build_local_communication_app;
 
     let opts = CommandLineOptions::parse();
     build_local_communication_app(

@@ -11,6 +11,24 @@ pub struct CommunicatedOption<T> {
     data: MaybeUninit<T>,
 }
 
+impl<T> Clone for CommunicatedOption<T>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        let data = unsafe {
+            match self.valid {
+                true => MaybeUninit::new(self.data.assume_init_ref().clone()),
+                false => MaybeUninit::uninit(),
+            }
+        };
+        Self {
+            valid: self.valid,
+            data,
+        }
+    }
+}
+
 impl<T> From<Option<T>> for CommunicatedOption<T> {
     fn from(data: Option<T>) -> Self {
         match data {

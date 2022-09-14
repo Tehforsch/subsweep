@@ -51,7 +51,7 @@ where
     pub fn blocking_send_vec(&mut self, rank: i32, data: Vec<T>) {
         debug_assert_eq!(self.pending_data[rank], false);
         self.pending_data[rank] = true;
-        self.communicator.blocking_send_vec(rank, data);
+        self.communicator.blocking_send_vec(rank, &data);
     }
 
     pub fn empty_send_to_others(&mut self) {
