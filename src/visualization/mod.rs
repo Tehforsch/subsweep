@@ -20,6 +20,7 @@ use crate::communication::CommunicationType;
 use crate::communication::Rank;
 use crate::communication::WorldRank;
 use crate::domain::visualization::DomainVisualizationPlugin;
+use crate::domain::GlobalExtent;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsStages;
@@ -39,6 +40,9 @@ pub enum VisualizationStage {
 }
 
 pub struct VisualizationPlugin;
+
+#[derive(Component)]
+struct WorldCamera;
 
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
@@ -87,6 +91,7 @@ impl Plugin for VisualizationPlugin {
                     VisualizationStage::AddVisualization,
                     spawn_sprites_system::<RemoteParticleVisualization>,
                 )
+                .add_system_to_stage(VisualizationStage::Draw, camera_translation_system)
                 .add_system_to_stage(
                     VisualizationStage::Draw,
                     position_to_translation_system::<DrawCircle>
@@ -104,6 +109,16 @@ impl Plugin for VisualizationPlugin {
             );
         }
     }
+}
+
+fn camera_translation_system(
+    mut camera: Query<&mut Transform, With<WorldCamera>>,
+    extent: Res<GlobalExtent>,
+) {
+    let mut camera_transform = camera.single_mut();
+    let pos = extent.center.in_units(CAMERA_ZOOM);
+    camera_transform.translation.x = pos.x;
+    camera_transform.translation.y = pos.y;
 }
 
 pub fn get_color(rank: Rank) -> Color {
@@ -124,7 +139,9 @@ fn spawn_sprites_system<T: Component + GetColor>(
 }
 
 pub fn setup_camera_system(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands
+        .spawn_bundle(Camera2dBundle::default())
+        .insert(WorldCamera);
 }
 
 fn position_to_translation_system<T: Component + IntoBundle>(
