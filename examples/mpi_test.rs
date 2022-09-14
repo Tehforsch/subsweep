@@ -1,4 +1,7 @@
 use mpi::Tag;
+use tenet::communication::from_communicator::FromCommunicator;
+use tenet::communication::DataByRank;
+use tenet::communication::ExchangeCommunicator;
 use tenet::communication::MpiWorld;
 use tenet::communication::SizedCommunicator;
 use tenet::communication::WorldCommunicator;
@@ -13,6 +16,11 @@ use tenet::communication::WorldCommunicator;
 // program.  Passing --num-threads 1 and --jobs 1 does not help
 
 fn main() {
+    test_send_receive();
+    test_exchange_all();
+}
+
+fn test_send_receive() {
     let mut world = MpiWorld::<i32>::new(Tag::default());
     let rank = world.rank();
     let x0: Vec<i32> = vec![1, 2, 3];
@@ -29,5 +37,25 @@ fn main() {
             x0
         );
         world.blocking_send_vec(0, x1);
+    }
+}
+
+fn test_exchange_all() {
+    let mut world = MpiWorld::<i32>::new(Tag::default());
+    let rank = world.rank();
+    let mut exchange_comm = ExchangeCommunicator::from_communicator(world);
+    for i in 0..100 {
+        dbg!(i);
+        let x0: Vec<i32> = vec![1, 2, 3];
+        let x1: Vec<i32> = vec![3, 2, 1];
+        if rank == 0 {
+            let data = DataByRank::from_iter([(1, x0)].into_iter());
+            let res = exchange_comm.exchange_all(data);
+            assert_eq!(res[1], x1);
+        } else if rank == 1 {
+            let data = DataByRank::from_iter([(0, x1)].into_iter());
+            let res = exchange_comm.exchange_all(data);
+            assert_eq!(res[0], x0);
+        }
     }
 }
