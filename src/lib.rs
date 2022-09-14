@@ -15,6 +15,7 @@ pub(crate) mod config;
 pub(crate) mod domain;
 pub(crate) mod initial_conditions;
 pub(crate) mod mass;
+pub(crate) mod quadtree;
 
 #[cfg(not(feature = "local"))]
 pub mod mpi_log;

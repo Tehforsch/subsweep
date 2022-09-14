@@ -1,11 +1,14 @@
+mod visualization;
+
 use std::ops::Index;
 use std::ops::IndexMut;
 
 use bevy::prelude::Entity;
 use mpi::traits::Equivalence;
 use serde::Deserialize;
+pub use visualization::QuadtreeVisualizationPlugin;
 
-use super::Extent;
+use crate::domain::extent::Extent;
 use crate::physics::MassMoments;
 use crate::units::Mass;
 use crate::units::VecLength;

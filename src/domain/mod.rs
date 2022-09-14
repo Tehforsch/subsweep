@@ -3,16 +3,9 @@ use mpi::traits::Equivalence;
 
 mod exchange_data_plugin;
 pub mod extent;
-pub mod quadtree;
-pub mod visualization;
-
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 use self::extent::Extent;
-use self::quadtree::LeafData;
-use self::quadtree::QuadTree;
-use self::quadtree::QuadTreeConfig;
-use self::quadtree::QuadTreeIndex;
 use crate::communication::AllGatherCommunicator;
 use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicatedOption;
@@ -25,6 +18,10 @@ use crate::communication::WorldSize;
 use crate::mass::Mass;
 use crate::physics::MassMoments;
 use crate::position::Position;
+use crate::quadtree::LeafData;
+use crate::quadtree::QuadTree;
+use crate::quadtree::QuadTreeConfig;
+use crate::quadtree::QuadTreeIndex;
 use crate::velocity::Velocity;
 
 #[derive(StageLabel)]

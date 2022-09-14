@@ -9,11 +9,10 @@ use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Identified;
 use crate::communication::WorldRank;
-use crate::domain::quadtree::Node;
-use crate::domain::quadtree::QuadTree;
-use crate::domain::quadtree::QuadTreeIndex;
 use crate::domain::TopLevelIndices;
 use crate::position::Position;
+use crate::quadtree::Node;
+use crate::quadtree::*;
 use crate::units;
 use crate::units::Dimensionless;
 use crate::units::Length;
@@ -166,10 +165,9 @@ mod tests {
 
     use super::QuadTree;
     use crate::domain::extent::Extent;
-    use crate::domain::quadtree::LeafData;
-    use crate::domain::quadtree::QuadTreeConfig;
-    use crate::domain::quadtree::{self};
     use crate::physics::gravity::Solver;
+    use crate::quadtree;
+    use crate::quadtree::*;
     use crate::units::assert_is_close;
     use crate::units::DVec2Acceleration;
     use crate::units::DVec2Length;

@@ -9,7 +9,6 @@ pub use self::gravity::mass_moments::MassMoments;
 use self::gravity::plugin::GravityPlugin;
 use self::parameters::Parameters;
 pub use self::time::Time;
-use crate::domain::quadtree::QuadTreeConfig;
 use crate::domain::DomainDecompositionStages;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass::Mass;
@@ -18,6 +17,7 @@ use crate::output::DatasetPlugin;
 use crate::parameters::ParameterPlugin;
 use crate::plugin_utils::get_parameters;
 use crate::position::Position;
+use crate::quadtree::QuadTreeConfig;
 use crate::units;
 use crate::velocity::Velocity;
 

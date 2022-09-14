@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use super::quadtree::QuadTree;
-use super::TopLevelIndices;
+use super::QuadTree;
+use crate::domain::TopLevelIndices;
 use crate::visualization::get_color;
 use crate::visualization::parameters::Parameters;
 use crate::visualization::DrawRect;
@@ -10,9 +10,9 @@ use crate::visualization::VisualizationStage;
 #[derive(Component)]
 struct Outline;
 
-pub struct DomainVisualizationPlugin;
+pub struct QuadtreeVisualizationPlugin;
 
-impl Plugin for DomainVisualizationPlugin {
+impl Plugin for QuadtreeVisualizationPlugin {
     fn build(&self, app: &mut App) {
         if app
             .world
