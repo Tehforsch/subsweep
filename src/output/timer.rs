@@ -1,9 +1,11 @@
 use bevy::ecs::schedule::ShouldRun;
 use bevy::prelude::Commands;
+use bevy::prelude::EventReader;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 
 use super::parameters::Parameters;
+use crate::physics::StopSimulationEvent;
 use crate::physics::Time;
 use crate::units;
 
@@ -20,8 +22,13 @@ impl Timer {
         });
     }
 
-    pub fn run_criterion(time: Res<Time>, timer: Res<Self>) -> ShouldRun {
-        if time.0 >= timer.next_output_time {
+    pub fn run_criterion(
+        time: Res<Time>,
+        timer: Res<Self>,
+        events: EventReader<StopSimulationEvent>,
+    ) -> ShouldRun {
+        let simulation_finished = !events.is_empty();
+        if simulation_finished || time.0 >= timer.next_output_time {
             ShouldRun::Yes
         } else {
             ShouldRun::No

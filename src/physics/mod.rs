@@ -2,6 +2,7 @@ mod gravity;
 mod parameters;
 mod time;
 
+use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
@@ -59,10 +60,28 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(DatasetPlugin::<Mass>::new("mass"))
             .add_plugin(AttributePlugin::<Time>::new("time"))
             .add_plugin(GravityPlugin)
+            .add_event::<StopSimulationEvent>()
             .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::second(0.00)))
             .add_system(integrate_motion_system)
-            .add_system(time_system);
+            .add_system(time_system)
+            .add_system(stop_simulation_system.after(time_system));
+    }
+}
+
+pub struct StopSimulationEvent;
+
+fn stop_simulation_system(
+    parameters: Res<Parameters>,
+    current_time: Res<Time>,
+    mut stop_sim: EventWriter<StopSimulationEvent>,
+    mut app_exit: EventWriter<AppExit>,
+) {
+    if let Some(time) = parameters.final_time {
+        if **current_time >= time {
+            stop_sim.send(StopSimulationEvent);
+            app_exit.send(AppExit);
+        }
     }
 }
 
