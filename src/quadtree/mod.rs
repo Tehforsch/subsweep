@@ -1,12 +1,11 @@
 mod config;
+mod index;
+mod node_index;
 mod visualization;
-
-use std::ops::Index;
-use std::ops::IndexMut;
 
 use bevy::prelude::Entity;
 pub use config::QuadTreeConfig;
-use mpi::traits::Equivalence;
+pub use index::QuadTreeIndex;
 pub use visualization::QuadtreeVisualizationPlugin;
 
 use crate::domain::extent::Extent;
@@ -141,150 +140,8 @@ impl QuadTree {
     }
 }
 
-#[derive(Equivalence, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct QuadTreeIndex([u8; MAX_DEPTH]);
-
-impl std::fmt::Debug for QuadTreeIndex {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = self
-            .0
-            .map(|x| <u8 as Into<NodeIndex>>::into(x).to_string())
-            .join("");
-        write!(f, "QuadTreeIndex({})", s)
-    }
-}
-
-impl Default for QuadTreeIndex {
-    fn default() -> Self {
-        Self([NodeIndex::ThisNode.into(); MAX_DEPTH])
-    }
-}
-
-impl QuadTreeIndex {
-    fn internal_iter_all_at_depth(
-        depth: usize,
-        mut current_index: QuadTreeIndex,
-        current_depth: usize,
-    ) -> Box<dyn Iterator<Item = Self>> {
-        if current_depth < depth {
-            Box::new((0..NUM_SUBDIVISIONS).flat_map(move |num_child| {
-                current_index.0[current_depth] = NodeIndex::Child(num_child as u8).into();
-                Self::internal_iter_all_at_depth(depth, current_index, current_depth + 1)
-            }))
-        } else {
-            let mut current_index = current_index.clone();
-            current_index.0[current_depth] = NodeIndex::ThisNode.into();
-            Box::new(std::iter::once(current_index))
-        }
-    }
-
-    pub fn iter_all_nodes_at_depth(depth: usize) -> Box<dyn Iterator<Item = Self>> {
-        Self::internal_iter_all_at_depth(depth, QuadTreeIndex::default(), 0)
-    }
-
-    // I implemented this thinking I'd need it immediately but didn't,
-    // however this will definitely become useful at some point
-    #[allow(dead_code)]
-    pub fn belongs_to(&self, other_index: &QuadTreeIndex) -> bool {
-        for depth in 0..MAX_DEPTH {
-            if let NodeIndex::Child(num1) = other_index.0[depth].into() {
-                match self.0[depth].into() {
-                    NodeIndex::Child(num2) => {
-                        if num1 != num2 {
-                            return false;
-                        }
-                    }
-                    NodeIndex::ThisNode => {
-                        return false;
-                    }
-                }
-            } else {
-                return true;
-            }
-        }
-        panic!("Invalid quad tree index which does not terminate before MAX_DEPTH")
-    }
-}
-
-#[derive(Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub(super) enum NodeIndex {
-    #[default]
-    ThisNode,
-    Child(u8),
-}
-
-impl ToString for NodeIndex {
-    fn to_string(&self) -> String {
-        match self {
-            Self::ThisNode => "".into(),
-            Self::Child(num) => num.to_string(),
-        }
-    }
-}
-
-impl From<u8> for NodeIndex {
-    fn from(val: u8) -> Self {
-        if val == NUM_SUBDIVISIONS as u8 {
-            Self::ThisNode
-        } else {
-            Self::Child(val)
-        }
-    }
-}
-
-impl From<NodeIndex> for u8 {
-    fn from(val: NodeIndex) -> Self {
-        match val {
-            NodeIndex::ThisNode => NUM_SUBDIVISIONS as u8,
-            NodeIndex::Child(num) => num,
-        }
-    }
-}
-
-impl Index<&QuadTreeIndex> for QuadTree {
-    type Output = QuadTree;
-
-    fn index(&self, idx: &QuadTreeIndex) -> &Self::Output {
-        self.index_into_depth(idx, 0)
-    }
-}
-
-impl IndexMut<&QuadTreeIndex> for QuadTree {
-    fn index_mut(&mut self, index: &QuadTreeIndex) -> &mut Self::Output {
-        self.index_into_depth_mut(index, 0)
-    }
-}
-
-impl QuadTree {
-    fn index_into_depth(&self, idx: &QuadTreeIndex, depth: usize) -> &Self {
-        match idx.0[depth].into() {
-            NodeIndex::ThisNode => self,
-            NodeIndex::Child(num) => {
-                if let Node::Tree(ref children) = self.node {
-                    children[num as usize].index_into_depth(idx, depth + 1)
-                } else {
-                    panic!("Invalid index");
-                }
-            }
-        }
-    }
-
-    fn index_into_depth_mut(&mut self, idx: &QuadTreeIndex, depth: usize) -> &mut Self {
-        match idx.0[depth].into() {
-            NodeIndex::ThisNode => self,
-            NodeIndex::Child(num) => {
-                if let Node::Tree(ref mut children) = self.node {
-                    children[num as usize].index_into_depth_mut(idx, depth + 1)
-                } else {
-                    panic!("Invalid index");
-                }
-            }
-        }
-    }
-}
-
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::units::DVec2Length;
     use crate::units::Length;
@@ -317,7 +174,7 @@ mod tests {
         QuadTree::new(&config, positions.into_iter().collect(), &extent);
     }
 
-    fn get_min_depth_quadtree(min_depth: usize) -> QuadTree {
+    pub fn get_min_depth_quadtree(min_depth: usize) -> QuadTree {
         let positions = [];
         let config = QuadTreeConfig {
             min_depth,
@@ -343,71 +200,6 @@ mod tests {
             };
             tree.depth_first_map_leaf(&mut count);
             assert_eq!(num_nodes, 4usize.pow(min_depth as u32));
-        }
-    }
-
-    #[test]
-    fn quadtree_index() {
-        let min_depth = 5;
-        let mut tree = get_min_depth_quadtree(min_depth);
-        // obtain a list of particles we can add into the quadtree
-        // from the centers of all the leaf ectents
-        let config = QuadTreeConfig::default();
-        let mut particles = vec![];
-        tree.depth_first_map_leaf(&mut |extent: &Extent, _| {
-            particles.push(extent.center);
-        });
-        for pos in particles.into_iter() {
-            let data = LeafData {
-                pos,
-                mass: Mass::zero(),
-                entity: Entity::from_raw(0),
-            };
-            tree.insert_new(&config, data, 0);
-        }
-        for index in QuadTreeIndex::iter_all_nodes_at_depth(min_depth) {
-            let tree = &tree[&index];
-            if let Node::Leaf(ref leaf) = tree.node {
-                assert_eq!(leaf.len(), 1);
-            } else {
-                panic!("This should be a leaf")
-            }
-        }
-    }
-
-    fn get_quadtree_index(nodes: &[NodeIndex]) -> QuadTreeIndex {
-        let mut index = QuadTreeIndex::default();
-        for (depth, n) in nodes.iter().enumerate() {
-            index.0[depth] = (*n).into();
-        }
-        index
-    }
-
-    #[test]
-    fn quadtree_index_belongs_to() {
-        use NodeIndex::*;
-        let index1 = get_quadtree_index(&[Child(0), Child(1), Child(2)]);
-        let index2 = get_quadtree_index(&[Child(0), Child(1), ThisNode]);
-        let index3 = get_quadtree_index(&[Child(1), Child(2), Child(3)]);
-        assert_eq!(index1.belongs_to(&index1), true);
-        assert_eq!(index1.belongs_to(&index2), true);
-        assert_eq!(index2.belongs_to(&index1), false);
-        assert_eq!(index2.belongs_to(&index2), true);
-        assert_eq!(index1.belongs_to(&index3), false);
-        assert_eq!(index3.belongs_to(&index1), false);
-    }
-
-    #[test]
-    fn node_index_from_into() {
-        use NodeIndex::*;
-        let check = |n: NodeIndex| {
-            let to: u8 = n.into();
-            let converted: NodeIndex = to.into();
-            assert_eq!(n, converted);
-        };
-        check(ThisNode);
-        for i in 0..NUM_SUBDIVISIONS {
-            check(Child(i as u8));
         }
     }
 }
