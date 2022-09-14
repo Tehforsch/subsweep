@@ -91,6 +91,7 @@ pub fn main() {
     use super::communication::MpiWorld;
     use super::communication::SizedCommunicator;
     use super::mpi_log;
+    use crate::communication::MPI_UNIVERSE;
 
     let opts = CommandLineOptions::parse();
     let world: MpiWorld<usize> = MpiWorld::new(0);
@@ -98,6 +99,7 @@ pub fn main() {
     let mut app = App::new();
     build_app(&mut app, &opts, world.size(), world.rank());
     app.run();
+    MPI_UNIVERSE.drop();
 }
 
 #[cfg(feature = "local")]
