@@ -6,7 +6,6 @@ use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::ShapePlugin;
 pub use drawing::DrawCircle;
 pub use drawing::DrawRect;
-use lazy_static::lazy_static;
 
 use self::drawing::draw_translation_system;
 use self::drawing::DrawBundlePlugin;
@@ -29,9 +28,7 @@ use crate::units::Length;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
-lazy_static! {
-    pub static ref CAMERA_ZOOM: Length = Length::meter(0.01);
-}
+pub static CAMERA_ZOOM: Length = Length::astronomical_unit(1e-3);
 
 #[derive(StageLabel)]
 pub enum VisualizationStage {
@@ -120,7 +117,7 @@ fn spawn_sprites_system<T: Component + GetColor>(
     for (entity, pos, colored) in particles.iter() {
         commands.entity(entity).insert(DrawCircle {
             position: **pos,
-            radius: Length::meter(0.05),
+            radius: 10.0 * CAMERA_ZOOM,
             color: colored.get_color(),
         });
     }
