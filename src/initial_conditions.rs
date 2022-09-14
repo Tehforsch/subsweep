@@ -66,8 +66,8 @@ fn spawn_particles_system(
         let pos = 0.10 * DVec2Length::astronomical_unit(x, y);
         let x = rng.gen_range(-1.0..1.0);
         let y = rng.gen_range(-1.0..1.0);
-        let vel = 0.01 * DVec2Velocity::astronomical_unit_per_day(x, y);
-        spawn_particle(&mut commands, pos, vel, Mass::solar(1.0))
+        let vel = 0.04 * DVec2Velocity::astronomical_unit_per_day(x, y);
+        spawn_particle(&mut commands, pos, vel, Mass::solar(0.01))
     }
 }
 

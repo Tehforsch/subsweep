@@ -135,7 +135,7 @@ fn spawn_sprites_system<T: Component + GetColor>(
     for (entity, pos, colored) in particles.iter() {
         commands.entity(entity).insert(DrawCircle {
             position: **pos,
-            radius: 10.0 * CAMERA_ZOOM,
+            radius: 1.0 * CAMERA_ZOOM,
             color: colored.get_color(),
         });
     }
