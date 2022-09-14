@@ -125,7 +125,7 @@ macro_rules! unit_functions {
             }
             impl $quantity {
                 $(
-                    pub fn $unit(v: f32) -> $quantity {
+                    pub const fn $unit(v: f32) -> $quantity {
                         Quantity::<f32, $const>(v * $factor)
                     }
                 )*
@@ -152,19 +152,24 @@ unit_functions!(
     LENGTH, Length, length: 1,
     {
         meter, 1.0, "m",
-        kilometer, 1000.0, "km"
+        kilometer, 1000.0, "km",
+        astronomical_unit, 1.495978707e11, "au"
     },
     TIME, Time, time: 1,
     {
-        second, 1.0, "s"
+        second, 1.0, "s",
+        year, 31557600.0, "yr"
     },
     VELOCITY, Velocity, length: 1, time: -1,
     {
-        meters_per_second, 1.0,
+        meters_per_second, 1.0, "m/s",
+        astronomical_unit_per_day, 1731460.0, "au/d"
     },
     MASS, Mass, mass: 1,
     {
-        kilogram, 1.0, "kg"
+        kilogram, 1.0, "kg",
+        earth, 5.9722e24, "Mearth",
+        solar, 1.988477e30, "Msol"
     },
     ACCELERATION, Acceleration, length: 1, time: -2,
     {

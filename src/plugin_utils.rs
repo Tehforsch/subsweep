@@ -23,3 +23,7 @@ pub fn run_once(label: &'static str, app: &mut App, f: impl Fn(&mut App) -> ()) 
 pub fn is_main_rank(app: &App) -> bool {
     app.world.get_resource::<WorldRank>().unwrap().is_main()
 }
+
+pub fn get_parameters<P: Clone + Sync + Send + 'static>(app: &App) -> P {
+    app.world.get_resource::<P>().unwrap().clone()
+}

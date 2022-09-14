@@ -5,27 +5,49 @@ use rand::Rng;
 use serde::Deserialize;
 
 use crate::communication::WorldRank;
-use crate::mass::Mass;
 use crate::parameters::ParameterPlugin;
 use crate::particle::LocalParticleBundle;
+use crate::plugin_utils::get_parameters;
 use crate::position::Position;
-use crate::units;
+use crate::units::Mass;
 use crate::units::Vec2Length;
 use crate::units::Vec2Velocity;
+use crate::units::VecLength;
+use crate::units::VecVelocity;
 use crate::velocity::Velocity;
 
 pub struct InitialConditionsPlugin;
 
-#[derive(Default, Deserialize)]
+#[derive(Clone, Default, Deserialize)]
+enum InitialConditionType {
+    #[default]
+    Normal,
+    EarthSun,
+}
+
+#[derive(Clone, Default, Deserialize)]
 struct Parameters {
+    r#type: InitialConditionType,
     num_particles: usize,
 }
 
 impl Plugin for InitialConditionsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_particles_system)
-            .add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"));
+        app.add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"));
+        let parameters = get_parameters::<Parameters>(app);
+        match parameters.r#type {
+            InitialConditionType::Normal => app.add_startup_system(spawn_particles_system),
+            InitialConditionType::EarthSun => app.add_startup_system(spawn_solar_system_system),
+        };
     }
+}
+
+fn spawn_particle(commands: &mut Commands, pos: VecLength, vel: VecVelocity, mass: Mass) {
+    commands.spawn().insert_bundle(LocalParticleBundle::new(
+        Position(pos),
+        Velocity(vel),
+        crate::mass::Mass(mass),
+    ));
 }
 
 fn spawn_particles_system(
@@ -44,11 +66,7 @@ fn spawn_particles_system(
         let x = 0.0;
         let y = 0.1;
         let vel = Vec2Velocity::meters_per_second(x, y) * 1.0;
-        commands.spawn().insert_bundle(LocalParticleBundle::new(
-            Position(pos),
-            Velocity(vel),
-            Mass(units::Mass::kilogram(10000000.0)),
-        ));
+        spawn_particle(&mut commands, pos, vel, Mass::kilogram(10000000.0))
     }
 
     for _ in 0..n_particles {
@@ -58,10 +76,21 @@ fn spawn_particles_system(
         let x = 0.0;
         let y = -0.1;
         let vel = Vec2Velocity::meters_per_second(x, y) * 1.0;
-        commands.spawn().insert_bundle(LocalParticleBundle::new(
-            Position(pos),
-            Velocity(vel),
-            Mass(units::Mass::kilogram(10000000.0)),
-        ));
+        spawn_particle(&mut commands, pos, vel, Mass::kilogram(10000000.0))
+    }
+}
+
+fn spawn_solar_system_system(mut commands: Commands) {
+    let positions: Vec<VecLength> = vec![
+        VecLength::astronomical_unit(0.0, 0.0),
+        VecLength::astronomical_unit(0.7, 0.7),
+    ];
+    let velocity: Vec<VecVelocity> = vec![
+        VecVelocity::astronomical_unit_per_day(0.0, 0.0),
+        VecVelocity::astronomical_unit_per_day(1e-4, 1e-4),
+    ];
+    let masses: Vec<Mass> = vec![Mass::solar(1.0), Mass::earth(1.0)];
+    for ((pos, vel), mass) in positions.into_iter().zip(velocity).zip(masses) {
+        spawn_particle(&mut commands, pos, vel, mass)
     }
 }
