@@ -52,10 +52,7 @@ where
     C: WorldCommunicator<Identified<T>> + SizedCommunicator,
 {
     pub fn send_sync(&mut self, rank: Rank, entity: Entity, data: T) {
-        self.to_sync[rank].push(Identified {
-            key: entity.to_bits(),
-            data,
-        });
+        self.to_sync[rank].push(Identified::new(entity, data));
     }
 
     pub fn receive_sync(&mut self, mut f: impl FnMut(Rank, T) -> Entity) -> SyncResult<T> {
