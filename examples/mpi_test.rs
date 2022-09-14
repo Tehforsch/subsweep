@@ -35,6 +35,7 @@ mod test {
                 println!("{} ... ok", name);
             }
         }
+        MPI_UNIVERSE.drop();
     }
 
     fn send_receive() {

@@ -1,6 +1,10 @@
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
+use std::sync::Arc;
+use std::sync::Mutex;
 
+use bevy::prelude::Deref;
+use bevy::prelude::DerefMut;
 use lazy_static::lazy_static;
 use mpi::collective::SystemOperation;
 use mpi::datatype::PartitionMut;
@@ -26,15 +30,32 @@ use super::DataByRank;
 use super::Identified;
 use super::SizedCommunicator;
 
+/// A wrapper around universe which contains the universe in an
+/// Option. This allows calling .take at program completion so that
+/// the Universe is dropped which will call MPI_FINALIZE.  This is
+/// necessary because anything in a lazy_static will never be dropped.
+#[derive(Deref, DerefMut)]
+pub struct StaticUniverse(Arc<Mutex<Option<Universe>>>);
+
+impl StaticUniverse {
+    pub fn world(&self) -> SystemCommunicator {
+        self.0.lock().unwrap().as_ref().unwrap().world()
+    }
+
+    pub fn drop(&self) {
+        let _ = self.0.lock().unwrap().take();
+    }
+}
+
 lazy_static! {
-    pub static ref MPI_UNIVERSE: Universe = {
+    pub static ref MPI_UNIVERSE: StaticUniverse = {
         let threading = Threading::Multiple;
         let (universe, threading_initialized) = mpi::initialize_with_threading(threading).unwrap();
         assert_eq!(
             threading, threading_initialized,
             "Could not initialize MPI with Multithreading"
         );
-        universe
+        StaticUniverse(Arc::new(Mutex::new(Some(universe))))
     };
 }
 
