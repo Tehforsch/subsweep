@@ -24,7 +24,7 @@ use crate::velocity::Velocity;
 pub struct LocalParticle;
 
 #[derive(Equivalence, Deref, DerefMut)]
-pub(super) struct Timestep(crate::units::Time);
+pub struct Timestep(crate::units::Time);
 
 pub struct PhysicsPlugin;
 
@@ -70,6 +70,6 @@ fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timeste
     }
 }
 
-pub(super) fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
+pub fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
     **time += **timestep;
 }

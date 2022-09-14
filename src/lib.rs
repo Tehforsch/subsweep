@@ -7,6 +7,20 @@
 // perfectly readable.
 #![allow(clippy::type_complexity)]
 
-fn main() {
-    tenet::app_builder::main()
-}
+pub mod app_builder;
+pub(crate) mod command_line_options;
+pub mod communication;
+pub(crate) mod config;
+pub(crate) mod domain;
+pub(crate) mod initial_conditions;
+pub(crate) mod mass;
+pub mod mpi_log;
+pub(crate) mod output;
+pub(crate) mod parameters;
+pub(crate) mod particle;
+pub(crate) mod physics;
+pub(crate) mod plugin_utils;
+pub(crate) mod position;
+pub mod units;
+pub(crate) mod velocity;
+pub(crate) mod visualization;

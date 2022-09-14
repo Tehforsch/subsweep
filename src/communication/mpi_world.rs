@@ -28,7 +28,12 @@ use super::SizedCommunicator;
 
 lazy_static! {
     pub static ref MPI_UNIVERSE: Universe = {
-        let (universe, _threading) = mpi::initialize_with_threading(Threading::Multiple).unwrap();
+        let threading = Threading::Multiple;
+        let (universe, threading_initialized) = mpi::initialize_with_threading(threading).unwrap();
+        assert_eq!(
+            threading, threading_initialized,
+            "Could not initialize MPI with Multithreading"
+        );
         universe
     };
 }
@@ -48,6 +53,10 @@ impl<T> MpiWorld<T> {
             tag,
             _marker: PhantomData::default(),
         }
+    }
+
+    pub fn world(&self) -> &SystemCommunicator {
+        &self.world
     }
 }
 
