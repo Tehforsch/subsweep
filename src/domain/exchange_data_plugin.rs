@@ -238,7 +238,7 @@ mod tests {
     #[derive(Clone, Equivalence, Component)]
     struct A {
         x: i32,
-        y: f32,
+        y: f64,
     }
     #[derive(Clone, Equivalence, Component)]
     struct B {

@@ -299,25 +299,25 @@ impl QuadTree {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::units::DVec2Length;
     use crate::units::Length;
-    use crate::units::Vec2Length;
 
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
         let positions = [
             LeafData {
                 entity: Entity::from_raw(0),
-                pos: Vec2Length::meter(1.0, 1.0),
+                pos: DVec2Length::meter(1.0, 1.0),
                 mass: Mass::zero(),
             },
             LeafData {
                 entity: Entity::from_raw(0),
-                pos: Vec2Length::meter(1.0, 1.0),
+                pos: DVec2Length::meter(1.0, 1.0),
                 mass: Mass::zero(),
             },
             LeafData {
                 entity: Entity::from_raw(0),
-                pos: Vec2Length::meter(2.0, 2.0),
+                pos: DVec2Length::meter(2.0, 2.0),
                 mass: Mass::zero(),
             },
         ];

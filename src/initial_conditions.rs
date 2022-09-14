@@ -9,9 +9,9 @@ use crate::parameters::ParameterPlugin;
 use crate::particle::LocalParticleBundle;
 use crate::plugin_utils::get_parameters;
 use crate::position::Position;
+use crate::units::DVec2Length;
+use crate::units::DVec2Velocity;
 use crate::units::Mass;
-use crate::units::Vec2Length;
-use crate::units::Vec2Velocity;
 use crate::units::VecLength;
 use crate::units::VecVelocity;
 use crate::velocity::Velocity;
@@ -62,20 +62,20 @@ fn spawn_particles_system(
     for _ in 0..n_particles {
         let x = rand::thread_rng().gen_range(-5.0..-4.0);
         let y = rand::thread_rng().gen_range(-1.0..1.0);
-        let pos = Vec2Length::meter(x, y);
+        let pos = DVec2Length::meter(x, y);
         let x = 0.0;
         let y = 0.1;
-        let vel = Vec2Velocity::meters_per_second(x, y) * 1.0;
+        let vel = DVec2Velocity::meters_per_second(x, y) * 1.0;
         spawn_particle(&mut commands, pos, vel, Mass::kilogram(10000000.0))
     }
 
     for _ in 0..n_particles {
         let x = rand::thread_rng().gen_range(4.0..5.0);
         let y = rand::thread_rng().gen_range(-1.0..1.0);
-        let pos = Vec2Length::meter(x, y);
+        let pos = DVec2Length::meter(x, y);
         let x = 0.0;
         let y = -0.1;
-        let vel = Vec2Velocity::meters_per_second(x, y) * 1.0;
+        let vel = DVec2Velocity::meters_per_second(x, y) * 1.0;
         spawn_particle(&mut commands, pos, vel, Mass::kilogram(10000000.0))
     }
 }

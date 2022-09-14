@@ -171,19 +171,19 @@ mod tests {
     use crate::domain::quadtree::{self};
     use crate::physics::gravity::Solver;
     use crate::units::assert_is_close;
+    use crate::units::DVec2Acceleration;
+    use crate::units::DVec2Length;
     use crate::units::Dimensionless;
     use crate::units::Length;
     use crate::units::Mass;
-    use crate::units::Vec2Acceleration;
-    use crate::units::Vec2Length;
 
     fn get_particles(n: i32) -> Vec<LeafData> {
         (1..n)
             .flat_map(move |x| {
                 (1..n).map(move |y| LeafData {
                     entity: Entity::from_raw((x * n + y) as u32),
-                    pos: Vec2Length::meter(x as f32, y as f32),
-                    mass: Mass::kilogram(x as f32 * y as f32),
+                    pos: DVec2Length::meter(x as f64, y as f64),
+                    mass: Mass::kilogram(x as f64 * y as f64),
                 })
             })
             .collect()
@@ -223,7 +223,7 @@ mod tests {
     fn compare_quadtree_gravity_to_direct_sum() {
         let n_particles = 50;
         let tree = get_tree_for_particles(n_particles);
-        let pos = Vec2Length::meter(3.5, 3.5);
+        let pos = DVec2Length::meter(3.5, 3.5);
         let solver = Solver {
             opening_angle: Dimensionless::zero(),
             softening_length: Length::zero(),
@@ -231,16 +231,16 @@ mod tests {
         let acc1 = solver.traverse_tree(&tree, &pos);
         let acc2 = direct_sum(&solver, &pos, get_particles(n_particles).iter().collect());
         let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length());
-        // Precision is pretty low with f32, so change this to f64 once variable precision is implemented
+        // Precision is pretty low with f64, so change this to f64 once variable precision is implemented
         assert!(relative_diff.value() < &1e-5);
     }
 
     fn direct_sum(
         solver: &Solver,
-        pos1: &Vec2Length,
+        pos1: &DVec2Length,
         other_positions: Vec<&LeafData>,
-    ) -> Vec2Acceleration {
-        let mut total = Vec2Acceleration::zero();
+    ) -> DVec2Acceleration {
+        let mut total = DVec2Acceleration::zero();
         for particle in other_positions.iter() {
             total += solver.calc_gravity_acceleration(pos1, &particle.pos, particle.mass);
         }

@@ -6,7 +6,7 @@ use std::ops::Neg;
 use std::ops::Sub;
 use std::ops::SubAssign;
 
-use glam::Vec2;
+use glam::DVec2;
 
 use super::dimension::Dimension;
 use super::UNIT_NAMES;
@@ -33,9 +33,9 @@ where
         self.0
     }
 
-    pub fn in_units(self, other: Quantity<f32, D>) -> S
+    pub fn in_units(self, other: Quantity<f64, D>) -> S
     where
-        S: Div<f32, Output = S>,
+        S: Div<f64, Output = S>,
         Quantity<S, { D.dimension_div(D) }>:,
     {
         (self / other).unwrap_value().clone()
@@ -93,20 +93,20 @@ where
     }
 }
 
-impl<S, const D: Dimension> Mul<f32> for Quantity<S, D>
+impl<S, const D: Dimension> Mul<f64> for Quantity<S, D>
 where
-    S: Mul<f32, Output = S>,
+    S: Mul<f64, Output = S>,
 {
     type Output = Quantity<S, D>;
 
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: f64) -> Self::Output {
         Quantity(self.0 * rhs)
     }
 }
 
-impl<S, const D: Dimension> Mul<Quantity<S, D>> for f32
+impl<S, const D: Dimension> Mul<Quantity<S, D>> for f64
 where
-    f32: Mul<S, Output = S>,
+    f64: Mul<S, Output = S>,
 {
     type Output = Quantity<S, D>;
 
@@ -115,20 +115,20 @@ where
     }
 }
 
-impl<S, const D: Dimension> Div<f32> for Quantity<S, D>
+impl<S, const D: Dimension> Div<f64> for Quantity<S, D>
 where
-    S: Div<f32, Output = S>,
+    S: Div<f64, Output = S>,
 {
     type Output = Quantity<S, D>;
 
-    fn div(self, rhs: f32) -> Self::Output {
+    fn div(self, rhs: f64) -> Self::Output {
         Quantity(self.0 / rhs)
     }
 }
 
-impl<S, const D: Dimension> Div<Quantity<S, D>> for f32
+impl<S, const D: Dimension> Div<Quantity<S, D>> for f64
 where
-    f32: Div<S, Output = S>,
+    f64: Div<S, Output = S>,
 {
     type Output = Quantity<S, D>;
 
@@ -166,7 +166,7 @@ where
     Quantity<S, { D.dimension_div(D) }>:,
     S: Div<S, Output = S> + Copy,
 {
-    pub fn to_value(&self, unit: impl Fn(f32) -> Quantity<S, D>) -> S {
+    pub fn to_value(&self, unit: impl Fn(f64) -> Quantity<S, D>) -> S {
         (*self / unit(1.0)).unwrap_value()
     }
 }
@@ -180,7 +180,7 @@ where
     }
 }
 
-impl<const D: Dimension> std::fmt::Debug for Quantity<f32, D> {
+impl<const D: Dimension> std::fmt::Debug for Quantity<f64, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let unit_name = UNIT_NAMES
             .iter()
@@ -193,7 +193,7 @@ impl<const D: Dimension> std::fmt::Debug for Quantity<f32, D> {
     }
 }
 
-impl<const D: Dimension> std::fmt::Debug for Quantity<Vec2, D> {
+impl<const D: Dimension> std::fmt::Debug for Quantity<DVec2, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let unit_name = UNIT_NAMES
             .iter()

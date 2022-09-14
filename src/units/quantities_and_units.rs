@@ -1,6 +1,6 @@
 use std::iter::Sum;
 
-use glam::Vec2;
+use glam::DVec2;
 
 use super::dimension::Dimension;
 use super::quantity::Quantity;
@@ -11,7 +11,7 @@ pub(super) const NONE: Dimension = Dimension {
     mass: 0,
 };
 
-impl<const D: Dimension> Quantity<f32, D> {
+impl<const D: Dimension> Quantity<f64, D> {
     pub fn abs(&self) -> Self {
         Self(self.0.abs())
     }
@@ -24,24 +24,24 @@ impl<const D: Dimension> Quantity<f32, D> {
         Self(self.0.max(rhs.0))
     }
 
-    pub fn squared(&self) -> Quantity<f32, { D.dimension_powi(2) }>
+    pub fn squared(&self) -> Quantity<f64, { D.dimension_powi(2) }>
     where
-        Quantity<f32, { D.dimension_powi(2) }>:,
+        Quantity<f64, { D.dimension_powi(2) }>:,
     {
-        Quantity::<f32, { D.dimension_powi(2) }>(self.0.powi(2))
+        Quantity::<f64, { D.dimension_powi(2) }>(self.0.powi(2))
     }
 
-    pub fn cubed(&self) -> Quantity<f32, { D.dimension_powi(3) }>
+    pub fn cubed(&self) -> Quantity<f64, { D.dimension_powi(3) }>
     where
-        Quantity<f32, { D.dimension_powi(3) }>:,
+        Quantity<f64, { D.dimension_powi(3) }>:,
     {
-        Quantity::<f32, { D.dimension_powi(3) }>(self.0.powi(3))
+        Quantity::<f64, { D.dimension_powi(3) }>(self.0.powi(3))
     }
 }
 
-impl<const D: Dimension> Quantity<glam::Vec2, D> {
-    pub fn new(x: Quantity<f32, D>, y: Quantity<f32, D>) -> Self {
-        Self(Vec2::new(x.unwrap_value(), y.unwrap_value()))
+impl<const D: Dimension> Quantity<glam::DVec2, D> {
+    pub fn new(x: Quantity<f64, D>, y: Quantity<f64, D>) -> Self {
+        Self(DVec2::new(x.unwrap_value(), y.unwrap_value()))
     }
 
     pub fn abs(&self) -> Self {
@@ -49,30 +49,30 @@ impl<const D: Dimension> Quantity<glam::Vec2, D> {
     }
 
     pub fn zero() -> Self {
-        Self(Vec2::new(0.0, 0.0))
+        Self(DVec2::new(0.0, 0.0))
     }
 
-    pub fn x(&self) -> Quantity<f32, D> {
+    pub fn x(&self) -> Quantity<f64, D> {
         Quantity(self.0.x)
     }
 
-    pub fn y(&self) -> Quantity<f32, D> {
+    pub fn y(&self) -> Quantity<f64, D> {
         Quantity(self.0.y)
     }
 
-    pub fn length(&self) -> Quantity<f32, D> {
-        Quantity::<f32, D>(self.0.length())
+    pub fn length(&self) -> Quantity<f64, D> {
+        Quantity::<f64, D>(self.0.length())
     }
 
-    pub fn distance(&self, other: &Self) -> Quantity<f32, D> {
-        Quantity::<f32, D>(self.0.distance(other.0))
+    pub fn distance(&self, other: &Self) -> Quantity<f64, D> {
+        Quantity::<f64, D>(self.0.distance(other.0))
     }
 
-    pub fn distance_squared(&self, other: &Self) -> Quantity<f32, { D.dimension_powi(2) }>
+    pub fn distance_squared(&self, other: &Self) -> Quantity<f64, { D.dimension_powi(2) }>
     where
-        Quantity<f32, { D.dimension_powi(2) }>:,
+        Quantity<f64, { D.dimension_powi(2) }>:,
     {
-        Quantity::<f32, { D.dimension_powi(2) }>(self.0.distance_squared(other.0))
+        Quantity::<f64, { D.dimension_powi(2) }>(self.0.distance_squared(other.0))
     }
 
     pub fn normalize(&self) -> Self {
@@ -80,7 +80,7 @@ impl<const D: Dimension> Quantity<glam::Vec2, D> {
     }
 }
 
-impl<const D: Dimension> Sum for Quantity<glam::Vec2, D> {
+impl<const D: Dimension> Sum for Quantity<glam::DVec2, D> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         let mut total = Self::zero();
         for item in iter {
@@ -90,7 +90,7 @@ impl<const D: Dimension> Sum for Quantity<glam::Vec2, D> {
     }
 }
 
-impl<const D: Dimension> Sum for Quantity<f32, D> {
+impl<const D: Dimension> Sum for Quantity<f64, D> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         let mut total = Self::zero();
         for item in iter {
@@ -103,7 +103,7 @@ impl<const D: Dimension> Sum for Quantity<f32, D> {
 macro_rules! unit_functions {
     ($($const: ident, $quantity:ident, $($dimension_name: ident: $dimension: literal),*, {$($unit:ident, $factor:literal, $($unit_symbol:literal)?),*}),+) => {
         use paste::paste;
-        pub const UNIT_NAMES: &[(Dimension, &str, f32)] = &[
+        pub const UNIT_NAMES: &[(Dimension, &str, f64)] = &[
         $(
             $(
                 $(
@@ -118,23 +118,23 @@ macro_rules! unit_functions {
                     $dimension_name: $dimension,
                 )*
                 .. NONE };
-            pub type $quantity = Quantity<f32, $const>;
+            pub type $quantity = Quantity<f64, $const>;
             paste!{
-                pub type [<Vec $quantity>] = Quantity<glam::Vec2, $const>;
-                pub type [<Vec2 $quantity>] = Quantity<glam::Vec2, $const>;
+                pub type [<Vec $quantity>] = Quantity<glam::DVec2, $const>;
+                pub type [<DVec2 $quantity>] = Quantity<glam::DVec2, $const>;
             }
             impl $quantity {
                 $(
-                    pub const fn $unit(v: f32) -> $quantity {
-                        Quantity::<f32, $const>(v * $factor)
+                    pub const fn $unit(v: f64) -> $quantity {
+                        Quantity::<f64, $const>(v * $factor)
                     }
                 )*
             }
             paste! {
             impl [<Vec $quantity>] {
                 $(
-                    pub fn $unit(x: f32, y: f32) -> Quantity::<glam::Vec2, $const> {
-                        Quantity::<glam::Vec2, $const>(glam::Vec2::new(x, y) * $factor)
+                    pub fn $unit(x: f64, y: f64) -> Quantity::<glam::DVec2, $const> {
+                        Quantity::<glam::DVec2, $const>(glam::DVec2::new(x, y) * $factor)
                     }
                 )*
             }

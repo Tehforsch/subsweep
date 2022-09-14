@@ -117,8 +117,8 @@ fn camera_translation_system(
 ) {
     let mut camera_transform = camera.single_mut();
     let pos = extent.center.in_units(CAMERA_ZOOM);
-    camera_transform.translation.x = pos.x;
-    camera_transform.translation.y = pos.y;
+    camera_transform.translation.x = pos.x as f32;
+    camera_transform.translation.y = pos.y as f32;
 }
 
 pub fn get_color(rank: Rank) -> Color {

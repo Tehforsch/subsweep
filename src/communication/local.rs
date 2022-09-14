@@ -215,7 +215,7 @@ mod tests {
         let mut comm_b0 = comms.remove(&0).unwrap();
         let mut comm_b1 = comms.remove(&1).unwrap();
         let xs_a: Vec<i32> = vec![1, 2, 3];
-        let xs_b: Vec<f32> = vec![1.0, 2.0, 3.0];
+        let xs_b: Vec<f64> = vec![1.0, 2.0, 3.0];
         comm_a0.blocking_send_vec(1, &xs_a.clone());
         comm_b0.blocking_send_vec(1, &xs_b.clone());
         assert_eq!(comm_a1.receive_vec(0), xs_a);
@@ -227,10 +227,10 @@ mod tests {
         let mut comms = get_communicators(2, INITIAL_TAG);
         let mut comm0 = comms.remove(&0).unwrap();
         let mut comm1 = comms.remove(&1).unwrap();
-        let xs_0: Vec<f32> = vec![1.0, 3.0, 5.0];
-        let xs_1: Vec<f32> = vec![1.0, 2.0, 3.0];
-        let xs_0_cloned: Vec<f32> = vec![1.0, 3.0, 5.0];
-        let xs_1_cloned: Vec<f32> = vec![1.0, 2.0, 3.0];
+        let xs_0: Vec<f64> = vec![1.0, 3.0, 5.0];
+        let xs_1: Vec<f64> = vec![1.0, 2.0, 3.0];
+        let xs_0_cloned: Vec<f64> = vec![1.0, 3.0, 5.0];
+        let xs_1_cloned: Vec<f64> = vec![1.0, 2.0, 3.0];
         let h = thread::spawn(move || {
             let result = comm0.all_gather_vec(&xs_0.clone());
             assert_eq!(result[0], xs_0);

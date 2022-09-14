@@ -18,8 +18,8 @@ mod tests {
     use super::Dimensionless;
     use super::Length;
 
-    pub fn assert_is_close<const U: Dimension>(x: Quantity<f32, U>, y: Quantity<f32, U>) {
-        const EPSILON: f32 = 1e-20;
+    pub fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64, U>) {
+        const EPSILON: f64 = 1e-20;
         assert!(
             (x - y).abs().unwrap_value() < EPSILON,
             "{} {}",

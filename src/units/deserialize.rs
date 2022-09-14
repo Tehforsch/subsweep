@@ -10,8 +10,8 @@ use super::quantity::Quantity;
 use super::NONE;
 use super::UNIT_NAMES;
 
-impl<'de, const D: Dimension> Deserialize<'de> for Quantity<f32, D> {
-    fn deserialize<DE>(deserializer: DE) -> Result<Quantity<f32, D>, DE::Error>
+impl<'de, const D: Dimension> Deserialize<'de> for Quantity<f64, D> {
+    fn deserialize<DE>(deserializer: DE) -> Result<Quantity<f64, D>, DE::Error>
     where
         DE: Deserializer<'de>,
     {
@@ -22,7 +22,7 @@ impl<'de, const D: Dimension> Deserialize<'de> for Quantity<f32, D> {
 struct QuantityVisitor<const D: Dimension>;
 
 impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
-    type Value = Quantity<f32, D>;
+    type Value = Quantity<f64, D>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("a numerical value followed by a series of powers of units")
@@ -33,7 +33,7 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
         E: de::Error,
     {
         if D == NONE {
-            Ok(Quantity::<f32, D>(value as f32))
+            Ok(Quantity::<f64, D>(value as f64))
         } else {
             Err(E::custom(format!(
                 "dimensionless numerical value given for non-dimensionless quantity: {}",
@@ -46,7 +46,7 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
         E: de::Error,
     {
         if D == NONE {
-            Ok(Quantity::<f32, D>(value as f32))
+            Ok(Quantity::<f64, D>(value as f64))
         } else {
             Err(E::custom(format!(
                 "dimensionless numerical value given for non-dimensionless quantity: {}",
@@ -60,7 +60,7 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
         E: de::Error,
     {
         if D == NONE {
-            Ok(Quantity::<f32, D>(value as f32))
+            Ok(Quantity::<f64, D>(value as f64))
         } else {
             Err(E::custom(format!(
                 "dimensionless numerical value given for non-dimensionless quantity: {}",
@@ -78,7 +78,7 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
         let numerical_value_str = split
             .next()
             .ok_or_else(|| E::custom("unable to parse empty string"))?;
-        let numerical_value = numerical_value_str.parse::<f32>().map_err(|_| {
+        let numerical_value = numerical_value_str.parse::<f64>().map_err(|_| {
             E::custom(format!(
                 "unable to parse numerical value {}",
                 &numerical_value_str
@@ -92,7 +92,7 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
             total_factor *= factor;
         }
         if total_dimension == D {
-            Ok(Quantity::<f32, D>(numerical_value * total_factor))
+            Ok(Quantity::<f64, D>(numerical_value * total_factor))
         } else {
             Err(E::custom(format!(
                 "mismatch in dimensions: needed: {:?} given: {:?}",
@@ -102,7 +102,7 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
     }
 }
 
-fn read_unit_str<E>(unit_str: &str) -> Result<(Dimension, f32), E>
+fn read_unit_str<E>(unit_str: &str) -> Result<(Dimension, f64), E>
 where
     E: de::Error,
 {

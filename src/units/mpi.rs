@@ -1,4 +1,4 @@
-use glam::Vec2;
+use glam::DVec2;
 use mpi::datatype::DatatypeRef;
 use mpi::datatype::SystemDatatype;
 use mpi::datatype::UserDatatype;
@@ -10,14 +10,6 @@ use once_cell::sync::Lazy;
 use super::dimension::Dimension;
 use super::quantity::Quantity;
 
-unsafe impl<const D: Dimension> Equivalence for Quantity<f32, D> {
-    type Out = SystemDatatype;
-
-    fn equivalent_datatype() -> Self::Out {
-        unsafe { DatatypeRef::from_raw(ffi::RSMPI_FLOAT) }
-    }
-}
-
 unsafe impl<const D: Dimension> Equivalence for Quantity<f64, D> {
     type Out = SystemDatatype;
 
@@ -26,12 +18,12 @@ unsafe impl<const D: Dimension> Equivalence for Quantity<f64, D> {
     }
 }
 
-unsafe impl<const D: Dimension> Equivalence for Quantity<Vec2, D> {
+unsafe impl<const D: Dimension> Equivalence for Quantity<DVec2, D> {
     type Out = DatatypeRef<'static>;
 
     fn equivalent_datatype() -> Self::Out {
         static DATATYPE: Lazy<::mpi::datatype::UserDatatype> =
-            Lazy::new(|| UserDatatype::contiguous(2, &f32::equivalent_datatype()));
+            Lazy::new(|| UserDatatype::contiguous(2, &f64::equivalent_datatype()));
         DATATYPE.as_ref()
     }
 }
@@ -46,7 +38,7 @@ mod tests {
     use crate::units::VecLength;
 
     #[test]
-    fn pack_unpack_f32_quantity() {
+    fn pack_unpack_f64_quantity() {
         let world = MPI_UNIVERSE.world();
 
         let q1 = Length::meter(1.0);

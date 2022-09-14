@@ -35,7 +35,7 @@ impl IntoBundle for DrawCircle {
     type Output = ShapeBundle;
     fn into_bundle(&self) -> Self::Output {
         let shape = shapes::Circle {
-            radius: self.radius.in_units(CAMERA_ZOOM),
+            radius: self.radius.in_units(CAMERA_ZOOM) as f32,
             center: Vec2::new(0.0, 0.0),
         };
 
@@ -59,7 +59,9 @@ impl IntoBundle for DrawRect {
     type Output = ShapeBundle;
     fn into_bundle(&self) -> Self::Output {
         let shape = shapes::Rectangle {
-            extents: (self.upper_right - self.lower_left).in_units(CAMERA_ZOOM),
+            extents: (self.upper_right - self.lower_left)
+                .in_units(CAMERA_ZOOM)
+                .as_vec2(),
             origin: RectangleOrigin::BottomLeft,
         };
 
@@ -112,7 +114,7 @@ fn spawn_visualization_item_system<T: Component + IntoBundle>(
 
 fn position_to_translation(position: &VecLength) -> Vec3 {
     let pos = position.in_units(CAMERA_ZOOM);
-    Vec3::new(pos.x, pos.y, 0.0)
+    Vec3::new(pos.x as f32, pos.y as f32, 0.0)
 }
 
 pub(super) fn draw_translation_system<T: Component + IntoBundle>(

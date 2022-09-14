@@ -34,7 +34,7 @@ impl Extent {
     pub fn pad(self) -> Self {
         let dist_to_min = self.min - self.center;
         let dist_to_max = self.max - self.center;
-        const PADDING_FRACTION: f32 = 0.01;
+        const PADDING_FRACTION: f64 = 0.01;
         Self {
             min: self.center + dist_to_min * (1.0 + PADDING_FRACTION),
             max: self.center + dist_to_max * (1.0 + PADDING_FRACTION),
@@ -113,14 +113,14 @@ impl std::fmt::Debug for Extent {
 
 #[cfg(test)]
 mod tests {
-    use glam::Vec2;
+    use glam::DVec2;
 
     use crate::domain::Extent;
     use crate::units::Length;
     use crate::units::VecLength;
 
-    fn assert_is_close(a: VecLength, b: Vec2) {
-        const EPSILON: f32 = 1e-20;
+    fn assert_is_close(a: VecLength, b: DVec2) {
+        const EPSILON: f64 = 1e-20;
         assert!((a - VecLength::meter(b.x, b.y)).length().unwrap_value() < EPSILON)
     }
 
@@ -133,17 +133,17 @@ mod tests {
             Length::meter(2.0),
         );
         let quadrants = root_extent.get_quadrants();
-        assert_is_close(quadrants[0].min, Vec2::new(-1.0, -2.0));
-        assert_is_close(quadrants[0].max, Vec2::new(0.0, 0.0));
+        assert_is_close(quadrants[0].min, DVec2::new(-1.0, -2.0));
+        assert_is_close(quadrants[0].max, DVec2::new(0.0, 0.0));
 
-        assert_is_close(quadrants[1].min, Vec2::new(0.0, -2.0));
-        assert_is_close(quadrants[1].max, Vec2::new(1.0, 0.0));
+        assert_is_close(quadrants[1].min, DVec2::new(0.0, -2.0));
+        assert_is_close(quadrants[1].max, DVec2::new(1.0, 0.0));
 
-        assert_is_close(quadrants[2].min, Vec2::new(0.0, 0.0));
-        assert_is_close(quadrants[2].max, Vec2::new(1.0, 2.0));
+        assert_is_close(quadrants[2].min, DVec2::new(0.0, 0.0));
+        assert_is_close(quadrants[2].max, DVec2::new(1.0, 2.0));
 
-        assert_is_close(quadrants[3].min, Vec2::new(-1.0, 0.0));
-        assert_is_close(quadrants[3].max, Vec2::new(0.0, 2.0));
+        assert_is_close(quadrants[3].min, DVec2::new(-1.0, 0.0));
+        assert_is_close(quadrants[3].max, DVec2::new(0.0, 2.0));
     }
 
     #[test]
@@ -155,8 +155,8 @@ mod tests {
             VecLength::meter(0.0, 2.0),
         ];
         let extent = Extent::from_positions(positions.iter()).unwrap();
-        assert_is_close(extent.min, Vec2::new(-1.0, -2.0));
-        assert_is_close(extent.max, Vec2::new(1.0, 2.0));
+        assert_is_close(extent.min, DVec2::new(-1.0, -2.0));
+        assert_is_close(extent.max, DVec2::new(1.0, 2.0));
     }
 
     #[test]
