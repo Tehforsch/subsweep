@@ -3,7 +3,7 @@ use mpi::traits::Equivalence;
 use crate::units::Length;
 use crate::units::VecLength;
 
-#[derive(Clone, Equivalence, PartialEq)]
+#[derive(Default, Clone, Equivalence, PartialEq)]
 pub struct Extent {
     pub min: VecLength,
     pub max: VecLength,
@@ -12,8 +12,8 @@ pub struct Extent {
 
 impl Extent {
     pub fn new(min_x: Length, max_x: Length, min_y: Length, max_y: Length) -> Self {
-        debug_assert!(min_x < max_x);
-        debug_assert!(min_y < max_y);
+        debug_assert!(min_x <= max_x);
+        debug_assert!(min_y <= max_y);
         let min = VecLength::new(min_x, min_y);
         let max = VecLength::new(max_x, max_y);
         Self {
@@ -23,20 +23,9 @@ impl Extent {
         }
     }
 
-    /// A sentinel value used for communicating that there are not enough particles to construct extent
-    pub fn sentinel() -> Self {
-        Self {
-            min: VecLength::meter(0.0, 0.0),
-            max: VecLength::meter(0.0, 0.0),
-            center: VecLength::meter(0.0, 0.0),
-        }
-    }
-
     pub fn get_all_encompassing<'a>(extent: impl Iterator<Item = &'a Extent>) -> Option<Self> {
         Self::from_positions(
-            extent
-                .filter(|extent| *extent != &Self::sentinel())
-                .flat_map(|extent: &Extent| [&extent.min, &extent.max].into_iter()),
+            extent.flat_map(|extent: &Extent| [&extent.min, &extent.max].into_iter()),
         )
     }
 
@@ -87,11 +76,7 @@ impl Extent {
             update_min(&mut min_y, pos.y());
             update_max(&mut max_y, pos.y());
         }
-        if min_x == max_x || min_y == max_y {
-            None
-        } else {
-            Some(Self::new(min_x?, max_x?, min_y?, max_y?))
-        }
+        Some(Self::new(min_x?, max_x?, min_y?, max_y?))
     }
 
     pub fn get_quadrant_index(&self, pos: &VecLength) -> usize {
