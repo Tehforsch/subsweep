@@ -88,11 +88,13 @@ fn spawn_solar_system_system(mut commands: Commands, rank: Res<WorldRank>) {
         VecLength::astronomical_unit(0.0, 0.0),
         VecLength::astronomical_unit(0.7, 0.7),
     ];
-    let velocity: Vec<VecVelocity> = vec![
-        VecVelocity::astronomical_unit_per_day(-1e-2, 1e-2),
-        VecVelocity::astronomical_unit_per_day(0.0, 0.0),
-    ];
     let masses: Vec<Mass> = vec![Mass::solar(1.0), Mass::earth(1.0)];
+    let mass_ratio = masses[0] / masses[1];
+    let mass_ratio = mass_ratio.value();
+    let velocity: Vec<VecVelocity> = vec![
+        VecVelocity::astronomical_unit_per_day(-1e-2 / mass_ratio, 1e-2 / mass_ratio),
+        VecVelocity::astronomical_unit_per_day(1e-2, -1e-2),
+    ];
     for ((pos, vel), mass) in positions.into_iter().zip(velocity).zip(masses) {
         spawn_particle(&mut commands, pos, vel, mass)
     }
