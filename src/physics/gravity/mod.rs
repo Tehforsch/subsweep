@@ -78,13 +78,13 @@ impl Solver {
 }
 
 #[derive(Equivalence, Debug)]
-pub(super) struct ExportData {
+pub(super) struct GravityCalculationRequest {
     pos: VecLength,
     index: QuadTreeIndex,
 }
 
 #[derive(Equivalence, Debug)]
-pub(super) struct ImportData {
+pub(super) struct GravityCalculationReply {
     acc: VecAcceleration,
 }
 
@@ -95,14 +95,14 @@ pub(super) fn gravity_system(
     indices: Res<TopLevelIndices>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
     parameters: Res<Parameters>,
-    mut export_comm: NonSendMut<ExchangeCommunicator<Identified<ExportData>>>,
-    mut import_comm: NonSendMut<ExchangeCommunicator<Identified<ImportData>>>,
+    mut request_comm: NonSendMut<ExchangeCommunicator<Identified<GravityCalculationRequest>>>,
+    mut reply_comm: NonSendMut<ExchangeCommunicator<Identified<GravityCalculationReply>>>,
 ) {
     let gravity = Solver {
         softening_length: parameters.softening_length,
         opening_angle: parameters.opening_angle,
     };
-    let mut to_export = DataByRank::from_communicator(&*export_comm);
+    let mut outgoing_requests = DataByRank::from_communicator(&*request_comm);
     let add_acceleration = |vel: &mut Velocity, acceleration| {
         **vel += acceleration * **timestep;
     };
@@ -113,11 +113,11 @@ pub(super) fn gravity_system(
                 add_acceleration(&mut vel, gravity.traverse_tree(sub_tree, &**pos));
             } else {
                 if gravity.should_be_opened(sub_tree, pos) {
-                    to_export.push(
+                    outgoing_requests.push(
                         rank,
                         Identified::new(
                             entity,
-                            ExportData {
+                            GravityCalculationRequest {
                                 index: index.clone(),
                                 pos: *pos.clone(),
                             },
@@ -133,10 +133,10 @@ pub(super) fn gravity_system(
             }
         }
     }
-    let num_export = to_export.size();
-    let imported = export_comm.exchange_all(to_export);
-    let mut result = DataByRank::from_communicator(&*import_comm);
-    for (rank, requests) in imported {
+    let num_outgoing_requests = outgoing_requests.size();
+    let incoming_requests = request_comm.exchange_all(outgoing_requests);
+    let mut result = DataByRank::from_communicator(&*reply_comm);
+    for (rank, requests) in incoming_requests {
         for request in requests {
             let tree = &tree[&request.data.index];
             let acc = gravity.traverse_tree(tree, &request.data.pos);
@@ -144,13 +144,13 @@ pub(super) fn gravity_system(
                 rank,
                 Identified {
                     key: request.key,
-                    data: ImportData { acc },
+                    data: GravityCalculationReply { acc },
                 },
             );
         }
     }
-    let accelerations = import_comm.exchange_all(result);
-    assert_eq!(accelerations.size(), num_export);
+    let accelerations = reply_comm.exchange_all(result);
+    assert_eq!(accelerations.size(), num_outgoing_requests);
     for (_, accelerations) in accelerations.iter() {
         for acc in accelerations {
             let entity = acc.entity();
