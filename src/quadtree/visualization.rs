@@ -10,9 +10,9 @@ use crate::visualization::VisualizationStage;
 #[derive(Component)]
 struct Outline;
 
-pub struct QuadtreeVisualizationPlugin;
+pub struct QuadTreeVisualizationPlugin;
 
-impl Plugin for QuadtreeVisualizationPlugin {
+impl Plugin for QuadTreeVisualizationPlugin {
     fn build(&self, app: &mut App) {
         if app
             .world

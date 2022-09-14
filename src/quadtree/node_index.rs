@@ -34,3 +34,23 @@ impl From<NodeIndex> for u8 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::NodeIndex;
+    use crate::quadtree::NUM_SUBDIVISIONS;
+
+    #[test]
+    fn node_index_from_into() {
+        use NodeIndex::*;
+        let check = |n: NodeIndex| {
+            let to: u8 = n.into();
+            let converted: NodeIndex = to.into();
+            assert_eq!(n, converted);
+        };
+        check(ThisNode);
+        for i in 0..NUM_SUBDIVISIONS {
+            check(Child(i as u8));
+        }
+    }
+}

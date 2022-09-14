@@ -24,7 +24,7 @@ use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsStages;
 use crate::position::Position;
-use crate::quadtree::QuadtreeVisualizationPlugin;
+use crate::quadtree::QuadTreeVisualizationPlugin;
 use crate::units::Length;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
@@ -72,7 +72,7 @@ impl Plugin for VisualizationPlugin {
                 .add_plugin(ShapePlugin)
                 .add_plugin(DrawBundlePlugin::<DrawRect>::default())
                 .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
-                .add_plugin(QuadtreeVisualizationPlugin)
+                .add_plugin(QuadTreeVisualizationPlugin)
                 .add_plugin(
                     CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
                         CommunicationType::Sync,

@@ -6,7 +6,7 @@ mod visualization;
 use bevy::prelude::Entity;
 pub use config::QuadTreeConfig;
 pub use index::QuadTreeIndex;
-pub use visualization::QuadtreeVisualizationPlugin;
+pub use visualization::QuadTreeVisualizationPlugin;
 
 use crate::domain::extent::Extent;
 use crate::physics::MassMoments;

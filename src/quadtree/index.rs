@@ -127,7 +127,6 @@ mod tests {
     use crate::quadtree::LeafData;
     use crate::quadtree::Node;
     use crate::quadtree::QuadTreeConfig;
-    use crate::quadtree::NUM_SUBDIVISIONS;
     use crate::units::Mass;
 
     #[test]
@@ -179,19 +178,5 @@ mod tests {
         assert_eq!(index2.belongs_to(&index2), true);
         assert_eq!(index1.belongs_to(&index3), false);
         assert_eq!(index3.belongs_to(&index1), false);
-    }
-
-    #[test]
-    fn node_index_from_into() {
-        use NodeIndex::*;
-        let check = |n: NodeIndex| {
-            let to: u8 = n.into();
-            let converted: NodeIndex = to.into();
-            assert_eq!(n, converted);
-        };
-        check(ThisNode);
-        for i in 0..NUM_SUBDIVISIONS {
-            check(Child(i as u8));
-        }
     }
 }
