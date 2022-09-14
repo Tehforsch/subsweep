@@ -6,6 +6,7 @@ mod timer;
 
 use std::fs;
 
+use bevy::prelude::info;
 use bevy::prelude::AmbiguitySetLabel;
 use bevy::prelude::App;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
@@ -81,6 +82,7 @@ fn open_file_system(
 ) {
     assert!(file.f.is_none());
     let filename = &format!("snapshot_{}_{}.hdf5", output_timer.snapshot_num(), rank.0);
+    info!("Writing snapshot: {}", output_timer.snapshot_num());
     file.f = Some(
         File::create(&parameters.output_dir.join(filename)).expect("Failed to open output file"),
     );
