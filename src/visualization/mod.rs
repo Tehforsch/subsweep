@@ -79,6 +79,10 @@ impl Plugin for VisualizationPlugin {
                     ),
                 )
                 .add_startup_system(setup_camera_system)
+                .add_startup_system_to_stage(
+                    StartupStage::PostStartup,
+                    camera_translation_system.after(setup_camera_system),
+                )
                 .add_system_to_stage(
                     VisualizationStage::Synchronize,
                     receive_particles_on_main_thread_system,
@@ -91,7 +95,6 @@ impl Plugin for VisualizationPlugin {
                     VisualizationStage::AddVisualization,
                     spawn_sprites_system::<RemoteParticleVisualization>,
                 )
-                .add_system_to_stage(VisualizationStage::Draw, camera_translation_system)
                 .add_system_to_stage(
                     VisualizationStage::Draw,
                     position_to_translation_system::<DrawCircle>

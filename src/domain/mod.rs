@@ -59,6 +59,7 @@ impl Plugin for DomainDecompositionPlugin {
             DomainDecompositionStages::TopLevelTreeConstruction,
             determine_global_extent_system,
         )
+        .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
         .add_system_to_stage(
             DomainDecompositionStages::TopLevelTreeConstruction,
             construct_quad_tree_system.after(determine_global_extent_system),
