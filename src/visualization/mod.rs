@@ -31,6 +31,8 @@ const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW]
 
 pub static CAMERA_ZOOM: Length = Length::astronomical_unit(1e-3);
 
+pub static CIRCLE_RADIUS: f64 = 3.0;
+
 #[derive(StageLabel)]
 pub enum VisualizationStage {
     Synchronize,
@@ -135,7 +137,7 @@ fn spawn_sprites_system<T: Component + GetColor>(
     for (entity, pos, colored) in particles.iter() {
         commands.entity(entity).insert(DrawCircle {
             position: **pos,
-            radius: 1.0 * CAMERA_ZOOM,
+            radius: CIRCLE_RADIUS * CAMERA_ZOOM,
             color: colored.get_color(),
         });
     }
