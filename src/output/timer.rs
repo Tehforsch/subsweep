@@ -17,7 +17,9 @@ pub(super) struct Timer {
 impl Timer {
     pub fn initialize_system(mut commands: Commands, parameters: Res<Parameters>) {
         commands.insert_resource(Timer {
-            next_output_time: parameters.time_first_snapshot,
+            next_output_time: parameters
+                .time_first_snapshot
+                .unwrap_or(units::Time::zero()),
             snapshot_num: 0,
         });
     }
