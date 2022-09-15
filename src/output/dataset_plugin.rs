@@ -8,41 +8,35 @@ use hdf5::H5Type;
 
 use super::add_output_system;
 use super::OutputFile;
+use crate::named::Named;
 
 pub struct DatasetPlugin<T> {
     _marker: PhantomData<T>,
-    name: String,
 }
 
-impl<T> DatasetPlugin<T> {
-    pub fn new(name: &str) -> Self {
+impl<T> Default for DatasetPlugin<T> {
+    fn default() -> Self {
         Self {
             _marker: PhantomData::default(),
-            name: name.into(),
         }
     }
 }
 
-impl<T: Clone + H5Type + Component + Sync + Send + 'static> Plugin for DatasetPlugin<T> {
+impl<T: Named + Clone + H5Type + Component + Sync + Send + 'static> Plugin for DatasetPlugin<T> {
     fn build(&self, app: &mut bevy::prelude::App) {
-        let output_name = self.name.clone();
-        add_output_system(
-            app,
-            &self.name,
-            move |query: Query<&T>, file: ResMut<OutputFile>| {
-                Self::write_dataset(&output_name, query, file)
-            },
-        )
+        add_output_system::<T, _>(app, move |query: Query<&T>, file: ResMut<OutputFile>| {
+            Self::write_dataset(query, file)
+        })
     }
 }
 
-impl<T: Sync + Send + 'static + Clone + H5Type + Component> DatasetPlugin<T> {
-    fn write_dataset(name: &str, query: Query<&T>, file: ResMut<OutputFile>) {
+impl<T: Named + Sync + Send + 'static + Clone + H5Type + Component> DatasetPlugin<T> {
+    fn write_dataset(query: Query<&T>, file: ResMut<OutputFile>) {
         let f = file.f.as_ref().unwrap();
         let data: Vec<T> = query.iter().cloned().collect();
         f.new_dataset_builder()
             .with_data(&data)
-            .create(name)
+            .create(T::name())
             .expect("Failed to write dataset");
     }
 }

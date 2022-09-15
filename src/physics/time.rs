@@ -12,4 +12,8 @@ impl Attribute for Time {
     fn to_value(&self) -> Self::Output {
         self.0
     }
+
+    fn name() -> &'static str {
+        "time"
+    }
 }

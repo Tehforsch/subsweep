@@ -22,6 +22,7 @@ pub use self::dataset_plugin::DatasetPlugin;
 use self::parameters::Parameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;
+use crate::named::Named;
 use crate::parameters::ParameterPlugin;
 use crate::physics::PhysicsStages;
 use crate::plugin_utils::run_once;
@@ -92,13 +93,9 @@ fn close_file_system(mut file: ResMut<OutputFile>) {
     file.f = None;
 }
 
-fn add_output_system<P>(
-    app: &mut App,
-    name: &String,
-    system: impl ParallelSystemDescriptorCoercion<P>,
-) {
+fn add_output_system<T: Named, P>(app: &mut App, system: impl ParallelSystemDescriptorCoercion<P>) {
     run_once("output_plugin", app, |app| output_setup(app));
-    if is_desired_field(app, name) {
+    if Parameters::is_desired_field::<T>(app) {
         app.add_system_to_stage(
             OutputStages::Output,
             system
@@ -108,12 +105,4 @@ fn add_output_system<P>(
                 .with_run_criteria(Timer::run_criterion),
         );
     }
-}
-
-fn is_desired_field(app: &App, name: &String) -> bool {
-    app.world
-        .get_resource::<Parameters>()
-        .unwrap()
-        .fields
-        .contains(&name)
 }

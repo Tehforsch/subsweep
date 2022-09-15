@@ -4,6 +4,14 @@ use bevy::prelude::DerefMut;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
+use crate::named::Named;
+
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut)]
 #[repr(C)]
 pub struct Mass(pub crate::units::Mass);
+
+impl Named for Mass {
+    fn name() -> &'static str {
+        "mass"
+    }
+}

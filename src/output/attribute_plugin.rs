@@ -10,14 +10,12 @@ use super::OutputFile;
 
 pub struct AttributePlugin<T> {
     _marker: PhantomData<T>,
-    name: String,
 }
 
-impl<T> AttributePlugin<T> {
-    pub fn new(name: &str) -> Self {
+impl<T> Default for AttributePlugin<T> {
+    fn default() -> Self {
         Self {
             _marker: PhantomData::default(),
-            name: name.into(),
         }
     }
 }
@@ -27,14 +25,9 @@ where
     T: Attribute + Sync + Send + 'static,
 {
     fn build(&self, app: &mut bevy::prelude::App) {
-        let output_name = self.name.clone();
-        add_output_system(
-            app,
-            &self.name,
-            move |res: Res<T>, file: ResMut<OutputFile>| {
-                Self::write_attribute(&output_name, res, file)
-            },
-        );
+        add_output_system::<T, _>(app, move |res: Res<T>, file: ResMut<OutputFile>| {
+            Self::write_attribute(res, file)
+        });
     }
 }
 
@@ -42,9 +35,13 @@ impl<T> AttributePlugin<T>
 where
     T: Attribute + Sync + Send + 'static,
 {
-    fn write_attribute(name: &str, res: Res<T>, file: ResMut<OutputFile>) {
+    fn write_attribute(res: Res<T>, file: ResMut<OutputFile>) {
         let f = file.f.as_ref().unwrap();
-        let attr = f.new_attr::<T::Output>().shape(()).create(name).unwrap();
+        let attr = f
+            .new_attr::<T::Output>()
+            .shape(())
+            .create(T::name())
+            .unwrap();
         attr.write_scalar(&res.to_value()).unwrap();
     }
 }
