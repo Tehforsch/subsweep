@@ -1,11 +1,11 @@
+#[cfg(not(feature = "mpi"))]
+mod parallel;
+
 mod tests {
-    use bevy::prelude::App;
     use bevy::prelude::Entity;
 
     use super::super::QuadTree;
     use crate::domain::extent::Extent;
-    use crate::domain::DomainDecompositionPlugin;
-    use crate::physics::gravity::plugin::GravityPlugin;
     use crate::physics::gravity::Solver;
     use crate::quadtree;
     use crate::quadtree::*;
@@ -16,7 +16,7 @@ mod tests {
     use crate::units::Length;
     use crate::units::Mass;
 
-    fn get_particles(n: i32) -> Vec<LeafData> {
+    pub fn get_particles(n: i32) -> Vec<LeafData> {
         (1..n)
             .flat_map(move |x| {
                 (1..n).map(move |y| LeafData {
@@ -83,34 +83,5 @@ mod tests {
             total += solver.calc_gravity_acceleration(pos1, &particle.pos, particle.mass);
         }
         total
-    }
-
-    #[test]
-    #[cfg(not(feature = "mpi"))]
-    fn compare_parallel_quadtree_gravity_to_direct_sum() {
-        use crate::communication::build_local_communication_app_with_custom_logic;
-        let check = |_| {};
-        build_local_communication_app_with_custom_logic(build_parallel_gravity_app, check, 2);
-    }
-
-    #[cfg(not(feature = "mpi"))]
-    fn build_parallel_gravity_app(app: &mut App) {
-        use crate::output;
-        use crate::physics::PhysicsPlugin;
-        use crate::physics::{self};
-
-        app.insert_resource(physics::Parameters {
-            opening_angle: Dimensionless::zero(),
-            ..Default::default()
-        })
-        .insert_resource(QuadTreeConfig {
-            ..Default::default()
-        })
-        .insert_resource(output::Parameters {
-            ..Default::default()
-        })
-        .add_plugin(DomainDecompositionPlugin)
-        .add_plugin(PhysicsPlugin)
-        .add_plugin(GravityPlugin);
     }
 }

@@ -19,7 +19,7 @@ use super::physics::PhysicsPlugin;
 use super::plugin_utils::is_main_rank;
 use super::visualization::VisualizationPlugin;
 
-fn log_setup(verbosity: usize) -> LogSettings {
+pub fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
         0 => LogSettings {
             level: Level::INFO,
