@@ -63,6 +63,10 @@ impl Plugin for DomainDecompositionPlugin {
             construct_quad_tree_system.after(determine_global_extent_system),
         )
         .add_system_to_stage(
+            DomainDecompositionStages::TopLevelTreeConstruction,
+            communicate_mass_moments_system.after(construct_quad_tree_system),
+        )
+        .add_system_to_stage(
             DomainDecompositionStages::Decomposition,
             distribute_top_level_nodes_system,
         )
@@ -168,18 +172,19 @@ impl TopLevelIndices {
     }
 }
 
-fn distribute_top_level_nodes_system(
+fn get_top_level_indices(depth: usize) -> Vec<QuadTreeIndex> {
+    QuadTreeIndex::iter_all_nodes_at_depth(depth).collect()
+}
+
+pub fn communicate_mass_moments_system(
     mut tree: ResMut<QuadTree>,
     config: Res<QuadTreeConfig>,
-    num_ranks: Res<WorldSize>,
-    mut indices: ResMut<TopLevelIndices>,
     mut comm: NonSendMut<AllGatherCommunicator<MassMoments>>,
 ) {
     // Use the particle counts at depth config.min_depth for
     // decomposition for now. This obviously needs to be fixed and
     // replaced by a proper peano hilbert curve on an actual tree
-    let top_level_tree_leaf_indices: Vec<_> =
-        QuadTreeIndex::iter_all_nodes_at_depth(config.min_depth).collect();
+    let top_level_tree_leaf_indices = get_top_level_indices(config.min_depth);
     let mass_moments: Vec<_> = top_level_tree_leaf_indices
         .iter()
         .map(|index| tree[&index].data.moments.clone())
@@ -192,9 +197,18 @@ fn distribute_top_level_nodes_system(
     {
         tree[index].data.moments = moments.clone();
     }
-    let particles_per_leaf: Vec<usize> = total_mass_moments
+}
+
+fn distribute_top_level_nodes_system(
+    tree: Res<QuadTree>,
+    config: Res<QuadTreeConfig>,
+    num_ranks: Res<WorldSize>,
+    mut indices: ResMut<TopLevelIndices>,
+) {
+    let top_level_tree_leaf_indices = get_top_level_indices(config.min_depth);
+    let particles_per_leaf: Vec<usize> = top_level_tree_leaf_indices
         .iter()
-        .map(|moments| moments.count())
+        .map(|index| tree[&index].data.moments.count())
         .collect();
     let cutoffs = get_cutoffs(&particles_per_leaf, **num_ranks);
     *indices = TopLevelIndices(
