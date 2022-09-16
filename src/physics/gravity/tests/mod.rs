@@ -15,8 +15,9 @@ mod tests {
     use crate::units::Dimensionless;
     use crate::units::Length;
     use crate::units::Mass;
+    use crate::units::VecAcceleration;
 
-    pub fn get_particles(n: i32) -> Vec<LeafData> {
+    fn get_particles(n: i32) -> Vec<LeafData> {
         (1..n)
             .flat_map(move |x| {
                 (1..n).map(move |y| LeafData {
@@ -68,19 +69,30 @@ mod tests {
             softening_length: Length::zero(),
         };
         let acc1 = solver.traverse_tree(&tree, &pos);
-        let acc2 = direct_sum(&solver, &pos, get_particles(n_particles).iter().collect());
+        let acc2 = direct_sum(
+            &solver,
+            &pos,
+            get_particles(n_particles)
+                .iter()
+                .map(|part| (part.pos, part.mass))
+                .collect(),
+        );
+        compare_accelerations(acc1, acc2);
+    }
+
+    pub(super) fn compare_accelerations(acc1: VecAcceleration, acc2: VecAcceleration) {
         let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length());
         assert!(relative_diff.value() < &1e-15);
     }
 
-    fn direct_sum(
+    pub(super) fn direct_sum(
         solver: &Solver,
         pos1: &DVec2Length,
-        other_positions: Vec<&LeafData>,
+        other_positions: Vec<(DVec2Length, Mass)>,
     ) -> DVec2Acceleration {
         let mut total = DVec2Acceleration::zero();
-        for particle in other_positions.iter() {
-            total += solver.calc_gravity_acceleration(pos1, &particle.pos, particle.mass);
+        for (pos, mass) in other_positions.into_iter() {
+            total += solver.calc_gravity_acceleration(pos1, &pos, mass);
         }
         total
     }

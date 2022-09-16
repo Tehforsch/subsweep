@@ -18,6 +18,7 @@ use super::physics::time_system;
 use super::physics::PhysicsPlugin;
 use super::plugin_utils::is_main_rank;
 use super::visualization::VisualizationPlugin;
+use crate::physics::GravityPlugin;
 
 pub fn log_setup(verbosity: usize) -> LogSettings {
     match verbosity {
@@ -60,6 +61,7 @@ fn build_app(app: &mut App, opts: &CommandLineOptions) {
     app.insert_resource(task_pool_opts)
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
+        .add_plugin(GravityPlugin)
         .add_plugin(InitialConditionsPlugin);
     if is_main_rank(app) {
         app.insert_resource(log_setup(opts.verbosity));

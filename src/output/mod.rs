@@ -42,7 +42,7 @@ struct OutputFile {
 
 fn output_setup(app: &mut App) {
     app.add_stage_after(
-        PhysicsStages::Gravity,
+        PhysicsStages::Physics,
         OutputStages::Output,
         SystemStage::parallel(),
     )

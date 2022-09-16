@@ -10,7 +10,7 @@ pub struct QuadTreeConfig {
 impl Default for QuadTreeConfig {
     fn default() -> Self {
         Self {
-            min_depth: 0,
+            min_depth: 1,
             max_depth: 20,
             max_num_particles_per_leaf: 1,
         }

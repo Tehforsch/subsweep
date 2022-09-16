@@ -6,8 +6,9 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
+use self::gravity::gravity_system;
 pub use self::gravity::mass_moments::MassMoments;
-use self::gravity::plugin::GravityPlugin;
+pub use self::gravity::plugin::GravityPlugin;
 use self::parameters::Parameters;
 pub use self::time::Time;
 use crate::domain::DomainDecompositionStages;
@@ -33,20 +34,14 @@ pub struct PhysicsPlugin;
 // Cannot wait for stageless
 #[derive(StageLabel)]
 pub enum PhysicsStages {
-    QuadTreeConstruction,
-    Gravity,
+    Physics,
 }
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.add_stage_after(
-            DomainDecompositionStages::Decomposition,
-            PhysicsStages::QuadTreeConstruction,
-            SystemStage::parallel(),
-        );
-        app.add_stage_after(
-            PhysicsStages::QuadTreeConstruction,
-            PhysicsStages::Gravity,
+            DomainDecompositionStages::Exchange,
+            PhysicsStages::Physics,
             SystemStage::parallel(),
         );
         app.add_plugin(ParameterPlugin::<Parameters>::new("physics"))
@@ -59,13 +54,21 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(DatasetPlugin::<Velocity>::default())
             .add_plugin(DatasetPlugin::<Mass>::default())
             .add_plugin(AttributePlugin::<Time>::default())
-            .add_plugin(GravityPlugin)
             .add_event::<StopSimulationEvent>()
             .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::second(0.00)))
-            .add_system(integrate_motion_system)
-            .add_system(time_system)
-            .add_system(stop_simulation_system.after(time_system));
+            .add_system_to_stage(
+                PhysicsStages::Physics,
+                integrate_motion_system.after(gravity_system),
+            )
+            .add_system_to_stage(
+                PhysicsStages::Physics,
+                time_system.after(integrate_motion_system),
+            )
+            .add_system_to_stage(
+                PhysicsStages::Physics,
+                stop_simulation_system.after(time_system),
+            );
     }
 }
 

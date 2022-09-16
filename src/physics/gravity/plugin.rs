@@ -12,7 +12,7 @@ pub struct GravityPlugin;
 
 impl Plugin for GravityPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system_to_stage(PhysicsStages::Gravity, gravity_system)
+        app.add_system_to_stage(PhysicsStages::Physics, gravity_system)
             .add_plugin(
                 CommunicationPlugin::<Identified<GravityCalculationRequest>>::new(
                     CommunicationType::Exchange,

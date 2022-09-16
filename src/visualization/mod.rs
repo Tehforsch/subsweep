@@ -50,7 +50,7 @@ impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
         let rank = *app.world.get_resource::<WorldRank>().unwrap();
         app.add_stage_after(
-            PhysicsStages::Gravity,
+            PhysicsStages::Physics,
             VisualizationStage::Synchronize,
             SystemStage::parallel(),
         );
