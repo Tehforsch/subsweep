@@ -10,6 +10,7 @@ use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
+use super::BaseCommunicationPlugin;
 use crate::communication::local::LocalCommunicator;
 use crate::communication::local::Payload;
 use crate::communication::plugin::add_communicator;
@@ -21,7 +22,7 @@ use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 
-fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut App, usize, Rank)>(
+fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut App)>(
     build_app: F,
     receivers: Receivers,
     senders: Senders,
@@ -29,15 +30,14 @@ fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut App, usize, Ra
     rank: Rank,
 ) -> App {
     let mut app = App::new();
+    app.add_plugin(BaseCommunicationPlugin::new(num_threads, rank));
     app.insert_non_send_resource(receivers);
     app.insert_non_send_resource(senders);
-    build_app(&mut app, num_threads, rank);
+    build_app(&mut app);
     app
 }
 
-pub fn build_local_communication_app<
-    F: 'static + Sync + Copy + Send + Fn(&mut App, usize, Rank),
->(
+pub fn build_local_communication_app<F: 'static + Sync + Copy + Send + Fn(&mut App)>(
     build_app: F,
     num_threads: usize,
 ) {
@@ -49,7 +49,7 @@ pub fn build_local_communication_app<
 }
 
 pub fn build_local_communication_app_with_custom_logic<
-    F: 'static + Sync + Copy + Send + Fn(&mut App, usize, Rank),
+    F: 'static + Sync + Copy + Send + Fn(&mut App),
     G: 'static + Sync + Copy + Send + Fn(App),
 >(
     build_app: F,

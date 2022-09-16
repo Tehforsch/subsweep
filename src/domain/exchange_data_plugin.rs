@@ -229,7 +229,6 @@ mod tests {
     use mpi::traits::Equivalence;
 
     use crate::communication::build_local_communication_app_with_custom_logic;
-    use crate::communication::BaseCommunicationPlugin;
     use crate::communication::WorldRank;
     use crate::domain::exchange_data_plugin::ExchangeDataPlugin;
     use crate::domain::exchange_data_plugin::OutgoingEntities;
@@ -301,20 +300,15 @@ mod tests {
 
     #[test]
     fn exchange_data_plugin() {
-        build_local_communication_app_with_custom_logic(
-            |app, size, rank| build_app(app, size, rank),
-            check_received,
-            2,
-        );
+        build_local_communication_app_with_custom_logic(build_app, check_received, 2);
     }
 
-    fn build_app(app: &mut App, size: usize, rank: i32) {
+    fn build_app(app: &mut App) {
         app.add_stage_after(
             CoreStage::Update,
             DomainDecompositionStages::Exchange,
             SystemStage::parallel(),
         )
-        .add_plugin(BaseCommunicationPlugin::new(size, rank))
         .add_plugin(ExchangeDataPlugin::<A>::default())
         .add_plugin(ExchangeDataPlugin::<B>::default());
     }

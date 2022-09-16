@@ -11,7 +11,6 @@ use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 
 use super::command_line_options::CommandLineOptions;
-use super::communication::BaseCommunicationPlugin;
 use super::domain::DomainDecompositionPlugin;
 use super::initial_conditions::InitialConditionsPlugin;
 use super::parameters::add_parameter_file_contents;
@@ -51,7 +50,7 @@ fn show_time_system(time: Res<super::physics::Time>) {
     debug!("Time: {:.3} s", time.to_value(super::units::Time::second));
 }
 
-fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
+fn build_app(app: &mut App, opts: &CommandLineOptions) {
     add_parameter_file_contents(app, &opts.parameter_file_path);
     let task_pool_opts = if let Some(num_worker_threads) = opts.num_worker_threads {
         DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
@@ -59,7 +58,6 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
         DefaultTaskPoolOptions::default()
     };
     app.insert_resource(task_pool_opts)
-        .add_plugin(BaseCommunicationPlugin::new(size, rank))
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(InitialConditionsPlugin);
@@ -91,13 +89,15 @@ pub fn main() {
     use super::communication::MpiWorld;
     use super::communication::SizedCommunicator;
     use super::mpi_log;
+    use crate::communication::BaseCommunicationPlugin;
     use crate::communication::MPI_UNIVERSE;
 
     let opts = CommandLineOptions::parse();
     let world: MpiWorld<usize> = MpiWorld::new(0);
     mpi_log::initialize(world.rank(), world.size());
     let mut app = App::new();
-    build_app(&mut app, &opts, world.size(), world.rank());
+    app.add_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
+    build_app(&mut app, &opts);
     app.run();
     MPI_UNIVERSE.drop();
 }
@@ -110,9 +110,9 @@ pub fn main() {
 
     let opts = CommandLineOptions::parse();
     build_local_communication_app(
-        |app, num_threads, rank| {
+        |app| {
             let opts = CommandLineOptions::parse();
-            build_app(app, &opts, num_threads, rank)
+            build_app(app, &opts)
         },
         opts.num_threads,
     );
