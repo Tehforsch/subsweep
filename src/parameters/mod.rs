@@ -54,7 +54,14 @@ impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> P
 {
     fn build(&self, app: &mut App) {
         let name = self.name.clone();
-        let parameter_file_contents = &app.world.get_resource::<ParameterFileContents>().expect("No parameter file contents resource available - failed to call add_parameter_file_contents?").0;
+        // In tests, we want to be able to insert the parameters
+        // directly into the app, without having to read a parameter file
+        // which is why we check here whether the parameter struct is already present
+        if app.world.get_resource::<T>().is_some() {
+            debug!("Parameters for {} already present", &name);
+            return;
+        }
+        let parameter_file_contents = &app.world.get_resource::<ParameterFileContents>().expect(&format!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameter_file_contents?", &name)).0;
         let parameters =
             Self::get_parameter_struct_from_parameter_file_contents(&name, parameter_file_contents);
         app.world.insert_resource(parameters);

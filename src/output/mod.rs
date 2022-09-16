@@ -19,7 +19,7 @@ use hdf5::File;
 pub use self::attribute::Attribute;
 pub use self::attribute_plugin::AttributePlugin;
 pub use self::dataset_plugin::DatasetPlugin;
-use self::parameters::Parameters;
+pub use self::parameters::Parameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
