@@ -1,6 +1,7 @@
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::prelude::App;
 use bevy::prelude::Commands;
+use bevy::prelude::Component;
 use bevy::prelude::Entity;
 use bevy::prelude::Query;
 use bevy::prelude::Res;
@@ -8,6 +9,7 @@ use bevy::prelude::ResMut;
 use bevy::prelude::Stage;
 use bevy::prelude::SystemStage;
 use bevy::MinimalPlugins;
+use mpi::traits::Equivalence;
 
 use super::tests::compare_accelerations;
 use super::tests::direct_sum;
@@ -28,7 +30,7 @@ use crate::units::VecLength;
 use crate::units::VecVelocity;
 use crate::velocity::Velocity;
 
-pub const NUM_PARTICLES_ONE_DIMENSION: usize = 6;
+pub const NUM_PARTICLES_ONE_DIMENSION: usize = 1;
 
 fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
     (0..n)
@@ -52,16 +54,14 @@ fn run_system_on_app<P>(app: &mut App, system: impl IntoSystemDescriptor<P>) {
 fn check_system(
     parameters: Res<physics::Parameters>,
     timestep: Res<Timestep>,
-    query: Query<&Velocity>,
-    entities: Res<Entities>,
+    query: Query<(&Velocity, &IndexIntoArray)>,
 ) {
     let solver = Solver::from_parameters(&parameters);
-    for (i, entity) in entities.0.iter().enumerate() {
-        let vel = query.get(*entity).unwrap();
+    for (vel, index) in query.iter() {
+        let particles = get_particles(NUM_PARTICLES_ONE_DIMENSION);
         // We can't use the particle position from a query here,
         // because that has already been integrated
-        let particles = get_particles(NUM_PARTICLES_ONE_DIMENSION);
-        let pos = &particles[i].0;
+        let pos = &particles[index.0].0;
         let direct_sum = direct_sum(
             &solver,
             pos,
@@ -77,25 +77,23 @@ fn check_system(
     }
 }
 
-struct Entities(Vec<Entity>);
+#[derive(Component, Equivalence, Clone)]
+struct IndexIntoArray(usize);
 
-fn spawn_particles_system(
-    rank: Res<WorldRank>,
-    mut commands: Commands,
-    mut remember_entities: ResMut<Entities>,
-) {
+fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
     if **rank == 0 {
-        for bundle in get_particles(NUM_PARTICLES_ONE_DIMENSION)
-            .into_iter()
-            .map(|(pos, mass, vel)| (pos, mass, vel, LocalParticle))
-        {
-            remember_entities.0.push(commands.spawn_bundle(bundle).id());
-        }
+        commands.spawn_batch(
+            get_particles(NUM_PARTICLES_ONE_DIMENSION)
+                .into_iter()
+                .enumerate()
+                .map(|(i, (pos, mass, vel))| (pos, mass, vel, LocalParticle, IndexIntoArray(i))),
+        )
     }
 }
 
 #[cfg(not(feature = "mpi"))]
 fn build_parallel_gravity_app(app: &mut App) {
+    use crate::domain::ExchangeDataPlugin;
     use crate::quadtree::QuadTreeConfig;
     use crate::units::Dimensionless;
     use crate::units::Length;
@@ -107,7 +105,6 @@ fn build_parallel_gravity_app(app: &mut App) {
         softening_length: Length::meter(1.0),
         ..Default::default()
     })
-    .insert_resource(Entities(vec![]))
     .insert_resource(QuadTreeConfig {
         ..Default::default()
     })
@@ -118,7 +115,8 @@ fn build_parallel_gravity_app(app: &mut App) {
     .add_plugins(MinimalPlugins)
     .add_plugin(DomainDecompositionPlugin)
     .add_plugin(PhysicsPlugin)
-    .add_plugin(GravityPlugin);
+    .add_plugin(GravityPlugin)
+    .add_plugin(ExchangeDataPlugin::<IndexIntoArray>::default());
 }
 
 #[test]
