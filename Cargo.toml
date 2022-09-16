@@ -5,7 +5,8 @@ edition = "2021"
 resolver="2"
 
 [features]
-local = []
+default = ["mpi"]
+mpi = []
 
 [dependencies]
 bevy = { version = "0.8.0", default-features = false, features = ["render", "x11", "bevy_winit", "serialize", "filesystem_watcher"]}
@@ -32,4 +33,5 @@ opt-level = 3
 
 [[example]]
 name = "mpi_test"
+required-features = ["mpi"]
 

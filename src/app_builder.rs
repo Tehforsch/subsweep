@@ -73,7 +73,7 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
         app.add_system(show_time_system.after(time_system));
     } else {
         app.add_plugins(MinimalPlugins);
-        #[cfg(not(feature = "local"))]
+        #[cfg(feature = "mpi")]
         app.add_plugin(LogPlugin);
     }
     if opts.headless {
@@ -84,7 +84,7 @@ fn build_app(app: &mut App, opts: &CommandLineOptions, size: usize, rank: i32) {
     }
 }
 
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 pub fn main() {
     use clap::Parser;
 
@@ -102,7 +102,7 @@ pub fn main() {
     MPI_UNIVERSE.drop();
 }
 
-#[cfg(feature = "local")]
+#[cfg(not(feature = "mpi"))]
 pub fn main() {
     use clap::Parser;
 

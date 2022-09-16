@@ -106,7 +106,7 @@ where
 }
 
 #[cfg(test)]
-#[cfg(feature = "local")]
+#[cfg(not(feature = "mpi"))]
 mod tests {
     use std::thread;
 

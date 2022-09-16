@@ -27,5 +27,5 @@ pub mod units;
 pub(crate) mod velocity;
 pub(crate) mod visualization;
 
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 pub mod mpi_log;

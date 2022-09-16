@@ -59,7 +59,7 @@ where
 use bevy::prelude::Entity;
 
 #[cfg(test)]
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 mod tests {
     use bevy::prelude::Entity;
     use mpi::traits::Communicator;
