@@ -22,7 +22,6 @@ use crate::communication::WorldRank;
 use crate::domain::GlobalExtent;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
-use crate::physics::PhysicsStages;
 use crate::position::Position;
 use crate::quadtree::QuadTreeVisualizationPlugin;
 use crate::units::Length;
@@ -49,26 +48,6 @@ struct WorldCamera;
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
         let rank = *app.world.get_resource::<WorldRank>().unwrap();
-        app.add_stage_after(
-            PhysicsStages::Physics,
-            VisualizationStage::Synchronize,
-            SystemStage::parallel(),
-        );
-        app.add_stage_after(
-            VisualizationStage::Synchronize,
-            VisualizationStage::AddVisualization,
-            SystemStage::parallel(),
-        );
-        app.add_stage_after(
-            VisualizationStage::AddVisualization,
-            VisualizationStage::AddDrawComponents,
-            SystemStage::parallel(),
-        );
-        app.add_stage_after(
-            VisualizationStage::AddDrawComponents,
-            VisualizationStage::Draw,
-            SystemStage::parallel(),
-        );
         if rank.is_main() {
             app.add_plugin(ParameterPlugin::<Parameters>::new("visualization"))
                 .add_plugin(ShapePlugin)

@@ -224,15 +224,13 @@ fn despawn_outgoing_entities_system(
 mod tests {
     use bevy::prelude::App;
     use bevy::prelude::Component;
-    use bevy::prelude::CoreStage;
-    use bevy::prelude::SystemStage;
     use mpi::traits::Equivalence;
 
     use crate::communication::build_local_communication_app_with_custom_logic;
     use crate::communication::WorldRank;
     use crate::domain::exchange_data_plugin::ExchangeDataPlugin;
     use crate::domain::exchange_data_plugin::OutgoingEntities;
-    use crate::domain::DomainDecompositionStages;
+    use crate::stages::SimulationStagesPlugin;
 
     #[derive(Clone, Equivalence, Component)]
     struct A {
@@ -304,12 +302,8 @@ mod tests {
     }
 
     fn build_app(app: &mut App) {
-        app.add_stage_after(
-            CoreStage::Update,
-            DomainDecompositionStages::Exchange,
-            SystemStage::parallel(),
-        )
-        .add_plugin(ExchangeDataPlugin::<A>::default())
-        .add_plugin(ExchangeDataPlugin::<B>::default());
+        app.add_plugin(SimulationStagesPlugin)
+            .add_plugin(ExchangeDataPlugin::<A>::default())
+            .add_plugin(ExchangeDataPlugin::<B>::default());
     }
 }

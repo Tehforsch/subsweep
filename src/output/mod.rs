@@ -13,7 +13,6 @@ use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 use bevy::prelude::StageLabel;
-use bevy::prelude::SystemStage;
 use hdf5::File;
 
 pub use self::attribute::Attribute;
@@ -24,14 +23,13 @@ use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
-use crate::physics::PhysicsStages;
 use crate::plugin_utils::run_once;
 
 #[derive(AmbiguitySetLabel)]
 struct OutputSystemsAmbiguitySet;
 
 #[derive(StageLabel)]
-enum OutputStages {
+pub enum OutputStages {
     Output,
 }
 
@@ -41,31 +39,26 @@ struct OutputFile {
 }
 
 fn output_setup(app: &mut App) {
-    app.add_stage_after(
-        PhysicsStages::Physics,
-        OutputStages::Output,
-        SystemStage::parallel(),
-    )
-    .add_plugin(ParameterPlugin::<Parameters>::new("output"))
-    .insert_resource(OutputFile::default())
-    .add_startup_system(Timer::initialize_system)
-    .add_startup_system(make_output_dir_system)
-    .add_system_to_stage(
-        OutputStages::Output,
-        open_file_system.with_run_criteria(Timer::run_criterion),
-    )
-    .add_system_to_stage(
-        OutputStages::Output,
-        close_file_system
-            .after(open_file_system)
-            .with_run_criteria(Timer::run_criterion),
-    )
-    .add_system_to_stage(
-        OutputStages::Output,
-        Timer::update_system
-            .after(close_file_system)
-            .with_run_criteria(Timer::run_criterion),
-    );
+    app.add_plugin(ParameterPlugin::<Parameters>::new("output"))
+        .insert_resource(OutputFile::default())
+        .add_startup_system(Timer::initialize_system)
+        .add_startup_system(make_output_dir_system)
+        .add_system_to_stage(
+            OutputStages::Output,
+            open_file_system.with_run_criteria(Timer::run_criterion),
+        )
+        .add_system_to_stage(
+            OutputStages::Output,
+            close_file_system
+                .after(open_file_system)
+                .with_run_criteria(Timer::run_criterion),
+        )
+        .add_system_to_stage(
+            OutputStages::Output,
+            Timer::update_system
+                .after(close_file_system)
+                .with_run_criteria(Timer::run_criterion),
+        );
 }
 
 fn make_output_dir_system(parameters: Res<Parameters>) {

@@ -38,21 +38,6 @@ impl Plugin for DomainDecompositionPlugin {
         app.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()));
-        app.add_stage_after(
-            CoreStage::Update,
-            DomainDecompositionStages::TopLevelTreeConstruction,
-            SystemStage::parallel(),
-        );
-        app.add_stage_after(
-            DomainDecompositionStages::TopLevelTreeConstruction,
-            DomainDecompositionStages::Decomposition,
-            SystemStage::parallel(),
-        );
-        app.add_stage_after(
-            DomainDecompositionStages::Decomposition,
-            DomainDecompositionStages::Exchange,
-            SystemStage::parallel(),
-        );
         app.add_system_to_stage(
             DomainDecompositionStages::TopLevelTreeConstruction,
             determine_global_extent_system,

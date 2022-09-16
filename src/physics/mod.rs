@@ -11,7 +11,6 @@ pub use self::gravity::mass_moments::MassMoments;
 pub use self::gravity::plugin::GravityPlugin;
 use self::parameters::Parameters;
 pub use self::time::Time;
-use crate::domain::DomainDecompositionStages;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass::Mass;
 use crate::output::AttributeOutputPlugin;
@@ -39,11 +38,6 @@ pub enum PhysicsStages {
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_stage_after(
-            DomainDecompositionStages::Exchange,
-            PhysicsStages::Physics,
-            SystemStage::parallel(),
-        );
         app.add_plugin(ParameterPlugin::<Parameters>::new("physics"))
             .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("tree"));
         let parameters = get_parameters::<Parameters>(app).clone();

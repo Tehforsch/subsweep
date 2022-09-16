@@ -23,6 +23,7 @@ pub(crate) mod physics;
 pub(crate) mod plugin_utils;
 pub(crate) mod position;
 pub(crate) mod quadtree;
+pub(crate) mod stages;
 pub mod units;
 pub(crate) mod velocity;
 pub(crate) mod visualization;

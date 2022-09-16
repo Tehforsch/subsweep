@@ -90,6 +90,7 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 fn build_parallel_gravity_app(app: &mut App) {
     use crate::domain::ExchangeDataPlugin;
     use crate::quadtree::QuadTreeConfig;
+    use crate::stages::SimulationStagesPlugin;
     use crate::units::Dimensionless;
     use crate::units::Length;
     use crate::units::Time;
@@ -108,6 +109,7 @@ fn build_parallel_gravity_app(app: &mut App) {
     })
     .add_startup_system(spawn_particles_system)
     .add_plugins(MinimalPlugins)
+    .add_plugin(SimulationStagesPlugin)
     .add_plugin(DomainDecompositionPlugin)
     .add_plugin(PhysicsPlugin)
     .add_plugin(GravityPlugin)
