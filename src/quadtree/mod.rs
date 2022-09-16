@@ -115,7 +115,7 @@ impl QuadTree {
         }
     }
 
-    fn make_empty_leaf_from_extent(extent: Extent) -> Self {
+    pub fn make_empty_leaf_from_extent(extent: Extent) -> Self {
         Self {
             node: Node::Leaf(vec![]),
             data: NodeData::default(),

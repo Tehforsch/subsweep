@@ -36,7 +36,8 @@ pub struct DomainDecompositionPlugin;
 impl Plugin for DomainDecompositionPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GlobalExtent(Extent::default()))
-            .insert_resource(TopLevelIndices::default());
+            .insert_resource(TopLevelIndices::default())
+            .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()));
         app.add_stage_after(
             CoreStage::Update,
             DomainDecompositionStages::TopLevelTreeConstruction,
@@ -103,11 +104,11 @@ pub(super) struct ParticleExchangeData {
     mass: Mass,
 }
 
-fn construct_quad_tree_system(
-    mut commands: Commands,
+pub fn construct_quad_tree_system(
     config: Res<QuadTreeConfig>,
     particles: Query<(Entity, &Position, &Mass)>,
     extent: Res<GlobalExtent>,
+    mut quadtree: ResMut<QuadTree>,
 ) {
     let particles: Vec<_> = particles
         .iter()
@@ -117,8 +118,7 @@ fn construct_quad_tree_system(
             mass: **mass,
         })
         .collect();
-    let quadtree = QuadTree::new(&config, particles, &extent);
-    commands.insert_resource(quadtree);
+    *quadtree = QuadTree::new(&config, particles, &extent);
 }
 
 fn sum_vecs(mut data: DataByRank<Vec<MassMoments>>) -> Vec<MassMoments> {

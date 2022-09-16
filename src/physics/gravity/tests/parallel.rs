@@ -5,7 +5,6 @@ use bevy::prelude::Component;
 use bevy::prelude::Entity;
 use bevy::prelude::Query;
 use bevy::prelude::Res;
-use bevy::prelude::ResMut;
 use bevy::prelude::Stage;
 use bevy::prelude::SystemStage;
 use bevy::MinimalPlugins;
@@ -30,18 +29,16 @@ use crate::units::VecLength;
 use crate::units::VecVelocity;
 use crate::velocity::Velocity;
 
-pub const NUM_PARTICLES_ONE_DIMENSION: usize = 1;
+pub const NUM_PARTICLES_ONE_DIMENSION: usize = 500;
 
 fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
     (0..n)
-        .flat_map(move |x| {
-            (0..n).map(move |y| {
-                (
-                    Position(VecLength::meter(x as f64, y as f64)),
-                    mass::Mass(Mass::kilogram(1e11)),
-                    Velocity(VecVelocity::zero()),
-                )
-            })
+        .map(move |x| {
+            (
+                Position(VecLength::meter(x as f64, 0.0 as f64)),
+                mass::Mass(Mass::kilogram(1e11)),
+                Velocity(VecVelocity::zero()),
+            )
         })
         .collect()
 }
@@ -55,11 +52,9 @@ fn check_system(
     parameters: Res<physics::Parameters>,
     timestep: Res<Timestep>,
     query: Query<(&Velocity, &IndexIntoArray)>,
-    rank: Res<WorldRank>,
 ) {
     let solver = Solver::from_parameters(&parameters);
     for (vel, index) in query.iter() {
-        dbg!(**rank, vel, index);
         let particles = get_particles(NUM_PARTICLES_ONE_DIMENSION);
         // We can't use the particle position from a query here,
         // because that has already been integrated
@@ -74,7 +69,6 @@ fn check_system(
         );
         let acc1 = direct_sum;
         let acc2 = **vel / **timestep;
-        dbg!(&acc1, &acc2);
         compare_accelerations(acc1, acc2);
     }
 }
@@ -104,7 +98,7 @@ fn build_parallel_gravity_app(app: &mut App) {
     app.insert_resource(physics::Parameters {
         timestep: Time::second(1.0),
         opening_angle: Dimensionless::dimensionless(0.0),
-        softening_length: Length::meter(1.0),
+        softening_length: Length::meter(1e-30),
         ..Default::default()
     })
     .insert_resource(QuadTreeConfig {
