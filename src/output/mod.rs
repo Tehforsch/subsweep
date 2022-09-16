@@ -17,8 +17,8 @@ use bevy::prelude::SystemStage;
 use hdf5::File;
 
 pub use self::attribute::Attribute;
-pub use self::attribute_plugin::AttributePlugin;
-pub use self::dataset_plugin::DatasetPlugin;
+pub use self::attribute_plugin::AttributeOutputPlugin;
+pub use self::dataset_plugin::DatasetOutputPlugin;
 pub use self::parameters::Parameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;

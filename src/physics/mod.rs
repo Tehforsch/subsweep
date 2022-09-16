@@ -14,8 +14,8 @@ pub use self::time::Time;
 use crate::domain::DomainDecompositionStages;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass::Mass;
-use crate::output::AttributePlugin;
-use crate::output::DatasetPlugin;
+use crate::output::AttributeOutputPlugin;
+use crate::output::DatasetOutputPlugin;
 use crate::parameters::ParameterPlugin;
 use crate::plugin_utils::get_parameters;
 use crate::position::Position;
@@ -50,10 +50,10 @@ impl Plugin for PhysicsPlugin {
         app.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())
-            .add_plugin(DatasetPlugin::<Position>::default())
-            .add_plugin(DatasetPlugin::<Velocity>::default())
-            .add_plugin(DatasetPlugin::<Mass>::default())
-            .add_plugin(AttributePlugin::<Time>::default())
+            .add_plugin(DatasetOutputPlugin::<Position>::default())
+            .add_plugin(DatasetOutputPlugin::<Velocity>::default())
+            .add_plugin(DatasetOutputPlugin::<Mass>::default())
+            .add_plugin(AttributeOutputPlugin::<Time>::default())
             .add_event::<StopSimulationEvent>()
             .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::second(0.00)))

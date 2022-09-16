@@ -10,11 +10,11 @@ use super::add_output_system;
 use super::OutputFile;
 use crate::named::Named;
 
-pub struct DatasetPlugin<T> {
+pub struct DatasetOutputPlugin<T> {
     _marker: PhantomData<T>,
 }
 
-impl<T> Default for DatasetPlugin<T> {
+impl<T> Default for DatasetOutputPlugin<T> {
     fn default() -> Self {
         Self {
             _marker: PhantomData::default(),
@@ -22,7 +22,9 @@ impl<T> Default for DatasetPlugin<T> {
     }
 }
 
-impl<T: Named + Clone + H5Type + Component + Sync + Send + 'static> Plugin for DatasetPlugin<T> {
+impl<T: Named + Clone + H5Type + Component + Sync + Send + 'static> Plugin
+    for DatasetOutputPlugin<T>
+{
     fn build(&self, app: &mut bevy::prelude::App) {
         add_output_system::<T, _>(app, move |query: Query<&T>, file: ResMut<OutputFile>| {
             Self::write_dataset(query, file)
@@ -30,7 +32,7 @@ impl<T: Named + Clone + H5Type + Component + Sync + Send + 'static> Plugin for D
     }
 }
 
-impl<T: Named + Sync + Send + 'static + Clone + H5Type + Component> DatasetPlugin<T> {
+impl<T: Named + Sync + Send + 'static + Clone + H5Type + Component> DatasetOutputPlugin<T> {
     fn write_dataset(query: Query<&T>, file: ResMut<OutputFile>) {
         let f = file.f.as_ref().unwrap();
         let data: Vec<T> = query.iter().cloned().collect();

@@ -8,11 +8,11 @@ use super::add_output_system;
 use super::attribute::Attribute;
 use super::OutputFile;
 
-pub struct AttributePlugin<T> {
+pub struct AttributeOutputPlugin<T> {
     _marker: PhantomData<T>,
 }
 
-impl<T> Default for AttributePlugin<T> {
+impl<T> Default for AttributeOutputPlugin<T> {
     fn default() -> Self {
         Self {
             _marker: PhantomData::default(),
@@ -20,7 +20,7 @@ impl<T> Default for AttributePlugin<T> {
     }
 }
 
-impl<T> Plugin for AttributePlugin<T>
+impl<T> Plugin for AttributeOutputPlugin<T>
 where
     T: Attribute + Sync + Send + 'static,
 {
@@ -31,7 +31,7 @@ where
     }
 }
 
-impl<T> AttributePlugin<T>
+impl<T> AttributeOutputPlugin<T>
 where
     T: Attribute + Sync + Send + 'static,
 {
