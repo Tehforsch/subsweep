@@ -29,7 +29,7 @@ unsafe impl<const D: Dimension> Equivalence for Quantity<DVec2, D> {
 }
 
 #[cfg(test)]
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 mod tests {
     use mpi::traits::Communicator;
 

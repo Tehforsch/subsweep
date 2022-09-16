@@ -22,16 +22,16 @@ pub use plugin::CommunicationPlugin;
 pub use plugin::CommunicationType;
 pub use sized_communicator::SizedCommunicator;
 pub use world_communicator::WorldCommunicator;
-#[cfg(feature = "local")]
+#[cfg(not(feature = "mpi"))]
 mod local;
 
-#[cfg(feature = "local")]
+#[cfg(not(feature = "mpi"))]
 pub mod local_app_building;
 
-#[cfg(feature = "local")]
+#[cfg(not(feature = "mpi"))]
 pub use local_reexport::*;
 
-#[cfg(feature = "local")]
+#[cfg(not(feature = "mpi"))]
 #[path = ""]
 mod local_reexport {
     use super::identified::Identified;
@@ -51,13 +51,13 @@ mod local_reexport {
     pub type Communicator<T> = super::local::LocalCommunicator<T>;
 }
 
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 mod mpi_world;
 
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 pub use mpi_reexport::*;
 
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 #[path = ""]
 mod mpi_reexport {
     use super::identified::Identified;

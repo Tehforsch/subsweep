@@ -76,7 +76,7 @@ where
 }
 
 #[cfg(test)]
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 mod tests {
     use mpi::traits::Communicator;
     use mpi::traits::Equivalence;

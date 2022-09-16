@@ -220,7 +220,7 @@ fn despawn_outgoing_entities_system(
 }
 
 #[cfg(test)]
-#[cfg(feature = "local")]
+#[cfg(not(feature = "mpi"))]
 mod tests {
     use bevy::prelude::App;
     use bevy::prelude::Component;

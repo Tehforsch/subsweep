@@ -1,1 +1,1 @@
-cargo test --features local && cargo test && cargo mpirun --np 2 --example mpi_test
+cargo test --no-default-features && cargo test && cargo mpirun --np 2 --example mpi_test

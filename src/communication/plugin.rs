@@ -71,7 +71,7 @@ pub(super) fn get_next_tag(app: &mut App) -> Tag {
     tag
 }
 
-#[cfg(not(feature = "local"))]
+#[cfg(feature = "mpi")]
 impl<T: Equivalence + Sync + Send + 'static> bevy::prelude::Plugin for CommunicationPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,
