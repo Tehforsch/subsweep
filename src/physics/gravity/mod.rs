@@ -34,6 +34,15 @@ struct Solver {
 }
 
 impl Solver {
+    pub fn from_parameters(parameters: &Parameters) -> Self {
+        Self {
+            softening_length: parameters.softening_length,
+            opening_angle: parameters.opening_angle,
+        }
+    }
+}
+
+impl Solver {
     fn calc_gravity_acceleration(
         &self,
         pos1: &VecLength,
@@ -100,10 +109,7 @@ pub(super) fn gravity_system(
     mut request_comm: NonSendMut<ExchangeCommunicator<Identified<GravityCalculationRequest>>>,
     mut reply_comm: NonSendMut<ExchangeCommunicator<Identified<GravityCalculationReply>>>,
 ) {
-    let gravity = Solver {
-        softening_length: parameters.softening_length,
-        opening_angle: parameters.opening_angle,
-    };
+    let gravity = Solver::from_parameters(&parameters);
     let mut outgoing_requests = DataByRank::from_communicator(&*request_comm);
     let add_acceleration = |vel: &mut Velocity, acceleration| {
         **vel += acceleration * **timestep;

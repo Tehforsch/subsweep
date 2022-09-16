@@ -55,10 +55,7 @@ fn check_system(
     query: Query<&Velocity>,
     entities: Res<Entities>,
 ) {
-    let solver = Solver {
-        softening_length: parameters.softening_length,
-        opening_angle: parameters.opening_angle,
-    };
+    let solver = Solver::from_parameters(&parameters);
     for (i, entity) in entities.0.iter().enumerate() {
         let vel = query.get(*entity).unwrap();
         // We can't use the particle position from a query here,
