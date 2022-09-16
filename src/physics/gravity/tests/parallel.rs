@@ -55,9 +55,11 @@ fn check_system(
     parameters: Res<physics::Parameters>,
     timestep: Res<Timestep>,
     query: Query<(&Velocity, &IndexIntoArray)>,
+    rank: Res<WorldRank>,
 ) {
     let solver = Solver::from_parameters(&parameters);
     for (vel, index) in query.iter() {
+        dbg!(**rank, vel, index);
         let particles = get_particles(NUM_PARTICLES_ONE_DIMENSION);
         // We can't use the particle position from a query here,
         // because that has already been integrated
@@ -77,7 +79,7 @@ fn check_system(
     }
 }
 
-#[derive(Component, Equivalence, Clone)]
+#[derive(Component, Equivalence, Clone, Debug)]
 struct IndexIntoArray(usize);
 
 fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
