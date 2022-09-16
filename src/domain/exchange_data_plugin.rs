@@ -25,6 +25,7 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
+use crate::named::Named;
 use crate::physics::LocalParticle;
 use crate::plugin_utils::run_once;
 
@@ -59,14 +60,20 @@ pub struct ExchangeDataPlugin<T> {
     _marker: PhantomData<T>,
 }
 
-#[derive(Equivalence, Deref, DerefMut)]
-struct NumEntities(usize);
-
 impl<T> Default for ExchangeDataPlugin<T> {
     fn default() -> Self {
         Self {
             _marker: PhantomData::default(),
         }
+    }
+}
+
+#[derive(Equivalence, Deref, DerefMut)]
+struct NumEntities(usize);
+
+impl<T> Named for ExchangeDataPlugin<T> {
+    fn name() -> &'static str {
+        "exchange_data_plugin"
     }
 }
 
@@ -77,7 +84,7 @@ where
     fn build(&self, app: &mut bevy::prelude::App) {
         let rank = **app.world.get_resource::<WorldRank>().unwrap();
         let size = **app.world.get_resource::<WorldSize>().unwrap();
-        run_once("exchange_data_plugin", app, |app| {
+        run_once::<Self>(app, |app| {
             app.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
                 .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
                 .insert_resource(ExchangeOrder::default())

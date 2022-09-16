@@ -16,6 +16,7 @@ use crate::communication::Rank;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::mass::Mass;
+use crate::named::Named;
 use crate::physics::MassMoments;
 use crate::position::Position;
 use crate::quadtree::LeafData;
@@ -32,6 +33,12 @@ pub enum DomainDecompositionStages {
 }
 
 pub struct DomainDecompositionPlugin;
+
+impl Named for DomainDecompositionPlugin {
+    fn name() -> &'static str {
+        "domain_decomposition_plugin"
+    }
+}
 
 impl Plugin for DomainDecompositionPlugin {
     fn build(&self, app: &mut App) {

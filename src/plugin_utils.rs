@@ -3,20 +3,30 @@ use std::collections::HashSet;
 use bevy::prelude::App;
 
 use crate::communication::WorldRank;
+use crate::named::Named;
 
 #[derive(Default)]
-struct Labels(HashSet<&'static str>);
+struct RunOnceLabels(HashSet<&'static str>);
 
-pub fn run_once(label: &'static str, app: &mut App, f: impl Fn(&mut App) -> ()) {
-    let labels_resource_exists = app.world.get_resource_mut::<Labels>().is_some();
-    if !labels_resource_exists {
-        app.world.insert_resource(Labels::default());
-    }
-    let mut labels = app.world.get_resource_mut::<Labels>().unwrap();
-    let contains_label = labels.0.contains(label);
-    labels.0.insert(label);
-    if !contains_label {
+#[derive(Default)]
+struct AlreadyAddedLabels(HashSet<&'static str>);
+
+pub fn run_once<P: Named>(app: &mut App, f: impl Fn(&mut App) -> ()) {
+    let mut labels = app
+        .world
+        .get_resource_or_insert_with(|| RunOnceLabels::default());
+    if labels.0.insert(P::name()) {
         f(app);
+    }
+}
+
+/// Panics if a named item was (accidentally) added twice
+pub fn panic_if_already_added<P: Named>(app: &mut App) {
+    let mut labels = app
+        .world
+        .get_resource_or_insert_with(|| AlreadyAddedLabels::default());
+    if !labels.0.insert(P::name()) {
+        panic!("Added twice: {}", P::name())
     }
 }
 

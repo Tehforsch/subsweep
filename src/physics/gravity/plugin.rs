@@ -9,12 +9,21 @@ use crate::communication::CommunicationType;
 use crate::communication::Identified;
 use crate::domain::communicate_mass_moments_system;
 use crate::domain::construct_quad_tree_system;
+use crate::named::Named;
 use crate::physics::PhysicsStages;
+use crate::plugin_utils::panic_if_already_added;
 
 pub struct GravityPlugin;
 
+impl Named for GravityPlugin {
+    fn name() -> &'static str {
+        "gravity_plugin"
+    }
+}
+
 impl Plugin for GravityPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
+        panic_if_already_added::<Self>(app);
         app.add_system_to_stage(PhysicsStages::Physics, construct_quad_tree_system)
             .add_system_to_stage(
                 PhysicsStages::Physics,

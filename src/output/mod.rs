@@ -87,7 +87,7 @@ fn close_file_system(mut file: ResMut<OutputFile>) {
 }
 
 fn add_output_system<T: Named, P>(app: &mut App, system: impl ParallelSystemDescriptorCoercion<P>) {
-    run_once("output_plugin", app, |app| output_setup(app));
+    run_once::<OutputMarker>(app, |app| output_setup(app));
     if Parameters::is_desired_field::<T>(app) {
         app.add_system_to_stage(
             OutputStages::Output,
@@ -97,5 +97,12 @@ fn add_output_system<T: Named, P>(app: &mut App, system: impl ParallelSystemDesc
                 .in_ambiguity_set(OutputSystemsAmbiguitySet)
                 .with_run_criteria(Timer::run_criterion),
         );
+    }
+}
+
+struct OutputMarker;
+impl Named for OutputMarker {
+    fn name() -> &'static str {
+        "output"
     }
 }

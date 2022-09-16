@@ -13,10 +13,12 @@ use self::parameters::Parameters;
 pub use self::time::Time;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass::Mass;
+use crate::named::Named;
 use crate::output::AttributeOutputPlugin;
 use crate::output::DatasetOutputPlugin;
 use crate::parameters::ParameterPlugin;
 use crate::plugin_utils::get_parameters;
+use crate::plugin_utils::panic_if_already_added;
 use crate::position::Position;
 use crate::quadtree::QuadTreeConfig;
 use crate::units;
@@ -30,6 +32,12 @@ pub struct Timestep(crate::units::Time);
 
 pub struct PhysicsPlugin;
 
+impl Named for PhysicsPlugin {
+    fn name() -> &'static str {
+        "physics_plugin"
+    }
+}
+
 // Cannot wait for stageless
 #[derive(StageLabel)]
 pub enum PhysicsStages {
@@ -38,6 +46,7 @@ pub enum PhysicsStages {
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
+        panic_if_already_added::<Self>(app);
         app.add_plugin(ParameterPlugin::<Parameters>::new("physics"))
             .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("tree"));
         let parameters = get_parameters::<Parameters>(app).clone();
