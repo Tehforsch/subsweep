@@ -130,12 +130,17 @@ fn sum_vecs(mut data: DataByRank<Vec<MassMoments>>) -> Vec<MassMoments> {
 
 fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     let total_work: usize = particle_counts.iter().sum();
-    let work_per_rank = total_work / num_ranks;
+    let mut work_per_rank = total_work / num_ranks;
     let mut key_cutoffs_by_rank = vec![0];
     let mut load = 0;
+    let mut loads = vec![];
+    let remaining_work = |loads: &[usize]| total_work - loads.iter().sum::<usize>();
     for (i, count) in particle_counts.iter().enumerate() {
         if load >= work_per_rank {
             key_cutoffs_by_rank.push(i);
+            loads.push(load);
+            // Recalculate work_per_rank based on the remaining work
+            work_per_rank = remaining_work(&loads) / (num_ranks - loads.len());
             if key_cutoffs_by_rank.len() == num_ranks {
                 break;
             }
@@ -143,6 +148,11 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
         }
         load += count;
     }
+    loads.push(remaining_work(&loads));
+    let max_load = *loads.iter().max().unwrap() as f64;
+    let min_load = *loads.iter().min().unwrap() as f64;
+    let load_imbalance = (max_load - min_load) / max_load;
+    debug!("Load imbalance: {:.1}%", (load_imbalance * 100.0));
     let num_entries_to_fill = num_ranks as i32 - key_cutoffs_by_rank.len() as i32;
     if num_entries_to_fill > 0 {
         error!("One rank has no work - increase domain min_depth");
@@ -150,6 +160,18 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     // Even if num_entries_to_fill is zero, we add the final index once to make calculating the index
     // ranges later easier (since we can just use cutoffs[rank]..cutoffs[rank+1], even for the last rank)
     key_cutoffs_by_rank.extend((0..1 + num_entries_to_fill).map(|_| particle_counts.len()));
+    if num_entries_to_fill > 0 {
+        for (i, window) in key_cutoffs_by_rank.windows(2).enumerate() {
+            println!(
+                "{} {}",
+                i,
+                (window[0]..window[1])
+                    .map(|x| particle_counts[x].to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            );
+        }
+    }
     key_cutoffs_by_rank
 }
 
