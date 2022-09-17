@@ -140,10 +140,10 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
             key_cutoffs_by_rank.push(i);
             loads.push(load);
             // Recalculate work_per_rank based on the remaining work
-            work_per_rank = remaining_work(&loads) / (num_ranks - loads.len());
-            if key_cutoffs_by_rank.len() == num_ranks {
+            if key_cutoffs_by_rank.len() >= num_ranks {
                 break;
             }
+            work_per_rank = remaining_work(&loads) / (num_ranks - loads.len());
             load = 0;
         }
         load += count;
