@@ -25,9 +25,7 @@ where
     T: Attribute + Sync + Send + 'static,
 {
     fn build(&self, app: &mut bevy::prelude::App) {
-        add_output_system::<T, _>(app, move |res: Res<T>, file: ResMut<OutputFile>| {
-            Self::write_attribute(res, file)
-        });
+        add_output_system::<T, _>(app, Self::write_attribute);
     }
 }
 
