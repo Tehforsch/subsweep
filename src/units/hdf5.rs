@@ -13,6 +13,6 @@ unsafe impl<const D: Dimension> H5Type for Quantity<f64, D> {
 
 unsafe impl<const D: Dimension> H5Type for Quantity<glam::DVec2, D> {
     fn type_descriptor() -> hdf5::types::TypeDescriptor {
-        TypeDescriptor::FixedArray(Box::new(TypeDescriptor::Float(FloatSize::U4)), 2)
+        TypeDescriptor::FixedArray(Box::new(TypeDescriptor::Float(FloatSize::U8)), 2)
     }
 }
