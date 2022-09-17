@@ -10,6 +10,7 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
+use crate::physics::LocalParticle;
 use crate::plugin_utils::run_once;
 
 #[derive(Default, Deref, DerefMut)]
@@ -49,7 +50,9 @@ impl<T> Default for DatasetInputPlugin<T> {
 #[derive(Default, Deref, DerefMut)]
 pub struct RegisteredDatasets(Vec<&'static str>);
 
-impl<T: H5Type + Component + Named + Sync + Send + 'static> Plugin for DatasetInputPlugin<T> {
+impl<T: H5Type + std::fmt::Debug + Component + Named + Sync + Send + 'static> Plugin
+    for DatasetInputPlugin<T>
+{
     fn build(&self, app: &mut App) {
         run_once::<InputMarker>(app, |app| {
             app.add_plugin(ParameterPlugin::<Parameters>::new("input"))
@@ -90,6 +93,7 @@ fn open_file_system(
         .filter(|(i, _)| i.rem_euclid(**size) == **rank as usize)
         .map(|(_, file)| file)
         .collect();
+    dbg!(files_this_rank_should_open.len());
     assert!(files.is_empty());
     for path in files_this_rank_should_open.iter() {
         info!(
@@ -134,10 +138,12 @@ fn spawn_entities_system(
         }
     }
     assert_eq!(spawned_entities.len(), 0);
-    spawned_entities.0 = (0..num_entities).map(|_| commands.spawn().id()).collect();
+    spawned_entities.0 = (0..num_entities)
+        .map(|_| commands.spawn_bundle((LocalParticle,)).id())
+        .collect();
 }
 
-fn read_dataset_system<T: H5Type + Named + Component>(
+fn read_dataset_system<T: H5Type + Named + Component + std::fmt::Debug>(
     mut commands: Commands,
     files: Res<InputFiles>,
     spawned_entities: Res<SpawnedEntities>,
@@ -150,9 +156,10 @@ fn read_dataset_system<T: H5Type + Named + Component>(
         set.read_1d::<T>()
             .expect(&format!("Failed to read dataset: {}", name))
     });
-    for set in data {
-        for (entity, item) in spawned_entities.iter().zip(set.into_iter()) {
-            commands.entity(*entity).insert(item);
-        }
+    for (item, entity) in data
+        .flat_map(|set| set.into_iter())
+        .zip(spawned_entities.iter())
+    {
+        commands.entity(*entity).insert(item);
     }
 }
