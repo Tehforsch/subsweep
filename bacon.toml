@@ -59,6 +59,7 @@ need_stdout = true
 a = "job:test-all"
 i = "job:initial"
 c = "job:clippy"
+b = "job:check-all"
 d = "job:doc-open"
 t = "job:test"
 r = "job:mpi"

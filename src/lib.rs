@@ -14,6 +14,7 @@ pub mod communication;
 pub(crate) mod config;
 pub(crate) mod domain;
 pub(crate) mod initial_conditions;
+pub(crate) mod input;
 pub(crate) mod mass;
 pub(crate) mod named;
 pub(crate) mod output;

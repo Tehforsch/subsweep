@@ -2700,6 +2700,7 @@ dependencies = [
  "lazy_static",
  "libffi",
  "mpi",
+ "ndarray",
  "once_cell",
  "paste",
  "rand",

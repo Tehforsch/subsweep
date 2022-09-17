@@ -12,6 +12,7 @@ pub use self::gravity::plugin::GravityPlugin;
 use self::parameters::Parameters;
 pub use self::time::Time;
 use crate::domain::ExchangeDataPlugin;
+use crate::input::DatasetInputPlugin;
 use crate::mass::Mass;
 use crate::named::Named;
 use crate::output::AttributeOutputPlugin;
@@ -56,6 +57,9 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(DatasetOutputPlugin::<Position>::default())
             .add_plugin(DatasetOutputPlugin::<Velocity>::default())
             .add_plugin(DatasetOutputPlugin::<Mass>::default())
+            .add_plugin(DatasetInputPlugin::<Position>::default())
+            .add_plugin(DatasetInputPlugin::<Velocity>::default())
+            .add_plugin(DatasetInputPlugin::<Mass>::default())
             .add_plugin(AttributeOutputPlugin::<Time>::default())
             .add_event::<StopSimulationEvent>()
             .insert_resource(Timestep(parameters.timestep))

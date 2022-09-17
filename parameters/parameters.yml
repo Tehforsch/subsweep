@@ -17,4 +17,13 @@ output:
   fields:
     - position
     - velocity
+    - mass
     - time
+input:
+  initial_condition_paths:
+    - input/snapshot_1_0.hdf5
+    - input/snapshot_1_1.hdf5
+    - input/snapshot_1_2.hdf5
+    - input/snapshot_1_3.hdf5
+    - input/snapshot_1_4.hdf5
+    - input/snapshot_1_5.hdf5
