@@ -15,6 +15,7 @@ use crate::units::DVec2Velocity;
 use crate::units::Mass;
 use crate::units::VecLength;
 use crate::units::VecVelocity;
+use crate::units::GRAVITY_CONSTANT;
 use crate::velocity::Velocity;
 
 pub struct InitialConditionsPlugin;
@@ -25,6 +26,7 @@ pub enum Parameters {
     Random(usize),
     EarthSun,
     Read(input::Parameters),
+    Figure8,
 }
 
 impl Parameters {
@@ -52,6 +54,9 @@ impl Plugin for InitialConditionsPlugin {
             }
             Parameters::EarthSun => {
                 app.add_startup_system(spawn_solar_system_system);
+            }
+            Parameters::Figure8 => {
+                app.add_startup_system(spawn_figure_8_system);
             }
             Parameters::Read(_) => {}
         };
@@ -108,4 +113,21 @@ fn spawn_solar_system_system(mut commands: Commands, rank: Res<WorldRank>) {
     for ((pos, vel), mass) in positions.into_iter().zip(velocity).zip(masses) {
         spawn_particle(&mut commands, pos, vel, mass)
     }
+}
+
+fn spawn_figure_8_system(mut commands: Commands, rank: Res<WorldRank>) {
+    if !rank.is_main() {
+        return;
+    }
+    let factor = 1.0;
+    let x1 = factor * VecLength::meter(0.97000436, -0.24308753);
+    let x2 = -x1;
+    let x3 = VecLength::zero();
+    let v1 = VecVelocity::meters_per_second(0.466203685, 0.43235673);
+    let v2 = v1;
+    let v3 = -2.0 * v1;
+    let gravity_factor = 1.0 / GRAVITY_CONSTANT.unwrap_value();
+    spawn_particle(&mut commands, x1, v1, gravity_factor * Mass::kilogram(1.0));
+    spawn_particle(&mut commands, x2, v2, gravity_factor * Mass::kilogram(1.0));
+    spawn_particle(&mut commands, x3, v3, gravity_factor * Mass::kilogram(1.0));
 }
