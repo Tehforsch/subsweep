@@ -5,6 +5,7 @@ use rand::Rng;
 use serde::Deserialize;
 
 use crate::communication::WorldRank;
+use crate::input;
 use crate::parameters::ParameterPlugin;
 use crate::particle::LocalParticleBundle;
 use crate::plugin_utils::get_parameters;
@@ -18,26 +19,41 @@ use crate::velocity::Velocity;
 
 pub struct InitialConditionsPlugin;
 
-#[derive(Clone, Default, Deserialize)]
-enum InitialConditionType {
-    #[default]
-    Normal,
+#[derive(Clone, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Parameters {
+    Random(usize),
     EarthSun,
+    Read(input::Parameters),
 }
 
-#[derive(Clone, Default, Deserialize)]
-struct Parameters {
-    r#type: InitialConditionType,
-    num_particles: usize,
+impl Parameters {
+    pub fn unwrap_read(&self) -> &input::Parameters {
+        match self {
+            Self::Read(parameters) => parameters,
+            _ => panic!("Called unwrap_read on other variant"),
+        }
+    }
+}
+
+impl Default for Parameters {
+    fn default() -> Self {
+        Self::Read(input::Parameters::default())
+    }
 }
 
 impl Plugin for InitialConditionsPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"));
         let parameters = get_parameters::<Parameters>(app);
-        match parameters.r#type {
-            InitialConditionType::Normal => app.add_startup_system(spawn_particles_system),
-            InitialConditionType::EarthSun => app.add_startup_system(spawn_solar_system_system),
+        match parameters {
+            Parameters::Random(_) => {
+                app.add_startup_system(spawn_particles_system);
+            }
+            Parameters::EarthSun => {
+                app.add_startup_system(spawn_solar_system_system);
+            }
+            Parameters::Read(_) => {}
         };
     }
 }
@@ -58,9 +74,12 @@ fn spawn_particles_system(
     if !rank.is_main() {
         return;
     }
-    let n_particles = parameters.num_particles / 2;
+    let num_particles = match *parameters {
+        Parameters::Random(num_particles) => num_particles,
+        _ => unreachable!(),
+    };
     let mut rng = rand::thread_rng();
-    for _ in 0..n_particles {
+    for _ in 0..num_particles {
         let x = rng.gen_range(-1.0..1.0);
         let y = rng.gen_range(-1.0..1.0);
         let pos = 0.10 * DVec2Length::astronomical_unit(x, y);

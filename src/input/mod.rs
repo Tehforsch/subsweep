@@ -8,9 +8,10 @@ use serde::Deserialize;
 
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
+use crate::initial_conditions;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
+use crate::plugin_utils::get_parameters;
 use crate::plugin_utils::run_once;
 
 #[derive(Default, Deref, DerefMut)]
@@ -27,9 +28,9 @@ impl Named for InputMarker {
     }
 }
 
-#[derive(Default, Deserialize)]
-struct Parameters {
-    initial_condition_paths: Vec<PathBuf>,
+#[derive(Clone, Default, Deserialize)]
+pub struct Parameters {
+    pub initial_condition_paths: Vec<PathBuf>,
 }
 
 #[derive(Default, Deref, DerefMut)]
@@ -54,8 +55,12 @@ impl<T: H5Type + std::fmt::Debug + Component + Named + Sync + Send + 'static> Pl
     for DatasetInputPlugin<T>
 {
     fn build(&self, app: &mut App) {
+        let parameters = get_parameters::<initial_conditions::Parameters>(app);
+        if !matches!(parameters, initial_conditions::Parameters::Read(_)) {
+            return;
+        }
         run_once::<InputMarker>(app, |app| {
-            app.add_plugin(ParameterPlugin::<Parameters>::new("input"))
+            app.insert_resource(parameters.unwrap_read().clone())
                 .insert_resource(InputFiles::default())
                 .insert_resource(SpawnedEntities::default())
                 .add_startup_system(open_file_system)
@@ -93,7 +98,6 @@ fn open_file_system(
         .filter(|(i, _)| i.rem_euclid(**size) == **rank as usize)
         .map(|(_, file)| file)
         .collect();
-    dbg!(files_this_rank_should_open.len());
     assert!(files.is_empty());
     for path in files_this_rank_should_open.iter() {
         info!(
