@@ -5,8 +5,8 @@ use bevy::sprite::Mesh2dHandle;
 use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::*;
 
+use super::parameters::Parameters;
 use super::VisualizationStage;
-use super::CAMERA_ZOOM;
 use crate::units::Length;
 use crate::units::VecLength;
 
@@ -26,16 +26,16 @@ pub struct DrawRect {
 
 pub(super) trait IntoBundle {
     type Output: Bundle;
-    fn into_bundle(&self) -> Self::Output;
+    fn into_bundle(&self, camera_zoom: &Length) -> Self::Output;
     fn translation(&self) -> &VecLength;
     fn set_translation(&mut self, pos: &VecLength);
 }
 
 impl IntoBundle for DrawCircle {
     type Output = ShapeBundle;
-    fn into_bundle(&self) -> Self::Output {
+    fn into_bundle(&self, camera_zoom: &Length) -> Self::Output {
         let shape = shapes::Circle {
-            radius: self.radius.in_units(CAMERA_ZOOM) as f32,
+            radius: self.radius.in_units(*camera_zoom) as f32,
             center: Vec2::new(0.0, 0.0),
         };
 
@@ -57,10 +57,10 @@ impl IntoBundle for DrawCircle {
 
 impl IntoBundle for DrawRect {
     type Output = ShapeBundle;
-    fn into_bundle(&self) -> Self::Output {
+    fn into_bundle(&self, camera_zoom: &Length) -> Self::Output {
         let shape = shapes::Rectangle {
             extents: (self.upper_right - self.lower_left)
-                .in_units(CAMERA_ZOOM)
+                .in_units(*camera_zoom)
                 .as_vec2(),
             origin: RectangleOrigin::BottomLeft,
         };
@@ -106,21 +106,26 @@ impl<T: IntoBundle + Component + Sync + Send + 'static> Plugin for DrawBundlePlu
 fn spawn_visualization_item_system<T: Component + IntoBundle>(
     mut commands: Commands,
     query: Query<(Entity, &T), Without<Mesh2dHandle>>,
+    parameters: Res<Parameters>,
 ) {
     for (entity, item) in query.iter() {
-        commands.entity(entity).insert_bundle(item.into_bundle());
+        commands
+            .entity(entity)
+            .insert_bundle(item.into_bundle(&parameters.camera_zoom));
     }
 }
 
-fn position_to_translation(position: &VecLength) -> Vec3 {
-    let pos = position.in_units(CAMERA_ZOOM);
+fn position_to_translation(position: &VecLength, camera_zoom: &Length) -> Vec3 {
+    let pos = position.in_units(*camera_zoom);
     Vec3::new(pos.x as f32, pos.y as f32, 0.0)
 }
 
 pub(super) fn draw_translation_system<T: Component + IntoBundle>(
     mut query: Query<(&mut Transform, &T)>,
+    parameters: Res<Parameters>,
 ) {
     for (mut transform, item) in query.iter_mut() {
-        transform.translation = position_to_translation(item.translation());
+        transform.translation =
+            position_to_translation(item.translation(), &parameters.camera_zoom);
     }
 }

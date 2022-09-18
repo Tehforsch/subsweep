@@ -24,11 +24,8 @@ use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::position::Position;
 use crate::quadtree::QuadTreeVisualizationPlugin;
-use crate::units::Length;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
-
-pub static CAMERA_ZOOM: Length = Length::astronomical_unit(1e-3);
 
 pub static CIRCLE_RADIUS: f64 = 3.0;
 
@@ -98,9 +95,10 @@ impl Plugin for VisualizationPlugin {
 fn camera_translation_system(
     mut camera: Query<&mut Transform, With<WorldCamera>>,
     extent: Res<GlobalExtent>,
+    parameters: Res<Parameters>,
 ) {
     let mut camera_transform = camera.single_mut();
-    let pos = extent.center.in_units(CAMERA_ZOOM);
+    let pos = extent.center.in_units(parameters.camera_zoom);
     camera_transform.translation.x = pos.x as f32;
     camera_transform.translation.y = pos.y as f32;
 }
@@ -112,11 +110,12 @@ pub fn get_color(rank: Rank) -> Color {
 fn spawn_sprites_system<T: Component + GetColor>(
     mut commands: Commands,
     particles: Query<(Entity, &Position, &T), (With<T>, Without<DrawCircle>)>,
+    parameters: Res<Parameters>,
 ) {
     for (entity, pos, colored) in particles.iter() {
         commands.entity(entity).insert(DrawCircle {
             position: **pos,
-            radius: CIRCLE_RADIUS * CAMERA_ZOOM,
+            radius: CIRCLE_RADIUS * parameters.camera_zoom,
             color: colored.get_color(),
         });
     }
