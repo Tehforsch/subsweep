@@ -5,12 +5,12 @@ use bevy::prelude::*;
 use hdf5::File;
 use serde::Deserialize;
 
+use super::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
+use super::to_dataset::ToDataset;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::initial_conditions;
 use crate::named::Named;
-use crate::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
-use crate::output::to_dataset::ToDataset;
 use crate::physics::LocalParticle;
 use crate::plugin_utils::get_parameters;
 use crate::plugin_utils::run_once;

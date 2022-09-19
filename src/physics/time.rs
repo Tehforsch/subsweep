@@ -1,7 +1,7 @@
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 
-use crate::output::Attribute;
+use crate::io::output::Attribute;
 
 #[derive(Clone, Deref, DerefMut)]
 pub struct Time(pub crate::units::Time);

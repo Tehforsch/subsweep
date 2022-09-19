@@ -5,7 +5,7 @@ use rand::Rng;
 use serde::Deserialize;
 
 use crate::communication::WorldRank;
-use crate::input;
+use crate::io::input;
 use crate::parameters::ParameterPlugin;
 use crate::particle::LocalParticleBundle;
 use crate::plugin_utils::get_parameters;

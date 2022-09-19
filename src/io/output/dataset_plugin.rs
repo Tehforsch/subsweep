@@ -8,8 +8,8 @@ use bevy::prelude::With;
 use hdf5::H5Type;
 
 use super::add_output_system;
-use super::to_dataset::ToDataset;
 use super::OutputFile;
+use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::physics::LocalParticle;
 
