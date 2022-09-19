@@ -18,6 +18,7 @@ use super::parameters::add_parameter_file_contents;
 use super::physics::PhysicsPlugin;
 use super::plugin_utils::is_main_rank;
 use super::visualization::VisualizationPlugin;
+use crate::physics::hydrodynamics::HydrodynamicsPlugin;
 use crate::physics::GravityPlugin;
 use crate::stages::SimulationStagesPlugin;
 
@@ -63,7 +64,8 @@ fn build_app(app: &mut App, opts: &CommandLineOptions) {
         .add_plugin(InitialConditionsPlugin)
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
-        .add_plugin(GravityPlugin);
+        .add_plugin(GravityPlugin)
+        .add_plugin(HydrodynamicsPlugin);
     if is_main_rank(app) {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {

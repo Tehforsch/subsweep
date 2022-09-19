@@ -7,7 +7,7 @@ use mpi::traits::Equivalence;
 
 use crate::named::Named;
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From)]
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default)]
 #[repr(C)]
 pub struct Pressure(pub crate::units::Pressure);
 
