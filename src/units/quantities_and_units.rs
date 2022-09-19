@@ -194,6 +194,10 @@ unit_functions!(
     {
         kilogram_per_square_meter, 1.0, "kg/m^2"
     },
+    PRESSURE, Pressure, mass: 1, length: -1, time: -2,
+    {
+        pascals, 1.0, "Pa"
+    },
     LENGTHMASS, LengthMass, mass: 1, length: 1,
     {
     }

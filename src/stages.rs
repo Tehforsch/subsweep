@@ -3,6 +3,7 @@ use bevy::prelude::*;
 
 use crate::domain::DomainDecompositionStages;
 use crate::io::output::OutputStages;
+use crate::physics::hydrodynamics::HydrodynamicsStages;
 use crate::physics::PhysicsStages;
 use crate::visualization::VisualizationStage;
 
@@ -15,6 +16,7 @@ impl Plugin for SimulationStagesPlugin {
             DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
             DomainDecompositionStages::Decomposition.as_label(),
             DomainDecompositionStages::Exchange.as_label(),
+            HydrodynamicsStages::Hydrodynamics.as_label(),
             PhysicsStages::Physics.as_label(),
             VisualizationStage::Synchronize.as_label(),
             VisualizationStage::AddVisualization.as_label(),
