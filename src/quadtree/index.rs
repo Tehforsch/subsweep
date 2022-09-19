@@ -172,11 +172,11 @@ mod tests {
         let index1 = get_quadtree_index(&[Child(0), Child(1), Child(2)]);
         let index2 = get_quadtree_index(&[Child(0), Child(1), ThisNode]);
         let index3 = get_quadtree_index(&[Child(1), Child(2), Child(3)]);
-        assert_eq!(index1.belongs_to(&index1), true);
-        assert_eq!(index1.belongs_to(&index2), true);
-        assert_eq!(index2.belongs_to(&index1), false);
-        assert_eq!(index2.belongs_to(&index2), true);
-        assert_eq!(index1.belongs_to(&index3), false);
-        assert_eq!(index3.belongs_to(&index1), false);
+        assert!(index1.belongs_to(&index1));
+        assert!(index1.belongs_to(&index2));
+        assert!(!index2.belongs_to(&index1));
+        assert!(index2.belongs_to(&index2));
+        assert!(!index1.belongs_to(&index3));
+        assert!(!index3.belongs_to(&index1));
     }
 }

@@ -9,8 +9,8 @@ use bevy::prelude::SystemStage;
 use bevy::MinimalPlugins;
 use mpi::traits::Equivalence;
 
-use super::tests::compare_accelerations;
-use super::tests::direct_sum;
+use super::compare_accelerations;
+use super::direct_sum;
 use crate::communication::build_local_communication_app_with_custom_logic;
 use crate::communication::WorldRank;
 use crate::domain::DomainDecompositionPlugin;
