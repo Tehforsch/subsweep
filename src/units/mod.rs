@@ -7,7 +7,9 @@ mod quantities_and_units;
 mod quantity;
 
 pub use constants::*;
+pub use dimension::Dimension;
 pub use quantities_and_units::*;
+pub use quantity::Quantity;
 #[cfg(test)]
 pub use tests::assert_is_close;
 

@@ -113,7 +113,7 @@ macro_rules! unit_functions {
         )*
         ];
         $(
-            const $const: Dimension = Dimension {
+            pub const $const: Dimension = Dimension {
                 $(
                     $dimension_name: $dimension,
                 )*

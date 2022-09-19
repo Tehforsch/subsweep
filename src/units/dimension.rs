@@ -1,3 +1,7 @@
+const MASS_TO_SI: f64 = 1.0;
+const LENGTH_TO_SI: f64 = 1.0;
+const TIME_TO_SI: f64 = 1.0;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Dimension {
     pub length: i32,
@@ -28,5 +32,15 @@ impl Dimension {
             mass: self.mass * rhs,
             time: self.time * rhs,
         }
+    }
+
+    /// Get the base conversion factor of this dimension
+    /// into SI units. As of now, this is always 1.0
+    /// but will change if the base units are changed
+    /// from SI to anything else
+    pub fn base_conversion_factor(self) -> f64 {
+        (LENGTH_TO_SI).powi(self.length)
+            * (TIME_TO_SI).powi(self.time)
+            * (MASS_TO_SI).powi(self.mass)
     }
 }
