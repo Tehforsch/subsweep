@@ -82,8 +82,8 @@ impl<const D: Dimension> Quantity<glam::DVec2, D> {
         Quantity::<f64, { D.dimension_powi(2) }>(self.0.distance_squared(other.0))
     }
 
-    pub fn normalize(&self) -> Self {
-        Self(self.0.normalize())
+    pub fn normalize(&self) -> Quantity<DVec2, NONE> {
+        Quantity::<DVec2, NONE>(self.0.normalize())
     }
 }
 
