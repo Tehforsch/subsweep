@@ -9,10 +9,9 @@ use super::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
 use super::to_dataset::ToDataset;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
-use crate::initial_conditions;
 use crate::named::Named;
+use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
-use crate::plugin_utils::get_parameters;
 use crate::plugin_utils::run_once;
 
 #[derive(Default, Deref, DerefMut)]
@@ -54,29 +53,24 @@ pub struct RegisteredDatasets(Vec<&'static str>);
 
 impl<T: ToDataset + Component + Sync + Send + 'static> Plugin for DatasetInputPlugin<T> {
     fn build(&self, app: &mut App) {
-        let should_run = app
+        if app
             .world
-            .get_resource::<initial_conditions::Parameters>()
-            .map(|parameters| parameters.should_read_initial_conditions())
-            .unwrap_or(false);
-        if !should_run {
+            .get_resource::<ShouldReadInitialConditions>()
+            .is_none()
+        {
             return;
         }
         run_once::<InputMarker>(app, |app| {
-            app.insert_resource(
-                get_parameters::<initial_conditions::Parameters>(app)
-                    .unwrap_read()
-                    .clone(),
-            )
-            .insert_resource(InputFiles::default())
-            .insert_resource(SpawnedEntities::default())
-            .add_startup_system(open_file_system)
-            .add_startup_system(
-                spawn_entities_system
-                    .after(open_file_system)
-                    .before(close_file_system),
-            )
-            .add_startup_system(close_file_system.after(spawn_entities_system));
+            app.add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"))
+                .insert_resource(InputFiles::default())
+                .insert_resource(SpawnedEntities::default())
+                .add_startup_system(open_file_system)
+                .add_startup_system(
+                    spawn_entities_system
+                        .after(open_file_system)
+                        .before(close_file_system),
+                )
+                .add_startup_system(close_file_system.after(spawn_entities_system));
         });
         let mut registered_datasets = app
             .world
@@ -184,5 +178,16 @@ fn read_dataset_system<T: ToDataset + Component>(
         commands
             .entity(*entity)
             .insert(item.convert_base_units(factor_written / factor_read));
+    }
+}
+
+struct ShouldReadInitialConditions;
+
+#[derive(Default)]
+pub struct InputPlugin;
+
+impl Plugin for InputPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(ShouldReadInitialConditions);
     }
 }

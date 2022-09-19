@@ -13,11 +13,11 @@ use bevy::winit::WinitSettings;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainDecompositionPlugin;
-use super::initial_conditions::InitialConditionsPlugin;
 use super::parameters::add_parameter_file_contents;
 use super::physics::PhysicsPlugin;
 use super::plugin_utils::is_main_rank;
 use super::visualization::VisualizationPlugin;
+use crate::io::input::InputPlugin;
 use crate::physics::hydrodynamics::HydrodynamicsPlugin;
 use crate::physics::GravityPlugin;
 use crate::stages::SimulationStagesPlugin;
@@ -61,7 +61,7 @@ fn build_app(app: &mut App, opts: &CommandLineOptions) {
     };
     app.insert_resource(task_pool_opts)
         .add_plugin(SimulationStagesPlugin)
-        .add_plugin(InitialConditionsPlugin)
+        .add_plugin(InputPlugin)
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(GravityPlugin)
