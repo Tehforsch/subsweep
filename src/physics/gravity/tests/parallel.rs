@@ -34,8 +34,8 @@ fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
     (0..n)
         .map(move |x| {
             (
-                Position(VecLength::meter(x as f64, 0.0 as f64)),
-                mass::Mass(Mass::kilogram(1e11)),
+                Position(VecLength::meters(x as f64, 0.0 as f64)),
+                mass::Mass(Mass::kilograms(1e11)),
                 Velocity(VecVelocity::zero()),
             )
         })
@@ -96,9 +96,9 @@ fn build_parallel_gravity_app(app: &mut App) {
     use crate::units::Time;
 
     app.insert_resource(physics::Parameters {
-        timestep: Time::second(1.0),
+        timestep: Time::seconds(1.0),
         opening_angle: Dimensionless::dimensionless(0.0),
-        softening_length: Length::meter(1e-30),
+        softening_length: Length::meters(1e-30),
         ..Default::default()
     })
     .insert_resource(QuadTreeConfig {

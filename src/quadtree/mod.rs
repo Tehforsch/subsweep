@@ -151,17 +151,17 @@ pub mod tests {
         let positions = [
             LeafData {
                 entity: Entity::from_raw(0),
-                pos: DVec2Length::meter(1.0, 1.0),
+                pos: DVec2Length::meters(1.0, 1.0),
                 mass: Mass::zero(),
             },
             LeafData {
                 entity: Entity::from_raw(0),
-                pos: DVec2Length::meter(1.0, 1.0),
+                pos: DVec2Length::meters(1.0, 1.0),
                 mass: Mass::zero(),
             },
             LeafData {
                 entity: Entity::from_raw(0),
-                pos: DVec2Length::meter(2.0, 2.0),
+                pos: DVec2Length::meters(2.0, 2.0),
                 mass: Mass::zero(),
             },
         ];
@@ -182,10 +182,10 @@ pub mod tests {
             ..Default::default()
         };
         let extent = Extent::new(
-            Length::meter(0.0),
-            Length::meter(1.0),
-            Length::meter(0.0),
-            Length::meter(1.0),
+            Length::meters(0.0),
+            Length::meters(1.0),
+            Length::meters(0.0),
+            Length::meters(1.0),
         );
         QuadTree::new(&config, positions.into_iter().collect(), &extent)
     }

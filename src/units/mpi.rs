@@ -41,8 +41,8 @@ mod tests {
     fn pack_unpack_f64_quantity() {
         let world = MPI_UNIVERSE.world();
 
-        let q1 = Length::meter(1.0);
-        let mut q2 = Length::meter(2.0);
+        let q1 = Length::meters(1.0);
+        let mut q2 = Length::meters(2.0);
         let a = world.pack(&q1);
         unsafe {
             world.unpack_into(&a, &mut q2, 0);
@@ -53,8 +53,8 @@ mod tests {
     #[test]
     fn pack_unpack_vec_quantity() {
         let world = MPI_UNIVERSE.world();
-        let q1 = VecLength::meter(1.0, 2.0);
-        let mut q2 = VecLength::meter(3.0, 4.0);
+        let q1 = VecLength::meters(1.0, 2.0);
+        let mut q2 = VecLength::meters(3.0, 4.0);
         let a = world.pack(&q1);
         unsafe {
             world.unpack_into(&a, &mut q2, 0);

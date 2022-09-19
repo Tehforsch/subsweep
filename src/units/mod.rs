@@ -32,29 +32,29 @@ mod tests {
 
     #[test]
     fn add_same_unit() {
-        let x = Length::meter(1.0);
-        let y = Length::meter(10.0);
-        assert_is_close(x + y, Length::meter(11.0));
+        let x = Length::meters(1.0);
+        let y = Length::meters(10.0);
+        assert_is_close(x + y, Length::meters(11.0));
     }
 
     #[test]
     fn add_different_units() {
-        let x = Length::meter(1.0);
-        let y = Length::kilometer(10.0);
-        assert_is_close(x + y, Length::meter(10001.0));
+        let x = Length::meters(1.0);
+        let y = Length::kilometers(10.0);
+        assert_is_close(x + y, Length::meters(10001.0));
     }
 
     #[test]
     fn sub_different_units() {
-        let x = Length::meter(1.0);
-        let y = Length::kilometer(10.0);
-        assert_is_close(x - y, Length::meter(-9999.0));
+        let x = Length::meters(1.0);
+        let y = Length::kilometers(10.0);
+        assert_is_close(x - y, Length::meters(-9999.0));
     }
 
     #[test]
     fn div_same_unit() {
-        let x = Length::meter(1.0);
-        let y = Length::meter(10.0);
+        let x = Length::meters(1.0);
+        let y = Length::meters(10.0);
         assert_is_close(x / y, Dimensionless::dimensionless(0.1));
     }
 }

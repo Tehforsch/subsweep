@@ -17,7 +17,7 @@ impl Default for Parameters {
         Self {
             softening_length: Length::zero(),
             opening_angle: Dimensionless::dimensionless(0.5),
-            timestep: Time::second(1.0),
+            timestep: Time::seconds(1.0),
             final_time: None,
         }
     }

@@ -121,16 +121,16 @@ mod tests {
 
     fn assert_is_close(a: VecLength, b: DVec2) {
         const EPSILON: f64 = 1e-20;
-        assert!((a - VecLength::meter(b.x, b.y)).length().unwrap_value() < EPSILON)
+        assert!((a - VecLength::meters(b.x, b.y)).length().unwrap_value() < EPSILON)
     }
 
     #[test]
     fn extent_quadrants() {
         let root_extent = Extent::new(
-            Length::meter(-1.0),
-            Length::meter(1.0),
-            Length::meter(-2.0),
-            Length::meter(2.0),
+            Length::meters(-1.0),
+            Length::meters(1.0),
+            Length::meters(-2.0),
+            Length::meters(2.0),
         );
         let quadrants = root_extent.get_quadrants();
         assert_is_close(quadrants[0].min, DVec2::new(-1.0, -2.0));
@@ -149,10 +149,10 @@ mod tests {
     #[test]
     fn extent_from_positions() {
         let positions = &[
-            VecLength::meter(1.0, 0.0),
-            VecLength::meter(-1.0, 0.0),
-            VecLength::meter(0.0, -2.0),
-            VecLength::meter(0.0, 2.0),
+            VecLength::meters(1.0, 0.0),
+            VecLength::meters(-1.0, 0.0),
+            VecLength::meters(0.0, -2.0),
+            VecLength::meters(0.0, 2.0),
         ];
         let extent = Extent::from_positions(positions.iter()).unwrap();
         assert_is_close(extent.min, DVec2::new(-1.0, -2.0));
@@ -168,10 +168,10 @@ mod tests {
     #[should_panic]
     fn invalid_extent() {
         Extent::new(
-            Length::meter(1.0),
-            Length::meter(-1.0),
-            Length::meter(0.0),
-            Length::meter(1.0),
+            Length::meters(1.0),
+            Length::meters(-1.0),
+            Length::meters(0.0),
+            Length::meters(1.0),
         );
     }
 }

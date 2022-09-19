@@ -91,10 +91,10 @@ fn spawn_particles_system(
     for _ in 0..num_particles {
         let x = rng.gen_range(-1.0..1.0);
         let y = rng.gen_range(-1.0..1.0);
-        let pos = 0.10 * DVec2Length::astronomical_unit(x, y);
+        let pos = 0.10 * DVec2Length::astronomical_units(x, y);
         let x = rng.gen_range(-1.0..1.0);
         let y = rng.gen_range(-1.0..1.0);
-        let vel = 0.04 * DVec2Velocity::astronomical_unit_per_day(x, y);
+        let vel = 0.04 * DVec2Velocity::astronomical_units_per_day(x, y);
         spawn_particle(&mut commands, pos, vel, Mass::solar(0.01))
     }
 }
@@ -104,15 +104,15 @@ fn spawn_solar_system_system(mut commands: Commands, rank: Res<WorldRank>) {
         return;
     }
     let positions: Vec<VecLength> = vec![
-        VecLength::astronomical_unit(0.0, 0.0),
-        VecLength::astronomical_unit(0.7, 0.7),
+        VecLength::astronomical_units(0.0, 0.0),
+        VecLength::astronomical_units(0.7, 0.7),
     ];
     let masses: Vec<Mass> = vec![Mass::solar(1.0), Mass::earth(1.0)];
     let mass_ratio = masses[0] / masses[1];
     let mass_ratio = mass_ratio.value();
     let velocity: Vec<VecVelocity> = vec![
-        VecVelocity::astronomical_unit_per_day(-1e-2 / mass_ratio, 1e-2 / mass_ratio),
-        VecVelocity::astronomical_unit_per_day(1e-2, -1e-2),
+        VecVelocity::astronomical_units_per_day(-1e-2 / mass_ratio, 1e-2 / mass_ratio),
+        VecVelocity::astronomical_units_per_day(1e-2, -1e-2),
     ];
     for ((pos, vel), mass) in positions.into_iter().zip(velocity).zip(masses) {
         spawn_particle(&mut commands, pos, vel, mass)
@@ -124,14 +124,14 @@ fn spawn_figure_8_system(mut commands: Commands, rank: Res<WorldRank>) {
         return;
     }
     let factor = 1.0;
-    let x1 = factor * VecLength::meter(0.97000436, -0.24308753);
+    let x1 = factor * VecLength::meters(0.97000436, -0.24308753);
     let x2 = -x1;
     let x3 = VecLength::zero();
     let v1 = VecVelocity::meters_per_second(0.466203685, 0.43235673);
     let v2 = v1;
     let v3 = -2.0 * v1;
     let gravity_factor = 1.0 / GRAVITY_CONSTANT.unwrap_value();
-    spawn_particle(&mut commands, x1, v1, gravity_factor * Mass::kilogram(1.0));
-    spawn_particle(&mut commands, x2, v2, gravity_factor * Mass::kilogram(1.0));
-    spawn_particle(&mut commands, x3, v3, gravity_factor * Mass::kilogram(1.0));
+    spawn_particle(&mut commands, x1, v1, gravity_factor * Mass::kilograms(1.0));
+    spawn_particle(&mut commands, x2, v2, gravity_factor * Mass::kilograms(1.0));
+    spawn_particle(&mut commands, x3, v3, gravity_factor * Mass::kilograms(1.0));
 }

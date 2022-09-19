@@ -138,13 +138,13 @@ mod tests {
     #[test]
     fn deserialize_basic_units() {
         let q: Length = serde_yaml::from_str(&"1.0 m").unwrap();
-        assert_is_close(q, Length::meter(1.0));
+        assert_is_close(q, Length::meters(1.0));
         let q: Length = serde_yaml::from_str(&"2.0 m").unwrap();
-        assert_is_close(q, Length::meter(2.0));
+        assert_is_close(q, Length::meters(2.0));
         let q: Length = serde_yaml::from_str(&"2.0e8 m").unwrap();
-        assert_is_close(q, Length::meter(2.0e8));
+        assert_is_close(q, Length::meters(2.0e8));
         let q: Length = serde_yaml::from_str(&"5.0 km").unwrap();
-        assert_is_close(q, Length::meter(5000.0));
+        assert_is_close(q, Length::meters(5000.0));
     }
 
     #[test]
@@ -171,8 +171,8 @@ mod tests {
         let q: Dimensionless = serde_yaml::from_str(&"5.0 km m^-1").unwrap();
         assert_is_close(q, Dimensionless::dimensionless(5000.0));
         let q: Force = serde_yaml::from_str(&"5.0 kg m^1 s^-2").unwrap();
-        assert_is_close(q, Force::newton(5.0));
+        assert_is_close(q, Force::newtons(5.0));
         let q: Force = serde_yaml::from_str(&"5.0e0 kg km^1 s^-2").unwrap();
-        assert_is_close(q, Force::newton(5000.0));
+        assert_is_close(q, Force::newtons(5000.0));
     }
 }

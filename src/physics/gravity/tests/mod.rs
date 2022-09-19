@@ -23,8 +23,8 @@ mod tests {
             .flat_map(move |x| {
                 (1..n).map(move |y| LeafData {
                     entity: Entity::from_raw((x * n + y) as u32),
-                    pos: DVec2Length::meter(x as f64, y as f64),
-                    mass: Mass::kilogram(x as f64 * y as f64),
+                    pos: DVec2Length::meters(x as f64, y as f64),
+                    mass: Mass::kilograms(x as f64 * y as f64),
                 })
             })
             .collect()
@@ -64,7 +64,7 @@ mod tests {
     fn compare_quadtree_gravity_to_direct_sum() {
         let n_particles = 50;
         let tree = get_tree_for_particles(n_particles);
-        let pos = DVec2Length::meter(3.5, 3.5);
+        let pos = DVec2Length::meters(3.5, 3.5);
         let solver = Solver {
             opening_angle: Dimensionless::zero(),
             softening_length: Length::zero(),

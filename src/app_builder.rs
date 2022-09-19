@@ -48,7 +48,7 @@ pub fn log_setup(verbosity: usize) -> LogSettings {
 }
 
 fn show_time_system(time: Res<super::physics::Time>) {
-    debug!("Time: {:.3} s", time.to_value(super::units::Time::second));
+    debug!("Time: {:.3} s", time.to_value(super::units::Time::seconds));
 }
 
 fn build_app(app: &mut App, opts: &CommandLineOptions) {

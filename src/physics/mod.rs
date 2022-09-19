@@ -63,7 +63,7 @@ impl Plugin for PhysicsPlugin {
             .add_plugin(AttributeOutputPlugin::<Time>::default())
             .add_event::<StopSimulationEvent>()
             .insert_resource(Timestep(parameters.timestep))
-            .insert_resource(Time(units::Time::second(0.00)))
+            .insert_resource(Time(units::Time::seconds(0.00)))
             .add_system_to_stage(
                 PhysicsStages::Physics,
                 integrate_motion_system.after(gravity_system),
