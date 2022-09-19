@@ -40,7 +40,7 @@ impl QuadTreeIndex {
                 Self::internal_iter_all_at_depth(depth, current_index, current_depth + 1)
             }))
         } else {
-            let mut current_index = current_index.clone();
+            let mut current_index = current_index;
             current_index.0[current_depth] = NodeIndex::ThisNode.into();
             Box::new(std::iter::once(current_index))
         }

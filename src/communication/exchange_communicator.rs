@@ -49,7 +49,7 @@ where
     }
 
     pub fn blocking_send_vec(&mut self, rank: i32, data: Vec<T>) {
-        debug_assert_eq!(self.pending_data[rank], false);
+        debug_assert!(!self.pending_data[rank]);
         self.pending_data[rank] = true;
         self.communicator.blocking_send_vec(rank, &data);
     }
@@ -63,25 +63,23 @@ where
     }
 
     pub fn exchange_all(&mut self, data: DataByRank<Vec<T>>) -> DataByRank<Vec<T>> {
-        let res = scope(|scope| {
+        scope(|scope| {
             let mut guards = vec![];
             for (rank, items) in data.iter() {
-                debug_assert_eq!(self.pending_data[*rank], false);
+                debug_assert!(!self.pending_data[*rank]);
                 self.pending_data[*rank] = true;
-                let guard = self.communicator.immediate_send_vec(scope, *rank, &items);
+                let guard = self.communicator.immediate_send_vec(scope, *rank, items);
                 guards.extend(guard.into_iter());
             }
-            let r = self.receive_vec();
-            r
-        });
-        res
+            self.receive_vec()
+        })
     }
 
     pub fn receive_vec(&mut self) -> DataByRank<Vec<T>> {
         self.empty_send_to_others();
         let mut received_data = DataByRank::from_communicator(&self.communicator);
         for rank in self.communicator.other_ranks() {
-            debug_assert_eq!(self.pending_data[rank], true);
+            debug_assert!(!self.pending_data[rank]);
         }
         for rank in self.communicator.other_ranks() {
             let received = self.communicator.receive_vec(rank);

@@ -203,7 +203,7 @@ pub fn communicate_mass_moments_system(
     let top_level_tree_leaf_indices = get_top_level_indices(config.min_depth);
     let mass_moments: Vec<_> = top_level_tree_leaf_indices
         .iter()
-        .map(|index| tree[&index].data.moments.clone())
+        .map(|index| tree[index].data.moments.clone())
         .collect();
     // replace with allreduce over buffer at some point
     let total_mass_moments = sum_vecs(comm.all_gather_vec(&mass_moments));
@@ -224,7 +224,7 @@ fn distribute_top_level_nodes_system(
     let top_level_tree_leaf_indices = get_top_level_indices(config.min_depth);
     let particles_per_leaf: Vec<usize> = top_level_tree_leaf_indices
         .iter()
-        .map(|index| tree[&index].data.moments.count())
+        .map(|index| tree[index].data.moments.count())
         .collect();
     let cutoffs = get_cutoffs(&particles_per_leaf, **num_ranks);
     *indices = TopLevelIndices(
@@ -234,10 +234,7 @@ fn distribute_top_level_nodes_system(
                 let end = cutoffs[rank + 1];
                 (
                     rank as i32,
-                    top_level_tree_leaf_indices[start..end]
-                        .iter()
-                        .map(|x| *x)
-                        .collect::<Vec<_>>(),
+                    top_level_tree_leaf_indices[start..end].to_vec(),
                 )
             })
             .collect(),

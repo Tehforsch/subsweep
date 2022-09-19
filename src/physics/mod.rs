@@ -47,7 +47,7 @@ impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         panic_if_already_added::<Self>(app);
         app.add_plugin(ParameterPlugin::<Parameters>::new("physics"));
-        let parameters = get_parameters::<Parameters>(app).clone();
+        let parameters = get_parameters::<Parameters>(app);
         app.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())

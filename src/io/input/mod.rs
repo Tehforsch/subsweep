@@ -80,7 +80,7 @@ impl<T: ToDataset + Component + Sync + Send + 'static> Plugin for DatasetInputPl
         });
         let mut registered_datasets = app
             .world
-            .get_resource_or_insert_with(|| RegisteredDatasets::default());
+            .get_resource_or_insert_with(RegisteredDatasets::default);
         registered_datasets.push(T::name());
         app.add_startup_system(
             read_dataset_system::<T>
@@ -111,10 +111,12 @@ fn open_file_system(
             "Reading initial conditions file: {}",
             path.to_str().unwrap()
         );
-        files.push(File::open(path).expect(&format!(
-            "Failed to open initial conditions file: {}",
-            path.to_str().unwrap()
-        )));
+        files.push(File::open(path).unwrap_or_else(|_| {
+            panic!(
+                "Failed to open initial conditions file: {}",
+                path.to_str().unwrap()
+            )
+        }));
     }
 }
 
@@ -163,10 +165,10 @@ fn read_dataset_system<T: ToDataset + Component>(
     let data = files.iter().map(|file| {
         let set = file
             .dataset(name)
-            .expect(&format!("Failed to open dataset: {}", name));
+            .unwrap_or_else(|_| panic!("Failed to open dataset: {}", name));
         let data = set
             .read_1d::<T>()
-            .expect(&format!("Failed to read dataset: {}", name));
+            .unwrap_or_else(|_| panic!("Failed to read dataset: {}", name));
         let conversion_factor: f64 = set
             .attr(SCALE_FACTOR_IDENTIFIER)
             .expect("No scale factor in dataset")

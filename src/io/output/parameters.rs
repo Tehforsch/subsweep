@@ -32,7 +32,6 @@ impl Parameters {
             .unwrap()
             .fields
             .iter()
-            .find(|field| field == &T::name())
-            .is_some()
+            .any(|field| field == T::name())
     }
 }

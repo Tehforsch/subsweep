@@ -14,7 +14,7 @@ struct AlreadyAddedLabels(HashSet<&'static str>);
 pub fn run_once<P: Named>(app: &mut App, f: impl Fn(&mut App)) {
     let mut labels = app
         .world
-        .get_resource_or_insert_with(|| RunOnceLabels::default());
+        .get_resource_or_insert_with(RunOnceLabels::default);
     if labels.0.insert(P::name()) {
         f(app);
     }
@@ -24,7 +24,7 @@ pub fn run_once<P: Named>(app: &mut App, f: impl Fn(&mut App)) {
 pub fn panic_if_already_added<P: Named>(app: &mut App) {
     let mut labels = app
         .world
-        .get_resource_or_insert_with(|| AlreadyAddedLabels::default());
+        .get_resource_or_insert_with(AlreadyAddedLabels::default);
     if !labels.0.insert(P::name()) {
         panic!("Added twice: {}", P::name())
     }

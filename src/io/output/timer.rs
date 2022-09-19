@@ -19,7 +19,7 @@ impl Timer {
         commands.insert_resource(Timer {
             next_output_time: parameters
                 .time_first_snapshot
-                .unwrap_or(units::Time::zero()),
+                .unwrap_or_else(units::Time::zero),
             snapshot_num: 0,
         });
     }

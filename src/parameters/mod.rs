@@ -27,12 +27,13 @@ where
 struct ParameterFileContents(String);
 
 pub fn add_parameter_file_contents(app: &mut App, parameter_file_name: &Path) {
-    let contents = fs::read_to_string(&parameter_file_name).expect(&format!(
-        "Failed to read parameter file at {:?}",
-        &parameter_file_name
-    ));
-    app.world
-        .insert_resource(ParameterFileContents(contents.clone()));
+    let contents = fs::read_to_string(parameter_file_name).unwrap_or_else(|_| {
+        panic!(
+            "Failed to read parameter file at {:?}",
+            &parameter_file_name
+        )
+    });
+    app.world.insert_resource(ParameterFileContents(contents));
 }
 
 pub struct ParameterPlugin<T> {
@@ -61,7 +62,7 @@ impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> P
             debug!("Parameters for {} already present", &name);
             return;
         }
-        let parameter_file_contents = &app.world.get_resource::<ParameterFileContents>().expect(&format!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameter_file_contents?", &name)).0;
+        let parameter_file_contents = &app.world.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameter_file_contents?", &name)).0;
         let parameters =
             Self::get_parameter_struct_from_parameter_file_contents(&name, parameter_file_contents);
         app.world.insert_resource(parameters);

@@ -62,10 +62,8 @@ fn output_setup(app: &mut App) {
 }
 
 fn make_output_dir_system(parameters: Res<Parameters>) {
-    fs::create_dir_all(&parameters.output_dir).expect(&format!(
-        "Failed to create output dir: {:?}",
-        parameters.output_dir
-    ));
+    fs::create_dir_all(&parameters.output_dir)
+        .unwrap_or_else(|_| panic!("Failed to create output dir: {:?}", parameters.output_dir));
 }
 
 fn open_file_system(
@@ -87,7 +85,7 @@ fn close_file_system(mut file: ResMut<OutputFile>) {
 }
 
 fn add_output_system<T: Named, P>(app: &mut App, system: impl ParallelSystemDescriptorCoercion<P>) {
-    run_once::<OutputMarker>(app, |app| output_setup(app));
+    run_once::<OutputMarker>(app, output_setup);
     if Parameters::is_desired_field::<T>(app) {
         app.add_system_to_stage(
             OutputStages::Output,

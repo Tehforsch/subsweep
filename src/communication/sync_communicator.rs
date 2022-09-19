@@ -66,7 +66,7 @@ where
             let deleted = &mut result.deleted[rank];
             let known_this_rank = &mut self.known[rank];
             let mut known_but_not_mentioned: HashSet<_> =
-                known_this_rank.iter().map(|(k, _)| k.clone()).collect();
+                known_this_rank.iter().map(|(k, _)| *k).collect();
             for d in data.into_iter() {
                 match known_this_rank.get(&d.key) {
                     Some(entity) => {

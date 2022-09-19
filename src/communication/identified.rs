@@ -34,7 +34,7 @@ use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Address;
 
-unsafe impl<'a, T> Equivalence for Identified<T>
+unsafe impl<T> Equivalence for Identified<T>
 where
     T: Equivalence,
     <T as Equivalence>::Out: MatchesRaw,
