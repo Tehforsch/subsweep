@@ -35,6 +35,14 @@ impl Dimension {
         }
     }
 
+    pub const fn dimension_neg(self) -> Self {
+        Self {
+            length: -self.length,
+            mass: -self.mass,
+            time: -self.time,
+        }
+    }
+
     /// Get the base conversion factor of this dimension
     /// into SI units. As of now, this is always 1.0
     /// but will change if the base units are changed

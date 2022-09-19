@@ -37,6 +37,13 @@ impl<const D: Dimension> Quantity<f64, D> {
     {
         Quantity::<f64, { D.dimension_powi(3) }>(self.0.powi(3))
     }
+
+    pub fn powi<const I: i32>(&self) -> Quantity<f64, { D.dimension_powi(I) }>
+    where
+        Quantity<f64, { D.dimension_powi(I) }>:,
+    {
+        Quantity::<f64, { D.dimension_powi(I) }>(self.0.powi(I))
+    }
 }
 
 impl<const D: Dimension> Quantity<glam::DVec2, D> {
@@ -182,6 +189,10 @@ unit_functions!(
     ENERGY, Energy, mass: 1, length: 2, time: -2,
     {
         joules, 1.0, "J"
+    },
+    DENSITY, Density, mass: 1, length: -2, time: 0,
+    {
+        kilogram_per_square_meter, 1.0, "kg/m^2"
     },
     LENGTHMASS, LengthMass, mass: 1, length: 1,
     {

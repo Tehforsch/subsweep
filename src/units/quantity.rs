@@ -128,9 +128,10 @@ where
 
 impl<S, const D: Dimension> Div<Quantity<S, D>> for f64
 where
+    Quantity<S, { D.dimension_neg() }>:,
     f64: Div<S, Output = S>,
 {
-    type Output = Quantity<S, D>;
+    type Output = Quantity<S, { D.dimension_neg() }>;
 
     fn div(self, rhs: Quantity<S, D>) -> Self::Output {
         Quantity(self / rhs.0)
