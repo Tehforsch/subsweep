@@ -44,17 +44,17 @@ impl<T> From<Option<T>> for CommunicatedOption<T> {
     }
 }
 
-impl<T> Into<Option<T>> for CommunicatedOption<T> {
-    fn into(self) -> Option<T> {
-        if self.valid {
-            unsafe { Some(self.data.assume_init()) }
+impl<T> From<CommunicatedOption<T>> for Option<T> {
+    fn from(other: CommunicatedOption<T>) -> Option<T> {
+        if other.valid {
+            unsafe { Some(other.data.assume_init()) }
         } else {
             None
         }
     }
 }
 
-unsafe impl<'a, T> Equivalence for CommunicatedOption<T>
+unsafe impl<T> Equivalence for CommunicatedOption<T>
 where
     T: Equivalence,
 {

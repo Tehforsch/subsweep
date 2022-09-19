@@ -13,7 +13,7 @@ use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::physics::LocalParticle;
 
-pub const SCALE_FACTOR_IDENTIFIER: &'static str = "scale_factor";
+pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor";
 
 pub struct DatasetOutputPlugin<T> {
     _marker: PhantomData<T>,

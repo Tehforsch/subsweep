@@ -25,7 +25,6 @@ pub fn log_setup(verbosity: usize) -> LogSettings {
         0 => LogSettings {
             level: Level::INFO,
             filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-            ..Default::default()
         },
         1 => LogSettings {
             level: Level::DEBUG,

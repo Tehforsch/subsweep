@@ -11,7 +11,7 @@ struct RunOnceLabels(HashSet<&'static str>);
 #[derive(Default)]
 struct AlreadyAddedLabels(HashSet<&'static str>);
 
-pub fn run_once<P: Named>(app: &mut App, f: impl Fn(&mut App) -> ()) {
+pub fn run_once<P: Named>(app: &mut App, f: impl Fn(&mut App)) {
     let mut labels = app
         .world
         .get_resource_or_insert_with(|| RunOnceLabels::default());

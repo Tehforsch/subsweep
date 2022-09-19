@@ -119,25 +119,22 @@ pub(super) fn gravity_system(
             let sub_tree = &tree[index];
             if rank == **world_rank {
                 add_acceleration(&mut vel, gravity.traverse_tree(sub_tree, &**pos));
+            } else if gravity.should_be_opened(sub_tree, pos) {
+                outgoing_requests.push(
+                    rank,
+                    Identified::new(
+                        entity,
+                        GravityCalculationRequest {
+                            index: index.clone(),
+                            pos: *pos.clone(),
+                        },
+                    ),
+                );
             } else {
-                if gravity.should_be_opened(sub_tree, pos) {
-                    outgoing_requests.push(
-                        rank,
-                        Identified::new(
-                            entity,
-                            GravityCalculationRequest {
-                                index: index.clone(),
-                                pos: *pos.clone(),
-                            },
-                        ),
-                    );
-                } else {
-                    add_acceleration(
-                        &mut vel,
-                        gravity
-                            .calc_gravity_acceleration_for_moments(&**pos, &sub_tree.data.moments),
-                    );
-                }
+                add_acceleration(
+                    &mut vel,
+                    gravity.calc_gravity_acceleration_for_moments(&**pos, &sub_tree.data.moments),
+                );
             }
         }
     }

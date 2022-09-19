@@ -25,7 +25,7 @@ macro_rules! maindbg {
         // of temporaries - https://stackoverflow.com/a/48732525/1063961
         match $val {
             tmp => {
-                if crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst) == 0 {
+                if $crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst) == 0 {
                     eprintln!("[{}:{}] {} = {:#?}",
                         file!(), line!(), stringify!($val), &tmp);
                 }
@@ -42,7 +42,7 @@ macro_rules! maindbg {
 macro_rules! mpidbg {
     () => {
         eprintln!("[{}:{}] rank={}",  $crate::file!(), $crate::line!(),
-                  crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst)
+                  $crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst)
         )
     };
     ($val:expr $(,)?) => {
@@ -52,7 +52,7 @@ macro_rules! mpidbg {
             tmp => {
                 eprintln!("[{}:{}] rank={} {} = {:#?}",
                           file!(), line!(),
-                          crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst),
+                          $crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst),
                           stringify!($val), &tmp);
                 tmp
             }
@@ -83,30 +83,30 @@ pub fn end_barrier() {
 #[macro_export]
 macro_rules! barrierdbg {
     () => {
-        crate::mpi_log::start_barrier();
+        $crate::mpi_log::start_barrier();
         eprintln!("[{}:{}] rank={}",  $crate::file!(), $crate::line!(),
-                  crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst)
+                  $crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst)
         )
-        crate::mpi_log::end_barrier();
+        $crate::mpi_log::end_barrier();
     };
     ($val:expr $(,)?) => {
         // Use of `match` here is intentional because it affects the lifetimes
         // of temporaries - https://stackoverflow.com/a/48732525/1063961
-        crate::mpi_log::start_barrier();
+        $crate::mpi_log::start_barrier();
         match $val {
             tmp => {
                 eprintln!("[{}:{}] rank={} {} = {:#?}",
                           file!(), line!(),
-                          crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst),
+                          $crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst),
                           stringify!($val), &tmp);
-                crate::mpi_log::end_barrier();
+                $crate::mpi_log::end_barrier();
                 tmp
             }
         }
     };
     ($($val:expr),+ $(,)?) => {
-        crate::mpi_log::start_barrier();
+        $crate::mpi_log::start_barrier();
         ($(mpidbg!($val)),+,)
-        crate::mpi_log::end_barrier();
+        $crate::mpi_log::end_barrier();
     };
 }

@@ -125,7 +125,7 @@ impl QuadTree {
 
     pub fn depth_first_map_leaf<'a>(
         &'a self,
-        closure: &mut impl FnMut(&'a Extent, &'a [LeafData]) -> (),
+        closure: &mut impl FnMut(&'a Extent, &'a [LeafData]),
     ) {
         match self.node {
             Node::Tree(ref node) => {

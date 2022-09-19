@@ -23,7 +23,7 @@ where
         let pending_data = DataByRank::from_communicator(&communicator);
         Self {
             communicator,
-            pending_data: pending_data,
+            pending_data,
             _marker: PhantomData::default(),
         }
     }
