@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::mem;
 use std::mem::MaybeUninit;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -135,9 +136,11 @@ impl<T> SizedCommunicator for MpiWorld<T> {
 }
 
 unsafe fn get_buffer<T>(num_elements: usize) -> Vec<T> {
-    let mut buffer = Vec::with_capacity(num_elements);
-    buffer.set_len(num_elements);
-    buffer
+    let mut buffer: Vec<MaybeUninit<T>> = Vec::with_capacity(num_elements);
+    unsafe {
+        buffer.set_len(num_elements);
+        mem::transmute(buffer)
+    }
 }
 
 impl<T: Equivalence> CollectiveCommunicator<T> for MpiWorld<T> {
