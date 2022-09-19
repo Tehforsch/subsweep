@@ -9,6 +9,7 @@ use bevy::prelude::CoreStage;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::Res;
+use bevy::winit::WinitSettings;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainDecompositionPlugin;
@@ -68,6 +69,11 @@ fn build_app(app: &mut App, opts: &CommandLineOptions) {
         if opts.headless {
             app.add_plugins(MinimalPlugins).add_plugin(LogPlugin);
         } else {
+            let winit_opts = WinitSettings {
+                return_from_run: true,
+                ..Default::default()
+            };
+            app.insert_resource(winit_opts);
             app.add_plugins(DefaultPlugins);
         }
         app.add_system_to_stage(CoreStage::Update, show_time_system);

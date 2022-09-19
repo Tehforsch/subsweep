@@ -90,12 +90,6 @@ impl Plugin for VisualizationPlugin {
                 .add_system_to_stage(
                     VisualizationStage::AppExit,
                     handle_app_exit_system.after(keyboard_app_exit_system),
-                )
-                .add_system_to_stage(
-                    VisualizationStage::AppExit,
-                    handle_app_exit_main_rank_system
-                        .after(keyboard_app_exit_system)
-                        .after(handle_app_exit_system),
                 );
         } else {
             app.add_system_to_stage(
@@ -172,19 +166,6 @@ fn handle_app_exit_system(
     let should_exit = result.into_iter().any(|x| x.0);
     if should_exit {
         event_writer.send(AppExit);
-    }
-}
-
-fn handle_app_exit_main_rank_system(mut event_reader: EventReader<AppExit>, rank: Res<WorldRank>) {
-    assert!(rank.is_main());
-    // Since winit takes ownership of the main thread when calling
-    // app.run(), we can never clean up the MPI_WORLD (which is
-    // stored in a lazy_static and therefore has init lifetime and
-    // needs to be explicitly destructed. Because of this, we
-    // catch an app exit here and call the destructor explicitly.
-    if event_reader.iter().count() > 0 {
-        #[cfg(feature = "mpi")]
-        crate::communication::MPI_UNIVERSE.drop();
     }
 }
 
