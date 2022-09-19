@@ -31,7 +31,7 @@ impl Named for InputMarker {
 
 #[derive(Clone, Default, Deserialize)]
 pub struct Parameters {
-    pub initial_condition_paths: Vec<PathBuf>,
+    pub paths: Vec<PathBuf>,
 }
 
 #[derive(Default, Deref, DerefMut)]
@@ -99,7 +99,7 @@ fn open_file_system(
     size: Res<WorldSize>,
 ) {
     let files_this_rank_should_open: Vec<_> = parameters
-        .initial_condition_paths
+        .paths
         .iter()
         .enumerate()
         .filter(|(i, _)| i.rem_euclid(**size) == **rank as usize)
