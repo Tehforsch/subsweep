@@ -5,7 +5,7 @@ use rand::Rng;
 use serde::Deserialize;
 
 use crate::communication::WorldRank;
-use crate::input;
+use crate::io::input;
 use crate::parameters::ParameterPlugin;
 use crate::particle::LocalParticleBundle;
 use crate::plugin_utils::get_parameters;
@@ -30,6 +30,10 @@ pub enum Parameters {
 }
 
 impl Parameters {
+    pub fn should_read_initial_conditions(&self) -> bool {
+        matches!(self, Self::Read(_))
+    }
+
     pub fn unwrap_read(&self) -> &input::Parameters {
         match self {
             Self::Read(parameters) => parameters,

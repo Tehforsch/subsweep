@@ -3,7 +3,6 @@ mod attribute_plugin;
 pub(super) mod dataset_plugin;
 mod parameters;
 mod timer;
-pub mod to_dataset;
 
 use std::fs;
 

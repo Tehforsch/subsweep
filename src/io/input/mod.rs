@@ -5,12 +5,12 @@ use bevy::prelude::*;
 use hdf5::File;
 use serde::Deserialize;
 
+use super::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
+use super::to_dataset::ToDataset;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::initial_conditions;
 use crate::named::Named;
-use crate::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
-use crate::output::to_dataset::ToDataset;
 use crate::physics::LocalParticle;
 use crate::plugin_utils::get_parameters;
 use crate::plugin_utils::run_once;
@@ -54,21 +54,29 @@ pub struct RegisteredDatasets(Vec<&'static str>);
 
 impl<T: ToDataset + Component + Sync + Send + 'static> Plugin for DatasetInputPlugin<T> {
     fn build(&self, app: &mut App) {
-        let parameters = get_parameters::<initial_conditions::Parameters>(app);
-        if !matches!(parameters, initial_conditions::Parameters::Read(_)) {
+        let should_run = app
+            .world
+            .get_resource::<initial_conditions::Parameters>()
+            .map(|parameters| parameters.should_read_initial_conditions())
+            .unwrap_or(false);
+        if !should_run {
             return;
         }
         run_once::<InputMarker>(app, |app| {
-            app.insert_resource(parameters.unwrap_read().clone())
-                .insert_resource(InputFiles::default())
-                .insert_resource(SpawnedEntities::default())
-                .add_startup_system(open_file_system)
-                .add_startup_system(
-                    spawn_entities_system
-                        .after(open_file_system)
-                        .before(close_file_system),
-                )
-                .add_startup_system(close_file_system.after(spawn_entities_system));
+            app.insert_resource(
+                get_parameters::<initial_conditions::Parameters>(app)
+                    .unwrap_read()
+                    .clone(),
+            )
+            .insert_resource(InputFiles::default())
+            .insert_resource(SpawnedEntities::default())
+            .add_startup_system(open_file_system)
+            .add_startup_system(
+                spawn_entities_system
+                    .after(open_file_system)
+                    .before(close_file_system),
+            )
+            .add_startup_system(close_file_system.after(spawn_entities_system));
         });
         let mut registered_datasets = app
             .world

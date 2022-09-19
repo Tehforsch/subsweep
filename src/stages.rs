@@ -2,7 +2,7 @@ use bevy::ecs::schedule::StageLabelId;
 use bevy::prelude::*;
 
 use crate::domain::DomainDecompositionStages;
-use crate::output::OutputStages;
+use crate::io::output::OutputStages;
 use crate::physics::PhysicsStages;
 use crate::visualization::VisualizationStage;
 
