@@ -3,13 +3,14 @@ use std::path::PathBuf;
 
 use bevy::prelude::*;
 use hdf5::File;
-use hdf5::H5Type;
 use serde::Deserialize;
 
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::initial_conditions;
 use crate::named::Named;
+use crate::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
+use crate::output::to_dataset::ToDataset;
 use crate::physics::LocalParticle;
 use crate::plugin_utils::get_parameters;
 use crate::plugin_utils::run_once;
@@ -51,9 +52,7 @@ impl<T> Default for DatasetInputPlugin<T> {
 #[derive(Default, Deref, DerefMut)]
 pub struct RegisteredDatasets(Vec<&'static str>);
 
-impl<T: H5Type + std::fmt::Debug + Component + Named + Sync + Send + 'static> Plugin
-    for DatasetInputPlugin<T>
-{
+impl<T: ToDataset + Component + Sync + Send + 'static> Plugin for DatasetInputPlugin<T> {
     fn build(&self, app: &mut App) {
         let parameters = get_parameters::<initial_conditions::Parameters>(app);
         if !matches!(parameters, initial_conditions::Parameters::Read(_)) {
@@ -147,7 +146,7 @@ fn spawn_entities_system(
         .collect();
 }
 
-fn read_dataset_system<T: H5Type + Named + Component + std::fmt::Debug>(
+fn read_dataset_system<T: ToDataset + Component>(
     mut commands: Commands,
     files: Res<InputFiles>,
     spawned_entities: Res<SpawnedEntities>,
@@ -157,13 +156,23 @@ fn read_dataset_system<T: H5Type + Named + Component + std::fmt::Debug>(
         let set = file
             .dataset(name)
             .expect(&format!("Failed to open dataset: {}", name));
-        set.read_1d::<T>()
-            .expect(&format!("Failed to read dataset: {}", name))
+        let data = set
+            .read_1d::<T>()
+            .expect(&format!("Failed to read dataset: {}", name));
+        let conversion_factor: f64 = set
+            .attr(SCALE_FACTOR_IDENTIFIER)
+            .expect("No scale factor in dataset")
+            .read_scalar()
+            .unwrap();
+        (data, conversion_factor)
     });
-    for (item, entity) in data
-        .flat_map(|set| set.into_iter())
+    for ((item, factor_written), entity) in data
+        .flat_map(|(set, factor_written)| set.into_iter().map(move |item| (item, factor_written)))
         .zip(spawned_entities.iter())
     {
-        commands.entity(*entity).insert(item);
+        let factor_read = T::dimension().base_conversion_factor();
+        commands
+            .entity(*entity)
+            .insert(item.convert_base_units(factor_written / factor_read));
     }
 }

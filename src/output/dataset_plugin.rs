@@ -13,6 +13,8 @@ use super::OutputFile;
 use crate::named::Named;
 use crate::physics::LocalParticle;
 
+pub const SCALE_FACTOR_IDENTIFIER: &'static str = "scale_factor";
+
 pub struct DatasetOutputPlugin<T> {
     _marker: PhantomData<T>,
 }
@@ -47,7 +49,7 @@ impl<T: ToDataset + Named + Sync + Send + 'static + Clone + H5Type + Component>
         let attr = dataset
             .new_attr::<f64>()
             .shape(())
-            .create("scale_factor")
+            .create(SCALE_FACTOR_IDENTIFIER)
             .unwrap();
         let scale_factor = T::dimension().base_conversion_factor();
         attr.write_scalar(&scale_factor).unwrap();
