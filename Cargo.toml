@@ -37,3 +37,6 @@ opt-level = 3
 name = "mpi_test"
 required-features = ["mpi"]
 
+[[example]]
+name = "figure8"
+required-features = ["mpi"]

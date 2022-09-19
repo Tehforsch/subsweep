@@ -8,6 +8,7 @@ use bevy::prelude::App;
 use bevy::prelude::CoreStage;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
+use bevy::prelude::Plugin;
 use bevy::prelude::Res;
 use bevy::winit::WinitSettings;
 
@@ -61,9 +62,9 @@ fn build_app(app: &mut App, opts: &CommandLineOptions) {
     };
     app.insert_resource(task_pool_opts)
         .add_plugin(SimulationStagesPlugin)
-        .add_plugin(InputPlugin)
-        .add_plugin(DomainDecompositionPlugin)
         .add_plugin(PhysicsPlugin)
+        .add_plugin(DomainDecompositionPlugin)
+        .add_plugin(InputPlugin)
         .add_plugin(GravityPlugin)
         .add_plugin(HydrodynamicsPlugin);
     if is_main_rank(app) {
@@ -126,4 +127,23 @@ pub fn main() {
         },
         opts.num_threads,
     );
+}
+
+#[derive(Default)]
+pub struct SimulationPlugin {
+    pub visualize: bool,
+}
+
+impl Plugin for SimulationPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugin(SimulationStagesPlugin)
+            .add_plugin(PhysicsPlugin)
+            .add_plugin(DomainDecompositionPlugin);
+        if self.visualize {
+            app.add_plugins(DefaultPlugins)
+                .add_plugin(VisualizationPlugin);
+        } else {
+            app.add_plugins(MinimalPlugins);
+        }
+    }
 }
