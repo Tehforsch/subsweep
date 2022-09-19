@@ -5,16 +5,15 @@ use bevy::log::LogPlugin;
 use bevy::log::LogSettings;
 use bevy::prelude::debug;
 use bevy::prelude::App;
+use bevy::prelude::CoreStage;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
-use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainDecompositionPlugin;
 use super::initial_conditions::InitialConditionsPlugin;
 use super::parameters::add_parameter_file_contents;
-use super::physics::time_system;
 use super::physics::PhysicsPlugin;
 use super::plugin_utils::is_main_rank;
 use super::visualization::VisualizationPlugin;
@@ -72,7 +71,7 @@ fn build_app(app: &mut App, opts: &CommandLineOptions) {
         } else {
             app.add_plugins(DefaultPlugins);
         }
-        app.add_system(show_time_system.after(time_system));
+        app.add_system_to_stage(CoreStage::Update, show_time_system);
     } else {
         app.add_plugins(MinimalPlugins);
         #[cfg(feature = "mpi")]
