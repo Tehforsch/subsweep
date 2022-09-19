@@ -20,6 +20,7 @@ impl Plugin for SimulationStagesPlugin {
             VisualizationStage::AddVisualization.as_label(),
             VisualizationStage::AddDrawComponents.as_label(),
             VisualizationStage::Draw.as_label(),
+            VisualizationStage::AppExit.as_label(),
             OutputStages::Output.as_label(),
         ];
         for window in stages.windows(2) {

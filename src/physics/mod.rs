@@ -2,7 +2,6 @@ mod gravity;
 mod parameters;
 mod time;
 
-use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
@@ -83,12 +82,10 @@ fn stop_simulation_system(
     parameters: Res<Parameters>,
     current_time: Res<Time>,
     mut stop_sim: EventWriter<StopSimulationEvent>,
-    mut app_exit: EventWriter<AppExit>,
 ) {
     if let Some(time) = parameters.final_time {
         if **current_time >= time {
             stop_sim.send(StopSimulationEvent);
-            app_exit.send(AppExit);
         }
     }
 }

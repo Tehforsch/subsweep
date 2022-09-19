@@ -2,10 +2,12 @@ mod drawing;
 pub mod parameters;
 pub mod remote;
 
+use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::ShapePlugin;
 pub use drawing::DrawCircle;
 pub use drawing::DrawRect;
+use mpi::traits::Equivalence;
 
 use self::drawing::draw_translation_system;
 use self::drawing::DrawBundlePlugin;
@@ -15,13 +17,17 @@ use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
 use self::remote::RemoteParticleVisualization;
+use crate::communication::AllGatherCommunicator;
+use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Rank;
 use crate::communication::WorldRank;
+use crate::communication::MPI_UNIVERSE;
 use crate::domain::GlobalExtent;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
+use crate::physics::StopSimulationEvent;
 use crate::position::Position;
 use crate::quadtree::QuadTreeVisualizationPlugin;
 
@@ -29,12 +35,16 @@ const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW]
 
 pub static CIRCLE_RADIUS: f64 = 3.0;
 
+#[derive(Equivalence)]
+struct ShouldExit(bool);
+
 #[derive(StageLabel)]
 pub enum VisualizationStage {
     Synchronize,
     AddVisualization,
     AddDrawComponents,
     Draw,
+    AppExit,
 }
 
 pub struct VisualizationPlugin;
@@ -45,17 +55,19 @@ struct WorldCamera;
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
         let rank = *app.world.get_resource::<WorldRank>().unwrap();
+        app.add_plugin(
+            CommunicationPlugin::<ParticleVisualizationExchangeData>::new(CommunicationType::Sync),
+        )
+        .add_plugin(CommunicationPlugin::<ShouldExit>::new(
+            CommunicationType::AllGather,
+        ));
+
         if rank.is_main() {
             app.add_plugin(ParameterPlugin::<Parameters>::new("visualization"))
                 .add_plugin(ShapePlugin)
                 .add_plugin(DrawBundlePlugin::<DrawRect>::default())
                 .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
                 .add_plugin(QuadTreeVisualizationPlugin)
-                .add_plugin(
-                    CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
-                        CommunicationType::Sync,
-                    ),
-                )
                 .add_startup_system(setup_camera_system)
                 .add_startup_system_to_stage(StartupStage::PostStartup, camera_translation_system)
                 .add_system_to_stage(
@@ -74,17 +86,24 @@ impl Plugin for VisualizationPlugin {
                     VisualizationStage::Draw,
                     position_to_translation_system::<DrawCircle>
                         .before(draw_translation_system::<DrawCircle>),
+                )
+                .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system)
+                .add_system_to_stage(
+                    VisualizationStage::AppExit,
+                    handle_app_exit_system.after(keyboard_app_exit_system),
+                )
+                .add_system_to_stage(
+                    VisualizationStage::AppExit,
+                    handle_app_exit_main_rank_system
+                        .after(keyboard_app_exit_system)
+                        .after(handle_app_exit_system),
                 );
         } else {
-            app.add_plugin(
-                CommunicationPlugin::<ParticleVisualizationExchangeData>::new(
-                    CommunicationType::Sync,
-                ),
-            )
-            .add_system_to_stage(
+            app.add_system_to_stage(
                 VisualizationStage::Synchronize,
                 send_particles_to_main_thread_system,
-            );
+            )
+            .add_system_to_stage(VisualizationStage::AppExit, handle_app_exit_system);
         }
     }
 }
@@ -129,6 +148,43 @@ fn position_to_translation_system<T: Component + IntoBundle>(
 ) {
     for (mut item, position) in query.iter_mut() {
         item.set_translation(position);
+    }
+}
+
+fn keyboard_app_exit_system(
+    input: Res<Input<KeyCode>>,
+    mut event_writer: EventWriter<StopSimulationEvent>,
+) {
+    if input.just_pressed(KeyCode::Escape) {
+        event_writer.send(StopSimulationEvent);
+    }
+}
+
+fn handle_app_exit_system(
+    mut event_reader: EventReader<StopSimulationEvent>,
+    mut event_writer: EventWriter<AppExit>,
+    mut comm: NonSendMut<AllGatherCommunicator<ShouldExit>>,
+) {
+    let result = if event_reader.iter().count() > 0 {
+        comm.all_gather(&ShouldExit(true))
+    } else {
+        comm.all_gather(&ShouldExit(false))
+    };
+    let should_exit = result.into_iter().any(|x| x.0);
+    if should_exit {
+        event_writer.send(AppExit);
+    }
+}
+
+fn handle_app_exit_main_rank_system(mut event_reader: EventReader<AppExit>, rank: Res<WorldRank>) {
+    assert!(rank.is_main());
+    // Since winit takes ownership of the main thread when calling
+    // app.run(), we can never clean up the MPI_WORLD (which is
+    // stored in a lazy_static and therefore has init lifetime and
+    // needs to be explicitly destructed. Because of this, we
+    // catch an app exit here and call the destructor explicitly.
+    if event_reader.iter().count() > 0 {
+        MPI_UNIVERSE.drop();
     }
 }
 
