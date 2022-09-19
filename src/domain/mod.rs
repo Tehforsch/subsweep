@@ -17,6 +17,7 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::mass::Mass;
 use crate::named::Named;
+use crate::parameters::ParameterPlugin;
 use crate::physics::MassMoments;
 use crate::position::Position;
 use crate::quadtree::LeafData;
@@ -44,6 +45,7 @@ impl Plugin for DomainDecompositionPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
+            .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("domain_tree"))
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()));
         app.add_system_to_stage(
             DomainDecompositionStages::TopLevelTreeConstruction,

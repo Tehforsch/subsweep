@@ -21,7 +21,6 @@ use crate::parameters::ParameterPlugin;
 use crate::plugin_utils::get_parameters;
 use crate::plugin_utils::panic_if_already_added;
 use crate::position::Position;
-use crate::quadtree::QuadTreeConfig;
 use crate::units;
 use crate::velocity::Velocity;
 
@@ -48,8 +47,7 @@ pub enum PhysicsStages {
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         panic_if_already_added::<Self>(app);
-        app.add_plugin(ParameterPlugin::<Parameters>::new("physics"))
-            .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("tree"));
+        app.add_plugin(ParameterPlugin::<Parameters>::new("physics"));
         let parameters = get_parameters::<Parameters>(app).clone();
         app.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
