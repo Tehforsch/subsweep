@@ -26,14 +26,14 @@ pub struct DrawRect {
 
 pub(super) trait IntoBundle {
     type Output: Bundle;
-    fn into_bundle(&self, camera_zoom: &Length) -> Self::Output;
+    fn get_bundle(&self, camera_zoom: &Length) -> Self::Output;
     fn translation(&self) -> &VecLength;
     fn set_translation(&mut self, pos: &VecLength);
 }
 
 impl IntoBundle for DrawCircle {
     type Output = ShapeBundle;
-    fn into_bundle(&self, camera_zoom: &Length) -> Self::Output {
+    fn get_bundle(&self, camera_zoom: &Length) -> Self::Output {
         let shape = shapes::Circle {
             radius: self.radius.in_units(*camera_zoom) as f32,
             center: Vec2::new(0.0, 0.0),
@@ -57,7 +57,7 @@ impl IntoBundle for DrawCircle {
 
 impl IntoBundle for DrawRect {
     type Output = ShapeBundle;
-    fn into_bundle(&self, camera_zoom: &Length) -> Self::Output {
+    fn get_bundle(&self, camera_zoom: &Length) -> Self::Output {
         let shape = shapes::Rectangle {
             extents: (self.upper_right - self.lower_left)
                 .in_units(*camera_zoom)
@@ -111,7 +111,7 @@ fn spawn_visualization_item_system<T: Component + IntoBundle>(
     for (entity, item) in query.iter() {
         commands
             .entity(entity)
-            .insert_bundle(item.into_bundle(&parameters.camera_zoom));
+            .insert_bundle(item.get_bundle(&parameters.camera_zoom));
     }
 }
 
