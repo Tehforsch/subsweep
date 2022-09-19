@@ -79,7 +79,7 @@ where
         self.empty_send_to_others();
         let mut received_data = DataByRank::from_communicator(&self.communicator);
         for rank in self.communicator.other_ranks() {
-            debug_assert!(!self.pending_data[rank]);
+            debug_assert!(self.pending_data[rank]);
         }
         for rank in self.communicator.other_ranks() {
             let received = self.communicator.receive_vec(rank);

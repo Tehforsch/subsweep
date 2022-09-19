@@ -23,7 +23,6 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Rank;
 use crate::communication::WorldRank;
-use crate::communication::MPI_UNIVERSE;
 use crate::domain::GlobalExtent;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
@@ -35,7 +34,7 @@ const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW]
 
 pub static CIRCLE_RADIUS: f64 = 3.0;
 
-#[derive(Equivalence)]
+#[derive(Equivalence, Clone)]
 struct ShouldExit(bool);
 
 #[derive(StageLabel)]
@@ -184,7 +183,8 @@ fn handle_app_exit_main_rank_system(mut event_reader: EventReader<AppExit>, rank
     // needs to be explicitly destructed. Because of this, we
     // catch an app exit here and call the destructor explicitly.
     if event_reader.iter().count() > 0 {
-        MPI_UNIVERSE.drop();
+        #[cfg(feature = "mpi")]
+        crate::communication::MPI_UNIVERSE.drop();
     }
 }
 
