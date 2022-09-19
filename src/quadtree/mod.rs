@@ -63,9 +63,9 @@ pub struct QuadTree {
 }
 
 impl QuadTree {
-    pub fn new<'a>(config: &QuadTreeConfig, particles: Vec<LeafData>, extent: &Extent) -> Self {
+    pub fn new(config: &QuadTreeConfig, particles: Vec<LeafData>, extent: &Extent) -> Self {
         let mut tree = Self::make_empty_leaf_from_extent(extent.clone());
-        tree.subdivide_to_depth(&config, config.min_depth);
+        tree.subdivide_to_depth(config, config.min_depth);
         for particle in particles.iter() {
             tree.insert_new(config, particle.clone(), 0);
         }
@@ -101,7 +101,7 @@ impl QuadTree {
         }
         if let Node::Tree(ref mut children) = self.node {
             let quadrant = &mut children[self.extent.get_quadrant_index(&leaf_data.pos)];
-            quadrant.insert_new(&config, leaf_data, depth + 1);
+            quadrant.insert_new(config, leaf_data, depth + 1);
         }
     }
 
@@ -134,7 +134,7 @@ impl QuadTree {
                 }
             }
             Node::Leaf(ref leaf) => {
-                closure(&self.extent, &leaf);
+                closure(&self.extent, leaf);
             }
         }
     }

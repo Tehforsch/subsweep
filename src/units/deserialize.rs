@@ -106,8 +106,8 @@ fn read_unit_str<E>(unit_str: &str) -> Result<(Dimension, f64), E>
 where
     E: de::Error,
 {
-    let (unit, exponent) = if unit_str.contains("^") {
-        let split: Vec<_> = unit_str.split("^").collect();
+    let (unit, exponent) = if unit_str.contains('^') {
+        let split: Vec<_> = unit_str.split('^').collect();
         if split.len() != 2 {
             return Err(E::custom(format!("invalid unit string: {}", unit_str)));
         }
@@ -122,8 +122,7 @@ where
     };
     let (dimension, _, factor) = UNIT_NAMES
         .iter()
-        .filter(|(_, known_unit_name, _)| &unit == known_unit_name)
-        .next()
+        .find(|(_, known_unit_name, _)| &unit == known_unit_name)
         .ok_or_else(|| E::custom(format!("unknown unit: {}", &unit)))?;
     Ok((dimension.clone().dimension_powi(exponent), *factor))
 }

@@ -56,7 +56,7 @@ pub(super) fn receive_particles_on_main_thread_system(
         commands
             .spawn()
             .insert_bundle(RemoteParticleVisualizationBundle {
-                pos: data.pos.clone(),
+                pos: data.pos,
                 vis: RemoteParticleVisualization(rank),
             })
             .id()

@@ -12,7 +12,7 @@ use super::dimension::Dimension;
 use super::UNIT_NAMES;
 use crate::units::NONE;
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Default)]
 pub struct Quantity<S: 'static, const D: Dimension>(pub(super) S);
 
 impl<S> Quantity<S, { NONE }> {
@@ -38,7 +38,7 @@ where
         S: Div<f64, Output = S>,
         Quantity<S, { D.dimension_div(D) }>:,
     {
-        (self / other).unwrap_value().clone()
+        (self / other).unwrap_value()
     }
 }
 

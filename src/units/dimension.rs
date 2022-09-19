@@ -3,6 +3,7 @@ const LENGTH_TO_SI: f64 = 1.0;
 const TIME_TO_SI: f64 = 1.0;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
+#[non_exhaustive] // Prevents clippy warnings due to ..NONE update in quantities macro
 pub struct Dimension {
     pub length: i32,
     pub time: i32,
