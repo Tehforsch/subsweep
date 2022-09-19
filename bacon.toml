@@ -58,7 +58,7 @@ need_stdout = true
 [keybindings]
 a = "job:test-all"
 i = "job:initial"
-c = "job:clippy"
+c = "job:clippy-all"
 b = "job:check-all"
 d = "job:doc-open"
 t = "job:test"
