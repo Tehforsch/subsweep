@@ -1,3 +1,5 @@
+mod tenet_plugin;
+
 use std::collections::HashSet;
 
 use bevy::prelude::App;
