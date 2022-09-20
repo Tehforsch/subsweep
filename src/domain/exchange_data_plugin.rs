@@ -56,6 +56,7 @@ impl<T> ExchangeBuffers<T> {
     }
 }
 
+#[derive(Named)]
 pub struct ExchangeDataPlugin<T> {
     _marker: PhantomData<T>,
 }
@@ -70,12 +71,6 @@ impl<T> Default for ExchangeDataPlugin<T> {
 
 #[derive(Equivalence, Deref, DerefMut)]
 struct NumEntities(usize);
-
-impl<T> Named for ExchangeDataPlugin<T> {
-    fn name() -> &'static str {
-        "exchange_data_plugin"
-    }
-}
 
 impl<T: Sync + Send + 'static + Component + Clone + Equivalence> TenetPlugin
     for ExchangeDataPlugin<T>

@@ -48,16 +48,11 @@ pub enum VisualizationStage {
     AppExit,
 }
 
+#[derive(Named)]
 pub struct VisualizationPlugin;
 
 #[derive(Component)]
 struct WorldCamera;
-
-impl Named for VisualizationPlugin {
-    fn name() -> &'static str {
-        "visualization"
-    }
-}
 
 impl TenetPlugin for VisualizationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {

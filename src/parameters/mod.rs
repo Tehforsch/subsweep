@@ -41,6 +41,7 @@ impl Simulation {
     }
 }
 
+#[derive(Named)]
 pub struct ParameterPlugin<T> {
     _marker: PhantomData<T>,
     name: String,
@@ -52,12 +53,6 @@ impl<T> ParameterPlugin<T> {
             _marker: PhantomData::default(),
             name: name.into(),
         }
-    }
-}
-
-impl<T> Named for ParameterPlugin<T> {
-    fn name() -> &'static str {
-        "parameter_plugin"
     }
 }
 

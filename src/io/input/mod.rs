@@ -21,14 +21,6 @@ struct InputFiles(Vec<File>);
 #[derive(AmbiguitySetLabel)]
 struct InputSystemsAmbiguitySet;
 
-struct InputMarker;
-
-impl Named for InputMarker {
-    fn name() -> &'static str {
-        "input"
-    }
-}
-
 #[derive(Clone, Default, Deserialize)]
 pub struct Parameters {
     pub paths: Vec<PathBuf>,
@@ -37,6 +29,7 @@ pub struct Parameters {
 #[derive(Default, Deref, DerefMut)]
 struct SpawnedEntities(Vec<Entity>);
 
+#[derive(Named)]
 pub struct DatasetInputPlugin<T> {
     _marker: PhantomData<T>,
 }
@@ -86,12 +79,6 @@ impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetIn
                 .before(close_file_system)
                 .in_ambiguity_set(InputSystemsAmbiguitySet),
         );
-    }
-}
-
-impl<T> Named for DatasetInputPlugin<T> {
-    fn name() -> &'static str {
-        "initial_conditions"
     }
 }
 

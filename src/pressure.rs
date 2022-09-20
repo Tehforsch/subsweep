@@ -7,12 +7,7 @@ use mpi::traits::Equivalence;
 
 use crate::named::Named;
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default)]
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
+#[name = "pressure"]
 #[repr(C)]
 pub struct Pressure(pub crate::units::Pressure);
-
-impl Named for Pressure {
-    fn name() -> &'static str {
-        "pressure"
-    }
-}

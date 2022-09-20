@@ -7,12 +7,7 @@ use mpi::traits::Equivalence;
 
 use crate::named::Named;
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From)]
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[repr(C)]
+#[name = "mass"]
 pub struct Mass(pub crate::units::Mass);
-
-impl Named for Mass {
-    fn name() -> &'static str {
-        "mass"
-    }
-}

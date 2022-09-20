@@ -239,12 +239,9 @@ mod tests {
     #[test]
     #[should_panic]
     fn add_plugin_twice() {
+        #[derive(Named)]
+        #[name = "my_plugin"]
         struct MyPlugin;
-        impl Named for MyPlugin {
-            fn name() -> &'static str {
-                "my_plugin"
-            }
-        }
         impl TenetPlugin for MyPlugin {}
         let mut sim = Simulation::new();
         sim.add_plugin(MyPlugin);

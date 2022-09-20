@@ -30,13 +30,8 @@ pub struct LocalParticle;
 #[derive(Equivalence, Deref, DerefMut)]
 pub struct Timestep(crate::units::Time);
 
+#[derive(Named)]
 pub struct PhysicsPlugin;
-
-impl Named for PhysicsPlugin {
-    fn name() -> &'static str {
-        "physics_plugin"
-    }
-}
 
 // Cannot wait for stageless
 #[derive(StageLabel)]
