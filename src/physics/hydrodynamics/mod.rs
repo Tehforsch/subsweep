@@ -8,8 +8,11 @@ use crate::density;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass;
 use crate::mass::Mass;
+use crate::named::Named;
 use crate::position::Position;
 use crate::pressure;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 use crate::units::Density;
 use crate::units::Length;
 use crate::units::Pressure;
@@ -25,9 +28,15 @@ pub enum HydrodynamicsStages {
 
 const CUTOFF_LENGTH: Length = Length::astronomical_units(0.1);
 
-impl Plugin for HydrodynamicsPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system_to_stage(
+impl Named for HydrodynamicsPlugin {
+    fn name() -> &'static str {
+        "hydrodynamics"
+    }
+}
+
+impl TenetPlugin for HydrodynamicsPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.add_system_to_stage(
             HydrodynamicsStages::Hydrodynamics,
             compute_pressure_and_density_system,
         )

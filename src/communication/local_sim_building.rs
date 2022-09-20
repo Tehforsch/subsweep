@@ -4,8 +4,8 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::thread;
 
-use bevy::prelude::App;
-use bevy::prelude::Plugin;
+use bevy::prelude::Deref;
+use bevy::prelude::DerefMut;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
@@ -21,43 +21,45 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
-fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut App)>(
-    build_app: F,
+fn create_and_build_sim<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
+    build_sim: F,
     receivers: Receivers,
     senders: Senders,
     num_threads: usize,
     rank: Rank,
-) -> App {
-    let mut app = App::new();
-    app.add_plugin(BaseCommunicationPlugin::new(num_threads, rank));
-    app.insert_non_send_resource(receivers);
-    app.insert_non_send_resource(senders);
-    build_app(&mut app);
-    app
+) -> Simulation {
+    let mut sim = Simulation::new();
+    sim.add_plugin(BaseCommunicationPlugin::new(num_threads, rank));
+    sim.insert_non_send_resource(receivers);
+    sim.insert_non_send_resource(senders);
+    build_sim(&mut sim);
+    sim
 }
 
-pub fn build_local_communication_app<F: 'static + Sync + Copy + Send + Fn(&mut App)>(
-    build_app: F,
+pub fn build_local_communication_sim<F: 'static + Sync + Copy + Send + Fn(&mut Simulation)>(
+    build_sim: F,
     num_threads: usize,
 ) {
-    build_local_communication_app_with_custom_logic(
-        build_app,
-        |mut app: App| app.run(),
+    build_local_communication_sim_with_custom_logic(
+        build_sim,
+        |mut sim: Simulation| sim.run(),
         num_threads,
     );
 }
 
-pub fn build_local_communication_app_with_custom_logic<
-    F: 'static + Sync + Copy + Send + Fn(&mut App),
-    G: 'static + Sync + Copy + Send + Fn(App),
+pub fn build_local_communication_sim_with_custom_logic<
+    F: 'static + Sync + Copy + Send + Fn(&mut Simulation),
+    G: 'static + Sync + Copy + Send + Fn(Simulation),
 >(
-    build_app: F,
+    build_sim: F,
     custom_logic: G,
     num_threads: usize,
 ) {
-    let mut app = create_and_build_app(
-        build_app,
+    let mut sim = create_and_build_sim(
+        build_sim,
         Receivers(HashMap::new()),
         Senders(HashMap::new()),
         num_threads,
@@ -66,31 +68,27 @@ pub fn build_local_communication_app_with_custom_logic<
     let mut handles = vec![];
     for rank in 1..num_threads {
         let receivers = Receivers({
-            let all = &mut app
-                .world
-                .get_non_send_resource_mut::<Receivers>()
-                .unwrap()
-                .0;
+            let all = &mut sim.unwrap_non_send_resource_mut::<Receivers>();
             let to_move = all
                 .drain_filter(|comm, _| comm.owner == rank as Rank)
                 .collect();
             to_move
         });
         let senders = Senders({
-            let all = &mut app.world.get_non_send_resource_mut::<Senders>().unwrap().0;
+            let all = &mut sim.unwrap_non_send_resource_mut::<Senders>();
             let to_move = all
                 .drain_filter(|comm, _| comm.owner == rank as Rank)
                 .collect();
             to_move
         });
         let handle = thread::spawn(move || {
-            let app =
-                create_and_build_app(build_app, receivers, senders, num_threads, rank as Rank);
-            custom_logic(app);
+            let sim =
+                create_and_build_sim(build_sim, receivers, senders, num_threads, rank as Rank);
+            custom_logic(sim);
         });
         handles.push(handle);
     }
-    custom_logic(app);
+    custom_logic(sim);
     for handle in handles {
         handle.join().unwrap();
     }
@@ -103,30 +101,26 @@ pub(super) struct Comm {
     tag: Tag,
 }
 
+#[derive(Deref, DerefMut)]
 pub(super) struct Receivers(HashMap<Comm, Receiver<Payload>>);
 
+#[derive(Deref, DerefMut)]
 struct Senders(HashMap<Comm, Sender<Payload>>);
 
-impl<T> Plugin for CommunicationPlugin<T>
+impl<T> TenetPlugin for CommunicationPlugin<T>
 where
     T: Equivalence + Sync + Send + 'static,
     <T as Equivalence>::Out: MatchesRaw,
 {
-    fn build(&self, app: &mut App) {
-        let tag = get_next_tag(app);
-        let rank = app.world.get_resource::<WorldRank>().unwrap().0;
-        let world_size = app.world.get_resource::<WorldSize>().unwrap().0;
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let tag = get_next_tag(sim);
+        let rank = **sim.unwrap_resource::<WorldRank>();
+        let world_size = **sim.unwrap_resource::<WorldSize>();
         if rank == 0 {
             let (senders, receivers) = get_senders_and_receivers(world_size, tag);
-            app.world
-                .get_non_send_resource_mut::<Senders>()
-                .unwrap()
-                .0
+            sim.unwrap_non_send_resource_mut::<Senders>()
                 .extend(senders.into_iter());
-            app.world
-                .get_non_send_resource_mut::<Receivers>()
-                .unwrap()
-                .0
+            sim.unwrap_non_send_resource_mut::<Receivers>()
                 .extend(receivers.into_iter());
         }
         let mut commun = LocalCommunicator::<T>::new(
@@ -136,11 +130,15 @@ where
             world_size,
             rank,
         );
-        let mut senders = app.world.get_non_send_resource_mut::<Senders>().unwrap();
-        add_senders_to_communicator(&mut commun, &mut senders.0);
-        let mut receivers = app.world.get_non_send_resource_mut::<Receivers>().unwrap();
-        add_receivers_to_communicator(&mut commun, &mut receivers.0);
-        add_communicator(self.type_, app, commun);
+        let mut senders = sim.unwrap_non_send_resource_mut::<Senders>();
+        add_senders_to_communicator(&mut commun, &mut senders);
+        let mut receivers = sim.unwrap_non_send_resource_mut::<Receivers>();
+        add_receivers_to_communicator(&mut commun, &mut receivers);
+        add_communicator(self.type_, sim, commun);
+    }
+
+    fn allow_adding_twice(&self) -> bool {
+        true
     }
 }
 

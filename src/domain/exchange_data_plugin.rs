@@ -9,7 +9,6 @@ use bevy::prelude::DerefMut;
 use bevy::prelude::Entity;
 use bevy::prelude::NonSendMut;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
-use bevy::prelude::Plugin;
 use bevy::prelude::Query;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
@@ -27,7 +26,8 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::physics::LocalParticle;
-use crate::plugin_utils::run_once;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 #[derive(Default)]
 struct ExchangePluginExists;
@@ -77,40 +77,48 @@ impl<T> Named for ExchangeDataPlugin<T> {
     }
 }
 
-impl<T: Sync + Send + 'static + Component + Clone + Equivalence> Plugin for ExchangeDataPlugin<T>
+impl<T: Sync + Send + 'static + Component + Clone + Equivalence> TenetPlugin
+    for ExchangeDataPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,
 {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        let rank = **app.world.get_resource::<WorldRank>().unwrap();
-        let size = **app.world.get_resource::<WorldSize>().unwrap();
-        run_once::<Self>(app, |app| {
-            app.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
-                .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
-                .insert_resource(ExchangeOrder::default())
-                .add_plugin(CommunicationPlugin::<NumEntities>::new(
-                    CommunicationType::Exchange,
-                ))
-                .add_system_to_stage(
-                    DomainDecompositionStages::Exchange,
-                    send_num_outgoing_entities_system,
-                )
-                .add_system_to_stage(
-                    DomainDecompositionStages::Exchange,
-                    despawn_outgoing_entities_system,
-                )
-                .add_system_to_stage(
-                    DomainDecompositionStages::Exchange,
-                    reset_outgoing_entities_system
-                        .after(send_num_outgoing_entities_system)
-                        .after(despawn_outgoing_entities_system),
-                )
-                .add_system_to_stage(
-                    DomainDecompositionStages::Exchange,
-                    spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
-                );
-        });
-        let labels = app.world.get_resource_mut::<ExchangeOrder>();
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
+    fn build_once_everywhere(&self, sim: &mut Simulation) {
+        let rank = **sim.unwrap_resource::<WorldRank>();
+        let size = **sim.unwrap_resource::<WorldSize>();
+        sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
+            .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
+            .insert_resource(ExchangeOrder::default())
+            .add_plugin(CommunicationPlugin::<NumEntities>::new(
+                CommunicationType::Exchange,
+            ))
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                send_num_outgoing_entities_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                despawn_outgoing_entities_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                reset_outgoing_entities_system
+                    .after(send_num_outgoing_entities_system)
+                    .after(despawn_outgoing_entities_system),
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
+            );
+    }
+
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let rank = **sim.unwrap_resource::<WorldRank>();
+        let size = **sim.unwrap_resource::<WorldSize>();
+        let labels = sim.get_resource_mut::<ExchangeOrder>();
         let mut exchange_buffers_system = Self::exchange_buffers_system
             .after(Self::fill_buffers_system)
             .after(spawn_incoming_entities_system)
@@ -120,7 +128,7 @@ where
         }
         let label = Self::exchange_buffers_system.as_system_label();
         labels.unwrap().0.push(label);
-        app.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
+        sim.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
             size, rank,
         )))
         .add_system_to_stage(DomainDecompositionStages::Exchange, exchange_buffers_system)
@@ -229,14 +237,14 @@ fn despawn_outgoing_entities_system(
 #[cfg(test)]
 #[cfg(not(feature = "mpi"))]
 mod tests {
-    use bevy::prelude::App;
     use bevy::prelude::Component;
     use mpi::traits::Equivalence;
 
-    use crate::communication::build_local_communication_app_with_custom_logic;
+    use crate::communication::build_local_communication_sim_with_custom_logic;
     use crate::communication::WorldRank;
     use crate::domain::exchange_data_plugin::ExchangeDataPlugin;
     use crate::domain::exchange_data_plugin::OutgoingEntities;
+    use crate::simulation::Simulation;
     use crate::stages::SimulationStagesPlugin;
 
     #[derive(Clone, Equivalence, Component)]
@@ -250,66 +258,67 @@ mod tests {
         y: bool,
     }
 
-    fn check_received(mut app: App) {
-        let is_main = app.world.get_resource::<WorldRank>().unwrap().is_main();
+    fn check_received(mut sim: Simulation) {
+        let is_main = sim.unwrap_resource::<WorldRank>().is_main();
         let mut entities = vec![];
         if is_main {
             entities.push(
-                app.world
+                sim.world()
                     .spawn()
                     .insert(A { x: 0, y: 5.0 })
                     .insert(B { x: 0, y: false })
                     .id(),
             );
             entities.push(
-                app.world
+                sim.world()
                     .spawn()
                     .insert(A { x: 1, y: 10.0 })
                     .insert(B { x: 1, y: true })
                     .id(),
             );
             entities.push(
-                app.world
+                sim.world()
                     .spawn()
                     .insert(A { x: 2, y: 20.0 })
                     .insert(B { x: 2, y: false })
                     .id(),
             );
         }
-        let check_num_entities = |app: &mut App, rank_0_count: usize, rank_1_count: usize| {
-            let mut query = app.world.query::<&mut A>();
-            let count = query.iter(&app.world).count();
+        let check_num_entities =
+            |sim: &mut Simulation, rank_0_count: usize, rank_1_count: usize| {
+                let mut query = sim.world().query::<&mut A>();
+                let count = query.iter(&sim.world()).count();
+                if is_main {
+                    assert_eq!(count, rank_0_count);
+                } else {
+                    assert_eq!(count, rank_1_count);
+                }
+            };
+        let mut exchange_first_entity = |sim: &mut Simulation| {
             if is_main {
-                assert_eq!(count, rank_0_count);
-            } else {
-                assert_eq!(count, rank_1_count);
-            }
-        };
-        let mut exchange_first_entity = |app: &mut App| {
-            if is_main {
-                let mut outgoing = app.world.get_resource_mut::<OutgoingEntities>().unwrap();
+                let mut outgoing = sim.unwrap_resource_mut::<OutgoingEntities>();
                 outgoing.add(1, entities.remove(0));
             }
         };
-        check_num_entities(&mut app, 3, 0);
-        exchange_first_entity(&mut app);
-        app.update();
-        check_num_entities(&mut app, 2, 1);
-        app.update();
-        check_num_entities(&mut app, 2, 1);
-        exchange_first_entity(&mut app);
-        exchange_first_entity(&mut app);
-        app.update();
-        check_num_entities(&mut app, 0, 3);
+        check_num_entities(&mut sim, 3, 0);
+        exchange_first_entity(&mut sim);
+        sim.update();
+        check_num_entities(&mut sim, 2, 1);
+        sim.update();
+        check_num_entities(&mut sim, 2, 1);
+        exchange_first_entity(&mut sim);
+        exchange_first_entity(&mut sim);
+        sim.update();
+        check_num_entities(&mut sim, 0, 3);
     }
 
     #[test]
     fn exchange_data_plugin() {
-        build_local_communication_app_with_custom_logic(build_app, check_received, 2);
+        build_local_communication_sim_with_custom_logic(build_sim, check_received, 2);
     }
 
-    fn build_app(app: &mut App) {
-        app.add_plugin(SimulationStagesPlugin)
+    fn build_sim(sim: &mut Simulation) {
+        sim.add_plugin(SimulationStagesPlugin)
             .add_plugin(ExchangeDataPlugin::<A>::default())
             .add_plugin(ExchangeDataPlugin::<B>::default());
     }

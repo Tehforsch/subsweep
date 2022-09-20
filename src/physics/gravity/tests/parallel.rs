@@ -1,5 +1,4 @@
 use bevy::ecs::schedule::IntoSystemDescriptor;
-use bevy::prelude::App;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Query;
@@ -11,7 +10,7 @@ use mpi::traits::Equivalence;
 
 use super::compare_accelerations;
 use super::direct_sum;
-use crate::communication::build_local_communication_app_with_custom_logic;
+use crate::communication::build_local_communication_sim_with_custom_logic;
 use crate::communication::WorldRank;
 use crate::domain::DomainDecompositionPlugin;
 use crate::io::output;
@@ -23,6 +22,7 @@ use crate::physics::PhysicsPlugin;
 use crate::physics::Timestep;
 use crate::physics::{self};
 use crate::position::Position;
+use crate::simulation::Simulation;
 use crate::units::Mass;
 use crate::units::VecLength;
 use crate::units::VecVelocity;
@@ -42,9 +42,9 @@ fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
         .collect()
 }
 
-fn run_system_on_app<P>(app: &mut App, system: impl IntoSystemDescriptor<P>) {
+fn run_system_on_sim<P>(sim: &mut Simulation, system: impl IntoSystemDescriptor<P>) {
     let mut stage = SystemStage::parallel().with_system(system);
-    stage.run(&mut app.world);
+    stage.run(&mut sim.world());
 }
 
 fn check_system(
@@ -87,7 +87,7 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 }
 
 #[cfg(not(feature = "mpi"))]
-fn build_parallel_gravity_app(app: &mut App) {
+fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
     use crate::quadtree::QuadTreeConfig;
     use crate::stages::SimulationStagesPlugin;
@@ -95,7 +95,7 @@ fn build_parallel_gravity_app(app: &mut App) {
     use crate::units::Length;
     use crate::units::Time;
 
-    app.insert_resource(physics::Parameters {
+    sim.insert_resource(physics::Parameters {
         timestep: Time::seconds(1.0),
         opening_angle: Dimensionless::dimensionless(0.0),
         softening_length: Length::meters(1e-30),
@@ -108,7 +108,7 @@ fn build_parallel_gravity_app(app: &mut App) {
         ..Default::default()
     })
     .add_startup_system(spawn_particles_system)
-    .add_plugins(MinimalPlugins)
+    .add_bevy_plugins(MinimalPlugins)
     .add_plugin(SimulationStagesPlugin)
     .add_plugin(DomainDecompositionPlugin)
     .add_plugin(PhysicsPlugin)
@@ -119,9 +119,9 @@ fn build_parallel_gravity_app(app: &mut App) {
 #[test]
 #[cfg(not(feature = "mpi"))]
 fn compare_parallel_quadtree_gravity_to_direct_sum() {
-    let check = |mut app: App| {
-        app.update();
-        run_system_on_app(&mut app, check_system);
+    let check = |mut sim: Simulation| {
+        sim.update();
+        run_system_on_sim(&mut sim, check_system);
     };
-    build_local_communication_app_with_custom_logic(build_parallel_gravity_app, check, 2);
+    build_local_communication_sim_with_custom_logic(build_parallel_gravity_sim, check, 2);
 }

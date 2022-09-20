@@ -3,8 +3,10 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
-use bevy::prelude::App;
-use bevy::prelude::Plugin;
+
+use crate::named::Named;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 pub struct ReadParametersError(String);
 
@@ -26,14 +28,17 @@ where
 
 struct ParameterFileContents(String);
 
-pub fn add_parameter_file_contents(app: &mut App, parameter_file_name: &Path) {
-    let contents = fs::read_to_string(parameter_file_name).unwrap_or_else(|_| {
-        panic!(
-            "Failed to read parameter file at {:?}",
-            &parameter_file_name
-        )
-    });
-    app.world.insert_resource(ParameterFileContents(contents));
+impl Simulation {
+    pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {
+        let contents = fs::read_to_string(parameter_file_name).unwrap_or_else(|_| {
+            panic!(
+                "Failed to read parameter file at {:?}",
+                &parameter_file_name
+            )
+        });
+        self.insert_resource(ParameterFileContents(contents));
+        self
+    }
 }
 
 pub struct ParameterPlugin<T> {
@@ -50,22 +55,38 @@ impl<T> ParameterPlugin<T> {
     }
 }
 
-impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Plugin
+impl<T> Named for ParameterPlugin<T> {
+    fn name() -> &'static str {
+        "parameter_plugin"
+    }
+}
+
+impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> TenetPlugin
     for ParameterPlugin<T>
 {
-    fn build(&self, app: &mut App) {
-        let name = self.name.clone();
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
+    fn should_build(&self, sim: &Simulation) -> bool {
         // In tests, we want to be able to insert the parameters
-        // directly into the app, without having to read a parameter file
-        // which is why we check here whether the parameter struct is already present
-        if app.world.get_resource::<T>().is_some() {
-            debug!("Parameters for {} already present", &name);
-            return;
+        // directly into the sim, without having to read a parameter
+        // file which is why we only add the plugin if the parameter
+        // struct isn't already present
+        if sim.contains_resource::<T>() {
+            debug!("Parameters for {} already present", &self.name);
+            false
+        } else {
+            true
         }
-        let parameter_file_contents = &app.world.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameter_file_contents?", &name)).0;
+    }
+
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let name = self.name.clone();
+        let parameter_file_contents = &sim.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameter_file_contents?", &name)).0;
         let parameters =
             Self::get_parameter_struct_from_parameter_file_contents(&name, parameter_file_contents);
-        app.world.insert_resource(parameters);
+        sim.insert_resource(parameters);
     }
 }
 
@@ -99,13 +120,13 @@ impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> P
 
 #[cfg(test)]
 mod tests {
-    use bevy::prelude::*;
     use serde::Deserialize;
 
     use crate::parameters::ParameterFileContents;
     use crate::parameters::ParameterPlugin;
     use crate::parameters::Parameters;
     use crate::parameters::ReadParametersError;
+    use crate::simulation::Simulation;
 
     #[test]
     fn parameter_plugin() {
@@ -121,8 +142,8 @@ mod tests {
             d: String,
         }
 
-        let mut app = App::new();
-        app.insert_resource(ParameterFileContents(
+        let mut sim = Simulation::new();
+        sim.insert_resource(ParameterFileContents(
             "
 parameters1:
   i:
@@ -132,10 +153,10 @@ parameters2:
    'hi'"
                 .into(),
         ));
-        app.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"))
+        sim.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"))
             .add_plugin(ParameterPlugin::<Parameters2>::new("parameters2"));
-        let params1 = app.world.get_resource::<Parameters1>().unwrap();
-        let params2 = app.world.get_resource::<Parameters2>().unwrap();
+        let params1 = sim.unwrap_resource::<Parameters1>();
+        let params2 = sim.unwrap_resource::<Parameters2>();
         assert_eq!(params1.i, 1);
         assert_eq!(params2.s, "hi");
         assert_eq!(params2.d, "");
@@ -154,8 +175,8 @@ parameters2:
                 Err(ReadParametersError("Missing required param 'i'".into()))
             }
         }
-        let mut app = App::new();
-        app.insert_resource(ParameterFileContents("".into()));
-        app.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"));
+        let mut sim = Simulation::new();
+        sim.insert_resource(ParameterFileContents("".into()));
+        sim.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"));
     }
 }

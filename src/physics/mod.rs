@@ -9,6 +9,7 @@ use mpi::traits::Equivalence;
 use self::gravity::gravity_system;
 pub use self::gravity::mass_moments::MassMoments;
 pub use self::gravity::plugin::GravityPlugin;
+pub use self::hydrodynamics::HydrodynamicsPlugin;
 use self::parameters::Parameters;
 pub use self::time::Time;
 use crate::domain::ExchangeDataPlugin;
@@ -17,10 +18,9 @@ use crate::io::output::AttributeOutputPlugin;
 use crate::io::output::DatasetOutputPlugin;
 use crate::mass::Mass;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
-use crate::plugin_utils::get_parameters;
-use crate::plugin_utils::panic_if_already_added;
 use crate::position::Position;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 use crate::units;
 use crate::velocity::Velocity;
 
@@ -44,12 +44,10 @@ pub enum PhysicsStages {
     Physics,
 }
 
-impl Plugin for PhysicsPlugin {
-    fn build(&self, app: &mut App) {
-        panic_if_already_added::<Self>(app);
-        app.add_plugin(ParameterPlugin::<Parameters>::new("physics"));
-        let parameters = get_parameters::<Parameters>(app);
-        app.add_plugin(ExchangeDataPlugin::<Position>::default())
+impl TenetPlugin for PhysicsPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let parameters = sim.add_parameters::<Parameters>("physics");
+        sim.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())
             .add_plugin(DatasetOutputPlugin::<Position>::default())

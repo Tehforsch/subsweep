@@ -1,15 +1,23 @@
 use std::marker::PhantomData;
 
-use bevy::prelude::Plugin;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 
 use super::add_output_system;
 use super::attribute::Attribute;
 use super::OutputFile;
+use crate::named::Named;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 pub struct AttributeOutputPlugin<T> {
     _marker: PhantomData<T>,
+}
+
+impl<T> Named for AttributeOutputPlugin<T> {
+    fn name() -> &'static str {
+        "attribute_output"
+    }
 }
 
 impl<T> Default for AttributeOutputPlugin<T> {
@@ -20,12 +28,12 @@ impl<T> Default for AttributeOutputPlugin<T> {
     }
 }
 
-impl<T> Plugin for AttributeOutputPlugin<T>
+impl<T> TenetPlugin for AttributeOutputPlugin<T>
 where
     T: Attribute + Sync + Send + 'static,
 {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        add_output_system::<T, _>(app, Self::write_attribute);
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        add_output_system::<T, _>(sim, Self::write_attribute);
     }
 }
 

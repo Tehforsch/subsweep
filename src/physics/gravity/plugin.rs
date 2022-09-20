@@ -1,5 +1,4 @@
 use bevy::prelude::ParallelSystemDescriptorCoercion;
-use bevy::prelude::Plugin;
 
 use super::gravity_system;
 use super::GravityCalculationReply;
@@ -11,7 +10,8 @@ use crate::domain::communicate_mass_moments_system;
 use crate::domain::construct_quad_tree_system;
 use crate::named::Named;
 use crate::physics::PhysicsStages;
-use crate::plugin_utils::panic_if_already_added;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 pub struct GravityPlugin;
 
@@ -21,10 +21,9 @@ impl Named for GravityPlugin {
     }
 }
 
-impl Plugin for GravityPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        panic_if_already_added::<Self>(app);
-        app.add_system_to_stage(PhysicsStages::Physics, construct_quad_tree_system)
+impl TenetPlugin for GravityPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.add_system_to_stage(PhysicsStages::Physics, construct_quad_tree_system)
             .add_system_to_stage(
                 PhysicsStages::Physics,
                 communicate_mass_moments_system.after(construct_quad_tree_system),

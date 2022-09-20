@@ -3,14 +3,23 @@ use bevy::prelude::*;
 
 use crate::domain::DomainDecompositionStages;
 use crate::io::output::OutputStages;
+use crate::named::Named;
 use crate::physics::hydrodynamics::HydrodynamicsStages;
 use crate::physics::PhysicsStages;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 use crate::visualization::VisualizationStage;
 
 pub struct SimulationStagesPlugin;
 
-impl Plugin for SimulationStagesPlugin {
-    fn build(&self, app: &mut App) {
+impl Named for SimulationStagesPlugin {
+    fn name() -> &'static str {
+        "simulation_stages"
+    }
+}
+
+impl TenetPlugin for SimulationStagesPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),
             DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
@@ -26,7 +35,7 @@ impl Plugin for SimulationStagesPlugin {
             OutputStages::Output.as_label(),
         ];
         for window in stages.windows(2) {
-            app.add_stage_after(
+            sim.add_stage_after(
                 window[0].as_label(),
                 window[1].as_label(),
                 SystemStage::parallel(),

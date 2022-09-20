@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use bevy::prelude::App;
 use serde::Deserialize;
 
 use crate::named::Named;
+use crate::simulation::Simulation;
 use crate::units::Time;
 
 #[derive(Deserialize)]
@@ -26,10 +26,8 @@ impl Default for Parameters {
 }
 
 impl Parameters {
-    pub fn is_desired_field<T: Named>(app: &App) -> bool {
-        app.world
-            .get_resource::<Self>()
-            .unwrap()
+    pub fn is_desired_field<T: Named>(sim: &Simulation) -> bool {
+        sim.unwrap_resource::<Self>()
             .fields
             .iter()
             .any(|field| field == T::name())
