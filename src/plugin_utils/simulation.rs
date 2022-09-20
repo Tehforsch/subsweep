@@ -87,7 +87,7 @@ impl Simulation {
         self
     }
 
-    pub fn add_plugins<T: PluginGroup>(&mut self, group: T) -> &mut Self {
+    pub fn add_bevy_plugins<T: PluginGroup>(&mut self, group: T) -> &mut Self {
         self.0.add_plugins(group);
         self
     }

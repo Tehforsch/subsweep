@@ -71,18 +71,19 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
     if is_main_rank(app) {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
-            app.add_plugins(MinimalPlugins).add_bevy_plugin(LogPlugin);
+            app.add_bevy_plugins(MinimalPlugins)
+                .add_bevy_plugin(LogPlugin);
         } else {
             let winit_opts = WinitSettings {
                 return_from_run: true,
                 ..Default::default()
             };
             app.insert_resource(winit_opts);
-            app.add_plugins(DefaultPlugins);
+            app.add_bevy_plugins(DefaultPlugins);
         }
         app.add_system_to_stage(CoreStage::Update, show_time_system);
     } else {
-        app.add_plugins(MinimalPlugins);
+        app.add_bevy_plugins(MinimalPlugins);
         #[cfg(feature = "mpi")]
         app.add_bevy_plugin(LogPlugin);
     }
@@ -147,10 +148,10 @@ impl TenetPlugin for SimulationPlugin {
             .add_plugin(PhysicsPlugin)
             .add_plugin(DomainDecompositionPlugin);
         if self.visualize {
-            sim.add_plugins(DefaultPlugins)
+            sim.add_bevy_plugins(DefaultPlugins)
                 .add_plugin(VisualizationPlugin);
         } else {
-            sim.add_plugins(MinimalPlugins);
+            sim.add_bevy_plugins(MinimalPlugins);
         }
     }
 }

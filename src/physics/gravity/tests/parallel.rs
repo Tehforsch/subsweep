@@ -108,7 +108,7 @@ fn build_parallel_gravity_app(app: &mut Simulation) {
         ..Default::default()
     })
     .add_startup_system(spawn_particles_system)
-    .add_plugins(MinimalPlugins)
+    .add_bevy_plugins(MinimalPlugins)
     .add_plugin(SimulationStagesPlugin)
     .add_plugin(DomainDecompositionPlugin)
     .add_plugin(PhysicsPlugin)
