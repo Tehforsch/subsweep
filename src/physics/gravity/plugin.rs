@@ -24,8 +24,8 @@ impl Named for GravityPlugin {
 
 impl TenetPlugin for GravityPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_parameters::<Parameters>("gravity");
-        sim.add_system_to_stage(PhysicsStages::Physics, construct_quad_tree_system)
+        sim.add_parameter_type::<Parameters>("gravity")
+            .add_system_to_stage(PhysicsStages::Physics, construct_quad_tree_system)
             .add_system_to_stage(
                 PhysicsStages::Physics,
                 communicate_mass_moments_system.after(construct_quad_tree_system),

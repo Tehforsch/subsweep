@@ -46,7 +46,7 @@ pub enum PhysicsStages {
 
 impl TenetPlugin for PhysicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let parameters = sim.add_parameters::<Parameters>("physics");
+        let parameters = sim.add_parameter_type_and_get_result::<Parameters>("physics");
         sim.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())

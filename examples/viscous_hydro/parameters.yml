@@ -15,3 +15,7 @@ output:
     - velocity
     - mass
     - time
+viscous_gravity:
+  num_particles: 1000
+  fake_gravity_factor: 3e-9 s^-2
+  fake_viscosity_timescale: 3e4 s

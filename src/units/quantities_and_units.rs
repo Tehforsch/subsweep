@@ -200,5 +200,8 @@ unit_functions!(
     },
     LENGTHMASS, LengthMass, mass: 1, length: 1,
     {
+    },
+    INVERSE_TIME_SQUARED, InverseTimeSquared, time: -2,
+    {
     }
     );

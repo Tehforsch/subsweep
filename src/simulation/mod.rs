@@ -213,7 +213,15 @@ impl Simulation {
         }
     }
 
-    pub fn add_parameters<T>(&mut self, name: &str) -> T
+    pub fn add_parameter_type<T>(&mut self, name: &str) -> &mut Self
+    where
+        T: Sync + Send + 'static + Clone + Parameters + for<'de> Deserialize<'de>,
+    {
+        self.add_plugin(ParameterPlugin::<T>::new(name));
+        self
+    }
+
+    pub fn add_parameter_type_and_get_result<T>(&mut self, name: &str) -> T
     where
         T: Sync + Send + 'static + Clone + Parameters + for<'de> Deserialize<'de>,
     {

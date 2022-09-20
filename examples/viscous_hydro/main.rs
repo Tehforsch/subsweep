@@ -5,9 +5,10 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use rand::Rng;
+use serde::Deserialize;
 use tenet::prelude::*;
 use tenet::units;
-use tenet::units::Acceleration;
+use tenet::units::InverseTimeSquared;
 use tenet::units::Length;
 use tenet::units::Mass;
 use tenet::units::VecLength;
@@ -19,12 +20,20 @@ struct GravityCenter(VecLength);
 #[derive(Deref, DerefMut, Component)]
 struct ParticleType(usize);
 
+#[derive(Default, Deserialize, Clone)]
+struct ViscousGravityParameters {
+    num_particles: usize,
+    fake_gravity_factor: InverseTimeSquared,
+    fake_viscosity_timescale: units::Time,
+}
+
 fn main() {
     let mut sim = SimulationBuilder::mpi();
     sim.parameter_file_path(Path::new("examples/viscous_hydro/parameters.yml"))
         .headless(false)
         .read_initial_conditions(false)
         .build()
+        .add_parameter_type::<ViscousGravityParameters>("viscous_gravity")
         .add_plugin(HydrodynamicsPlugin)
         .add_startup_system(spawn_particles_system)
         .add_system(set_gravity_center_system)
@@ -38,6 +47,7 @@ fn fake_gravity_system(
     mut particles: Query<(&Position, &mut Velocity, &ParticleType)>,
     timestep: Res<Timestep>,
     center: Res<GravityCenter>,
+    parameters: Res<ViscousGravityParameters>,
 ) {
     for (pos, mut vel, type_) in particles.iter_mut() {
         let center = match type_.0 {
@@ -45,17 +55,21 @@ fn fake_gravity_system(
             1 => VecLength::zero(),
             _ => unreachable!(),
         };
-        let fake_gravity_factor =
-            3e-9 * Acceleration::meters_per_second_squared(1.0) / Length::meters(1.0);
-        let acceleration = (center - **pos) * fake_gravity_factor;
+        let acceleration = (center - **pos) * parameters.fake_gravity_factor;
         **vel += acceleration * **timestep;
     }
 }
 
-fn fake_viscosity_system(mut particles: Query<&mut Velocity>, timestep: Res<Timestep>) {
+fn fake_viscosity_system(
+    mut particles: Query<&mut Velocity>,
+    timestep: Res<Timestep>,
+    parameters: Res<ViscousGravityParameters>,
+) {
     for mut vel in particles.iter_mut() {
-        let viscosity_scale = units::Time::seconds(3e4);
-        **vel = **vel * (-**timestep / viscosity_scale).value().exp();
+        **vel = **vel
+            * (-**timestep / parameters.fake_viscosity_timescale)
+                .value()
+                .exp();
     }
 }
 
@@ -78,11 +92,15 @@ fn set_gravity_center_system(
     }
 }
 
-fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
+fn spawn_particles_system(
+    mut commands: Commands,
+    rank: Res<WorldRank>,
+    parameters: Res<ViscousGravityParameters>,
+) {
     if !rank.is_main() {
         return;
     }
-    let num_particles_per_type = 500;
+    let num_particles_per_type = parameters.num_particles / 2;
     let mut rng = rand::thread_rng();
     for type_ in [0, 1] {
         for _ in 0..num_particles_per_type {
