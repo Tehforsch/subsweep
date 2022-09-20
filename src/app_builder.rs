@@ -90,7 +90,7 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
         // Only show execution order ambiguities when running without render plugins
         app.insert_resource(ReportExecutionOrderAmbiguities);
     } else {
-        app.add_plugin(VisualizationPlugin);
+        app.add_tenet_plugin(VisualizationPlugin);
     }
 }
 
@@ -148,7 +148,7 @@ impl TenetPlugin for SimulationPlugin {
             .add_plugin(DomainDecompositionPlugin);
         if self.visualize {
             sim.add_plugins(DefaultPlugins)
-                .add_plugin(VisualizationPlugin);
+                .add_tenet_plugin(VisualizationPlugin);
         } else {
             sim.add_plugins(MinimalPlugins);
         }

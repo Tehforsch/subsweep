@@ -2,6 +2,9 @@ use bevy::prelude::*;
 
 use super::QuadTree;
 use crate::domain::TopLevelIndices;
+use crate::named::Named;
+use crate::plugin_utils::Simulation;
+use crate::plugin_utils::TenetPlugin;
 use crate::visualization::get_color;
 use crate::visualization::parameters::Parameters;
 use crate::visualization::DrawRect;
@@ -12,16 +15,19 @@ struct Outline;
 
 pub struct QuadTreeVisualizationPlugin;
 
-impl Plugin for QuadTreeVisualizationPlugin {
-    fn build(&self, app: &mut App) {
-        if app
-            .world
-            .get_resource::<Parameters>()
-            .unwrap()
-            .show_quadtree
-        {
-            app.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
-        }
+impl Named for QuadTreeVisualizationPlugin {
+    fn name() -> &'static str {
+        "quadtree_visualization"
+    }
+}
+
+impl TenetPlugin for QuadTreeVisualizationPlugin {
+    fn build_on_main_rank(&self, sim: &mut Simulation) {
+        sim.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
+    }
+
+    fn should_build(&self, sim: &Simulation) -> bool {
+        sim.unwrap_resource::<Parameters>().show_quadtree
     }
 }
 
