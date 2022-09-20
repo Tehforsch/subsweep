@@ -9,6 +9,7 @@ use mpi::traits::Equivalence;
 use self::gravity::gravity_system;
 pub use self::gravity::mass_moments::MassMoments;
 pub use self::gravity::plugin::GravityPlugin;
+pub use self::hydrodynamics::HydrodynamicsPlugin;
 use self::parameters::Parameters;
 pub use self::time::Time;
 use crate::domain::ExchangeDataPlugin;

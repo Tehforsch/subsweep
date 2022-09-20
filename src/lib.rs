@@ -34,3 +34,4 @@ pub mod mpi_log;
 
 pub use physics::hydrodynamics::HydrodynamicsPlugin;
 pub use physics::GravityPlugin;
+pub use simulation_builder::SimulationBuilder;
