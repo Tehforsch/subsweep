@@ -31,14 +31,16 @@ impl Simulation {
         if !plugin.should_build(self) {
             return self;
         }
-        run_once::<T>(self, |sim| {
-            plugin.build_once_everywhere(sim);
-            if get_parameters::<WorldRank>(sim).is_main() {
-                plugin.build_once_on_main_rank(sim);
-            } else {
-                plugin.build_once_on_other_ranks(sim);
-            }
-        });
+        if !plugin.skip_running_once() {
+            run_once::<T>(self, |sim| {
+                plugin.build_once_everywhere(sim);
+                if get_parameters::<WorldRank>(sim).is_main() {
+                    plugin.build_once_on_main_rank(sim);
+                } else {
+                    plugin.build_once_on_other_ranks(sim);
+                }
+            });
+        }
         plugin.build_everywhere(self);
         if get_parameters::<WorldRank>(self).is_main() {
             plugin.build_on_main_rank(self);

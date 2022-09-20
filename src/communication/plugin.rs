@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use bevy::prelude::App;
-use bevy::prelude::Plugin;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
@@ -13,6 +12,9 @@ use super::Rank;
 use super::SyncCommunicator;
 use super::WorldRank;
 use super::WorldSize;
+use crate::named::Named;
+use crate::plugin_utils::Simulation;
+use crate::plugin_utils::TenetPlugin;
 
 pub(super) const INITIAL_TAG: Tag = 0;
 
@@ -39,10 +41,24 @@ impl BaseCommunicationPlugin {
         }
     }
 }
-impl Plugin for BaseCommunicationPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(self.world_rank)
+
+impl Named for BaseCommunicationPlugin {
+    fn name() -> &'static str {
+        "base_communication"
+    }
+}
+
+impl TenetPlugin for BaseCommunicationPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.insert_resource(self.world_rank)
             .insert_resource(self.num_ranks);
+    }
+
+    // We can't check the world rank for this plugin
+    // because it has not been initialized yet when
+    // run_once runs
+    fn skip_running_once(&self) -> bool {
+        true
     }
 }
 

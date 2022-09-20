@@ -30,12 +30,12 @@ fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     num_threads: usize,
     rank: Rank,
 ) -> Simulation {
-    let mut app = Simulation::new();
-    app.add_plugin(BaseCommunicationPlugin::new(num_threads, rank));
-    app.insert_non_send_resource(receivers);
-    app.insert_non_send_resource(senders);
-    build_app(&mut app);
-    app
+    let mut sim = Simulation::new();
+    sim.add_tenet_plugin(BaseCommunicationPlugin::new(num_threads, rank));
+    sim.insert_non_send_resource(receivers);
+    sim.insert_non_send_resource(senders);
+    build_app(&mut sim);
+    sim
 }
 
 pub fn build_local_communication_app<F: 'static + Sync + Copy + Send + Fn(&mut Simulation)>(

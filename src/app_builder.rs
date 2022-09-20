@@ -108,7 +108,7 @@ pub fn main() {
     let world: MpiWorld<usize> = MpiWorld::new(0);
     mpi_log::initialize(world.rank(), world.size());
     let mut app = Simulation::new();
-    app.add_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
+    app.add_tenet_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
     build_app(&mut app, &opts);
     app.run();
     MPI_UNIVERSE.drop();
