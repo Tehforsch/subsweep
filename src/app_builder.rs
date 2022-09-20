@@ -65,7 +65,7 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
         .add_tenet_plugin(SimulationStagesPlugin)
         .add_tenet_plugin(InputPlugin)
         .add_tenet_plugin(PhysicsPlugin)
-        .add_plugin(DomainDecompositionPlugin)
+        .add_tenet_plugin(DomainDecompositionPlugin)
         .add_tenet_plugin(GravityPlugin)
         .add_tenet_plugin(HydrodynamicsPlugin);
     if is_main_rank(app) {
@@ -145,7 +145,7 @@ impl TenetPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_tenet_plugin(SimulationStagesPlugin)
             .add_tenet_plugin(PhysicsPlugin)
-            .add_plugin(DomainDecompositionPlugin);
+            .add_tenet_plugin(DomainDecompositionPlugin);
         if self.visualize {
             sim.add_plugins(DefaultPlugins)
                 .add_tenet_plugin(VisualizationPlugin);

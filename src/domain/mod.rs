@@ -19,6 +19,8 @@ use crate::mass::Mass;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
 use crate::physics::MassMoments;
+use crate::plugin_utils::Simulation;
+use crate::plugin_utils::TenetPlugin;
 use crate::position::Position;
 use crate::quadtree::LeafData;
 use crate::quadtree::QuadTree;
@@ -41,39 +43,39 @@ impl Named for DomainDecompositionPlugin {
     }
 }
 
-impl Plugin for DomainDecompositionPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(GlobalExtent(Extent::default()))
+impl TenetPlugin for DomainDecompositionPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
             .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("domain_tree"))
-            .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()));
-        app.add_system_to_stage(
-            DomainDecompositionStages::TopLevelTreeConstruction,
-            determine_global_extent_system,
-        )
-        .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
-        .add_system_to_stage(
-            DomainDecompositionStages::TopLevelTreeConstruction,
-            construct_quad_tree_system.after(determine_global_extent_system),
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::TopLevelTreeConstruction,
-            communicate_mass_moments_system.after(construct_quad_tree_system),
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::Decomposition,
-            distribute_top_level_nodes_system,
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::Decomposition,
-            domain_decomposition_system.after(distribute_top_level_nodes_system),
-        )
-        .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
-            CommunicationType::AllGather,
-        ))
-        .add_plugin(CommunicationPlugin::<MassMoments>::new(
-            CommunicationType::AllGather,
-        ));
+            .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                determine_global_extent_system,
+            )
+            .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                construct_quad_tree_system.after(determine_global_extent_system),
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                communicate_mass_moments_system.after(construct_quad_tree_system),
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Decomposition,
+                distribute_top_level_nodes_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Decomposition,
+                domain_decomposition_system.after(distribute_top_level_nodes_system),
+            )
+            .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
+                CommunicationType::AllGather,
+            ))
+            .add_plugin(CommunicationPlugin::<MassMoments>::new(
+                CommunicationType::AllGather,
+            ));
     }
 }
 
