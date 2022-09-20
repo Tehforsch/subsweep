@@ -21,6 +21,7 @@ use super::visualization::VisualizationPlugin;
 use crate::io::input::InputPlugin;
 use crate::physics::hydrodynamics::HydrodynamicsPlugin;
 use crate::physics::GravityPlugin;
+use crate::plugin_utils::Simulation;
 use crate::stages::SimulationStagesPlugin;
 
 pub fn log_setup(verbosity: usize) -> LogSettings {
@@ -53,7 +54,7 @@ fn show_time_system(time: Res<super::physics::Time>) {
     debug!("Time: {:.3} s", time.to_value(super::units::Time::seconds));
 }
 
-fn build_app(app: &mut App, opts: &CommandLineOptions) {
+fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
     add_parameter_file_contents(app, &opts.parameter_file_path);
     let task_pool_opts = if let Some(num_worker_threads) = opts.num_worker_threads {
         DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
@@ -64,7 +65,7 @@ fn build_app(app: &mut App, opts: &CommandLineOptions) {
         .add_plugin(SimulationStagesPlugin)
         .add_plugin(PhysicsPlugin)
         .add_plugin(DomainDecompositionPlugin)
-        .add_plugin(InputPlugin)
+        .add_tenet_plugin(InputPlugin)
         .add_plugin(GravityPlugin)
         .add_plugin(HydrodynamicsPlugin);
     if is_main_rank(app) {
@@ -106,7 +107,7 @@ pub fn main() {
     let opts = CommandLineOptions::parse();
     let world: MpiWorld<usize> = MpiWorld::new(0);
     mpi_log::initialize(world.rank(), world.size());
-    let mut app = App::new();
+    let mut app = Simulation::new();
     app.add_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
     build_app(&mut app, &opts);
     app.run();

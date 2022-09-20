@@ -20,7 +20,7 @@ pub(crate) mod named;
 pub(crate) mod parameters;
 pub mod particle;
 pub(crate) mod physics;
-pub(crate) mod plugin_utils;
+pub mod plugin_utils;
 pub(crate) mod position;
 pub(crate) mod pressure;
 pub(crate) mod quadtree;

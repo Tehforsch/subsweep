@@ -21,15 +21,16 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
+use crate::plugin_utils::Simulation;
 
-fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut App)>(
+fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     build_app: F,
     receivers: Receivers,
     senders: Senders,
     num_threads: usize,
     rank: Rank,
-) -> App {
-    let mut app = App::new();
+) -> Simulation {
+    let mut app = Simulation::new();
     app.add_plugin(BaseCommunicationPlugin::new(num_threads, rank));
     app.insert_non_send_resource(receivers);
     app.insert_non_send_resource(senders);
@@ -37,20 +38,20 @@ fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut App)>(
     app
 }
 
-pub fn build_local_communication_app<F: 'static + Sync + Copy + Send + Fn(&mut App)>(
+pub fn build_local_communication_app<F: 'static + Sync + Copy + Send + Fn(&mut Simulation)>(
     build_app: F,
     num_threads: usize,
 ) {
     build_local_communication_app_with_custom_logic(
         build_app,
-        |mut app: App| app.run(),
+        |mut app: Simulation| app.run(),
         num_threads,
     );
 }
 
 pub fn build_local_communication_app_with_custom_logic<
-    F: 'static + Sync + Copy + Send + Fn(&mut App),
-    G: 'static + Sync + Copy + Send + Fn(App),
+    F: 'static + Sync + Copy + Send + Fn(&mut Simulation),
+    G: 'static + Sync + Copy + Send + Fn(Simulation),
 >(
     build_app: F,
     custom_logic: G,
@@ -66,18 +67,14 @@ pub fn build_local_communication_app_with_custom_logic<
     let mut handles = vec![];
     for rank in 1..num_threads {
         let receivers = Receivers({
-            let all = &mut app
-                .world
-                .get_non_send_resource_mut::<Receivers>()
-                .unwrap()
-                .0;
+            let all = &mut app.unwrap_non_send_resource_mut::<Receivers>().0;
             let to_move = all
                 .drain_filter(|comm, _| comm.owner == rank as Rank)
                 .collect();
             to_move
         });
         let senders = Senders({
-            let all = &mut app.world.get_non_send_resource_mut::<Senders>().unwrap().0;
+            let all = &mut app.unwrap_non_send_resource_mut::<Senders>().0;
             let to_move = all
                 .drain_filter(|comm, _| comm.owner == rank as Rank)
                 .collect();

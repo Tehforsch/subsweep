@@ -6,6 +6,8 @@ use bevy::prelude::debug;
 use bevy::prelude::App;
 use bevy::prelude::Plugin;
 
+use crate::plugin_utils::Simulation;
+
 pub struct ReadParametersError(String);
 
 pub trait Parameters
@@ -26,14 +28,14 @@ where
 
 struct ParameterFileContents(String);
 
-pub fn add_parameter_file_contents(app: &mut App, parameter_file_name: &Path) {
+pub fn add_parameter_file_contents(app: &mut Simulation, parameter_file_name: &Path) {
     let contents = fs::read_to_string(parameter_file_name).unwrap_or_else(|_| {
         panic!(
             "Failed to read parameter file at {:?}",
             &parameter_file_name
         )
     });
-    app.world.insert_resource(ParameterFileContents(contents));
+    app.insert_resource(ParameterFileContents(contents));
 }
 
 pub struct ParameterPlugin<T> {

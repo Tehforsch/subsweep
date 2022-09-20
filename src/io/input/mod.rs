@@ -13,6 +13,7 @@ use crate::named::Named;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::plugin_utils::run_once;
+use crate::plugin_utils::TenetPlugin;
 
 #[derive(Default, Deref, DerefMut)]
 struct InputFiles(Vec<File>);
@@ -186,8 +187,14 @@ struct ShouldReadInitialConditions;
 #[derive(Default)]
 pub struct InputPlugin;
 
-impl Plugin for InputPlugin {
-    fn build(&self, app: &mut App) {
+impl Named for InputPlugin {
+    fn name() -> &'static str {
+        "input"
+    }
+}
+
+impl TenetPlugin for InputPlugin {
+    fn build_everywhere(&self, app: &mut App) {
         app.insert_resource(ShouldReadInitialConditions);
     }
 }

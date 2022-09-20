@@ -14,7 +14,7 @@ pub trait TenetPlugin: Named {
     fn build_once_on_other_ranks(&self, _app: &mut App) {}
 }
 
-struct IntoPlugin<T>(T);
+pub(super) struct IntoPlugin<T>(T);
 
 impl<T> From<T> for IntoPlugin<T> {
     fn from(t: T) -> Self {

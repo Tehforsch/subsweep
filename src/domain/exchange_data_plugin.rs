@@ -229,7 +229,6 @@ fn despawn_outgoing_entities_system(
 #[cfg(test)]
 #[cfg(not(feature = "mpi"))]
 mod tests {
-    use bevy::prelude::App;
     use bevy::prelude::Component;
     use mpi::traits::Equivalence;
 
@@ -237,6 +236,7 @@ mod tests {
     use crate::communication::WorldRank;
     use crate::domain::exchange_data_plugin::ExchangeDataPlugin;
     use crate::domain::exchange_data_plugin::OutgoingEntities;
+    use crate::plugin_utils::Simulation;
     use crate::stages::SimulationStagesPlugin;
 
     #[derive(Clone, Equivalence, Component)]
@@ -250,44 +250,45 @@ mod tests {
         y: bool,
     }
 
-    fn check_received(mut app: App) {
-        let is_main = app.world.get_resource::<WorldRank>().unwrap().is_main();
+    fn check_received(mut app: Simulation) {
+        let is_main = app.unwrap_resource::<WorldRank>().is_main();
         let mut entities = vec![];
         if is_main {
             entities.push(
-                app.world
+                app.world()
                     .spawn()
                     .insert(A { x: 0, y: 5.0 })
                     .insert(B { x: 0, y: false })
                     .id(),
             );
             entities.push(
-                app.world
+                app.world()
                     .spawn()
                     .insert(A { x: 1, y: 10.0 })
                     .insert(B { x: 1, y: true })
                     .id(),
             );
             entities.push(
-                app.world
+                app.world()
                     .spawn()
                     .insert(A { x: 2, y: 20.0 })
                     .insert(B { x: 2, y: false })
                     .id(),
             );
         }
-        let check_num_entities = |app: &mut App, rank_0_count: usize, rank_1_count: usize| {
-            let mut query = app.world.query::<&mut A>();
-            let count = query.iter(&app.world).count();
+        let check_num_entities =
+            |app: &mut Simulation, rank_0_count: usize, rank_1_count: usize| {
+                let mut query = app.world().query::<&mut A>();
+                let count = query.iter(&app.world()).count();
+                if is_main {
+                    assert_eq!(count, rank_0_count);
+                } else {
+                    assert_eq!(count, rank_1_count);
+                }
+            };
+        let mut exchange_first_entity = |app: &mut Simulation| {
             if is_main {
-                assert_eq!(count, rank_0_count);
-            } else {
-                assert_eq!(count, rank_1_count);
-            }
-        };
-        let mut exchange_first_entity = |app: &mut App| {
-            if is_main {
-                let mut outgoing = app.world.get_resource_mut::<OutgoingEntities>().unwrap();
+                let mut outgoing = app.unwrap_resource_mut::<OutgoingEntities>();
                 outgoing.add(1, entities.remove(0));
             }
         };
@@ -308,7 +309,7 @@ mod tests {
         build_local_communication_app_with_custom_logic(build_app, check_received, 2);
     }
 
-    fn build_app(app: &mut App) {
+    fn build_app(app: &mut Simulation) {
         app.add_plugin(SimulationStagesPlugin)
             .add_plugin(ExchangeDataPlugin::<A>::default())
             .add_plugin(ExchangeDataPlugin::<B>::default());

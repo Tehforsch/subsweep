@@ -1,8 +1,11 @@
+mod simulation;
 mod tenet_plugin;
 
 use std::collections::HashSet;
 
 use bevy::prelude::App;
+pub use simulation::Simulation;
+pub use tenet_plugin::TenetPlugin;
 
 use crate::communication::WorldRank;
 use crate::named::Named;
@@ -32,8 +35,8 @@ pub fn panic_if_already_added<P: Named>(app: &mut App) {
     }
 }
 
-pub fn is_main_rank(app: &App) -> bool {
-    app.world.get_resource::<WorldRank>().unwrap().is_main()
+pub fn is_main_rank(app: &Simulation) -> bool {
+    app.get_resource::<WorldRank>().unwrap().is_main()
 }
 
 pub fn get_parameters<P: Clone + Sync + Send + 'static>(app: &App) -> P {
