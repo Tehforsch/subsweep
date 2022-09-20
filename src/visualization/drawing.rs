@@ -7,6 +7,9 @@ use bevy_prototype_lyon::prelude::*;
 
 use super::parameters::Parameters;
 use super::VisualizationStage;
+use crate::named::Named;
+use crate::plugin_utils::Simulation;
+use crate::plugin_utils::TenetPlugin;
 use crate::units::Length;
 use crate::units::VecLength;
 
@@ -93,9 +96,15 @@ impl<T> Default for DrawBundlePlugin<T> {
     }
 }
 
-impl<T: IntoBundle + Component + Sync + Send + 'static> Plugin for DrawBundlePlugin<T> {
-    fn build(&self, app: &mut App) {
-        app.add_system_to_stage(
+impl<T> Named for DrawBundlePlugin<T> {
+    fn name() -> &'static str {
+        "draw_bundle_plugin"
+    }
+}
+
+impl<T: IntoBundle + Component + Sync + Send + 'static> TenetPlugin for DrawBundlePlugin<T> {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.add_system_to_stage(
             VisualizationStage::AddDrawComponents,
             spawn_visualization_item_system::<T>,
         )
