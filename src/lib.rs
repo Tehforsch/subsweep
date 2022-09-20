@@ -43,4 +43,7 @@ pub mod prelude {
     pub use super::position::Position;
     pub use super::simulation_builder::SimulationBuilder;
     pub use super::velocity::Velocity;
+    pub use super::visualization::parameters::Parameters;
+    pub use super::visualization::DrawCircle;
+    pub use super::visualization::DrawRect;
 }
