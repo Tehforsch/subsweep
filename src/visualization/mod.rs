@@ -70,7 +70,7 @@ impl TenetPlugin for VisualizationPlugin {
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
-        sim.add_plugin(ParameterPlugin::<Parameters>::new("visualization"))
+        sim.add_tenet_plugin(ParameterPlugin::<Parameters>::new("visualization"))
             .add_plugin(ShapePlugin)
             .add_plugin(DrawBundlePlugin::<DrawRect>::default())
             .add_plugin(DrawBundlePlugin::<DrawCircle>::default())

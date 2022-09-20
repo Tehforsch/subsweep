@@ -39,7 +39,7 @@ struct OutputFile {
 }
 
 fn output_setup(sim: &mut Simulation) {
-    sim.add_plugin(ParameterPlugin::<Parameters>::new("output"))
+    sim.add_tenet_plugin(ParameterPlugin::<Parameters>::new("output"))
         .insert_resource(OutputFile::default())
         .add_startup_system(Timer::initialize_system)
         .add_startup_system(make_output_dir_system)

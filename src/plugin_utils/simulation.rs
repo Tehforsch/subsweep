@@ -1,6 +1,7 @@
 use bevy::ecs::event::Event;
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::ecs::system::Resource;
+use bevy::prelude::warn;
 use bevy::prelude::App;
 use bevy::prelude::Mut;
 use bevy::prelude::Plugin;
@@ -31,23 +32,32 @@ impl Simulation {
         if !plugin.should_build(self) {
             return self;
         }
-        if !plugin.skip_running_once() {
-            run_once::<T>(self, |sim| {
-                plugin.build_once_everywhere(sim);
-                if get_parameters::<WorldRank>(sim).is_main() {
-                    plugin.build_once_on_main_rank(sim);
-                } else {
-                    plugin.build_once_on_other_ranks(sim);
-                }
-            });
-        }
+        run_once::<T>(self, |sim| {
+            plugin.build_once_everywhere(sim);
+            if !sim.has_world_rank() {
+            } else if get_parameters::<WorldRank>(sim).is_main() {
+                plugin.build_once_on_main_rank(sim);
+            } else {
+                plugin.build_once_on_other_ranks(sim);
+            }
+        });
         plugin.build_everywhere(self);
-        if get_parameters::<WorldRank>(self).is_main() {
+        if !self.has_world_rank() {
+        } else if get_parameters::<WorldRank>(self).is_main() {
             plugin.build_on_main_rank(self);
         } else {
             plugin.build_on_other_ranks(self);
         }
         self
+    }
+
+    fn has_world_rank(&self) -> bool {
+        if !self.contains_resource::<WorldRank>() {
+            warn!("World rank not present during plugin initialization, this should only happen in tests");
+            false
+        } else {
+            true
+        }
     }
 
     pub fn add_stage_after<S: Stage>(

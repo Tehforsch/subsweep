@@ -49,16 +49,9 @@ impl Named for BaseCommunicationPlugin {
 }
 
 impl TenetPlugin for BaseCommunicationPlugin {
-    fn build_everywhere(&self, sim: &mut Simulation) {
+    fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(self.world_rank)
             .insert_resource(self.num_ranks);
-    }
-
-    // We can't check the world rank for this plugin
-    // because it has not been initialized yet when
-    // run_once runs
-    fn skip_running_once(&self) -> bool {
-        true
     }
 }
 
