@@ -39,6 +39,7 @@ pub mod prelude {
     pub use super::physics::hydrodynamics::HydrodynamicsPlugin;
     pub use super::physics::GravityPlugin;
     pub use super::physics::LocalParticle;
+    pub use super::physics::Timestep;
     pub use super::position::Position;
     pub use super::simulation_builder::SimulationBuilder;
     pub use super::velocity::Velocity;

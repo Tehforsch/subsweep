@@ -64,6 +64,7 @@ impl TenetPlugin for PhysicsPlugin {
                 PhysicsStages::Physics,
                 integrate_motion_system.after(gravity_system),
             )
+            .add_system_to_stage(PhysicsStages::Physics, show_time_system.before(time_system))
             .add_system_to_stage(
                 PhysicsStages::Physics,
                 time_system.after(integrate_motion_system),
@@ -97,4 +98,8 @@ fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timeste
 
 pub fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
     **time += **timestep;
+}
+
+pub fn show_time_system(time: Res<self::Time>) {
+    debug!("Time: {:?}", **time);
 }

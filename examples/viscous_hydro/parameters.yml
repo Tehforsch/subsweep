@@ -1,8 +1,12 @@
 physics:
-  timestep: 1e-2 s
+  timestep: 15e2 s
+domain_tree:
+  max_depth: 20
+  min_depth: 4
+  max_num_particles_per_leaf: 1
 visualization:
   show_quadtree: false
-  camera_zoom: 2e-3 m
+  camera_zoom: 8e7 m
 output:
   output_dir: "output"
   time_between_snapshots: 0.1 yr
