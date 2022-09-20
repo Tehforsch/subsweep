@@ -48,8 +48,8 @@ impl TenetPlugin for HydrodynamicsPlugin {
             StartupStage::PostStartup,
             insert_pressure_and_density_system,
         )
-        .add_tenet_plugin(ExchangeDataPlugin::<pressure::Pressure>::default())
-        .add_tenet_plugin(ExchangeDataPlugin::<density::Density>::default());
+        .add_plugin(ExchangeDataPlugin::<pressure::Pressure>::default())
+        .add_plugin(ExchangeDataPlugin::<density::Density>::default());
     }
 }
 

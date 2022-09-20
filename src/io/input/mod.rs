@@ -58,7 +58,7 @@ impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetIn
     }
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
-        sim.add_tenet_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"))
+        sim.add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"))
             .insert_resource(InputFiles::default())
             .insert_resource(SpawnedEntities::default())
             .add_startup_system(open_file_system)

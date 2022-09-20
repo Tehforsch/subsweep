@@ -33,12 +33,12 @@ impl TenetPlugin for GravityPlugin {
                 PhysicsStages::Physics,
                 gravity_system.after(communicate_mass_moments_system),
             )
-            .add_tenet_plugin(
+            .add_plugin(
                 CommunicationPlugin::<Identified<GravityCalculationRequest>>::new(
                     CommunicationType::Exchange,
                 ),
             )
-            .add_tenet_plugin(
+            .add_plugin(
                 CommunicationPlugin::<Identified<GravityCalculationReply>>::new(
                     CommunicationType::Exchange,
                 ),

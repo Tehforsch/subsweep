@@ -47,7 +47,7 @@ impl TenetPlugin for DomainDecompositionPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
-            .add_tenet_plugin(ParameterPlugin::<QuadTreeConfig>::new("domain_tree"))
+            .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("domain_tree"))
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
                 DomainDecompositionStages::TopLevelTreeConstruction,
@@ -70,10 +70,10 @@ impl TenetPlugin for DomainDecompositionPlugin {
                 DomainDecompositionStages::Decomposition,
                 domain_decomposition_system.after(distribute_top_level_nodes_system),
             )
-            .add_tenet_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
+            .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
                 CommunicationType::AllGather,
             ))
-            .add_tenet_plugin(CommunicationPlugin::<MassMoments>::new(
+            .add_plugin(CommunicationPlugin::<MassMoments>::new(
                 CommunicationType::AllGather,
             ));
     }

@@ -25,10 +25,7 @@ impl Simulation {
         Self(App::new())
     }
 
-    pub fn add_tenet_plugin<T: Sync + Send + 'static + TenetPlugin>(
-        &mut self,
-        plugin: T,
-    ) -> &mut Self {
+    pub fn add_plugin<T: Sync + Send + 'static + TenetPlugin>(&mut self, plugin: T) -> &mut Self {
         if !plugin.should_build(self) {
             return self;
         }
@@ -85,7 +82,7 @@ impl Simulation {
         self
     }
 
-    pub fn add_plugin<T: Plugin>(&mut self, plugin: T) -> &mut Self {
+    pub fn add_bevy_plugin<T: Plugin>(&mut self, plugin: T) -> &mut Self {
         self.0.add_plugin(plugin);
         self
     }

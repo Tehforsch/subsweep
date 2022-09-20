@@ -48,18 +48,18 @@ pub enum PhysicsStages {
 impl TenetPlugin for PhysicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.panic_if_already_added::<Self>();
-        sim.add_tenet_plugin(ParameterPlugin::<Parameters>::new("physics"));
+        sim.add_plugin(ParameterPlugin::<Parameters>::new("physics"));
         let parameters = get_parameters::<Parameters>(sim);
-        sim.add_tenet_plugin(ExchangeDataPlugin::<Position>::default())
-            .add_tenet_plugin(ExchangeDataPlugin::<Velocity>::default())
-            .add_tenet_plugin(ExchangeDataPlugin::<Mass>::default())
-            .add_tenet_plugin(DatasetOutputPlugin::<Position>::default())
-            .add_tenet_plugin(DatasetOutputPlugin::<Velocity>::default())
-            .add_tenet_plugin(DatasetOutputPlugin::<Mass>::default())
-            .add_tenet_plugin(DatasetInputPlugin::<Position>::default())
-            .add_tenet_plugin(DatasetInputPlugin::<Velocity>::default())
-            .add_tenet_plugin(DatasetInputPlugin::<Mass>::default())
-            .add_tenet_plugin(AttributeOutputPlugin::<Time>::default())
+        sim.add_plugin(ExchangeDataPlugin::<Position>::default())
+            .add_plugin(ExchangeDataPlugin::<Velocity>::default())
+            .add_plugin(ExchangeDataPlugin::<Mass>::default())
+            .add_plugin(DatasetOutputPlugin::<Position>::default())
+            .add_plugin(DatasetOutputPlugin::<Velocity>::default())
+            .add_plugin(DatasetOutputPlugin::<Mass>::default())
+            .add_plugin(DatasetInputPlugin::<Position>::default())
+            .add_plugin(DatasetInputPlugin::<Velocity>::default())
+            .add_plugin(DatasetInputPlugin::<Mass>::default())
+            .add_plugin(AttributeOutputPlugin::<Time>::default())
             .add_event::<StopSimulationEvent>()
             .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::seconds(0.00)))

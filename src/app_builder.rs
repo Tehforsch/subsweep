@@ -62,16 +62,16 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
         DefaultTaskPoolOptions::default()
     };
     app.insert_resource(task_pool_opts)
-        .add_tenet_plugin(SimulationStagesPlugin)
-        .add_tenet_plugin(InputPlugin)
-        .add_tenet_plugin(PhysicsPlugin)
-        .add_tenet_plugin(DomainDecompositionPlugin)
-        .add_tenet_plugin(GravityPlugin)
-        .add_tenet_plugin(HydrodynamicsPlugin);
+        .add_plugin(SimulationStagesPlugin)
+        .add_plugin(InputPlugin)
+        .add_plugin(PhysicsPlugin)
+        .add_plugin(DomainDecompositionPlugin)
+        .add_plugin(GravityPlugin)
+        .add_plugin(HydrodynamicsPlugin);
     if is_main_rank(app) {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
-            app.add_plugins(MinimalPlugins).add_plugin(LogPlugin);
+            app.add_plugins(MinimalPlugins).add_bevy_plugin(LogPlugin);
         } else {
             let winit_opts = WinitSettings {
                 return_from_run: true,
@@ -84,13 +84,13 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
     } else {
         app.add_plugins(MinimalPlugins);
         #[cfg(feature = "mpi")]
-        app.add_plugin(LogPlugin);
+        app.add_bevy_plugin(LogPlugin);
     }
     if opts.headless {
         // Only show execution order ambiguities when running without render plugins
         app.insert_resource(ReportExecutionOrderAmbiguities);
     } else {
-        app.add_tenet_plugin(VisualizationPlugin);
+        app.add_plugin(VisualizationPlugin);
     }
 }
 
@@ -108,7 +108,7 @@ pub fn main() {
     let world: MpiWorld<usize> = MpiWorld::new(0);
     mpi_log::initialize(world.rank(), world.size());
     let mut app = Simulation::new();
-    app.add_tenet_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
+    app.add_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
     build_app(&mut app, &opts);
     app.run();
     MPI_UNIVERSE.drop();
@@ -143,12 +143,12 @@ impl Named for SimulationPlugin {
 
 impl TenetPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_tenet_plugin(SimulationStagesPlugin)
-            .add_tenet_plugin(PhysicsPlugin)
-            .add_tenet_plugin(DomainDecompositionPlugin);
+        sim.add_plugin(SimulationStagesPlugin)
+            .add_plugin(PhysicsPlugin)
+            .add_plugin(DomainDecompositionPlugin);
         if self.visualize {
             sim.add_plugins(DefaultPlugins)
-                .add_tenet_plugin(VisualizationPlugin);
+                .add_plugin(VisualizationPlugin);
         } else {
             sim.add_plugins(MinimalPlugins);
         }

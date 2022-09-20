@@ -61,20 +61,20 @@ impl Named for VisualizationPlugin {
 
 impl TenetPlugin for VisualizationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_tenet_plugin(
+        sim.add_plugin(
             CommunicationPlugin::<ParticleVisualizationExchangeData>::new(CommunicationType::Sync),
         )
-        .add_tenet_plugin(CommunicationPlugin::<ShouldExit>::new(
+        .add_plugin(CommunicationPlugin::<ShouldExit>::new(
             CommunicationType::AllGather,
         ));
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
-        sim.add_tenet_plugin(ParameterPlugin::<Parameters>::new("visualization"))
-            .add_plugin(ShapePlugin)
-            .add_tenet_plugin(DrawBundlePlugin::<DrawRect>::default())
-            .add_tenet_plugin(DrawBundlePlugin::<DrawCircle>::default())
-            .add_tenet_plugin(QuadTreeVisualizationPlugin)
+        sim.add_plugin(ParameterPlugin::<Parameters>::new("visualization"))
+            .add_bevy_plugin(ShapePlugin)
+            .add_plugin(DrawBundlePlugin::<DrawRect>::default())
+            .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
+            .add_plugin(QuadTreeVisualizationPlugin)
             .add_startup_system(setup_camera_system)
             .add_startup_system_to_stage(StartupStage::PostStartup, camera_translation_system)
             .add_system_to_stage(

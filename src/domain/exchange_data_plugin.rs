@@ -88,7 +88,7 @@ where
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(ExchangeOrder::default())
-            .add_tenet_plugin(CommunicationPlugin::<NumEntities>::new(
+            .add_plugin(CommunicationPlugin::<NumEntities>::new(
                 CommunicationType::Exchange,
             ))
             .add_system_to_stage(
@@ -128,7 +128,7 @@ where
             size, rank,
         )))
         .add_system_to_stage(DomainDecompositionStages::Exchange, exchange_buffers_system)
-        .add_tenet_plugin(CommunicationPlugin::<T>::new(CommunicationType::Exchange))
+        .add_plugin(CommunicationPlugin::<T>::new(CommunicationType::Exchange))
         .add_system_to_stage(
             DomainDecompositionStages::Exchange,
             Self::fill_buffers_system,
@@ -314,8 +314,8 @@ mod tests {
     }
 
     fn build_app(app: &mut Simulation) {
-        app.add_tenet_plugin(SimulationStagesPlugin)
-            .add_tenet_plugin(ExchangeDataPlugin::<A>::default())
-            .add_tenet_plugin(ExchangeDataPlugin::<B>::default());
+        app.add_plugin(SimulationStagesPlugin)
+            .add_plugin(ExchangeDataPlugin::<A>::default())
+            .add_plugin(ExchangeDataPlugin::<B>::default());
     }
 }

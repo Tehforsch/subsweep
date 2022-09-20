@@ -146,8 +146,8 @@ parameters2:
    'hi'"
                 .into(),
         ));
-        sim.add_tenet_plugin(ParameterPlugin::<Parameters1>::new("parameters1"))
-            .add_tenet_plugin(ParameterPlugin::<Parameters2>::new("parameters2"));
+        sim.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"))
+            .add_plugin(ParameterPlugin::<Parameters2>::new("parameters2"));
         let params1 = sim.unwrap_resource::<Parameters1>();
         let params2 = sim.unwrap_resource::<Parameters2>();
         assert_eq!(params1.i, 1);
@@ -170,6 +170,6 @@ parameters2:
         }
         let mut sim = Simulation::new();
         sim.insert_resource(ParameterFileContents("".into()));
-        sim.add_tenet_plugin(ParameterPlugin::<Parameters1>::new("parameters1"));
+        sim.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"));
     }
 }
