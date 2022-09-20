@@ -196,7 +196,7 @@ impl Named for InputPlugin {
 }
 
 impl TenetPlugin for InputPlugin {
-    fn build_everywhere(&self, app: &mut Simulation) {
-        app.insert_resource(ShouldReadInitialConditions);
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.insert_resource(ShouldReadInitialConditions);
     }
 }

@@ -97,9 +97,9 @@ pub mod tests {
 
     use crate::communication::from_communicator::FromCommunicator;
     use crate::communication::local::LocalCommunicator;
-    use crate::communication::local_app_building::add_receivers_to_communicator;
-    use crate::communication::local_app_building::add_senders_to_communicator;
-    use crate::communication::local_app_building::get_senders_and_receivers;
+    use crate::communication::local_sim_building::add_receivers_to_communicator;
+    use crate::communication::local_sim_building::add_senders_to_communicator;
+    use crate::communication::local_sim_building::get_senders_and_receivers;
     use crate::communication::DataByRank;
 
     pub fn get_communicators<T>(num_threads: usize, tag: Tag) -> DataByRank<LocalCommunicator<T>> {

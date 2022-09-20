@@ -52,13 +52,13 @@ fn show_time_system(time: Res<super::physics::Time>) {
     debug!("Time: {:.3} s", time.to_value(super::units::Time::seconds));
 }
 
-fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
+fn build_sim(sim: &mut Simulation, opts: &CommandLineOptions) {
     let task_pool_opts = if let Some(num_worker_threads) = opts.num_worker_threads {
         DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
     } else {
         DefaultTaskPoolOptions::default()
     };
-    app.add_parameters_from_file(&opts.parameter_file_path)
+    sim.add_parameters_from_file(&opts.parameter_file_path)
         .insert_resource(task_pool_opts)
         .add_plugin(SimulationStagesPlugin)
         .add_plugin(InputPlugin)
@@ -66,30 +66,30 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(GravityPlugin)
         .add_plugin(HydrodynamicsPlugin);
-    if app.on_main_rank() {
-        app.insert_resource(log_setup(opts.verbosity));
+    if sim.on_main_rank() {
+        sim.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
-            app.add_bevy_plugins(MinimalPlugins)
+            sim.add_bevy_plugins(MinimalPlugins)
                 .add_bevy_plugin(LogPlugin);
         } else {
             let winit_opts = WinitSettings {
                 return_from_run: true,
                 ..Default::default()
             };
-            app.insert_resource(winit_opts);
-            app.add_bevy_plugins(DefaultPlugins);
+            sim.insert_resource(winit_opts);
+            sim.add_bevy_plugins(DefaultPlugins);
         }
-        app.add_system_to_stage(CoreStage::Update, show_time_system);
+        sim.add_system_to_stage(CoreStage::Update, show_time_system);
     } else {
-        app.add_bevy_plugins(MinimalPlugins);
+        sim.add_bevy_plugins(MinimalPlugins);
         #[cfg(feature = "mpi")]
-        app.add_bevy_plugin(LogPlugin);
+        sim.add_bevy_plugin(LogPlugin);
     }
     if opts.headless {
         // Only show execution order ambiguities when running without render plugins
-        app.insert_resource(ReportExecutionOrderAmbiguities);
+        sim.insert_resource(ReportExecutionOrderAmbiguities);
     } else {
-        app.add_plugin(VisualizationPlugin);
+        sim.add_plugin(VisualizationPlugin);
     }
 }
 
@@ -106,10 +106,10 @@ pub fn main() {
     let opts = CommandLineOptions::parse();
     let world: MpiWorld<usize> = MpiWorld::new(0);
     mpi_log::initialize(world.rank(), world.size());
-    let mut app = Simulation::new();
-    app.add_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
-    build_app(&mut app, &opts);
-    app.run();
+    let mut sim = Simulation::new();
+    sim.add_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
+    build_sim(&mut sim, &opts);
+    sim.run();
     MPI_UNIVERSE.drop();
 }
 
@@ -117,13 +117,13 @@ pub fn main() {
 pub fn main() {
     use clap::Parser;
 
-    use crate::communication::build_local_communication_app;
+    use crate::communication::build_local_communication_sim;
 
     let opts = CommandLineOptions::parse();
-    build_local_communication_app(
-        |app| {
+    build_local_communication_sim(
+        |sim| {
             let opts = CommandLineOptions::parse();
-            build_app(app, &opts)
+            build_sim(sim, &opts)
         },
         opts.num_threads,
     );

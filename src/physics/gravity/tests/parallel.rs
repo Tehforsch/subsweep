@@ -10,7 +10,7 @@ use mpi::traits::Equivalence;
 
 use super::compare_accelerations;
 use super::direct_sum;
-use crate::communication::build_local_communication_app_with_custom_logic;
+use crate::communication::build_local_communication_sim_with_custom_logic;
 use crate::communication::WorldRank;
 use crate::domain::DomainDecompositionPlugin;
 use crate::io::output;
@@ -42,9 +42,9 @@ fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
         .collect()
 }
 
-fn run_system_on_app<P>(app: &mut Simulation, system: impl IntoSystemDescriptor<P>) {
+fn run_system_on_sim<P>(sim: &mut Simulation, system: impl IntoSystemDescriptor<P>) {
     let mut stage = SystemStage::parallel().with_system(system);
-    stage.run(&mut app.world());
+    stage.run(&mut sim.world());
 }
 
 fn check_system(
@@ -87,7 +87,7 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 }
 
 #[cfg(not(feature = "mpi"))]
-fn build_parallel_gravity_app(app: &mut Simulation) {
+fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
     use crate::quadtree::QuadTreeConfig;
     use crate::stages::SimulationStagesPlugin;
@@ -95,7 +95,7 @@ fn build_parallel_gravity_app(app: &mut Simulation) {
     use crate::units::Length;
     use crate::units::Time;
 
-    app.insert_resource(physics::Parameters {
+    sim.insert_resource(physics::Parameters {
         timestep: Time::seconds(1.0),
         opening_angle: Dimensionless::dimensionless(0.0),
         softening_length: Length::meters(1e-30),
@@ -119,9 +119,9 @@ fn build_parallel_gravity_app(app: &mut Simulation) {
 #[test]
 #[cfg(not(feature = "mpi"))]
 fn compare_parallel_quadtree_gravity_to_direct_sum() {
-    let check = |mut app: Simulation| {
-        app.update();
-        run_system_on_app(&mut app, check_system);
+    let check = |mut sim: Simulation| {
+        sim.update();
+        run_system_on_sim(&mut sim, check_system);
     };
-    build_local_communication_app_with_custom_logic(build_parallel_gravity_app, check, 2);
+    build_local_communication_sim_with_custom_logic(build_parallel_gravity_sim, check, 2);
 }

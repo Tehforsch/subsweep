@@ -24,8 +24,8 @@ use crate::communication::WorldSize;
 use crate::simulation::Simulation;
 use crate::simulation::TenetPlugin;
 
-fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
-    build_app: F,
+fn create_and_build_sim<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
+    build_sim: F,
     receivers: Receivers,
     senders: Senders,
     num_threads: usize,
@@ -35,31 +35,31 @@ fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     sim.add_plugin(BaseCommunicationPlugin::new(num_threads, rank));
     sim.insert_non_send_resource(receivers);
     sim.insert_non_send_resource(senders);
-    build_app(&mut sim);
+    build_sim(&mut sim);
     sim
 }
 
-pub fn build_local_communication_app<F: 'static + Sync + Copy + Send + Fn(&mut Simulation)>(
-    build_app: F,
+pub fn build_local_communication_sim<F: 'static + Sync + Copy + Send + Fn(&mut Simulation)>(
+    build_sim: F,
     num_threads: usize,
 ) {
-    build_local_communication_app_with_custom_logic(
-        build_app,
-        |mut app: Simulation| app.run(),
+    build_local_communication_sim_with_custom_logic(
+        build_sim,
+        |mut sim: Simulation| sim.run(),
         num_threads,
     );
 }
 
-pub fn build_local_communication_app_with_custom_logic<
+pub fn build_local_communication_sim_with_custom_logic<
     F: 'static + Sync + Copy + Send + Fn(&mut Simulation),
     G: 'static + Sync + Copy + Send + Fn(Simulation),
 >(
-    build_app: F,
+    build_sim: F,
     custom_logic: G,
     num_threads: usize,
 ) {
-    let mut app = create_and_build_app(
-        build_app,
+    let mut sim = create_and_build_sim(
+        build_sim,
         Receivers(HashMap::new()),
         Senders(HashMap::new()),
         num_threads,
@@ -68,27 +68,27 @@ pub fn build_local_communication_app_with_custom_logic<
     let mut handles = vec![];
     for rank in 1..num_threads {
         let receivers = Receivers({
-            let all = &mut app.unwrap_non_send_resource_mut::<Receivers>();
+            let all = &mut sim.unwrap_non_send_resource_mut::<Receivers>();
             let to_move = all
                 .drain_filter(|comm, _| comm.owner == rank as Rank)
                 .collect();
             to_move
         });
         let senders = Senders({
-            let all = &mut app.unwrap_non_send_resource_mut::<Senders>();
+            let all = &mut sim.unwrap_non_send_resource_mut::<Senders>();
             let to_move = all
                 .drain_filter(|comm, _| comm.owner == rank as Rank)
                 .collect();
             to_move
         });
         let handle = thread::spawn(move || {
-            let app =
-                create_and_build_app(build_app, receivers, senders, num_threads, rank as Rank);
-            custom_logic(app);
+            let sim =
+                create_and_build_sim(build_sim, receivers, senders, num_threads, rank as Rank);
+            custom_logic(sim);
         });
         handles.push(handle);
     }
-    custom_logic(app);
+    custom_logic(sim);
     for handle in handles {
         handle.join().unwrap();
     }

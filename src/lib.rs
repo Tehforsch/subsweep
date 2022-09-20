@@ -8,7 +8,6 @@
 // perfectly readable.
 #![allow(clippy::type_complexity)]
 
-pub mod app_builder;
 pub(crate) mod command_line_options;
 pub mod communication;
 pub(crate) mod config;
@@ -23,6 +22,7 @@ pub(crate) mod physics;
 pub(crate) mod position;
 pub(crate) mod pressure;
 pub(crate) mod quadtree;
+pub mod sim_builder;
 pub mod simulation;
 pub(crate) mod stages;
 pub mod units;
@@ -32,7 +32,7 @@ pub(crate) mod visualization;
 #[cfg(feature = "mpi")]
 pub mod mpi_log;
 
-pub use app_builder::SimulationPlugin;
 pub use io::input::InputPlugin;
 pub use physics::hydrodynamics::HydrodynamicsPlugin;
 pub use physics::GravityPlugin;
+pub use sim_builder::SimulationPlugin;

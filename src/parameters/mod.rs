@@ -66,7 +66,7 @@ impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> T
 {
     fn should_build(&self, sim: &Simulation) -> bool {
         // In tests, we want to be able to insert the parameters
-        // directly into the app, without having to read a parameter
+        // directly into the sim, without having to read a parameter
         // file which is why we only add the plugin if the parameter
         // struct isn't already present
         if sim.contains_resource::<T>() {
