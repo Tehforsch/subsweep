@@ -6,7 +6,7 @@ use crate::named::Named;
 use crate::simulation::Simulation;
 use crate::simulation::TenetPlugin;
 use crate::visualization::get_color;
-use crate::visualization::parameters::Parameters;
+use crate::visualization::parameters::VisualizationParameters;
 use crate::visualization::DrawRect;
 use crate::visualization::VisualizationStage;
 
@@ -22,7 +22,8 @@ impl TenetPlugin for QuadTreeVisualizationPlugin {
     }
 
     fn should_build(&self, sim: &Simulation) -> bool {
-        sim.unwrap_resource::<Parameters>().show_quadtree
+        sim.unwrap_resource::<VisualizationParameters>()
+            .show_quadtree
     }
 }
 

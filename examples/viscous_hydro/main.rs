@@ -76,7 +76,7 @@ fn fake_viscosity_system(
 fn set_gravity_center_system(
     mut center: ResMut<GravityCenter>,
     mut events_reader_cursor: EventReader<CursorMoved>,
-    vis_parameters: Res<Parameters>,
+    vis_parameters: Res<VisualizationParameters>,
     windows: Res<Windows>,
 ) {
     if let Some(mouse_event) = events_reader_cursor.iter().next() {

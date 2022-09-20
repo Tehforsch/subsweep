@@ -12,7 +12,7 @@ use mpi::traits::Equivalence;
 use self::drawing::draw_translation_system;
 use self::drawing::DrawBundlePlugin;
 use self::drawing::IntoBundle;
-use self::parameters::Parameters;
+use self::parameters::VisualizationParameters;
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
@@ -65,35 +65,37 @@ impl TenetPlugin for VisualizationPlugin {
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
-        sim.add_plugin(ParameterPlugin::<Parameters>::new("visualization"))
-            .add_bevy_plugin(ShapePlugin)
-            .add_plugin(DrawBundlePlugin::<DrawRect>::default())
-            .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
-            .add_plugin(QuadTreeVisualizationPlugin)
-            .add_startup_system(setup_camera_system)
-            .add_startup_system_to_stage(StartupStage::PostStartup, camera_translation_system)
-            .add_system_to_stage(
-                VisualizationStage::Synchronize,
-                receive_particles_on_main_thread_system,
-            )
-            .add_system_to_stage(
-                VisualizationStage::AddVisualization,
-                spawn_sprites_system::<LocalParticle>,
-            )
-            .add_system_to_stage(
-                VisualizationStage::AddVisualization,
-                spawn_sprites_system::<RemoteParticleVisualization>,
-            )
-            .add_system_to_stage(
-                VisualizationStage::Draw,
-                position_to_translation_system::<DrawCircle>
-                    .before(draw_translation_system::<DrawCircle>),
-            )
-            .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system)
-            .add_system_to_stage(
-                VisualizationStage::AppExit,
-                handle_app_exit_system.after(keyboard_app_exit_system),
-            );
+        sim.add_plugin(ParameterPlugin::<VisualizationParameters>::new(
+            "visualization",
+        ))
+        .add_bevy_plugin(ShapePlugin)
+        .add_plugin(DrawBundlePlugin::<DrawRect>::default())
+        .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
+        .add_plugin(QuadTreeVisualizationPlugin)
+        .add_startup_system(setup_camera_system)
+        .add_startup_system_to_stage(StartupStage::PostStartup, camera_translation_system)
+        .add_system_to_stage(
+            VisualizationStage::Synchronize,
+            receive_particles_on_main_thread_system,
+        )
+        .add_system_to_stage(
+            VisualizationStage::AddVisualization,
+            spawn_sprites_system::<LocalParticle>,
+        )
+        .add_system_to_stage(
+            VisualizationStage::AddVisualization,
+            spawn_sprites_system::<RemoteParticleVisualization>,
+        )
+        .add_system_to_stage(
+            VisualizationStage::Draw,
+            position_to_translation_system::<DrawCircle>
+                .before(draw_translation_system::<DrawCircle>),
+        )
+        .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system)
+        .add_system_to_stage(
+            VisualizationStage::AppExit,
+            handle_app_exit_system.after(keyboard_app_exit_system),
+        );
     }
 
     fn build_on_other_ranks(&self, sim: &mut Simulation) {
@@ -108,7 +110,7 @@ impl TenetPlugin for VisualizationPlugin {
 fn camera_translation_system(
     mut camera: Query<&mut Transform, With<WorldCamera>>,
     extent: Res<GlobalExtent>,
-    parameters: Res<Parameters>,
+    parameters: Res<VisualizationParameters>,
 ) {
     let mut camera_transform = camera.single_mut();
     let pos = extent.center.in_units(parameters.camera_zoom);
@@ -123,7 +125,7 @@ pub fn get_color(rank: Rank) -> Color {
 fn spawn_sprites_system<T: Component + GetColor>(
     mut commands: Commands,
     particles: Query<(Entity, &Position, &T), (With<T>, Without<DrawCircle>)>,
-    parameters: Res<Parameters>,
+    parameters: Res<VisualizationParameters>,
 ) {
     for (entity, pos, colored) in particles.iter() {
         commands.entity(entity).insert(DrawCircle {

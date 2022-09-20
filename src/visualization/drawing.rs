@@ -5,7 +5,7 @@ use bevy::sprite::Mesh2dHandle;
 use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::*;
 
-use super::parameters::Parameters;
+use super::parameters::VisualizationParameters;
 use super::VisualizationStage;
 use crate::named::Named;
 use crate::simulation::Simulation;
@@ -114,7 +114,7 @@ impl<T: IntoBundle + Component + Sync + Send + 'static> TenetPlugin for DrawBund
 fn spawn_visualization_item_system<T: Component + IntoBundle>(
     mut commands: Commands,
     query: Query<(Entity, &T), Without<Mesh2dHandle>>,
-    parameters: Res<Parameters>,
+    parameters: Res<VisualizationParameters>,
 ) {
     for (entity, item) in query.iter() {
         commands
@@ -130,7 +130,7 @@ fn position_to_translation(position: &VecLength, camera_zoom: &Length) -> Vec3 {
 
 pub(super) fn draw_translation_system<T: Component + IntoBundle>(
     mut query: Query<(&mut Transform, &T)>,
-    parameters: Res<Parameters>,
+    parameters: Res<VisualizationParameters>,
 ) {
     for (mut transform, item) in query.iter_mut() {
         transform.translation =
