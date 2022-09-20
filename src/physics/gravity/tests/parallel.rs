@@ -90,13 +90,14 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 #[cfg(not(feature = "mpi"))]
 fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
+    use crate::physics::SimulationParameters;
     use crate::quadtree::QuadTreeConfig;
     use crate::stages::SimulationStagesPlugin;
     use crate::units::Dimensionless;
     use crate::units::Length;
     use crate::units::Time;
 
-    sim.insert_resource(physics::Parameters {
+    sim.insert_resource(SimulationParameters {
         timestep: Time::seconds(1.0),
         ..Default::default()
     })

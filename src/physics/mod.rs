@@ -10,7 +10,7 @@ use self::gravity::gravity_system;
 pub use self::gravity::mass_moments::MassMoments;
 pub use self::gravity::plugin::GravityPlugin;
 pub use self::hydrodynamics::HydrodynamicsPlugin;
-use self::parameters::Parameters;
+use self::parameters::SimulationParameters;
 pub use self::time::Time;
 use crate::domain::ExchangeDataPlugin;
 use crate::io::input::DatasetInputPlugin;
@@ -41,7 +41,7 @@ pub enum PhysicsStages {
 
 impl TenetPlugin for PhysicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let parameters = sim.add_parameter_type_and_get_result::<Parameters>("physics");
+        let parameters = sim.add_parameter_type_and_get_result::<SimulationParameters>("physics");
         sim.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())
@@ -74,7 +74,7 @@ impl TenetPlugin for PhysicsPlugin {
 pub struct StopSimulationEvent;
 
 fn stop_simulation_system(
-    parameters: Res<Parameters>,
+    parameters: Res<SimulationParameters>,
     current_time: Res<Time>,
     mut stop_sim: EventWriter<StopSimulationEvent>,
 ) {
