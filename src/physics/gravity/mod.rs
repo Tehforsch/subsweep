@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
-use parameters::Parameters;
+use parameters::GravityParameters;
 
 use super::LocalParticle;
 use super::MassMoments;
@@ -35,7 +35,7 @@ struct Solver {
 }
 
 impl Solver {
-    pub fn from_parameters(parameters: &Parameters) -> Self {
+    pub fn from_parameters(parameters: &GravityParameters) -> Self {
         Self {
             softening_length: parameters.softening_length,
             opening_angle: parameters.opening_angle,
@@ -106,7 +106,7 @@ pub(super) fn gravity_system(
     world_rank: Res<WorldRank>,
     indices: Res<TopLevelIndices>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
-    parameters: Res<Parameters>,
+    parameters: Res<GravityParameters>,
     mut request_comm: NonSendMut<ExchangeCommunicator<Identified<GravityCalculationRequest>>>,
     mut reply_comm: NonSendMut<ExchangeCommunicator<Identified<GravityCalculationReply>>>,
 ) {

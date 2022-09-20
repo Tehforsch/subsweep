@@ -15,8 +15,8 @@ use crate::communication::WorldRank;
 use crate::domain::DomainDecompositionPlugin;
 use crate::io::output;
 use crate::mass;
-use crate::physics::gravity;
 use crate::physics::gravity::plugin::GravityPlugin;
+use crate::physics::gravity::GravityParameters;
 use crate::physics::gravity::Solver;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsPlugin;
@@ -49,7 +49,7 @@ fn run_system_on_sim<P>(sim: &mut Simulation, system: impl IntoSystemDescriptor<
 }
 
 fn check_system(
-    parameters: Res<gravity::Parameters>,
+    parameters: Res<GravityParameters>,
     timestep: Res<Timestep>,
     query: Query<(&Velocity, &IndexIntoArray)>,
 ) {
@@ -100,7 +100,7 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
         timestep: Time::seconds(1.0),
         ..Default::default()
     })
-    .insert_resource(gravity::Parameters {
+    .insert_resource(GravityParameters {
         opening_angle: Dimensionless::dimensionless(0.0),
         softening_length: Length::meters(1e-30),
     })
