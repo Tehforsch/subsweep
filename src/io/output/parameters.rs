@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::named::Named;
-use crate::plugin_utils::Simulation;
+use crate::simulation::Simulation;
 use crate::units::Time;
 
 #[derive(Deserialize)]

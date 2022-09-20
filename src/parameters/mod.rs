@@ -5,8 +5,8 @@ use std::path::Path;
 use bevy::prelude::debug;
 
 use crate::named::Named;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 pub struct ReadParametersError(String);
 
@@ -119,7 +119,7 @@ mod tests {
     use crate::parameters::ParameterPlugin;
     use crate::parameters::Parameters;
     use crate::parameters::ReadParametersError;
-    use crate::plugin_utils::Simulation;
+    use crate::simulation::Simulation;
 
     #[test]
     fn parameter_plugin() {

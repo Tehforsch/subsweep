@@ -26,8 +26,8 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::physics::LocalParticle;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 #[derive(Default)]
 struct ExchangePluginExists;
@@ -240,7 +240,7 @@ mod tests {
     use crate::communication::WorldRank;
     use crate::domain::exchange_data_plugin::ExchangeDataPlugin;
     use crate::domain::exchange_data_plugin::OutgoingEntities;
-    use crate::plugin_utils::Simulation;
+    use crate::simulation::Simulation;
     use crate::stages::SimulationStagesPlugin;
 
     #[derive(Clone, Equivalence, Component)]

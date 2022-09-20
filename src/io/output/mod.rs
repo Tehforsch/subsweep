@@ -22,7 +22,7 @@ use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
-use crate::plugin_utils::Simulation;
+use crate::simulation::Simulation;
 
 #[derive(AmbiguitySetLabel)]
 struct OutputSystemsAmbiguitySet;

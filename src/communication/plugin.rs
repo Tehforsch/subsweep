@@ -12,8 +12,8 @@ use super::SyncCommunicator;
 use super::WorldRank;
 use super::WorldSize;
 use crate::named::Named;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 pub(super) const INITIAL_TAG: Tag = 0;
 

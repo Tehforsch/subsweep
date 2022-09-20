@@ -11,8 +11,8 @@ use super::OutputFile;
 use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::physics::LocalParticle;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor";
 

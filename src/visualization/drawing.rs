@@ -8,8 +8,8 @@ use bevy_prototype_lyon::prelude::*;
 use super::parameters::Parameters;
 use super::VisualizationStage;
 use crate::named::Named;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 use crate::units::Length;
 use crate::units::VecLength;
 

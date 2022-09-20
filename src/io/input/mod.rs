@@ -12,8 +12,8 @@ use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 #[derive(Default, Deref, DerefMut)]
 struct InputFiles(Vec<File>);

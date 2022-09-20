@@ -19,13 +19,13 @@ use crate::mass::Mass;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
 use crate::physics::MassMoments;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
 use crate::position::Position;
 use crate::quadtree::LeafData;
 use crate::quadtree::QuadTree;
 use crate::quadtree::QuadTreeConfig;
 use crate::quadtree::QuadTreeIndex;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 use crate::velocity::Velocity;
 
 #[derive(StageLabel)]

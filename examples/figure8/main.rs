@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use tenet::communication::BaseCommunicationPlugin;
-use tenet::plugin_utils::Simulation;
+use tenet::simulation::Simulation;
 use tenet::*;
 
 fn main() {

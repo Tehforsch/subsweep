@@ -19,8 +19,8 @@ use crate::io::input::InputPlugin;
 use crate::named::Named;
 use crate::physics::hydrodynamics::HydrodynamicsPlugin;
 use crate::physics::GravityPlugin;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 use crate::stages::SimulationStagesPlugin;
 
 pub fn log_setup(verbosity: usize) -> LogSettings {

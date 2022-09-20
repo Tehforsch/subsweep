@@ -10,8 +10,8 @@ use crate::domain::communicate_mass_moments_system;
 use crate::domain::construct_quad_tree_system;
 use crate::named::Named;
 use crate::physics::PhysicsStages;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 pub struct GravityPlugin;
 

@@ -21,8 +21,8 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     build_app: F,

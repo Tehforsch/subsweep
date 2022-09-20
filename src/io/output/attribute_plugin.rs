@@ -7,8 +7,8 @@ use super::add_output_system;
 use super::attribute::Attribute;
 use super::OutputFile;
 use crate::named::Named;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 
 pub struct AttributeOutputPlugin<T> {
     _marker: PhantomData<T>,

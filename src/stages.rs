@@ -6,8 +6,8 @@ use crate::io::output::OutputStages;
 use crate::named::Named;
 use crate::physics::hydrodynamics::HydrodynamicsStages;
 use crate::physics::PhysicsStages;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 use crate::visualization::VisualizationStage;
 
 pub struct SimulationStagesPlugin;

@@ -17,9 +17,9 @@ use crate::io::output::AttributeOutputPlugin;
 use crate::io::output::DatasetOutputPlugin;
 use crate::mass::Mass;
 use crate::named::Named;
-use crate::plugin_utils::Simulation;
-use crate::plugin_utils::TenetPlugin;
 use crate::position::Position;
+use crate::simulation::Simulation;
+use crate::simulation::TenetPlugin;
 use crate::units;
 use crate::velocity::Velocity;
 
