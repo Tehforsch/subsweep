@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use bevy::prelude::Component;
-use bevy::prelude::Plugin;
 use bevy::prelude::Query;
 use bevy::prelude::ResMut;
 use bevy::prelude::With;
@@ -12,6 +11,8 @@ use super::OutputFile;
 use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::physics::LocalParticle;
+use crate::plugin_utils::Simulation;
+use crate::plugin_utils::TenetPlugin;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor";
 
@@ -27,11 +28,17 @@ impl<T> Default for DatasetOutputPlugin<T> {
     }
 }
 
-impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> Plugin
+impl<T> Named for DatasetOutputPlugin<T> {
+    fn name() -> &'static str {
+        "dataset_output"
+    }
+}
+
+impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> TenetPlugin
     for DatasetOutputPlugin<T>
 {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        add_output_system::<T, _>(app, Self::write_dataset);
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        add_output_system::<T, _>(sim, Self::write_dataset);
     }
 }
 

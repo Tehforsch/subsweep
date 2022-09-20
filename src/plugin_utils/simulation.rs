@@ -1,3 +1,4 @@
+use bevy::ecs::event::Event;
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::ecs::system::Resource;
 use bevy::prelude::App;
@@ -8,8 +9,12 @@ use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
 use bevy::prelude::World;
 
-use super::tenet_plugin::IntoPlugin;
+use super::get_parameters;
+use super::run_once;
 use super::tenet_plugin::TenetPlugin;
+use super::AlreadyAddedLabels;
+use crate::communication::WorldRank;
+use crate::named::Named;
 
 #[derive(Default)]
 pub struct Simulation(pub App);
@@ -23,7 +28,23 @@ impl Simulation {
         &mut self,
         plugin: T,
     ) -> &mut Self {
-        self.0.add_plugin(IntoPlugin::from(plugin));
+        if !plugin.should_build(self) {
+            return self;
+        }
+        run_once::<T>(self, |sim| {
+            plugin.build_once_everywhere(sim);
+            if get_parameters::<WorldRank>(sim).is_main() {
+                plugin.build_once_on_main_rank(sim);
+            } else {
+                plugin.build_once_on_other_ranks(sim);
+            }
+        });
+        plugin.build_everywhere(self);
+        if get_parameters::<WorldRank>(self).is_main() {
+            plugin.build_on_main_rank(self);
+        } else {
+            plugin.build_on_other_ranks(self);
+        }
         self
     }
 
@@ -66,11 +87,28 @@ impl Simulation {
         self
     }
 
+    pub fn add_startup_system_to_stage<Params>(
+        &mut self,
+        stage_label: impl StageLabel,
+        system: impl IntoSystemDescriptor<Params>,
+    ) -> &mut Self {
+        self.0.add_startup_system_to_stage(stage_label, system);
+        self
+    }
+
     pub fn add_startup_system<Params>(
         &mut self,
         system: impl IntoSystemDescriptor<Params>,
     ) -> &mut Self {
         self.0.add_startup_system(system);
+        self
+    }
+
+    pub fn add_event<T>(&mut self) -> &mut Self
+    where
+        T: Event,
+    {
+        self.0.add_event::<T>();
         self
     }
 
@@ -86,6 +124,10 @@ impl Simulation {
         self.0.world.get_resource::<T>()
     }
 
+    pub fn get_resource_mut<T: Sync + Send + 'static>(&mut self) -> Option<Mut<T>> {
+        self.0.world.get_resource_mut::<T>()
+    }
+
     pub fn unwrap_resource<T: Sync + Send + 'static>(&self) -> &T {
         self.0.world.get_resource::<T>().unwrap()
     }
@@ -98,7 +140,26 @@ impl Simulation {
         self.0.world.non_send_resource_mut::<R>()
     }
 
+    pub fn get_resource_or_insert_with<R: Resource>(
+        &mut self,
+        func: impl FnOnce() -> R,
+    ) -> Mut<'_, R> {
+        self.0.world.get_resource_or_insert_with(func)
+    }
+
+    pub fn contains_resource<T: Sync + Send + 'static>(&self) -> bool {
+        self.get_resource::<T>().is_some()
+    }
+
     pub fn world(&mut self) -> &mut World {
         &mut self.0.world
+    }
+
+    /// Panics if a named item was (accidentally) added twice
+    pub fn panic_if_already_added<P: Named>(&mut self) {
+        let mut labels = self.get_resource_or_insert_with(AlreadyAddedLabels::default);
+        if !labels.0.insert(P::name()) {
+            panic!("Added twice: {}", P::name())
+        }
     }
 }

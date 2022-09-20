@@ -111,9 +111,9 @@ fn build_parallel_gravity_app(app: &mut Simulation) {
     .add_plugins(MinimalPlugins)
     .add_plugin(SimulationStagesPlugin)
     .add_plugin(DomainDecompositionPlugin)
-    .add_plugin(PhysicsPlugin)
-    .add_plugin(GravityPlugin)
-    .add_plugin(ExchangeDataPlugin::<IndexIntoArray>::default());
+    .add_tenet_plugin(PhysicsPlugin)
+    .add_tenet_plugin(GravityPlugin)
+    .add_tenet_plugin(ExchangeDataPlugin::<IndexIntoArray>::default());
 }
 
 #[test]

@@ -12,7 +12,7 @@ use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
-use crate::plugin_utils::run_once;
+use crate::plugin_utils::Simulation;
 use crate::plugin_utils::TenetPlugin;
 
 #[derive(Default, Deref, DerefMut)]
@@ -52,38 +52,40 @@ impl<T> Default for DatasetInputPlugin<T> {
 #[derive(Default, Deref, DerefMut)]
 pub struct RegisteredDatasets(Vec<&'static str>);
 
-impl<T: ToDataset + Component + Sync + Send + 'static> Plugin for DatasetInputPlugin<T> {
-    fn build(&self, app: &mut App) {
-        if app
-            .world
-            .get_resource::<ShouldReadInitialConditions>()
-            .is_none()
-        {
-            return;
-        }
-        run_once::<InputMarker>(app, |app| {
-            app.add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"))
-                .insert_resource(InputFiles::default())
-                .insert_resource(SpawnedEntities::default())
-                .add_startup_system(open_file_system)
-                .add_startup_system(
-                    spawn_entities_system
-                        .after(open_file_system)
-                        .before(close_file_system),
-                )
-                .add_startup_system(close_file_system.after(spawn_entities_system));
-        });
-        let mut registered_datasets = app
-            .world
-            .get_resource_or_insert_with(RegisteredDatasets::default);
+impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetInputPlugin<T> {
+    fn should_build(&self, sim: &Simulation) -> bool {
+        sim.contains_resource::<ShouldReadInitialConditions>()
+    }
+
+    fn build_once_everywhere(&self, sim: &mut Simulation) {
+        sim.add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"))
+            .insert_resource(InputFiles::default())
+            .insert_resource(SpawnedEntities::default())
+            .add_startup_system(open_file_system)
+            .add_startup_system(
+                spawn_entities_system
+                    .after(open_file_system)
+                    .before(close_file_system),
+            )
+            .add_startup_system(close_file_system.after(spawn_entities_system));
+    }
+
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let mut registered_datasets = sim.get_resource_or_insert_with(RegisteredDatasets::default);
         registered_datasets.push(T::name());
-        app.add_startup_system(
+        sim.add_startup_system(
             read_dataset_system::<T>
                 .after(open_file_system)
                 .after(spawn_entities_system)
                 .before(close_file_system)
                 .in_ambiguity_set(InputSystemsAmbiguitySet),
         );
+    }
+}
+
+impl<T> Named for DatasetInputPlugin<T> {
+    fn name() -> &'static str {
+        "initial_conditions"
     }
 }
 
@@ -194,7 +196,7 @@ impl Named for InputPlugin {
 }
 
 impl TenetPlugin for InputPlugin {
-    fn build_everywhere(&self, app: &mut App) {
+    fn build_everywhere(&self, app: &mut Simulation) {
         app.insert_resource(ShouldReadInitialConditions);
     }
 }

@@ -4,11 +4,9 @@ use bevy::log::Level;
 use bevy::log::LogPlugin;
 use bevy::log::LogSettings;
 use bevy::prelude::debug;
-use bevy::prelude::App;
 use bevy::prelude::CoreStage;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
-use bevy::prelude::Plugin;
 use bevy::prelude::Res;
 use bevy::winit::WinitSettings;
 
@@ -19,9 +17,11 @@ use super::physics::PhysicsPlugin;
 use super::plugin_utils::is_main_rank;
 use super::visualization::VisualizationPlugin;
 use crate::io::input::InputPlugin;
+use crate::named::Named;
 use crate::physics::hydrodynamics::HydrodynamicsPlugin;
 use crate::physics::GravityPlugin;
 use crate::plugin_utils::Simulation;
+use crate::plugin_utils::TenetPlugin;
 use crate::stages::SimulationStagesPlugin;
 
 pub fn log_setup(verbosity: usize) -> LogSettings {
@@ -63,11 +63,11 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
     };
     app.insert_resource(task_pool_opts)
         .add_plugin(SimulationStagesPlugin)
-        .add_plugin(PhysicsPlugin)
+        .add_tenet_plugin(PhysicsPlugin)
         .add_plugin(DomainDecompositionPlugin)
         .add_tenet_plugin(InputPlugin)
-        .add_plugin(GravityPlugin)
-        .add_plugin(HydrodynamicsPlugin);
+        .add_tenet_plugin(GravityPlugin)
+        .add_tenet_plugin(HydrodynamicsPlugin);
     if is_main_rank(app) {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
@@ -135,16 +135,22 @@ pub struct SimulationPlugin {
     pub visualize: bool,
 }
 
-impl Plugin for SimulationPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugin(SimulationStagesPlugin)
-            .add_plugin(PhysicsPlugin)
+impl Named for SimulationPlugin {
+    fn name() -> &'static str {
+        "simulation"
+    }
+}
+
+impl TenetPlugin for SimulationPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.add_plugin(SimulationStagesPlugin)
+            .add_tenet_plugin(PhysicsPlugin)
             .add_plugin(DomainDecompositionPlugin);
         if self.visualize {
-            app.add_plugins(DefaultPlugins)
+            sim.add_plugins(DefaultPlugins)
                 .add_plugin(VisualizationPlugin);
         } else {
-            app.add_plugins(MinimalPlugins);
+            sim.add_plugins(MinimalPlugins);
         }
     }
 }

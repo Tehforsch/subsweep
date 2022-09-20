@@ -9,7 +9,6 @@ use bevy::prelude::DerefMut;
 use bevy::prelude::Entity;
 use bevy::prelude::NonSendMut;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
-use bevy::prelude::Plugin;
 use bevy::prelude::Query;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
@@ -27,7 +26,8 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::physics::LocalParticle;
-use crate::plugin_utils::run_once;
+use crate::plugin_utils::Simulation;
+use crate::plugin_utils::TenetPlugin;
 
 #[derive(Default)]
 struct ExchangePluginExists;
@@ -77,40 +77,44 @@ impl<T> Named for ExchangeDataPlugin<T> {
     }
 }
 
-impl<T: Sync + Send + 'static + Component + Clone + Equivalence> Plugin for ExchangeDataPlugin<T>
+impl<T: Sync + Send + 'static + Component + Clone + Equivalence> TenetPlugin
+    for ExchangeDataPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,
 {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        let rank = **app.world.get_resource::<WorldRank>().unwrap();
-        let size = **app.world.get_resource::<WorldSize>().unwrap();
-        run_once::<Self>(app, |app| {
-            app.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
-                .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
-                .insert_resource(ExchangeOrder::default())
-                .add_plugin(CommunicationPlugin::<NumEntities>::new(
-                    CommunicationType::Exchange,
-                ))
-                .add_system_to_stage(
-                    DomainDecompositionStages::Exchange,
-                    send_num_outgoing_entities_system,
-                )
-                .add_system_to_stage(
-                    DomainDecompositionStages::Exchange,
-                    despawn_outgoing_entities_system,
-                )
-                .add_system_to_stage(
-                    DomainDecompositionStages::Exchange,
-                    reset_outgoing_entities_system
-                        .after(send_num_outgoing_entities_system)
-                        .after(despawn_outgoing_entities_system),
-                )
-                .add_system_to_stage(
-                    DomainDecompositionStages::Exchange,
-                    spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
-                );
-        });
-        let labels = app.world.get_resource_mut::<ExchangeOrder>();
+    fn build_once_everywhere(&self, sim: &mut Simulation) {
+        let rank = **sim.unwrap_resource::<WorldRank>();
+        let size = **sim.unwrap_resource::<WorldSize>();
+        sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
+            .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
+            .insert_resource(ExchangeOrder::default())
+            .add_plugin(CommunicationPlugin::<NumEntities>::new(
+                CommunicationType::Exchange,
+            ))
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                send_num_outgoing_entities_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                despawn_outgoing_entities_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                reset_outgoing_entities_system
+                    .after(send_num_outgoing_entities_system)
+                    .after(despawn_outgoing_entities_system),
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Exchange,
+                spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
+            );
+    }
+
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let rank = **sim.unwrap_resource::<WorldRank>();
+        let size = **sim.unwrap_resource::<WorldSize>();
+        let labels = sim.get_resource_mut::<ExchangeOrder>();
         let mut exchange_buffers_system = Self::exchange_buffers_system
             .after(Self::fill_buffers_system)
             .after(spawn_incoming_entities_system)
@@ -120,7 +124,7 @@ where
         }
         let label = Self::exchange_buffers_system.as_system_label();
         labels.unwrap().0.push(label);
-        app.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
+        sim.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
             size, rank,
         )))
         .add_system_to_stage(DomainDecompositionStages::Exchange, exchange_buffers_system)
@@ -311,7 +315,7 @@ mod tests {
 
     fn build_app(app: &mut Simulation) {
         app.add_plugin(SimulationStagesPlugin)
-            .add_plugin(ExchangeDataPlugin::<A>::default())
-            .add_plugin(ExchangeDataPlugin::<B>::default());
+            .add_tenet_plugin(ExchangeDataPlugin::<A>::default())
+            .add_tenet_plugin(ExchangeDataPlugin::<B>::default());
     }
 }

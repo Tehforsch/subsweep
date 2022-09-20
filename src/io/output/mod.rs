@@ -8,7 +8,6 @@ use std::fs;
 
 use bevy::prelude::info;
 use bevy::prelude::AmbiguitySetLabel;
-use bevy::prelude::App;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
@@ -24,6 +23,7 @@ use crate::communication::WorldRank;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
 use crate::plugin_utils::run_once;
+use crate::plugin_utils::Simulation;
 
 #[derive(AmbiguitySetLabel)]
 struct OutputSystemsAmbiguitySet;
@@ -38,8 +38,8 @@ struct OutputFile {
     f: Option<File>,
 }
 
-fn output_setup(app: &mut App) {
-    app.add_plugin(ParameterPlugin::<Parameters>::new("output"))
+fn output_setup(sim: &mut Simulation) {
+    sim.add_plugin(ParameterPlugin::<Parameters>::new("output"))
         .insert_resource(OutputFile::default())
         .add_startup_system(Timer::initialize_system)
         .add_startup_system(make_output_dir_system)
@@ -84,10 +84,13 @@ fn close_file_system(mut file: ResMut<OutputFile>) {
     file.f = None;
 }
 
-fn add_output_system<T: Named, P>(app: &mut App, system: impl ParallelSystemDescriptorCoercion<P>) {
-    run_once::<OutputMarker>(app, output_setup);
-    if Parameters::is_desired_field::<T>(app) {
-        app.add_system_to_stage(
+fn add_output_system<T: Named, P>(
+    sim: &mut Simulation,
+    system: impl ParallelSystemDescriptorCoercion<P>,
+) {
+    run_once::<OutputMarker>(sim, output_setup);
+    if Parameters::is_desired_field::<T>(sim) {
+        sim.add_system_to_stage(
             OutputStages::Output,
             system
                 .after(open_file_system)
