@@ -28,14 +28,17 @@ where
 
 struct ParameterFileContents(String);
 
-pub fn add_parameter_file_contents(app: &mut Simulation, parameter_file_name: &Path) {
-    let contents = fs::read_to_string(parameter_file_name).unwrap_or_else(|_| {
-        panic!(
-            "Failed to read parameter file at {:?}",
-            &parameter_file_name
-        )
-    });
-    app.insert_resource(ParameterFileContents(contents));
+impl Simulation {
+    pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {
+        let contents = fs::read_to_string(parameter_file_name).unwrap_or_else(|_| {
+            panic!(
+                "Failed to read parameter file at {:?}",
+                &parameter_file_name
+            )
+        });
+        self.insert_resource(ParameterFileContents(contents));
+        self
+    }
 }
 
 pub struct ParameterPlugin<T> {

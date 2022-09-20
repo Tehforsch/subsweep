@@ -12,7 +12,6 @@ use bevy::winit::WinitSettings;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainDecompositionPlugin;
-use super::parameters::add_parameter_file_contents;
 use super::physics::PhysicsPlugin;
 use super::visualization::VisualizationPlugin;
 use crate::io::input::InputPlugin;
@@ -54,13 +53,13 @@ fn show_time_system(time: Res<super::physics::Time>) {
 }
 
 fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
-    add_parameter_file_contents(app, &opts.parameter_file_path);
     let task_pool_opts = if let Some(num_worker_threads) = opts.num_worker_threads {
         DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
     } else {
         DefaultTaskPoolOptions::default()
     };
-    app.insert_resource(task_pool_opts)
+    app.add_parameters_from_file(&opts.parameter_file_path)
+        .insert_resource(task_pool_opts)
         .add_plugin(SimulationStagesPlugin)
         .add_plugin(InputPlugin)
         .add_plugin(PhysicsPlugin)
