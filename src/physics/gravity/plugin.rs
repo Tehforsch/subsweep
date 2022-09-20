@@ -19,7 +19,7 @@ pub struct GravityPlugin;
 
 impl TenetPlugin for GravityPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_parameter_type::<GravityParameters>("gravity")
+        sim.add_parameter_type::<GravityParameters>()
             .add_system_to_stage(PhysicsStages::Physics, construct_quad_tree_system)
             .add_system_to_stage(
                 PhysicsStages::Physics,

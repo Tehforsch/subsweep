@@ -21,7 +21,6 @@ pub use self::parameters::OutputParameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
 use crate::simulation::Simulation;
 
 #[derive(AmbiguitySetLabel)]
@@ -38,7 +37,7 @@ struct OutputFile {
 }
 
 fn output_setup(sim: &mut Simulation) {
-    sim.add_plugin(ParameterPlugin::<OutputParameters>::new("output"))
+    sim.add_parameter_type::<OutputParameters>()
         .insert_resource(OutputFile::default())
         .add_startup_system(Timer::initialize_system)
         .add_startup_system(make_output_dir_system)

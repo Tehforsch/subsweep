@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+use crate::named::Named;
+
+#[derive(Deserialize, Named)]
+#[name = "tree"]
 pub struct QuadTreeConfig {
     pub min_depth: usize,
     pub max_depth: usize,

@@ -6,7 +6,8 @@ use crate::named::Named;
 use crate::simulation::Simulation;
 use crate::units::Time;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Named)]
+#[name = "output"]
 pub struct OutputParameters {
     pub time_between_snapshots: Time,
     pub time_first_snapshot: Option<Time>,

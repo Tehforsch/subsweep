@@ -1,8 +1,10 @@
 use serde::Deserialize;
 
+use crate::named::Named;
 use crate::units::Time;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Named)]
+#[name = "simulation"]
 pub(super) struct SimulationParameters {
     pub timestep: Time,
     pub final_time: Option<Time>,

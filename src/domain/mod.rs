@@ -17,7 +17,6 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::mass::Mass;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
 use crate::physics::MassMoments;
 use crate::position::Position;
 use crate::quadtree::LeafData;
@@ -42,7 +41,7 @@ impl TenetPlugin for DomainDecompositionPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
-            .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("domain_tree"))
+            .add_parameter_type::<QuadTreeConfig>()
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
                 DomainDecompositionStages::TopLevelTreeConstruction,

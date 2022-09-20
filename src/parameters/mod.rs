@@ -44,20 +44,19 @@ impl Simulation {
 #[derive(Named)]
 pub struct ParameterPlugin<T> {
     _marker: PhantomData<T>,
-    name: String,
 }
 
-impl<T> ParameterPlugin<T> {
-    pub fn new(name: &str) -> Self {
+impl<T> Default for ParameterPlugin<T> {
+    fn default() -> Self {
         Self {
             _marker: PhantomData::default(),
-            name: name.into(),
         }
     }
 }
 
-impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> TenetPlugin
-    for ParameterPlugin<T>
+impl<T> TenetPlugin for ParameterPlugin<T>
+where
+    T: Named + Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>,
 {
     fn allow_adding_twice(&self) -> bool {
         true
@@ -69,7 +68,7 @@ impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> T
         // file which is why we only add the plugin if the parameter
         // struct isn't already present
         if sim.contains_resource::<T>() {
-            debug!("Parameters for {} already present", &self.name);
+            debug!("Parameters for {} already present", T::name());
             false
         } else {
             true
@@ -77,10 +76,11 @@ impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> T
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let name = self.name.clone();
-        let parameter_file_contents = &sim.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameter_file_contents?", &name)).0;
-        let parameters =
-            Self::get_parameter_struct_from_parameter_file_contents(&name, parameter_file_contents);
+        let parameter_file_contents = &sim.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameter_file_contents?", T::name())).0;
+        let parameters = Self::get_parameter_struct_from_parameter_file_contents(
+            T::name(),
+            parameter_file_contents,
+        );
         sim.insert_resource(parameters);
     }
 }
@@ -117,26 +117,29 @@ impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> P
 mod tests {
     use serde::Deserialize;
 
+    use crate::named::Named;
     use crate::parameters::ParameterFileContents;
     use crate::parameters::ParameterPlugin;
     use crate::parameters::Parameters;
     use crate::parameters::ReadParametersError;
     use crate::simulation::Simulation;
 
+    #[derive(Deserialize, Default, Named)]
+    #[name = "parameters1"]
+    struct Parameters1 {
+        i: i32,
+    }
+
+    #[derive(Deserialize, Default, Named)]
+    #[name = "parameters2"]
+    struct Parameters2 {
+        s: String,
+        #[serde(default)]
+        d: String,
+    }
+
     #[test]
     fn parameter_plugin() {
-        #[derive(Deserialize, Default)]
-        struct Parameters1 {
-            i: i32,
-        }
-
-        #[derive(Deserialize, Default)]
-        struct Parameters2 {
-            s: String,
-            #[serde(default)]
-            d: String,
-        }
-
         let mut sim = Simulation::new();
         sim.insert_resource(ParameterFileContents(
             "
@@ -148,8 +151,8 @@ parameters2:
    'hi'"
                 .into(),
         ));
-        sim.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"))
-            .add_plugin(ParameterPlugin::<Parameters2>::new("parameters2"));
+        sim.add_plugin(ParameterPlugin::<Parameters1>::default())
+            .add_plugin(ParameterPlugin::<Parameters2>::default());
         let params1 = sim.unwrap_resource::<Parameters1>();
         let params2 = sim.unwrap_resource::<Parameters2>();
         assert_eq!(params1.i, 1);
@@ -160,11 +163,11 @@ parameters2:
     #[test]
     #[should_panic]
     fn do_not_accept_missing_required_parameter_section() {
-        #[derive(Deserialize)]
+        #[derive(Deserialize, Named)]
+        #[name = "parameters1"]
         struct Parameters1 {
             _i: i32,
         }
-
         impl Parameters for Parameters1 {
             fn from_empty() -> Result<Self, crate::parameters::ReadParametersError> {
                 Err(ReadParametersError("Missing required param 'i'".into()))
@@ -172,6 +175,6 @@ parameters2:
         }
         let mut sim = Simulation::new();
         sim.insert_resource(ParameterFileContents("".into()));
-        sim.add_plugin(ParameterPlugin::<Parameters1>::new("parameters1"));
+        sim.add_plugin(ParameterPlugin::<Parameters1>::default());
     }
 }

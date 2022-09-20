@@ -20,7 +20,8 @@ struct GravityCenter(VecLength);
 #[derive(Deref, DerefMut, Component)]
 struct ParticleType(usize);
 
-#[derive(Default, Deserialize, Clone)]
+#[derive(Default, Deserialize, Clone, Named)]
+#[name = "viscous_gravity"]
 struct ViscousGravityParameters {
     num_particles: usize,
     fake_gravity_factor: InverseTimeSquared,
@@ -33,7 +34,7 @@ fn main() {
         .headless(false)
         .read_initial_conditions(false)
         .build()
-        .add_parameter_type::<ViscousGravityParameters>("viscous_gravity")
+        .add_parameter_type::<ViscousGravityParameters>()
         .add_plugin(HydrodynamicsPlugin)
         .add_startup_system(spawn_particles_system)
         .add_system(set_gravity_center_system)

@@ -10,7 +10,6 @@ use super::to_dataset::ToDataset;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::simulation::Simulation;
 use crate::simulation::TenetPlugin;
@@ -21,7 +20,8 @@ struct InputFiles(Vec<File>);
 #[derive(AmbiguitySetLabel)]
 struct InputSystemsAmbiguitySet;
 
-#[derive(Clone, Default, Deserialize)]
+#[derive(Clone, Default, Deserialize, Named)]
+#[name = "input"]
 pub struct InputParameters {
     pub paths: Vec<PathBuf>,
 }
@@ -57,18 +57,16 @@ impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetIn
     }
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
-        sim.add_plugin(ParameterPlugin::<InputParameters>::new(
-            "initial_conditions",
-        ))
-        .insert_resource(InputFiles::default())
-        .insert_resource(SpawnedEntities::default())
-        .add_startup_system(open_file_system)
-        .add_startup_system(
-            spawn_entities_system
-                .after(open_file_system)
-                .before(close_file_system),
-        )
-        .add_startup_system(close_file_system.after(spawn_entities_system));
+        sim.add_parameter_type::<InputParameters>()
+            .insert_resource(InputFiles::default())
+            .insert_resource(SpawnedEntities::default())
+            .add_startup_system(open_file_system)
+            .add_startup_system(
+                spawn_entities_system
+                    .after(open_file_system)
+                    .before(close_file_system),
+            )
+            .add_startup_system(close_file_system.after(spawn_entities_system));
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {

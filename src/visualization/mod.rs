@@ -24,7 +24,6 @@ use crate::communication::CommunicationType;
 use crate::communication::Rank;
 use crate::domain::GlobalExtent;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
 use crate::physics::LocalParticle;
 use crate::physics::StopSimulationEvent;
 use crate::position::Position;
@@ -65,37 +64,35 @@ impl TenetPlugin for VisualizationPlugin {
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
-        sim.add_plugin(ParameterPlugin::<VisualizationParameters>::new(
-            "visualization",
-        ))
-        .add_bevy_plugin(ShapePlugin)
-        .add_plugin(DrawBundlePlugin::<DrawRect>::default())
-        .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
-        .add_plugin(QuadTreeVisualizationPlugin)
-        .add_startup_system(setup_camera_system)
-        .add_startup_system_to_stage(StartupStage::PostStartup, camera_translation_system)
-        .add_system_to_stage(
-            VisualizationStage::Synchronize,
-            receive_particles_on_main_thread_system,
-        )
-        .add_system_to_stage(
-            VisualizationStage::AddVisualization,
-            spawn_sprites_system::<LocalParticle>,
-        )
-        .add_system_to_stage(
-            VisualizationStage::AddVisualization,
-            spawn_sprites_system::<RemoteParticleVisualization>,
-        )
-        .add_system_to_stage(
-            VisualizationStage::Draw,
-            position_to_translation_system::<DrawCircle>
-                .before(draw_translation_system::<DrawCircle>),
-        )
-        .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system)
-        .add_system_to_stage(
-            VisualizationStage::AppExit,
-            handle_app_exit_system.after(keyboard_app_exit_system),
-        );
+        sim.add_parameter_type::<VisualizationParameters>()
+            .add_bevy_plugin(ShapePlugin)
+            .add_plugin(DrawBundlePlugin::<DrawRect>::default())
+            .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
+            .add_plugin(QuadTreeVisualizationPlugin)
+            .add_startup_system(setup_camera_system)
+            .add_startup_system_to_stage(StartupStage::PostStartup, camera_translation_system)
+            .add_system_to_stage(
+                VisualizationStage::Synchronize,
+                receive_particles_on_main_thread_system,
+            )
+            .add_system_to_stage(
+                VisualizationStage::AddVisualization,
+                spawn_sprites_system::<LocalParticle>,
+            )
+            .add_system_to_stage(
+                VisualizationStage::AddVisualization,
+                spawn_sprites_system::<RemoteParticleVisualization>,
+            )
+            .add_system_to_stage(
+                VisualizationStage::Draw,
+                position_to_translation_system::<DrawCircle>
+                    .before(draw_translation_system::<DrawCircle>),
+            )
+            .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system)
+            .add_system_to_stage(
+                VisualizationStage::AppExit,
+                handle_app_exit_system.after(keyboard_app_exit_system),
+            );
     }
 
     fn build_on_other_ranks(&self, sim: &mut Simulation) {

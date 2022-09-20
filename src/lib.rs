@@ -35,6 +35,7 @@ pub mod prelude {
     pub use super::communication::WorldRank;
     pub use super::communication::WorldSize;
     pub use super::mass::Mass;
+    pub use super::named::*;
     pub use super::physics::hydrodynamics::HydrodynamicsPlugin;
     pub use super::physics::GravityPlugin;
     pub use super::physics::LocalParticle;
