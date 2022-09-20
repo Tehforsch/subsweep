@@ -63,9 +63,9 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
     };
     app.insert_resource(task_pool_opts)
         .add_plugin(SimulationStagesPlugin)
+        .add_tenet_plugin(InputPlugin)
         .add_tenet_plugin(PhysicsPlugin)
         .add_plugin(DomainDecompositionPlugin)
-        .add_tenet_plugin(InputPlugin)
         .add_tenet_plugin(GravityPlugin)
         .add_tenet_plugin(HydrodynamicsPlugin);
     if is_main_rank(app) {
