@@ -50,8 +50,13 @@ impl Simulation {
         self
     }
 
-    pub fn add_stage<S: Stage>(&mut self, label: impl StageLabel, stage: S) -> &mut Self {
-        self.0.add_stage(label, stage);
+    pub fn add_stage_after<S: Stage>(
+        &mut self,
+        target: impl StageLabel,
+        label: impl StageLabel,
+        stage: S,
+    ) -> &mut Self {
+        self.0.add_stage_after(target, label, stage);
         self
     }
 

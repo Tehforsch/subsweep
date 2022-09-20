@@ -314,7 +314,7 @@ mod tests {
     }
 
     fn build_app(app: &mut Simulation) {
-        app.add_plugin(SimulationStagesPlugin)
+        app.add_tenet_plugin(SimulationStagesPlugin)
             .add_tenet_plugin(ExchangeDataPlugin::<A>::default())
             .add_tenet_plugin(ExchangeDataPlugin::<B>::default());
     }

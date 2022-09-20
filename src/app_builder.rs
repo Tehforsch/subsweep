@@ -62,7 +62,7 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
         DefaultTaskPoolOptions::default()
     };
     app.insert_resource(task_pool_opts)
-        .add_plugin(SimulationStagesPlugin)
+        .add_tenet_plugin(SimulationStagesPlugin)
         .add_tenet_plugin(InputPlugin)
         .add_tenet_plugin(PhysicsPlugin)
         .add_plugin(DomainDecompositionPlugin)
@@ -143,7 +143,7 @@ impl Named for SimulationPlugin {
 
 impl TenetPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_plugin(SimulationStagesPlugin)
+        sim.add_tenet_plugin(SimulationStagesPlugin)
             .add_tenet_plugin(PhysicsPlugin)
             .add_plugin(DomainDecompositionPlugin);
         if self.visualize {
