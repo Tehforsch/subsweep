@@ -16,6 +16,7 @@ use crate::simulation::TenetPlugin;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor";
 
+#[derive(Named)]
 pub struct DatasetOutputPlugin<T> {
     _marker: PhantomData<T>,
 }
@@ -28,12 +29,6 @@ impl<T> Default for DatasetOutputPlugin<T> {
     }
 }
 
-impl<T> Named for DatasetOutputPlugin<T> {
-    fn name() -> &'static str {
-        "dataset_output"
-    }
-}
-
 impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> TenetPlugin
     for DatasetOutputPlugin<T>
 {
@@ -42,7 +37,7 @@ impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> TenetPlug
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        add_output_system::<T, _>(sim, Self::write_dataset);
+        add_output_system::<T, _, Self>(sim, Self::write_dataset);
     }
 }
 

@@ -9,11 +9,8 @@ pub fn derive_type_name(input: TokenStream) -> TokenStream {
 }
 
 pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Construct a representation of Rust code as a syntax tree
-    // that we can manipulate
     let ast: DeriveInput = syn::parse(input).unwrap();
 
-    // Build the trait implementation
     let type_name = &ast.ident;
 
     let (impl_generics, type_generics, where_clause) = &ast.generics.split_for_impl();
@@ -41,10 +38,8 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
         };
     }
 
-    if name.is_none() {
-        panic!("No name given");
-    }
-    let name = name.unwrap();
+    let name = name.unwrap_or(ast.ident.to_string());
+
     let gen = quote! {
         impl #impl_generics crate::named::Named for #type_name #type_generics #where_clause {
             fn name() -> &'static str {

@@ -10,13 +10,9 @@ use crate::simulation::Simulation;
 use crate::simulation::TenetPlugin;
 use crate::visualization::VisualizationStage;
 
+#[derive(Named)]
+#[name = "simulation_stages_plugin"]
 pub struct SimulationStagesPlugin;
-
-impl Named for SimulationStagesPlugin {
-    fn name() -> &'static str {
-        "simulation_stages"
-    }
-}
 
 impl TenetPlugin for SimulationStagesPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {

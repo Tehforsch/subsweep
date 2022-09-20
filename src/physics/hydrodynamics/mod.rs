@@ -19,20 +19,15 @@ use crate::units::Pressure;
 use crate::units::VecAcceleration;
 use crate::velocity::Velocity;
 
-pub struct HydrodynamicsPlugin;
+const CUTOFF_LENGTH: Length = Length::astronomical_units(0.1);
 
 #[derive(StageLabel)]
 pub enum HydrodynamicsStages {
     Hydrodynamics,
 }
 
-const CUTOFF_LENGTH: Length = Length::astronomical_units(0.1);
-
-impl Named for HydrodynamicsPlugin {
-    fn name() -> &'static str {
-        "hydrodynamics"
-    }
-}
+#[derive(Named)]
+pub struct HydrodynamicsPlugin;
 
 impl TenetPlugin for HydrodynamicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {

@@ -27,7 +27,7 @@ pub enum CommunicationType {
 
 pub(super) struct CurrentTag(pub(super) Tag);
 
-#[derive(Clone)]
+#[derive(Clone, Named)]
 pub struct BaseCommunicationPlugin {
     num_ranks: WorldSize,
     world_rank: WorldRank,
@@ -42,12 +42,6 @@ impl BaseCommunicationPlugin {
     }
 }
 
-impl Named for BaseCommunicationPlugin {
-    fn name() -> &'static str {
-        "base_communication"
-    }
-}
-
 impl TenetPlugin for BaseCommunicationPlugin {
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(self.world_rank)
@@ -55,15 +49,10 @@ impl TenetPlugin for BaseCommunicationPlugin {
     }
 }
 
+#[derive(Named)]
 pub struct CommunicationPlugin<T> {
     _marker: PhantomData<T>,
     pub(super) type_: CommunicationType,
-}
-
-impl<T> Named for CommunicationPlugin<T> {
-    fn name() -> &'static str {
-        "communication_plugin"
-    }
 }
 
 impl<T> CommunicationPlugin<T> {

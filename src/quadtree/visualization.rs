@@ -13,13 +13,8 @@ use crate::visualization::VisualizationStage;
 #[derive(Component)]
 struct Outline;
 
+#[derive(Named)]
 pub struct QuadTreeVisualizationPlugin;
-
-impl Named for QuadTreeVisualizationPlugin {
-    fn name() -> &'static str {
-        "quadtree_visualization"
-    }
-}
 
 impl TenetPlugin for QuadTreeVisualizationPlugin {
     fn build_on_main_rank(&self, sim: &mut Simulation) {

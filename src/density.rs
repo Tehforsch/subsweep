@@ -7,12 +7,7 @@ use mpi::traits::Equivalence;
 
 use crate::named::Named;
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default)]
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
 #[repr(C)]
+#[name = "density"]
 pub struct Density(pub crate::units::Density);
-
-impl Named for Density {
-    fn name() -> &'static str {
-        "density"
-    }
-}

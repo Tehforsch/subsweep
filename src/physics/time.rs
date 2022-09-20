@@ -2,8 +2,10 @@ use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 
 use crate::io::output::Attribute;
+use crate::named::Named;
 
-#[derive(Clone, Deref, DerefMut)]
+#[derive(Clone, Deref, DerefMut, Named)]
+#[name = "time"]
 pub struct Time(pub crate::units::Time);
 
 impl Attribute for Time {
@@ -11,9 +13,5 @@ impl Attribute for Time {
 
     fn to_value(&self) -> Self::Output {
         self.0
-    }
-
-    fn name() -> &'static str {
-        "time"
     }
 }

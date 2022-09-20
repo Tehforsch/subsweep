@@ -84,6 +84,7 @@ impl IntoBundle for DrawRect {
     }
 }
 
+#[derive(Named)]
 pub(super) struct DrawBundlePlugin<T> {
     _marker: PhantomData<T>,
 }
@@ -93,12 +94,6 @@ impl<T> Default for DrawBundlePlugin<T> {
         Self {
             _marker: PhantomData::default(),
         }
-    }
-}
-
-impl<T> Named for DrawBundlePlugin<T> {
-    fn name() -> &'static str {
-        "draw_bundle_plugin"
     }
 }
 

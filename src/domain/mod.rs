@@ -35,13 +35,8 @@ pub enum DomainDecompositionStages {
     Exchange,
 }
 
+#[derive(Named)]
 pub struct DomainDecompositionPlugin;
-
-impl Named for DomainDecompositionPlugin {
-    fn name() -> &'static str {
-        "domain_decomposition_plugin"
-    }
-}
 
 impl TenetPlugin for DomainDecompositionPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {

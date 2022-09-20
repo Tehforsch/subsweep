@@ -14,13 +14,8 @@ use crate::physics::PhysicsStages;
 use crate::simulation::Simulation;
 use crate::simulation::TenetPlugin;
 
+#[derive(Named)]
 pub struct GravityPlugin;
-
-impl Named for GravityPlugin {
-    fn name() -> &'static str {
-        "gravity_plugin"
-    }
-}
 
 impl TenetPlugin for GravityPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
