@@ -54,7 +54,9 @@ pub struct RegisteredDatasets(Vec<&'static str>);
 
 impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetInputPlugin<T> {
     fn should_build(&self, sim: &Simulation) -> bool {
-        sim.contains_resource::<ShouldReadInitialConditions>()
+        sim.get_resource::<ShouldReadInitialConditions>()
+            .map(|x| x.0)
+            .unwrap_or(false)
     }
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
@@ -184,19 +186,4 @@ fn read_dataset_system<T: ToDataset + Component>(
     }
 }
 
-struct ShouldReadInitialConditions;
-
-#[derive(Default)]
-pub struct InputPlugin;
-
-impl Named for InputPlugin {
-    fn name() -> &'static str {
-        "input"
-    }
-}
-
-impl TenetPlugin for InputPlugin {
-    fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.insert_resource(ShouldReadInitialConditions);
-    }
-}
+pub struct ShouldReadInitialConditions(pub bool);

@@ -27,6 +27,7 @@ pub enum CommunicationType {
 
 pub(super) struct CurrentTag(pub(super) Tag);
 
+#[derive(Clone)]
 pub struct BaseCommunicationPlugin {
     num_ranks: WorldSize,
     world_rank: WorldRank,

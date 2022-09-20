@@ -1,155 +1,196 @@
+use std::path::Path;
+use std::path::PathBuf;
+
 use bevy::core::DefaultTaskPoolOptions;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
 use bevy::log::LogPlugin;
 use bevy::log::LogSettings;
-use bevy::prelude::debug;
-use bevy::prelude::CoreStage;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
-use bevy::prelude::Res;
 use bevy::winit::WinitSettings;
+use clap::Parser;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainDecompositionPlugin;
 use super::physics::PhysicsPlugin;
 use super::visualization::VisualizationPlugin;
-use crate::io::input::InputPlugin;
-use crate::named::Named;
-use crate::physics::hydrodynamics::HydrodynamicsPlugin;
-use crate::physics::GravityPlugin;
+use crate::communication::BaseCommunicationPlugin;
+use crate::io::input::ShouldReadInitialConditions;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 use crate::stages::SimulationStagesPlugin;
 
-pub fn log_setup(verbosity: usize) -> LogSettings {
-    match verbosity {
-        0 => LogSettings {
-            level: Level::INFO,
-            filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-        },
-        1 => LogSettings {
-            level: Level::DEBUG,
-            filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-        },
-        2 => LogSettings {
-            level: Level::DEBUG,
-            filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-        },
-        3 => LogSettings {
-            level: Level::DEBUG,
-            ..Default::default()
-        },
-        4 => LogSettings {
-            level: Level::TRACE,
-            ..Default::default()
-        },
-        v => unimplemented!("Unsupported verbosity level: {}", v)
-    }
-}
-
-fn show_time_system(time: Res<super::physics::Time>) {
-    debug!("Time: {:.3} s", time.to_value(super::units::Time::seconds));
-}
-
-fn build_sim(sim: &mut Simulation, opts: &CommandLineOptions) {
-    let task_pool_opts = if let Some(num_worker_threads) = opts.num_worker_threads {
-        DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
-    } else {
-        DefaultTaskPoolOptions::default()
-    };
-    sim.add_parameters_from_file(&opts.parameter_file_path)
-        .insert_resource(task_pool_opts)
-        .add_plugin(SimulationStagesPlugin)
-        .add_plugin(InputPlugin)
-        .add_plugin(PhysicsPlugin)
-        .add_plugin(DomainDecompositionPlugin)
-        .add_plugin(GravityPlugin)
-        .add_plugin(HydrodynamicsPlugin);
-    if sim.on_main_rank() {
-        sim.insert_resource(log_setup(opts.verbosity));
-        if opts.headless {
-            sim.add_bevy_plugins(MinimalPlugins)
-                .add_bevy_plugin(LogPlugin);
-        } else {
-            let winit_opts = WinitSettings {
-                return_from_run: true,
-                ..Default::default()
-            };
-            sim.insert_resource(winit_opts);
-            sim.add_bevy_plugins(DefaultPlugins);
-        }
-        sim.add_system_to_stage(CoreStage::Update, show_time_system);
-    } else {
-        sim.add_bevy_plugins(MinimalPlugins);
-        #[cfg(feature = "mpi")]
-        sim.add_bevy_plugin(LogPlugin);
-    }
-    if opts.headless {
-        // Only show execution order ambiguities when running without render plugins
-        sim.insert_resource(ReportExecutionOrderAmbiguities);
-    } else {
-        sim.add_plugin(VisualizationPlugin);
-    }
+fn get_command_line_options() -> CommandLineOptions {
+    CommandLineOptions::parse()
 }
 
 #[cfg(feature = "mpi")]
 pub fn main() {
-    use clap::Parser;
-
-    use super::communication::MpiWorld;
-    use super::communication::SizedCommunicator;
-    use super::mpi_log;
-    use crate::communication::BaseCommunicationPlugin;
     use crate::communication::MPI_UNIVERSE;
 
-    let opts = CommandLineOptions::parse();
-    let world: MpiWorld<usize> = MpiWorld::new(0);
-    mpi_log::initialize(world.rank(), world.size());
-    let mut sim = Simulation::new();
-    sim.add_plugin(BaseCommunicationPlugin::new(world.size(), world.rank()));
-    build_sim(&mut sim, &opts);
-    sim.run();
+    let opts = get_command_line_options();
+    let mut sim = SimulationBuilder::mpi();
+    sim.with_command_line_options(&opts).build().run();
     MPI_UNIVERSE.drop();
 }
 
 #[cfg(not(feature = "mpi"))]
 pub fn main() {
-    use clap::Parser;
-
     use crate::communication::build_local_communication_sim;
 
-    let opts = CommandLineOptions::parse();
+    let opts = get_command_line_options();
     build_local_communication_sim(
         |sim| {
-            let opts = CommandLineOptions::parse();
-            build_sim(sim, &opts)
+            let opts = get_command_line_options();
+            SimulationBuilder::default()
+                .with_command_line_options(&opts)
+                .build_with_sim(sim);
         },
         opts.num_threads,
     );
 }
 
-#[derive(Default)]
-pub struct SimulationPlugin {
-    pub visualize: bool,
+pub struct SimulationBuilder {
+    pub headless: bool,
+    pub num_worker_threads: Option<usize>,
+    pub parameter_file_path: PathBuf,
+    pub verbosity: usize,
+    pub read_initial_conditions: bool,
+    base_communication: Option<BaseCommunicationPlugin>,
 }
 
-impl Named for SimulationPlugin {
-    fn name() -> &'static str {
-        "simulation"
+impl Default for SimulationBuilder {
+    fn default() -> Self {
+        Self {
+            headless: true,
+            num_worker_threads: None,
+            parameter_file_path: PathBuf::new(),
+            verbosity: 0,
+            read_initial_conditions: true,
+            base_communication: None,
+        }
     }
 }
 
-impl TenetPlugin for SimulationPlugin {
-    fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_plugin(SimulationStagesPlugin)
+impl SimulationBuilder {
+    #[cfg(feature = "mpi")]
+    pub fn mpi() -> Self {
+        use crate::communication::MpiWorld;
+        use crate::communication::SizedCommunicator;
+
+        let world: MpiWorld<usize> = MpiWorld::new(0);
+        crate::mpi_log::initialize(world.rank(), world.size());
+        Self {
+            base_communication: Some(BaseCommunicationPlugin::new(world.size(), world.rank())),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_command_line_options(&mut self, opts: &CommandLineOptions) -> &mut Self {
+        self.headless(opts.headless)
+            .num_worker_threads(opts.num_worker_threads)
+            .parameter_file_path(&opts.parameter_file_path)
+            .verbosity(opts.verbosity)
+    }
+
+    pub fn headless(&mut self, headless: bool) -> &mut Self {
+        self.headless = headless;
+        self
+    }
+
+    pub fn num_worker_threads(&mut self, num_worker_threads: Option<usize>) -> &mut Self {
+        self.num_worker_threads = num_worker_threads;
+        self
+    }
+
+    pub fn parameter_file_path(&mut self, parameter_file_path: &Path) -> &mut Self {
+        self.parameter_file_path = parameter_file_path.to_owned();
+        self
+    }
+
+    pub fn verbosity(&mut self, verbosity: usize) -> &mut Self {
+        self.verbosity = verbosity;
+        self
+    }
+
+    fn build_with_sim(&self, sim: &mut Simulation) {
+        sim.add_parameters_from_file(&self.parameter_file_path)
+            .insert_resource(self.task_pool_opts())
+            .insert_resource(self.log_setup())
+            .insert_resource(self.winit_settings())
+            .insert_resource(ShouldReadInitialConditions(self.read_initial_conditions))
+            .maybe_add_plugin(self.base_communication.clone())
+            .add_plugin(SimulationStagesPlugin)
             .add_plugin(PhysicsPlugin)
             .add_plugin(DomainDecompositionPlugin);
-        if self.visualize {
-            sim.add_bevy_plugins(DefaultPlugins)
-                .add_plugin(VisualizationPlugin);
+        self.add_default_bevy_plugins(sim);
+        if self.headless {
+            // Only show execution order ambiguities when running without render plugins
+            sim.insert_resource(ReportExecutionOrderAmbiguities);
+        } else {
+            sim.add_plugin(VisualizationPlugin);
+        }
+    }
+
+    pub fn build(&mut self) -> Simulation {
+        let mut sim = Simulation::new();
+        self.build_with_sim(&mut sim);
+        sim
+    }
+
+    fn add_default_bevy_plugins(&self, sim: &mut Simulation) {
+        if sim.on_main_rank() {
+            if self.headless {
+                sim.add_bevy_plugins(MinimalPlugins)
+                    .add_bevy_plugin(LogPlugin);
+            } else {
+                sim.add_bevy_plugins(DefaultPlugins);
+            }
         } else {
             sim.add_bevy_plugins(MinimalPlugins);
+            #[cfg(feature = "mpi")]
+            sim.add_bevy_plugin(LogPlugin);
+        }
+    }
+
+    fn task_pool_opts(&self) -> DefaultTaskPoolOptions {
+        if let Some(num_worker_threads) = self.num_worker_threads {
+            DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
+        } else {
+            DefaultTaskPoolOptions::default()
+        }
+    }
+
+    fn winit_settings(&self) -> WinitSettings {
+        WinitSettings {
+            return_from_run: true,
+            ..Default::default()
+        }
+    }
+
+    fn log_setup(&self) -> LogSettings {
+        match self.verbosity {
+            0 => LogSettings {
+                level: Level::INFO,
+                filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
+            },
+            1 => LogSettings {
+                level: Level::DEBUG,
+                filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
+            },
+            2 => LogSettings {
+                level: Level::DEBUG,
+                filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
+            },
+            3 => LogSettings {
+                level: Level::DEBUG,
+                ..Default::default()
+            },
+            4 => LogSettings {
+                level: Level::TRACE,
+                ..Default::default()
+            },
+            v => unimplemented!("Unsupported verbosity level: {}", v)
         }
     }
 }

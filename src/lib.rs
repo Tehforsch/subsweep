@@ -32,7 +32,5 @@ pub(crate) mod visualization;
 #[cfg(feature = "mpi")]
 pub mod mpi_log;
 
-pub use io::input::InputPlugin;
 pub use physics::hydrodynamics::HydrodynamicsPlugin;
 pub use physics::GravityPlugin;
-pub use sim_builder::SimulationPlugin;

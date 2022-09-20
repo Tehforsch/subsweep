@@ -58,6 +58,16 @@ impl Simulation {
         self
     }
 
+    pub fn maybe_add_plugin<T: Sync + Send + 'static + TenetPlugin>(
+        &mut self,
+        plugin: Option<T>,
+    ) -> &mut Self {
+        if let Some(plugin) = plugin {
+            self.add_plugin(plugin);
+        }
+        self
+    }
+
     pub fn add_stage_after<S: Stage>(
         &mut self,
         target: impl StageLabel,
