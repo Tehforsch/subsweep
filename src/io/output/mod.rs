@@ -22,7 +22,6 @@ use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
-use crate::plugin_utils::run_once;
 use crate::plugin_utils::Simulation;
 
 #[derive(AmbiguitySetLabel)]
@@ -88,7 +87,7 @@ fn add_output_system<T: Named, P>(
     sim: &mut Simulation,
     system: impl ParallelSystemDescriptorCoercion<P>,
 ) {
-    run_once::<OutputMarker>(sim, output_setup);
+    sim.run_once::<OutputMarker>(output_setup);
     if Parameters::is_desired_field::<T>(sim) {
         sim.add_system_to_stage(
             OutputStages::Output,

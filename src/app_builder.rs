@@ -14,7 +14,6 @@ use super::command_line_options::CommandLineOptions;
 use super::domain::DomainDecompositionPlugin;
 use super::parameters::add_parameter_file_contents;
 use super::physics::PhysicsPlugin;
-use super::plugin_utils::is_main_rank;
 use super::visualization::VisualizationPlugin;
 use crate::io::input::InputPlugin;
 use crate::named::Named;
@@ -68,7 +67,7 @@ fn build_app(app: &mut Simulation, opts: &CommandLineOptions) {
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(GravityPlugin)
         .add_plugin(HydrodynamicsPlugin);
-    if is_main_rank(app) {
+    if app.on_main_rank() {
         app.insert_resource(log_setup(opts.verbosity));
         if opts.headless {
             app.add_bevy_plugins(MinimalPlugins)

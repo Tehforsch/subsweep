@@ -17,8 +17,6 @@ use crate::io::output::AttributeOutputPlugin;
 use crate::io::output::DatasetOutputPlugin;
 use crate::mass::Mass;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
-use crate::plugin_utils::get_parameters;
 use crate::plugin_utils::Simulation;
 use crate::plugin_utils::TenetPlugin;
 use crate::position::Position;
@@ -48,8 +46,7 @@ pub enum PhysicsStages {
 impl TenetPlugin for PhysicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.panic_if_already_added::<Self>();
-        sim.add_plugin(ParameterPlugin::<Parameters>::new("physics"));
-        let parameters = get_parameters::<Parameters>(sim);
+        let parameters = sim.add_parameters::<Parameters>("physics");
         sim.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())

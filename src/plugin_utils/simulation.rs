@@ -9,13 +9,15 @@ use bevy::prelude::PluginGroup;
 use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
 use bevy::prelude::World;
+use serde::Deserialize;
 
-use super::get_parameters;
-use super::run_once;
 use super::tenet_plugin::TenetPlugin;
 use super::AlreadyAddedLabels;
+use super::RunOnceLabels;
 use crate::communication::WorldRank;
 use crate::named::Named;
+use crate::parameters::ParameterPlugin;
+use crate::parameters::Parameters;
 
 #[derive(Default)]
 pub struct Simulation(pub App);
@@ -29,10 +31,10 @@ impl Simulation {
         if !plugin.should_build(self) {
             return self;
         }
-        run_once::<T>(self, |sim| {
+        self.run_once::<T>(|sim| {
             plugin.build_once_everywhere(sim);
             if !sim.has_world_rank() {
-            } else if get_parameters::<WorldRank>(sim).is_main() {
+            } else if sim.on_main_rank() {
                 plugin.build_once_on_main_rank(sim);
             } else {
                 plugin.build_once_on_other_ranks(sim);
@@ -40,21 +42,12 @@ impl Simulation {
         });
         plugin.build_everywhere(self);
         if !self.has_world_rank() {
-        } else if get_parameters::<WorldRank>(self).is_main() {
+        } else if self.on_main_rank() {
             plugin.build_on_main_rank(self);
         } else {
             plugin.build_on_other_ranks(self);
         }
         self
-    }
-
-    fn has_world_rank(&self) -> bool {
-        if !self.contains_resource::<WorldRank>() {
-            warn!("World rank not present during plugin initialization, this should only happen in tests");
-            false
-        } else {
-            true
-        }
     }
 
     pub fn add_stage_after<S: Stage>(
@@ -175,5 +168,33 @@ impl Simulation {
         if !labels.0.insert(P::name()) {
             panic!("Added twice: {}", P::name())
         }
+    }
+
+    fn has_world_rank(&self) -> bool {
+        if !self.contains_resource::<WorldRank>() {
+            warn!("World rank not present during plugin initialization, this should only happen in tests");
+            false
+        } else {
+            true
+        }
+    }
+
+    pub fn on_main_rank(&self) -> bool {
+        self.unwrap_resource::<WorldRank>().is_main()
+    }
+
+    pub fn run_once<P: Named>(&mut self, f: impl Fn(&mut Simulation)) {
+        let mut labels = self.get_resource_or_insert_with(RunOnceLabels::default);
+        if labels.0.insert(P::name()) {
+            f(self);
+        }
+    }
+
+    pub fn add_parameters<T>(&mut self, name: &str) -> T
+    where
+        T: Sync + Send + 'static + Clone + Parameters + for<'de> Deserialize<'de>,
+    {
+        self.add_plugin(ParameterPlugin::<T>::new(name));
+        self.unwrap_resource::<T>().clone()
     }
 }
