@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use tenet::sim_builder::SimulationBuilder;
+use tenet::simulation_builder::SimulationBuilder;
 use tenet::*;
 
 fn main() {

@@ -8,5 +8,5 @@
 #![allow(clippy::type_complexity)]
 
 fn main() {
-    tenet::sim_builder::main()
+    tenet::simulation_builder::main()
 }
