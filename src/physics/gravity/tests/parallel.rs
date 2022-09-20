@@ -13,7 +13,6 @@ use super::direct_sum;
 use crate::communication::build_local_communication_sim_with_custom_logic;
 use crate::communication::WorldRank;
 use crate::domain::DomainDecompositionPlugin;
-use crate::io::output;
 use crate::mass;
 use crate::physics::gravity::plugin::GravityPlugin;
 use crate::physics::gravity::GravityParameters;
@@ -89,6 +88,7 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 #[cfg(not(feature = "mpi"))]
 fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
+    use crate::io::output::OutputParameters;
     use crate::physics::SimulationParameters;
     use crate::quadtree::QuadTreeConfig;
     use crate::stages::SimulationStagesPlugin;
@@ -107,7 +107,7 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
     .insert_resource(QuadTreeConfig {
         ..Default::default()
     })
-    .insert_resource(output::Parameters {
+    .insert_resource(OutputParameters {
         ..Default::default()
     })
     .add_startup_system(spawn_particles_system)

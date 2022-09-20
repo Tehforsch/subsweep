@@ -17,7 +17,7 @@ use hdf5::File;
 pub use self::attribute::Attribute;
 pub use self::attribute_plugin::AttributeOutputPlugin;
 pub use self::dataset_plugin::DatasetOutputPlugin;
-pub use self::parameters::Parameters;
+pub use self::parameters::OutputParameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
@@ -38,7 +38,7 @@ struct OutputFile {
 }
 
 fn output_setup(sim: &mut Simulation) {
-    sim.add_plugin(ParameterPlugin::<Parameters>::new("output"))
+    sim.add_plugin(ParameterPlugin::<OutputParameters>::new("output"))
         .insert_resource(OutputFile::default())
         .add_startup_system(Timer::initialize_system)
         .add_startup_system(make_output_dir_system)
@@ -60,7 +60,7 @@ fn output_setup(sim: &mut Simulation) {
         );
 }
 
-fn make_output_dir_system(parameters: Res<Parameters>) {
+fn make_output_dir_system(parameters: Res<OutputParameters>) {
     fs::create_dir_all(&parameters.output_dir)
         .unwrap_or_else(|_| panic!("Failed to create output dir: {:?}", parameters.output_dir));
 }
@@ -68,7 +68,7 @@ fn make_output_dir_system(parameters: Res<Parameters>) {
 fn open_file_system(
     mut file: ResMut<OutputFile>,
     rank: Res<WorldRank>,
-    parameters: Res<Parameters>,
+    parameters: Res<OutputParameters>,
     output_timer: Res<Timer>,
 ) {
     assert!(file.f.is_none());
@@ -88,7 +88,7 @@ fn add_output_system<T: Named, P, Plug: Named>(
     system: impl ParallelSystemDescriptorCoercion<P>,
 ) {
     sim.run_once::<Plug>(output_setup);
-    if Parameters::is_desired_field::<T>(sim) {
+    if OutputParameters::is_desired_field::<T>(sim) {
         sim.add_system_to_stage(
             OutputStages::Output,
             system

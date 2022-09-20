@@ -7,14 +7,14 @@ use crate::simulation::Simulation;
 use crate::units::Time;
 
 #[derive(Deserialize)]
-pub struct Parameters {
+pub struct OutputParameters {
     pub time_between_snapshots: Time,
     pub time_first_snapshot: Option<Time>,
     pub output_dir: PathBuf,
     pub fields: Vec<String>,
 }
 
-impl Default for Parameters {
+impl Default for OutputParameters {
     fn default() -> Self {
         Self {
             time_between_snapshots: Time::zero(),
@@ -25,7 +25,7 @@ impl Default for Parameters {
     }
 }
 
-impl Parameters {
+impl OutputParameters {
     pub fn is_desired_field<T: Named>(sim: &Simulation) -> bool {
         sim.unwrap_resource::<Self>()
             .fields
