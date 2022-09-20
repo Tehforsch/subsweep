@@ -157,7 +157,7 @@ fn keyboard_app_exit_system(
     input: Res<Input<KeyCode>>,
     mut event_writer: EventWriter<StopSimulationEvent>,
 ) {
-    if input.just_pressed(KeyCode::Escape) {
+    if input.just_pressed(KeyCode::Escape) && input.get_pressed().len() == 1 {
         event_writer.send(StopSimulationEvent);
     }
 }
