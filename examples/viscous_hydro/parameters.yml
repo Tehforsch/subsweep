@@ -1,6 +1,6 @@
-physics:
+simulation:
   timestep: 15e2 s
-domain_tree:
+tree:
   max_depth: 20
   min_depth: 4
   max_num_particles_per_leaf: 1

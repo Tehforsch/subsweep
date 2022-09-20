@@ -28,7 +28,7 @@ where
     T: Attribute + Sync + Send + 'static,
 {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        add_output_system::<T, _, Self>(sim, Self::write_attribute);
+        add_output_system::<T, _>(sim, Self::write_attribute);
     }
 }
 

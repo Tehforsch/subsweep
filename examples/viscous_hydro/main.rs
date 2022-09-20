@@ -20,12 +20,19 @@ struct GravityCenter(VecLength);
 #[derive(Deref, DerefMut, Component)]
 struct ParticleType(usize);
 
-#[derive(Default, Deserialize, Clone, Named)]
-#[name = "viscous_gravity"]
+// Implementing named myself here because of
+// https://github.com/rust-lang/rust/issues/54363
+#[derive(Default, Deserialize, Clone)]
 struct ViscousGravityParameters {
     num_particles: usize,
     fake_gravity_factor: InverseTimeSquared,
     fake_viscosity_timescale: units::Time,
+}
+
+impl Named for ViscousGravityParameters {
+    fn name() -> &'static str {
+        "viscous_gravity"
+    }
 }
 
 fn main() {

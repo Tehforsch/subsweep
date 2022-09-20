@@ -37,7 +37,7 @@ impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> TenetPlug
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        add_output_system::<T, _, Self>(sim, Self::write_dataset);
+        add_output_system::<T, _>(sim, Self::write_dataset);
     }
 }
 

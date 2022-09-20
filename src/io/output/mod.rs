@@ -82,11 +82,14 @@ fn close_file_system(mut file: ResMut<OutputFile>) {
     file.f = None;
 }
 
-fn add_output_system<T: Named, P, Plug: Named>(
+#[derive(Named)]
+struct OutputMarker;
+
+fn add_output_system<T: Named, P>(
     sim: &mut Simulation,
     system: impl ParallelSystemDescriptorCoercion<P>,
 ) {
-    sim.run_once::<Plug>(output_setup);
+    sim.run_once::<OutputMarker>(output_setup);
     if OutputParameters::is_desired_field::<T>(sim) {
         sim.add_system_to_stage(
             OutputStages::Output,
