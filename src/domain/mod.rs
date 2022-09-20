@@ -70,10 +70,10 @@ impl TenetPlugin for DomainDecompositionPlugin {
                 DomainDecompositionStages::Decomposition,
                 domain_decomposition_system.after(distribute_top_level_nodes_system),
             )
-            .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
+            .add_tenet_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
                 CommunicationType::AllGather,
             ))
-            .add_plugin(CommunicationPlugin::<MassMoments>::new(
+            .add_tenet_plugin(CommunicationPlugin::<MassMoments>::new(
                 CommunicationType::AllGather,
             ));
     }

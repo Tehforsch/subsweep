@@ -4,8 +4,8 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::thread;
 
-use bevy::prelude::App;
-use bevy::prelude::Plugin;
+use bevy::prelude::Deref;
+use bevy::prelude::DerefMut;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
@@ -22,6 +22,7 @@ use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::plugin_utils::Simulation;
+use crate::plugin_utils::TenetPlugin;
 
 fn create_and_build_app<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     build_app: F,
@@ -67,14 +68,14 @@ pub fn build_local_communication_app_with_custom_logic<
     let mut handles = vec![];
     for rank in 1..num_threads {
         let receivers = Receivers({
-            let all = &mut app.unwrap_non_send_resource_mut::<Receivers>().0;
+            let all = &mut app.unwrap_non_send_resource_mut::<Receivers>();
             let to_move = all
                 .drain_filter(|comm, _| comm.owner == rank as Rank)
                 .collect();
             to_move
         });
         let senders = Senders({
-            let all = &mut app.unwrap_non_send_resource_mut::<Senders>().0;
+            let all = &mut app.unwrap_non_send_resource_mut::<Senders>();
             let to_move = all
                 .drain_filter(|comm, _| comm.owner == rank as Rank)
                 .collect();
@@ -100,30 +101,26 @@ pub(super) struct Comm {
     tag: Tag,
 }
 
+#[derive(Deref, DerefMut)]
 pub(super) struct Receivers(HashMap<Comm, Receiver<Payload>>);
 
+#[derive(Deref, DerefMut)]
 struct Senders(HashMap<Comm, Sender<Payload>>);
 
-impl<T> Plugin for CommunicationPlugin<T>
+impl<T> TenetPlugin for CommunicationPlugin<T>
 where
     T: Equivalence + Sync + Send + 'static,
     <T as Equivalence>::Out: MatchesRaw,
 {
-    fn build(&self, app: &mut App) {
-        let tag = get_next_tag(app);
-        let rank = app.world.get_resource::<WorldRank>().unwrap().0;
-        let world_size = app.world.get_resource::<WorldSize>().unwrap().0;
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let tag = get_next_tag(sim);
+        let rank = **sim.unwrap_resource::<WorldRank>();
+        let world_size = **sim.unwrap_resource::<WorldSize>();
         if rank == 0 {
             let (senders, receivers) = get_senders_and_receivers(world_size, tag);
-            app.world
-                .get_non_send_resource_mut::<Senders>()
-                .unwrap()
-                .0
+            sim.unwrap_non_send_resource_mut::<Senders>()
                 .extend(senders.into_iter());
-            app.world
-                .get_non_send_resource_mut::<Receivers>()
-                .unwrap()
-                .0
+            sim.unwrap_non_send_resource_mut::<Receivers>()
                 .extend(receivers.into_iter());
         }
         let mut commun = LocalCommunicator::<T>::new(
@@ -133,11 +130,11 @@ where
             world_size,
             rank,
         );
-        let mut senders = app.world.get_non_send_resource_mut::<Senders>().unwrap();
-        add_senders_to_communicator(&mut commun, &mut senders.0);
-        let mut receivers = app.world.get_non_send_resource_mut::<Receivers>().unwrap();
-        add_receivers_to_communicator(&mut commun, &mut receivers.0);
-        add_communicator(self.type_, app, commun);
+        let mut senders = sim.unwrap_non_send_resource_mut::<Senders>();
+        add_senders_to_communicator(&mut commun, &mut senders);
+        let mut receivers = sim.unwrap_non_send_resource_mut::<Receivers>();
+        add_receivers_to_communicator(&mut commun, &mut receivers);
+        add_communicator(self.type_, sim, commun);
     }
 }
 

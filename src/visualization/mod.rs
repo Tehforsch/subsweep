@@ -61,10 +61,10 @@ impl Named for VisualizationPlugin {
 
 impl TenetPlugin for VisualizationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_plugin(
+        sim.add_tenet_plugin(
             CommunicationPlugin::<ParticleVisualizationExchangeData>::new(CommunicationType::Sync),
         )
-        .add_plugin(CommunicationPlugin::<ShouldExit>::new(
+        .add_tenet_plugin(CommunicationPlugin::<ShouldExit>::new(
             CommunicationType::AllGather,
         ));
     }
