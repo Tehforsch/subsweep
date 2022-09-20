@@ -21,7 +21,6 @@ use crate::physics::gravity::Solver;
 use crate::physics::LocalParticle;
 use crate::physics::PhysicsPlugin;
 use crate::physics::Timestep;
-use crate::physics::{self};
 use crate::position::Position;
 use crate::simulation::Simulation;
 use crate::units::Mass;

@@ -22,7 +22,7 @@ struct InputFiles(Vec<File>);
 struct InputSystemsAmbiguitySet;
 
 #[derive(Clone, Default, Deserialize)]
-pub struct Parameters {
+pub struct InputParameters {
     pub paths: Vec<PathBuf>,
 }
 
@@ -57,16 +57,18 @@ impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetIn
     }
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
-        sim.add_plugin(ParameterPlugin::<Parameters>::new("initial_conditions"))
-            .insert_resource(InputFiles::default())
-            .insert_resource(SpawnedEntities::default())
-            .add_startup_system(open_file_system)
-            .add_startup_system(
-                spawn_entities_system
-                    .after(open_file_system)
-                    .before(close_file_system),
-            )
-            .add_startup_system(close_file_system.after(spawn_entities_system));
+        sim.add_plugin(ParameterPlugin::<InputParameters>::new(
+            "initial_conditions",
+        ))
+        .insert_resource(InputFiles::default())
+        .insert_resource(SpawnedEntities::default())
+        .add_startup_system(open_file_system)
+        .add_startup_system(
+            spawn_entities_system
+                .after(open_file_system)
+                .before(close_file_system),
+        )
+        .add_startup_system(close_file_system.after(spawn_entities_system));
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
@@ -84,7 +86,7 @@ impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetIn
 
 fn open_file_system(
     mut files: ResMut<InputFiles>,
-    parameters: Res<Parameters>,
+    parameters: Res<InputParameters>,
     rank: Res<WorldRank>,
     size: Res<WorldSize>,
 ) {
