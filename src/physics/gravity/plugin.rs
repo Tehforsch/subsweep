@@ -23,7 +23,6 @@ impl Named for GravityPlugin {
 
 impl TenetPlugin for GravityPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.panic_if_already_added::<Self>();
         sim.add_system_to_stage(PhysicsStages::Physics, construct_quad_tree_system)
             .add_system_to_stage(
                 PhysicsStages::Physics,

@@ -103,6 +103,10 @@ impl<T> Named for DrawBundlePlugin<T> {
 }
 
 impl<T: IntoBundle + Component + Sync + Send + 'static> TenetPlugin for DrawBundlePlugin<T> {
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_system_to_stage(
             VisualizationStage::AddDrawComponents,

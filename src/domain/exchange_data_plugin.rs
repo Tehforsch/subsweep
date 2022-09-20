@@ -82,6 +82,10 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> TenetPlugin
 where
     <T as Equivalence>::Out: MatchesRaw,
 {
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         let rank = **sim.unwrap_resource::<WorldRank>();
         let size = **sim.unwrap_resource::<WorldSize>();

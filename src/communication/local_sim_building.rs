@@ -136,6 +136,10 @@ where
         add_receivers_to_communicator(&mut commun, &mut receivers);
         add_communicator(self.type_, sim, commun);
     }
+
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
 }
 
 pub(super) fn add_senders_to_communicator<T>(

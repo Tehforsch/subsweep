@@ -53,6 +53,10 @@ impl<T> Default for DatasetInputPlugin<T> {
 pub struct RegisteredDatasets(Vec<&'static str>);
 
 impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetInputPlugin<T> {
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
     fn should_build(&self, sim: &Simulation) -> bool {
         sim.get_resource::<ShouldReadInitialConditions>()
             .map(|x| x.0)

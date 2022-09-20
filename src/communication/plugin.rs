@@ -94,6 +94,10 @@ where
         let tag = get_next_tag(sim);
         add_communicator(self.type_, sim, Communicator::<T>::new(tag));
     }
+
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
 }
 
 pub(super) fn add_communicator<T: Equivalence + 'static + Sync + Send>(

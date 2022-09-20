@@ -39,6 +39,9 @@ impl Simulation {
         if !plugin.should_build(self) {
             return self;
         }
+        if !plugin.allow_adding_twice() {
+            self.panic_if_already_added::<T>()
+        }
         self.run_once::<T>(|sim| {
             plugin.build_once_everywhere(sim);
             if !sim.has_world_rank() {
@@ -181,7 +184,7 @@ impl Simulation {
     }
 
     /// Panics if a named item was (accidentally) added twice
-    pub fn panic_if_already_added<P: Named>(&mut self) {
+    fn panic_if_already_added<P: Named>(&mut self) {
         let mut labels = self.get_resource_or_insert_with(AlreadyAddedLabels::default);
         if !labels.0.insert(P::name()) {
             panic!("Added twice: {}", P::name())

@@ -37,6 +37,10 @@ impl<T> Named for DatasetOutputPlugin<T> {
 impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> TenetPlugin
     for DatasetOutputPlugin<T>
 {
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
     fn build_everywhere(&self, sim: &mut Simulation) {
         add_output_system::<T, _>(sim, Self::write_dataset);
     }

@@ -64,6 +64,10 @@ impl<T> Named for ParameterPlugin<T> {
 impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> TenetPlugin
     for ParameterPlugin<T>
 {
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
     fn should_build(&self, sim: &Simulation) -> bool {
         // In tests, we want to be able to insert the parameters
         // directly into the sim, without having to read a parameter
