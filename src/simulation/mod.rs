@@ -219,3 +219,25 @@ impl Simulation {
         self.unwrap_resource::<T>().clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::named::Named;
+    use crate::simulation::Simulation;
+    use crate::simulation::TenetPlugin;
+
+    #[test]
+    #[should_panic]
+    fn add_plugin_twice() {
+        struct MyPlugin;
+        impl Named for MyPlugin {
+            fn name() -> &'static str {
+                "my_plugin"
+            }
+        }
+        impl TenetPlugin for MyPlugin {}
+        let mut sim = Simulation::new();
+        sim.add_plugin(MyPlugin);
+        sim.add_plugin(MyPlugin);
+    }
+}
