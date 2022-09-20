@@ -141,7 +141,9 @@ impl Simulation {
     }
 
     pub fn run(&mut self) {
-        self.0.run()
+        self.0.run();
+        #[cfg(feature = "mpi")]
+        crate::communication::MPI_UNIVERSE.drop();
     }
 
     pub fn update(&mut self) {

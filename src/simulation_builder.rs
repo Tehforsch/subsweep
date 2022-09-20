@@ -26,12 +26,9 @@ fn get_command_line_options() -> CommandLineOptions {
 
 #[cfg(feature = "mpi")]
 pub fn main() {
-    use crate::communication::MPI_UNIVERSE;
-
     let opts = get_command_line_options();
     let mut sim = SimulationBuilder::mpi();
     sim.with_command_line_options(&opts).build().run();
-    MPI_UNIVERSE.drop();
 }
 
 #[cfg(not(feature = "mpi"))]
