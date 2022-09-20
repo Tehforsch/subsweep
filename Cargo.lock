@@ -1219,6 +1219,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_named"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "dispatch"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2730,6 +2739,7 @@ dependencies = [
  "bevy_prototype_lyon",
  "clap",
  "derive_more",
+ "derive_named",
  "glam",
  "hdf5",
  "lazy_static",
