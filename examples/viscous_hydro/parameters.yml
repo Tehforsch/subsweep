@@ -1,18 +1,8 @@
 physics:
   timestep: 1e-2 s
-gravity:
-  softening_length: 1e-10 m
-  opening_angle: "0.5"
-domain_tree:
-  max_depth: 20
-  min_depth: 4
-  max_num_particles_per_leaf: 1
 visualization:
   show_quadtree: false
   camera_zoom: 2e-3 m
-initial_conditions:
-  paths:
-    - examples/figure8/ics.hdf5
 output:
   output_dir: "output"
   time_between_snapshots: 0.1 yr

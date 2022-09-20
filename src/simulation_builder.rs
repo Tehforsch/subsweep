@@ -113,6 +113,11 @@ impl SimulationBuilder {
         self
     }
 
+    pub fn read_initial_conditions(&mut self, read_initial_conditions: bool) -> &mut Self {
+        self.read_initial_conditions = read_initial_conditions;
+        self
+    }
+
     fn build_with_sim(&self, sim: &mut Simulation) {
         sim.add_parameters_from_file(&self.parameter_file_path)
             .insert_resource(self.task_pool_opts())

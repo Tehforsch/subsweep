@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
+use parameters::Parameters;
 
-use super::parameters::Parameters;
 use super::LocalParticle;
 use super::MassMoments;
 use super::Timestep;
@@ -25,6 +25,7 @@ pub(super) mod mass_moments;
 
 pub(super) mod plugin;
 
+mod parameters;
 #[cfg(test)]
 mod tests;
 

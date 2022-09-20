@@ -33,7 +33,13 @@ pub(crate) mod visualization;
 pub mod mpi_log;
 
 pub mod prelude {
+    pub use super::communication::WorldRank;
+    pub use super::communication::WorldSize;
+    pub use super::mass::Mass;
     pub use super::physics::hydrodynamics::HydrodynamicsPlugin;
     pub use super::physics::GravityPlugin;
+    pub use super::physics::LocalParticle;
+    pub use super::position::Position;
     pub use super::simulation_builder::SimulationBuilder;
+    pub use super::velocity::Velocity;
 }
