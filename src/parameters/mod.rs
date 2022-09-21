@@ -76,7 +76,7 @@ where
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let parameter_file_contents = &sim.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameter_file_contents?", T::name())).0;
+        let parameter_file_contents = &sim.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameters_from_file?", T::name())).0;
         let parameters = Self::get_parameter_struct_from_parameter_file_contents(
             T::name(),
             parameter_file_contents,
