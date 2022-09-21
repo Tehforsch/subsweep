@@ -2,9 +2,11 @@ mod tenet_plugin;
 
 use std::collections::HashSet;
 
+use bevy::app::PluginGroupBuilder;
 use bevy::ecs::event::Event;
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::ecs::system::Resource;
+use bevy::prelude::debug;
 use bevy::prelude::warn;
 use bevy::prelude::App;
 use bevy::prelude::Mut;
@@ -37,8 +39,10 @@ impl Simulation {
 
     pub fn add_plugin<T: Sync + Send + 'static + TenetPlugin>(&mut self, plugin: T) -> &mut Self {
         if !plugin.should_build(self) {
+            debug!("Skip plugin: {}", T::name());
             return self;
         }
+        debug!(" Add plugin: {}", T::name());
         if !plugin.allow_adding_twice() {
             self.panic_if_already_added::<T>()
         }
@@ -103,6 +107,15 @@ impl Simulation {
 
     pub fn add_bevy_plugins<T: PluginGroup>(&mut self, group: T) -> &mut Self {
         self.0.add_plugins(group);
+        self
+    }
+
+    pub fn add_bevy_plugins_with<T, F>(&mut self, group: T, func: F) -> &mut Self
+    where
+        T: PluginGroup,
+        F: FnOnce(&mut PluginGroupBuilder) -> &mut PluginGroupBuilder,
+    {
+        self.0.add_plugins_with(group, func);
         self
     }
 

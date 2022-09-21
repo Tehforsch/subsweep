@@ -121,6 +121,7 @@ impl SimulationBuilder {
             .insert_resource(self.log_setup())
             .insert_resource(self.winit_settings())
             .insert_resource(ShouldReadInitialConditions(self.read_initial_conditions))
+            .add_bevy_plugin(LogPlugin)
             .maybe_add_plugin(self.base_communication.clone())
             .add_plugin(SimulationStagesPlugin)
             .add_plugin(PhysicsPlugin)
@@ -143,15 +144,12 @@ impl SimulationBuilder {
     fn add_default_bevy_plugins(&self, sim: &mut Simulation) {
         if sim.on_main_rank() {
             if self.headless {
-                sim.add_bevy_plugins(MinimalPlugins)
-                    .add_bevy_plugin(LogPlugin);
+                sim.add_bevy_plugins(MinimalPlugins);
             } else {
-                sim.add_bevy_plugins(DefaultPlugins);
+                sim.add_bevy_plugins_with(DefaultPlugins, |group| group.disable::<LogPlugin>());
             }
         } else {
             sim.add_bevy_plugins(MinimalPlugins);
-            #[cfg(feature = "mpi")]
-            sim.add_bevy_plugin(LogPlugin);
         }
     }
 
