@@ -7,15 +7,8 @@ use crate::units::Length;
 #[derive(Clone, Deserialize, Named)]
 #[name = "gravity"]
 pub struct GravityParameters {
+    #[serde(default)]
     pub softening_length: Length,
+    #[serde(default)]
     pub opening_angle: Dimensionless,
-}
-
-impl Default for GravityParameters {
-    fn default() -> Self {
-        Self {
-            softening_length: Length::zero(),
-            opening_angle: Dimensionless::dimensionless(0.5),
-        }
-    }
 }

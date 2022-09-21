@@ -3,28 +3,14 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
+use serde::Deserialize;
+use serde_yaml::Value;
 
 use crate::named::Named;
 use crate::simulation::Simulation;
 use crate::simulation::TenetPlugin;
 
 pub struct ReadParametersError(String);
-
-pub trait Parameters
-where
-    Self: Sized,
-{
-    fn from_empty() -> Result<Self, ReadParametersError>;
-}
-
-impl<T> Parameters for T
-where
-    T: Default,
-{
-    fn from_empty() -> Result<Self, ReadParametersError> {
-        Ok(<T as Default>::default())
-    }
-}
 
 struct ParameterFileContents(String);
 
@@ -54,9 +40,21 @@ impl<T> Default for ParameterPlugin<T> {
     }
 }
 
+fn from_empty<T>() -> Result<T, ReadParametersError>
+where
+    T: Named + for<'de> Deserialize<'de>,
+{
+    serde_yaml::from_str::<T>("").map_err(|_| {
+        ReadParametersError(format!(
+            "No section {} in parameter file. This section cannot be left out",
+            T::name()
+        ))
+    })
+}
+
 impl<T> TenetPlugin for ParameterPlugin<T>
 where
-    T: Named + Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>,
+    T: Named + Sync + Send + 'static + for<'de> serde::Deserialize<'de>,
 {
     fn allow_adding_twice(&self) -> bool {
         true
@@ -85,20 +83,21 @@ where
     }
 }
 
-impl<T: Parameters + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> ParameterPlugin<T> {
+impl<T: Named + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> ParameterPlugin<T> {
     fn get_parameter_struct_from_parameter_file_contents(
         name: &str,
         parameter_file_contents: &str,
     ) -> T {
-        let all_parameters: serde_yaml::Value =
-            serde_yaml::from_str(parameter_file_contents).unwrap();
+        let all_parameters: Value =
+            serde_yaml::from_str(parameter_file_contents).unwrap_or(Value::Null);
         all_parameters
             .get(name)
             .map(|plugin_parameters| {
-                serde_yaml::from_value(plugin_parameters.clone())
-                    .expect("Failed to read parameter file")
+                serde_yaml::from_value(plugin_parameters.clone()).unwrap_or_else(|_| {
+                    panic!("Failed to read parameter file section {}", T::name())
+                })
             })
-            .unwrap_or_else(|| match T::from_empty() {
+            .unwrap_or_else(|| match from_empty() {
                 Ok(params) => {
                     debug!(
                         "Parameter section missing for '{}', assuming defaults",
@@ -120,11 +119,9 @@ mod tests {
     use crate::named::Named;
     use crate::parameters::ParameterFileContents;
     use crate::parameters::ParameterPlugin;
-    use crate::parameters::Parameters;
-    use crate::parameters::ReadParametersError;
     use crate::simulation::Simulation;
 
-    #[derive(Deserialize, Default, Named)]
+    #[derive(Clone, Deserialize, Default, Named)]
     #[name = "parameters1"]
     struct Parameters1 {
         i: i32,
@@ -151,10 +148,10 @@ parameters2:
    'hi'"
                 .into(),
         ));
-        sim.add_plugin(ParameterPlugin::<Parameters1>::default())
-            .add_plugin(ParameterPlugin::<Parameters2>::default());
-        let params1 = sim.unwrap_resource::<Parameters1>();
-        let params2 = sim.unwrap_resource::<Parameters2>();
+        let params1 = sim
+            .add_parameter_type_and_get_result::<Parameters1>()
+            .clone();
+        let params2 = sim.add_parameter_type_and_get_result::<Parameters2>();
         assert_eq!(params1.i, 1);
         assert_eq!(params2.s, "hi");
         assert_eq!(params2.d, "");
@@ -168,13 +165,55 @@ parameters2:
         struct Parameters1 {
             _i: i32,
         }
-        impl Parameters for Parameters1 {
-            fn from_empty() -> Result<Self, crate::parameters::ReadParametersError> {
-                Err(ReadParametersError("Missing required param 'i'".into()))
-            }
-        }
+
         let mut sim = Simulation::new();
         sim.insert_resource(ParameterFileContents("".into()));
         sim.add_plugin(ParameterPlugin::<Parameters1>::default());
+    }
+
+    #[test]
+    fn allow_leaving_out_struct_with_complete_set_of_defaults() {
+        #[derive(Deserialize, Named)]
+        #[name = "parameters1"]
+        struct Parameters1 {
+            #[serde(default = "get_default_i")]
+            i: i32,
+            #[serde(default = "get_default_x")]
+            x: f32,
+        }
+
+        fn get_default_i() -> i32 {
+            15
+        }
+
+        fn get_default_x() -> f32 {
+            12.0
+        }
+        let mut sim = Simulation::new();
+        sim.insert_resource(ParameterFileContents("".into()));
+        let params = sim.add_parameter_type_and_get_result::<Parameters1>();
+        assert_eq!(params.i, 15);
+        assert_eq!(params.x, 12.0);
+    }
+
+    #[test]
+    fn allow_defaults_from_type_default() {
+        #[derive(Deserialize, Named)]
+        #[name = "parameters1"]
+        struct Parameters1 {
+            #[serde(default)]
+            i: i32,
+            x: f32,
+        }
+
+        let mut sim = Simulation::new();
+        let contents = "
+parameters1:
+  x:
+    2.0";
+        sim.insert_resource(ParameterFileContents(contents.into()));
+        let params = sim.add_parameter_type_and_get_result::<Parameters1>();
+        assert_eq!(params.x, 2.0);
+        assert_eq!(params.i, 0);
     }
 }

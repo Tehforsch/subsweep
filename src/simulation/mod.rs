@@ -21,8 +21,6 @@ pub use tenet_plugin::TenetPlugin;
 use crate::communication::WorldRank;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
-use crate::parameters::Parameters;
-
 #[derive(Default)]
 struct RunOnceLabels(HashSet<&'static str>);
 
@@ -228,18 +226,18 @@ impl Simulation {
 
     pub fn add_parameter_type<T>(&mut self) -> &mut Self
     where
-        T: Named + Sync + Send + 'static + Parameters + for<'de> Deserialize<'de>,
+        T: Named + Sync + Send + 'static + for<'de> Deserialize<'de>,
     {
         self.add_plugin(ParameterPlugin::<T>::default());
         self
     }
 
-    pub fn add_parameter_type_and_get_result<T>(&mut self) -> T
+    pub fn add_parameter_type_and_get_result<T>(&mut self) -> &T
     where
-        T: Named + Sync + Send + 'static + Clone + Parameters + for<'de> Deserialize<'de>,
+        T: Named + Sync + Send + 'static + for<'de> Deserialize<'de>,
     {
         self.add_plugin(ParameterPlugin::<T>::default());
-        self.unwrap_resource::<T>().clone()
+        self.unwrap_resource::<T>()
     }
 }
 
