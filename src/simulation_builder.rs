@@ -136,7 +136,7 @@ impl SimulationBuilder {
     }
 
     pub fn build(&mut self) -> Simulation {
-        let mut sim = Simulation::new();
+        let mut sim = Simulation::default();
         self.build_with_sim(&mut sim);
         sim
     }

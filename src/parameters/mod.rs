@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn parameter_plugin() {
-        let mut sim = Simulation::new();
+        let mut sim = Simulation::default();
         sim.insert_resource(ParameterFileContents(
             "
 parameters1:
@@ -166,7 +166,7 @@ parameters2:
             _i: i32,
         }
 
-        let mut sim = Simulation::new();
+        let mut sim = Simulation::default();
         sim.insert_resource(ParameterFileContents("".into()));
         sim.add_plugin(ParameterPlugin::<Parameters1>::default());
     }
@@ -189,7 +189,7 @@ parameters2:
         fn get_default_x() -> f32 {
             12.0
         }
-        let mut sim = Simulation::new();
+        let mut sim = Simulation::default();
         sim.insert_resource(ParameterFileContents("".into()));
         let params = sim.add_parameter_type_and_get_result::<Parameters1>();
         assert_eq!(params.i, 15);
@@ -206,7 +206,7 @@ parameters2:
             x: f32,
         }
 
-        let mut sim = Simulation::new();
+        let mut sim = Simulation::default();
         let contents = "
 parameters1:
   x:

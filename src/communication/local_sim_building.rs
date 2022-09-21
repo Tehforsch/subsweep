@@ -31,7 +31,7 @@ fn create_and_build_sim<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     num_threads: usize,
     rank: Rank,
 ) -> Simulation {
-    let mut sim = Simulation::new();
+    let mut sim = Simulation::default();
     sim.add_plugin(BaseCommunicationPlugin::new(num_threads, rank));
     sim.insert_non_send_resource(receivers);
     sim.insert_non_send_resource(senders);

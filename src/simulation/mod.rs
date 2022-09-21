@@ -22,19 +22,13 @@ use crate::communication::WorldRank;
 use crate::named::Named;
 use crate::parameters::ParameterPlugin;
 
+#[derive(Default)]
 pub struct Simulation {
     pub app: App,
     labels: HashSet<&'static str>,
 }
 
 impl Simulation {
-    pub fn new() -> Self {
-        Self {
-            app: App::new(),
-            labels: HashSet::new(),
-        }
-    }
-
     pub fn already_added<P: Named>(&mut self) -> bool {
         !self.labels.insert(P::name())
     }
@@ -247,7 +241,7 @@ mod tests {
         #[name = "my_plugin"]
         struct MyPlugin;
         impl TenetPlugin for MyPlugin {}
-        let mut sim = Simulation::new();
+        let mut sim = Simulation::default();
         sim.add_plugin(MyPlugin);
         sim.add_plugin(MyPlugin);
     }
