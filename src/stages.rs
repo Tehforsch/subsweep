@@ -11,7 +11,6 @@ use crate::simulation::TenetPlugin;
 use crate::visualization::VisualizationStage;
 
 #[derive(Named)]
-#[name = "simulation_stages_plugin"]
 pub struct SimulationStagesPlugin;
 
 impl TenetPlugin for SimulationStagesPlugin {
