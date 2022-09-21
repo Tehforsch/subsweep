@@ -89,7 +89,9 @@ fn add_output_system<T: Named, P>(
     sim: &mut Simulation,
     system: impl ParallelSystemDescriptorCoercion<P>,
 ) {
-    sim.run_once::<OutputMarker>(output_setup);
+    if !sim.already_added::<OutputMarker>() {
+        output_setup(sim)
+    }
     if OutputParameters::is_desired_field::<T>(sim) {
         sim.add_system_to_stage(
             OutputStages::Output,
