@@ -1,7 +1,10 @@
+mod parameters;
+
 use std::f64::consts::PI;
 
 use bevy::prelude::*;
 
+use self::parameters::HydrodynamicsParameters;
 use super::LocalParticle;
 use super::Timestep;
 use crate::density;
@@ -14,12 +17,9 @@ use crate::pressure;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::Density;
-use crate::units::Length;
 use crate::units::Pressure;
 use crate::units::VecAcceleration;
 use crate::velocity::Velocity;
-
-const CUTOFF_LENGTH: Length = Length::astronomical_units(0.1);
 
 #[derive(StageLabel)]
 pub enum HydrodynamicsStages {
@@ -31,20 +31,21 @@ pub struct HydrodynamicsPlugin;
 
 impl RaxiomPlugin for HydrodynamicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_system_to_stage(
-            HydrodynamicsStages::Hydrodynamics,
-            compute_pressure_and_density_system,
-        )
-        .add_system_to_stage(
-            HydrodynamicsStages::Hydrodynamics,
-            compute_forces_system.after(compute_pressure_and_density_system),
-        )
-        .add_startup_system_to_stage(
-            StartupStage::PostStartup,
-            insert_pressure_and_density_system,
-        )
-        .add_plugin(ExchangeDataPlugin::<pressure::Pressure>::default())
-        .add_plugin(ExchangeDataPlugin::<density::Density>::default());
+        sim.add_parameter_type::<HydrodynamicsParameters>()
+            .add_system_to_stage(
+                HydrodynamicsStages::Hydrodynamics,
+                compute_pressure_and_density_system,
+            )
+            .add_system_to_stage(
+                HydrodynamicsStages::Hydrodynamics,
+                compute_forces_system.after(compute_pressure_and_density_system),
+            )
+            .add_startup_system_to_stage(
+                StartupStage::PostStartup,
+                insert_pressure_and_density_system,
+            )
+            .add_plugin(ExchangeDataPlugin::<pressure::Pressure>::default())
+            .add_plugin(ExchangeDataPlugin::<density::Density>::default());
     }
 }
 
@@ -76,10 +77,11 @@ fn compute_pressure_and_density_system(
         With<LocalParticle>,
     >,
     particles: Query<&Position, (With<pressure::Pressure>, With<Mass>, With<LocalParticle>)>,
+    parameters: Res<HydrodynamicsParameters>,
 ) {
-    let cutoff_squared = CUTOFF_LENGTH.squared();
-    let poly_6 = 4.0 / (PI * CUTOFF_LENGTH.powi::<8>());
-    let rest_density = Density::kilogram_per_square_meter(300.0);
+    let cutoff_squared = parameters.smoothing_length.squared();
+    let poly_6 = 4.0 / (PI * parameters.smoothing_length.powi::<8>());
+    let rest_density = Density::kilogram_per_square_meter(1.0);
     let gas_const = Pressure::pascals(100000.0) / rest_density;
     for (mut pressure, mut density, pos1, mass) in pressures.iter_mut() {
         **density = Density::zero();
@@ -112,8 +114,9 @@ fn compute_forces_system(
         &mass::Mass,
     )>,
     timestep: Res<Timestep>,
+    parameters: Res<HydrodynamicsParameters>,
 ) {
-    let spiky_grad = -10.0 / (PI * CUTOFF_LENGTH.powi::<5>());
+    let spiky_grad = -10.0 / (PI * parameters.smoothing_length.powi::<5>());
     for (entity1, mut vel, pos1, pressure1, density1) in particles1.iter_mut() {
         let mut acc = VecAcceleration::zero();
         for (entity2, pos2, pressure2, density2, mass2) in particles2.iter() {
@@ -125,11 +128,11 @@ fn compute_forces_system(
             let distance_normalized = distance.normalize();
             let length = distance.length();
 
-            if length < CUTOFF_LENGTH {
+            if length < parameters.smoothing_length {
                 acc += distance_normalized * **mass2 * (**pressure1 + **pressure2)
                     / (2.0 * **density2)
                     * spiky_grad
-                    * (CUTOFF_LENGTH - length).cubed()
+                    * (parameters.smoothing_length - length).cubed()
                     / **density1;
             }
         }
