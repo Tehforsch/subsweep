@@ -113,7 +113,6 @@ fn spawn_particles_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
     parameters: Res<Parameters>,
-    visualization_parameters: Res<VisualizationParameters>,
 ) {
     if !rank.is_main() {
         return;
@@ -127,7 +126,6 @@ fn spawn_particles_system(
             let y = rng.gen_range(-parameters.box_size.y()..parameters.box_size.y()) + offset;
             spawn_particle(
                 &mut commands,
-                &visualization_parameters,
                 VecLength::new(x, y),
                 VecVelocity::zero(),
                 parameters.particle_mass,
@@ -139,7 +137,6 @@ fn spawn_particles_system(
 
 fn spawn_particle(
     commands: &mut Commands,
-    parameters: &VisualizationParameters,
     pos: VecLength,
     vel: VecVelocity,
     mass: Mass,
@@ -151,13 +148,12 @@ fn spawn_particle(
         Velocity(vel),
         raxiom::prelude::Mass(mass),
         type_,
-        DrawCircle {
-            position: pos,
-            radius: 10.0 * parameters.camera_zoom,
-            color: match type_ {
+        DrawCircle::from_position_and_color(
+            pos,
+            match type_ {
                 ParticleType::Red => Color::RED,
                 ParticleType::Blue => Color::BLUE,
             },
-        },
+        ),
     ));
 }

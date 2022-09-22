@@ -122,14 +122,14 @@ pub fn get_color(rank: Rank) -> Color {
 fn spawn_sprites_system<T: Component + GetColor>(
     mut commands: Commands,
     particles: Query<(Entity, &Position, &T), (With<T>, Without<DrawCircle>)>,
-    parameters: Res<VisualizationParameters>,
 ) {
     for (entity, pos, colored) in particles.iter() {
-        commands.entity(entity).insert(DrawCircle {
-            position: **pos,
-            radius: CIRCLE_RADIUS * parameters.camera_zoom,
-            color: colored.get_color(),
-        });
+        commands
+            .entity(entity)
+            .insert(DrawCircle::from_position_and_color(
+                **pos,
+                colored.get_color(),
+            ));
     }
 }
 

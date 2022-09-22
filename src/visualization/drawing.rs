@@ -7,16 +7,22 @@ use bevy_prototype_lyon::prelude::*;
 
 use super::parameters::VisualizationParameters;
 use super::VisualizationStage;
+use super::CIRCLE_RADIUS;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::Length;
 use crate::units::VecLength;
 
+pub enum LengthOrPixels {
+    Length(Length),
+    Pixels(f64),
+}
+
 #[derive(Component)]
 pub struct DrawCircle {
     pub position: VecLength,
-    pub radius: Length,
+    pub radius: LengthOrPixels,
     pub color: Color,
 }
 
@@ -27,6 +33,15 @@ pub struct DrawRect {
     pub color: Color,
 }
 
+impl DrawCircle {
+    pub fn from_position_and_color(position: VecLength, color: Color) -> Self {
+        Self {
+            position,
+            color,
+            radius: LengthOrPixels::Pixels(CIRCLE_RADIUS),
+        }
+    }
+}
 pub(super) trait IntoBundle {
     type Output: Bundle;
     fn get_bundle(&self, camera_zoom: &Length) -> Self::Output;
@@ -38,7 +53,10 @@ impl IntoBundle for DrawCircle {
     type Output = ShapeBundle;
     fn get_bundle(&self, camera_zoom: &Length) -> Self::Output {
         let shape = shapes::Circle {
-            radius: self.radius.in_units(*camera_zoom) as f32,
+            radius: match self.radius {
+                LengthOrPixels::Length(length) => length.in_units(*camera_zoom) as f32,
+                LengthOrPixels::Pixels(pixels) => pixels as f32,
+            },
             center: Vec2::new(0.0, 0.0),
         };
 

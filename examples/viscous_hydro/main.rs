@@ -6,7 +6,6 @@ use rand::Rng;
 use raxiom::prelude::*;
 use raxiom::units;
 use raxiom::units::InverseTimeSquared;
-use raxiom::units::Length;
 use raxiom::units::Mass;
 use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
@@ -135,14 +134,13 @@ fn spawn_particle(
         Velocity(vel),
         raxiom::prelude::Mass(mass),
         ParticleType(type_),
-        DrawCircle {
-            position: pos,
-            radius: Length::astronomical_units(0.003),
-            color: match type_ {
+        DrawCircle::from_position_and_color(
+            pos,
+            match type_ {
                 0 => Color::RED,
                 1 => Color::BLUE,
                 _ => unreachable!(),
             },
-        },
+        ),
     ));
 }
