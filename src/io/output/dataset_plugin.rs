@@ -4,6 +4,7 @@ use bevy::prelude::Component;
 use bevy::prelude::Query;
 use bevy::prelude::ResMut;
 use bevy::prelude::With;
+use hdf5::Dataset;
 use hdf5::H5Type;
 
 use super::add_output_system;
@@ -13,8 +14,12 @@ use crate::named::Named;
 use crate::physics::LocalParticle;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::units::Dimension;
 
-pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor";
+pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor_si";
+pub const LENGTH_IDENTIFIER: &str = "scaling_length";
+pub const TIME_IDENTIFIER: &str = "scaling_time";
+pub const MASS_IDENTIFIER: &str = "scaling_mass";
 
 #[derive(Named)]
 pub struct DatasetOutputPlugin<T> {
@@ -57,7 +62,24 @@ impl<T: ToDataset + Named + Sync + Send + 'static + Clone + H5Type + Component>
             .shape(())
             .create(SCALE_FACTOR_IDENTIFIER)
             .unwrap();
-        let scale_factor = T::dimension().base_conversion_factor();
+        let dimension = T::dimension();
+        let scale_factor = dimension.base_conversion_factor();
         attr.write_scalar(&scale_factor).unwrap();
+        // Unpack this slightly awkwardly here to make sure that we
+        // remember to extend it once more units are added to the
+        // Dimension struct
+        let Dimension { length, time, mass } = dimension;
+        write_dimension(&dataset, LENGTH_IDENTIFIER, length);
+        write_dimension(&dataset, TIME_IDENTIFIER, time);
+        write_dimension(&dataset, MASS_IDENTIFIER, mass);
     }
+}
+
+fn write_dimension(dataset: &Dataset, identifier: &str, dimension: i32) {
+    let attr = dataset
+        .new_attr::<i32>()
+        .shape(())
+        .create(identifier)
+        .unwrap();
+    attr.write_scalar(&dimension).unwrap();
 }

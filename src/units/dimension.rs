@@ -47,7 +47,7 @@ impl Dimension {
     /// into SI units. As of now, this is always 1.0
     /// but will change if the base units are changed
     /// from SI to anything else
-    pub fn base_conversion_factor(self) -> f64 {
+    pub fn base_conversion_factor(&self) -> f64 {
         (LENGTH_TO_SI).powi(self.length)
             * (TIME_TO_SI).powi(self.time)
             * (MASS_TO_SI).powi(self.mass)
