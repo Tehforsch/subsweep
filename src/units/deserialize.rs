@@ -124,7 +124,10 @@ where
         .iter()
         .find(|(_, known_unit_name, _)| &unit == known_unit_name)
         .ok_or_else(|| E::custom(format!("unknown unit: {}", &unit)))?;
-    Ok((dimension.clone().dimension_powi(exponent), *factor))
+    Ok((
+        dimension.clone().dimension_powi(exponent),
+        factor.powi(exponent),
+    ))
 }
 
 #[cfg(test)]
@@ -171,7 +174,7 @@ mod tests {
         assert_is_close(q, Dimensionless::dimensionless(5000.0));
         let q: Force = serde_yaml::from_str("5.0 kg m^1 s^-2").unwrap();
         assert_is_close(q, Force::newtons(5.0));
-        let q: Force = serde_yaml::from_str("5.0e0 kg km^1 s^-2").unwrap();
+        let q: Force = serde_yaml::from_str("5.0e-3 kg km^2 m^-1 s^-2").unwrap();
         assert_is_close(q, Force::newtons(5000.0));
     }
 }
