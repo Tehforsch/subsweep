@@ -5,6 +5,7 @@ mod hdf5;
 mod mpi;
 mod quantities_and_units;
 mod quantity;
+mod sampling;
 
 pub use constants::*;
 pub use dimension::Dimension;
