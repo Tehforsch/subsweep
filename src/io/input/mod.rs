@@ -11,8 +11,8 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::physics::LocalParticle;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 #[derive(Default, Deref, DerefMut)]
 struct InputFiles(Vec<File>);
@@ -45,7 +45,7 @@ impl<T> Default for DatasetInputPlugin<T> {
 #[derive(Default, Deref, DerefMut)]
 pub struct RegisteredDatasets(Vec<&'static str>);
 
-impl<T: ToDataset + Component + Sync + Send + 'static> TenetPlugin for DatasetInputPlugin<T> {
+impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetInputPlugin<T> {
     fn allow_adding_twice(&self) -> bool {
         true
     }

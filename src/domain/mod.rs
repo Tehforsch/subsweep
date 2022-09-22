@@ -23,8 +23,8 @@ use crate::quadtree::LeafData;
 use crate::quadtree::QuadTree;
 use crate::quadtree::QuadTreeConfig;
 use crate::quadtree::QuadTreeIndex;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 use crate::velocity::Velocity;
 
 #[derive(StageLabel)]
@@ -37,7 +37,7 @@ pub enum DomainDecompositionStages {
 #[derive(Named)]
 pub struct DomainDecompositionPlugin;
 
-impl TenetPlugin for DomainDecompositionPlugin {
+impl RaxiomPlugin for DomainDecompositionPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())

@@ -9,13 +9,13 @@
 
 use mpi::traits::Communicator;
 use mpi::Tag;
-use tenet::communication::from_communicator::FromCommunicator;
-use tenet::communication::DataByRank;
-use tenet::communication::ExchangeCommunicator;
-use tenet::communication::MpiWorld;
-use tenet::communication::SizedCommunicator;
-use tenet::communication::WorldCommunicator;
-use tenet::communication::MPI_UNIVERSE;
+use raxiom::communication::from_communicator::FromCommunicator;
+use raxiom::communication::DataByRank;
+use raxiom::communication::ExchangeCommunicator;
+use raxiom::communication::MpiWorld;
+use raxiom::communication::SizedCommunicator;
+use raxiom::communication::WorldCommunicator;
+use raxiom::communication::MPI_UNIVERSE;
 
 pub fn main() {
     let fns: &[(&str, fn())] = &[

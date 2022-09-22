@@ -7,8 +7,8 @@ use super::add_output_system;
 use super::attribute::Attribute;
 use super::OutputFile;
 use crate::named::Named;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 #[derive(Named)]
 pub struct AttributeOutputPlugin<T> {
@@ -23,7 +23,7 @@ impl<T> Default for AttributeOutputPlugin<T> {
     }
 }
 
-impl<T> TenetPlugin for AttributeOutputPlugin<T>
+impl<T> RaxiomPlugin for AttributeOutputPlugin<T>
 where
     T: Attribute + Sync + Send + 'static,
 {

@@ -11,13 +11,13 @@ use crate::domain::communicate_mass_moments_system;
 use crate::domain::construct_quad_tree_system;
 use crate::named::Named;
 use crate::physics::PhysicsStages;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 #[derive(Named)]
 pub struct GravityPlugin;
 
-impl TenetPlugin for GravityPlugin {
+impl RaxiomPlugin for GravityPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<GravityParameters>()
             .add_system_to_stage(PhysicsStages::Physics, construct_quad_tree_system)

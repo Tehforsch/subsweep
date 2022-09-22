@@ -2484,6 +2484,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
+name = "raxiom"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_prototype_lyon",
+ "clap",
+ "derive_more",
+ "derive_named",
+ "glam",
+ "hdf5",
+ "lazy_static",
+ "libffi",
+ "mpi",
+ "ndarray",
+ "once_cell",
+ "paste",
+ "rand",
+ "serde",
+ "serde_yaml",
+]
+
+[[package]]
 name = "rectangle-pack"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2729,28 +2751,6 @@ dependencies = [
  "hash32-derive",
  "num-traits",
  "typenum",
-]
-
-[[package]]
-name = "tenet"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_prototype_lyon",
- "clap",
- "derive_more",
- "derive_named",
- "glam",
- "hdf5",
- "lazy_static",
- "libffi",
- "mpi",
- "ndarray",
- "once_cell",
- "paste",
- "rand",
- "serde",
- "serde_yaml",
 ]
 
 [[package]]

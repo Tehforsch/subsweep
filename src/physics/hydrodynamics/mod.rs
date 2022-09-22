@@ -11,8 +11,8 @@ use crate::mass::Mass;
 use crate::named::Named;
 use crate::position::Position;
 use crate::pressure;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 use crate::units::Density;
 use crate::units::Length;
 use crate::units::Pressure;
@@ -29,7 +29,7 @@ pub enum HydrodynamicsStages {
 #[derive(Named)]
 pub struct HydrodynamicsPlugin;
 
-impl TenetPlugin for HydrodynamicsPlugin {
+impl RaxiomPlugin for HydrodynamicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_system_to_stage(
             HydrodynamicsStages::Hydrodynamics,

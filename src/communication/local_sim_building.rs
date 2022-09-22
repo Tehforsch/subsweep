@@ -21,8 +21,8 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 fn create_and_build_sim<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     build_sim: F,
@@ -107,7 +107,7 @@ pub(super) struct Receivers(HashMap<Comm, Receiver<Payload>>);
 #[derive(Deref, DerefMut)]
 struct Senders(HashMap<Comm, Sender<Payload>>);
 
-impl<T> TenetPlugin for CommunicationPlugin<T>
+impl<T> RaxiomPlugin for CommunicationPlugin<T>
 where
     T: Equivalence + Sync + Send + 'static,
     <T as Equivalence>::Out: MatchesRaw,

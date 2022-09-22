@@ -5,14 +5,14 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use rand::Rng;
+use raxiom::prelude::*;
+use raxiom::units;
+use raxiom::units::InverseTimeSquared;
+use raxiom::units::Length;
+use raxiom::units::Mass;
+use raxiom::units::VecLength;
+use raxiom::units::VecVelocity;
 use serde::Deserialize;
-use tenet::prelude::*;
-use tenet::units;
-use tenet::units::InverseTimeSquared;
-use tenet::units::Length;
-use tenet::units::Mass;
-use tenet::units::VecLength;
-use tenet::units::VecVelocity;
 
 #[derive(Default, Deref, DerefMut, Debug)]
 struct GravityCenter(VecLength);
@@ -134,7 +134,7 @@ fn spawn_particle(
         LocalParticle,
         Position(pos),
         Velocity(vel),
-        tenet::prelude::Mass(mass),
+        raxiom::prelude::Mass(mass),
         ParticleType(type_),
         DrawCircle {
             position: pos,

@@ -8,5 +8,5 @@
 #![allow(clippy::type_complexity)]
 
 fn main() {
-    tenet::simulation_builder::main()
+    raxiom::simulation_builder::main()
 }

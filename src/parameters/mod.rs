@@ -7,8 +7,8 @@ use serde::Deserialize;
 use serde_yaml::Value;
 
 use crate::named::Named;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 pub struct ReadParametersError(String);
 
@@ -52,7 +52,7 @@ where
     })
 }
 
-impl<T> TenetPlugin for ParameterPlugin<T>
+impl<T> RaxiomPlugin for ParameterPlugin<T>
 where
     T: Named + Sync + Send + 'static + for<'de> serde::Deserialize<'de>,
 {

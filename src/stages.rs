@@ -6,14 +6,14 @@ use crate::io::output::OutputStages;
 use crate::named::Named;
 use crate::physics::hydrodynamics::HydrodynamicsStages;
 use crate::physics::PhysicsStages;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 use crate::visualization::VisualizationStage;
 
 #[derive(Named)]
 pub struct SimulationStagesPlugin;
 
-impl TenetPlugin for SimulationStagesPlugin {
+impl RaxiomPlugin for SimulationStagesPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),

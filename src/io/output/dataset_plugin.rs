@@ -11,8 +11,8 @@ use super::OutputFile;
 use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::physics::LocalParticle;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor";
 
@@ -29,7 +29,7 @@ impl<T> Default for DatasetOutputPlugin<T> {
     }
 }
 
-impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> TenetPlugin
+impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> RaxiomPlugin
     for DatasetOutputPlugin<T>
 {
     fn allow_adding_twice(&self) -> bool {

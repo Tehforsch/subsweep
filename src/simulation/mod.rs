@@ -1,4 +1,4 @@
-mod tenet_plugin;
+mod raxiom_plugin;
 
 use std::collections::HashSet;
 
@@ -15,8 +15,8 @@ use bevy::prelude::PluginGroup;
 use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
 use bevy::prelude::World;
+pub use raxiom_plugin::RaxiomPlugin;
 use serde::Deserialize;
-pub use tenet_plugin::TenetPlugin;
 
 use crate::communication::WorldRank;
 use crate::named::Named;
@@ -33,7 +33,7 @@ impl Simulation {
         !self.labels.insert(P::name())
     }
 
-    pub fn add_plugin<T: Sync + Send + 'static + TenetPlugin>(&mut self, plugin: T) -> &mut Self {
+    pub fn add_plugin<T: Sync + Send + 'static + RaxiomPlugin>(&mut self, plugin: T) -> &mut Self {
         let already_added = self.already_added::<T>();
         if !already_added {
             plugin.build_always_once(self);
@@ -65,7 +65,7 @@ impl Simulation {
         self
     }
 
-    pub fn maybe_add_plugin<T: Sync + Send + 'static + TenetPlugin>(
+    pub fn maybe_add_plugin<T: Sync + Send + 'static + RaxiomPlugin>(
         &mut self,
         plugin: Option<T>,
     ) -> &mut Self {
@@ -231,8 +231,8 @@ impl Simulation {
 #[cfg(test)]
 mod tests {
     use crate::named::Named;
+    use crate::simulation::RaxiomPlugin;
     use crate::simulation::Simulation;
-    use crate::simulation::TenetPlugin;
 
     #[test]
     #[should_panic]
@@ -240,7 +240,7 @@ mod tests {
         #[derive(Named)]
         #[name = "my_plugin"]
         struct MyPlugin;
-        impl TenetPlugin for MyPlugin {}
+        impl RaxiomPlugin for MyPlugin {}
         let mut sim = Simulation::default();
         sim.add_plugin(MyPlugin);
         sim.add_plugin(MyPlugin);
