@@ -25,8 +25,7 @@ enum ParticleType {
 struct Parameters {
     num_particles: usize,
     fake_viscosity_timescale: Time,
-    boundary_width: Length,
-    boundary_height: Length,
+    box_size: VecLength,
     x_force: Force,
     y_force_factor: <Force as Div<Length>>::Output,
     y_offset: Length,
@@ -104,10 +103,10 @@ fn fake_periodic_boundaries_system(
     parameters: Res<Parameters>,
 ) {
     for mut pos in particles.iter_mut() {
-        if pos.x() > parameters.boundary_width / 2.0 {
-            **pos -= VecLength::new(parameters.boundary_width, Length::zero());
-        } else if pos.x() < -parameters.boundary_width / 2.0 {
-            **pos += VecLength::new(parameters.boundary_width, Length::zero());
+        if pos.x() > parameters.box_size.x() / 2.0 {
+            **pos -= VecLength::new(parameters.box_size.x(), Length::zero());
+        } else if pos.x() < -parameters.box_size.x() / 2.0 {
+            **pos += VecLength::new(parameters.box_size.x(), Length::zero());
         }
     }
 }
@@ -126,8 +125,8 @@ fn spawn_particles_system(
     for type_ in [ParticleType::Red, ParticleType::Blue] {
         for _ in 0..num_particles_per_type {
             let offset = get_y_offset_of_particle_type(&parameters, &type_);
-            let x = rng.gen_range(-parameters.boundary_width..parameters.boundary_width);
-            let y = rng.gen_range(-parameters.boundary_height..parameters.boundary_height) + offset;
+            let x = rng.gen_range(-parameters.box_size.x()..parameters.box_size.x());
+            let y = rng.gen_range(-parameters.box_size.y()..parameters.box_size.y()) + offset;
             spawn_particle(
                 &mut commands,
                 &visualization_parameters,

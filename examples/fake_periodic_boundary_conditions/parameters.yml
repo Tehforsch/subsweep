@@ -20,8 +20,7 @@ output:
 example:
   num_particles: 1500
   fake_viscosity_timescale: 0.1 s
-  boundary_width: 45 m
-  boundary_height: 8 m
+  box_size: (45 8) m
   x_force: 2000 N
   y_force_factor: 100 N m^-1
   y_offset: 5 m
