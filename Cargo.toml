@@ -23,7 +23,7 @@ lazy_static = "1.4.0"
 # Use the system feature which uses the system library.
 # This is because the autoconfigure/build script of libffi (the C project, not the crate) seems to be bugged on my machine
 # since it is trying to invoke cc -V which my gcc doesnt support (and hasnt since 2013?)
-libffi = { version = "3.0.0", features = ["system"] }
+libffi = "3.0.0"
 mpi = { version = "0.6", features = ["user-operations", "derive"] }
 ndarray = "0.15.6"
 once_cell = "1.13.0"
