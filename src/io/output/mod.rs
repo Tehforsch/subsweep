@@ -21,6 +21,7 @@ pub use self::parameters::OutputParameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
+use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 
 #[derive(AmbiguitySetLabel)]
@@ -35,6 +36,8 @@ pub enum OutputStages {
 struct OutputFile {
     f: Option<File>,
 }
+
+pub struct ShouldWriteOutput(pub bool);
 
 fn output_setup(sim: &mut Simulation) {
     sim.add_parameter_type::<OutputParameters>()
@@ -67,11 +70,19 @@ fn make_output_dir_system(parameters: Res<OutputParameters>) {
 fn open_file_system(
     mut file: ResMut<OutputFile>,
     rank: Res<WorldRank>,
+    world_size: Res<WorldSize>,
     parameters: Res<OutputParameters>,
     output_timer: Res<Timer>,
 ) {
     assert!(file.f.is_none());
-    let filename = &format!("snapshot_{}_{}.hdf5", output_timer.snapshot_num(), rank.0);
+    let rank_padding = ((**world_size as f64).log10().floor() as usize) + 1;
+    let filename = &format!(
+        "snapshot_{:0snap_padding$}_{:0rank_padding$}.hdf5",
+        output_timer.snapshot_num(),
+        rank.0,
+        snap_padding = parameters.snapshot_padding,
+        rank_padding = rank_padding
+    );
     info!("Writing snapshot: {}", output_timer.snapshot_num());
     file.f = Some(
         File::create(&parameters.output_dir.join(filename)).expect("Failed to open output file"),

@@ -9,21 +9,30 @@ use crate::units::Time;
 #[derive(Deserialize, Named)]
 #[name = "output"]
 pub struct OutputParameters {
+    #[serde(default)]
     pub time_between_snapshots: Time,
+    #[serde(default)]
     pub time_first_snapshot: Option<Time>,
+    #[serde(default = "default_output_dir")]
     pub output_dir: PathBuf,
+    #[serde(default = "default_fields")]
     pub fields: Vec<String>,
+    #[serde(default = "default_snapshot_padding")]
+    pub snapshot_padding: usize,
 }
 
-impl Default for OutputParameters {
-    fn default() -> Self {
-        Self {
-            time_between_snapshots: Time::zero(),
-            time_first_snapshot: None,
-            output_dir: "output".into(),
-            fields: vec![],
-        }
-    }
+fn default_snapshot_padding() -> usize {
+    3
+}
+
+fn default_output_dir() -> PathBuf {
+    "output".into()
+}
+
+fn default_fields() -> Vec<String> {
+    ["position", "mass", "velocity"]
+        .map(|x| x.to_string())
+        .to_vec()
 }
 
 impl OutputParameters {

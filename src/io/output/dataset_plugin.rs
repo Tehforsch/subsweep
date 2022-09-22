@@ -9,6 +9,7 @@ use hdf5::H5Type;
 
 use super::add_output_system;
 use super::OutputFile;
+use super::ShouldWriteOutput;
 use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::physics::LocalParticle;
@@ -37,6 +38,12 @@ impl<T> Default for DatasetOutputPlugin<T> {
 impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> RaxiomPlugin
     for DatasetOutputPlugin<T>
 {
+    fn should_build(&self, sim: &Simulation) -> bool {
+        sim.get_resource::<ShouldWriteOutput>()
+            .map(|x| x.0)
+            .unwrap_or(true)
+    }
+
     fn allow_adding_twice(&self) -> bool {
         true
     }

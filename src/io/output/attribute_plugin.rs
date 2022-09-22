@@ -6,6 +6,7 @@ use bevy::prelude::ResMut;
 use super::add_output_system;
 use super::attribute::Attribute;
 use super::OutputFile;
+use super::ShouldWriteOutput;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -27,6 +28,16 @@ impl<T> RaxiomPlugin for AttributeOutputPlugin<T>
 where
     T: Attribute + Sync + Send + 'static,
 {
+    fn should_build(&self, sim: &Simulation) -> bool {
+        sim.get_resource::<ShouldWriteOutput>()
+            .map(|x| x.0)
+            .unwrap_or(true)
+    }
+
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
     fn build_everywhere(&self, sim: &mut Simulation) {
         add_output_system::<T, _>(sim, Self::write_attribute);
     }
