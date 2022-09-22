@@ -51,6 +51,14 @@ impl<const D: Dimension> Quantity<glam::DVec2, D> {
         Self(DVec2::new(x.unwrap_value(), y.unwrap_value()))
     }
 
+    pub fn new_x(x: Quantity<f64, D>) -> Self {
+        Self(DVec2::new(x.unwrap_value(), 0.0))
+    }
+
+    pub fn new_y(y: Quantity<f64, D>) -> Self {
+        Self(DVec2::new(0.0, y.unwrap_value()))
+    }
+
     pub fn abs(&self) -> Self {
         Self(self.0.abs())
     }
@@ -65,6 +73,14 @@ impl<const D: Dimension> Quantity<glam::DVec2, D> {
 
     pub fn y(&self) -> Quantity<f64, D> {
         Quantity(self.0.y)
+    }
+
+    pub fn set_x(&mut self, new_x: Quantity<f64, D>) {
+        self.0.x = new_x.unwrap_value();
+    }
+
+    pub fn set_y(&mut self, new_y: Quantity<f64, D>) {
+        self.0.y = new_y.unwrap_value();
     }
 
     pub fn length(&self) -> Quantity<f64, D> {
