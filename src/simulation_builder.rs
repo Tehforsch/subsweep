@@ -150,11 +150,13 @@ impl SimulationBuilder {
         .insert_resource(self.log_setup())
         .insert_resource(self.winit_settings())
         .insert_resource(ShouldReadInitialConditions(self.read_initial_conditions))
-        .add_bevy_plugin(LogPlugin)
-        .maybe_add_plugin(self.base_communication.clone())
-        .add_plugin(SimulationStagesPlugin)
-        .add_plugin(PhysicsPlugin)
-        .add_plugin(DomainDecompositionPlugin);
+        .maybe_add_plugin(self.base_communication.clone());
+        if sim.on_main_rank() {
+            sim.add_bevy_plugin(LogPlugin);
+        }
+        sim.add_plugin(SimulationStagesPlugin)
+            .add_plugin(PhysicsPlugin)
+            .add_plugin(DomainDecompositionPlugin);
         self.add_default_bevy_plugins(sim);
         if self.headless {
             // Only show execution order ambiguities when running without render plugins
