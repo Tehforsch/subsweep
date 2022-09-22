@@ -1,3 +1,4 @@
+mod camera;
 mod camera_transform;
 mod drawing;
 pub mod parameters;
@@ -11,6 +12,9 @@ pub use drawing::DrawCircle;
 pub use drawing::DrawRect;
 use mpi::traits::Equivalence;
 
+use self::camera::camera_scale_system;
+use self::camera::camera_translation_system;
+use self::camera::setup_camera_system;
 use self::drawing::draw_translation_system;
 use self::drawing::DrawBundlePlugin;
 use self::drawing::IntoBundle;
@@ -25,7 +29,6 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Rank;
 use crate::domain::determine_global_extent_system;
-use crate::domain::GlobalExtent;
 use crate::named::Named;
 use crate::physics::LocalParticle;
 use crate::physics::StopSimulationEvent;
@@ -52,9 +55,6 @@ pub enum VisualizationStage {
 
 #[derive(Named)]
 pub struct VisualizationPlugin;
-
-#[derive(Component)]
-struct WorldCamera;
 
 impl RaxiomPlugin for VisualizationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
@@ -112,28 +112,6 @@ impl RaxiomPlugin for VisualizationPlugin {
     }
 }
 
-fn camera_translation_system(
-    mut camera: Query<&mut Transform, With<WorldCamera>>,
-    extent: Res<GlobalExtent>,
-    camera_transform: Res<CameraTransform>,
-) {
-    let mut camera = camera.single_mut();
-    let pos = camera_transform.position_to_pixels(extent.center);
-    camera.translation.x = pos.x;
-    camera.translation.y = pos.y;
-}
-
-fn camera_scale_system(
-    extent: Res<GlobalExtent>,
-    mut camera_transform: ResMut<CameraTransform>,
-    windows: Res<Windows>,
-) {
-    let length = extent.max_side_length();
-    let window = windows.primary();
-    let max_side = window.width().max(window.height()).min(1000.0);
-    *camera_transform = CameraTransform::from_scale(length / (max_side as f64));
-}
-
 pub fn get_color(rank: Rank) -> Color {
     COLORS[(rank as usize).rem_euclid(COLORS.len())]
 }
@@ -150,12 +128,6 @@ fn spawn_sprites_system<T: Component + GetColor>(
                 colored.get_color(),
             ));
     }
-}
-
-pub fn setup_camera_system(mut commands: Commands) {
-    commands
-        .spawn_bundle(Camera2dBundle::default())
-        .insert(WorldCamera);
 }
 
 fn position_to_translation_system<T: Component + IntoBundle>(
