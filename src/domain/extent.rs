@@ -163,15 +163,4 @@ mod tests {
     fn extent_from_positions_is_none_with_zero_positions() {
         assert!(Extent::from_positions([].iter()).is_none());
     }
-
-    #[test]
-    #[should_panic]
-    fn invalid_extent() {
-        Extent::new(
-            Length::meters(1.0),
-            Length::meters(-1.0),
-            Length::meters(0.0),
-            Length::meters(1.0),
-        );
-    }
 }
