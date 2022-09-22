@@ -55,3 +55,7 @@ required-features = ["mpi"]
 [[example]]
 name = "fake_periodic_boundary_conditions"
 required-features = ["mpi"]
+
+[[example]]
+name = "gravity_collapse"
+required-features = ["mpi"]
