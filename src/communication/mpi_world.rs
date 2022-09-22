@@ -51,7 +51,9 @@ impl StaticUniverse {
 lazy_static! {
     pub static ref MPI_UNIVERSE: StaticUniverse = {
         let threading = Threading::Multiple;
-        let (universe, threading_initialized) = mpi::initialize_with_threading(threading).unwrap();
+        let (mut universe, threading_initialized) =
+            mpi::initialize_with_threading(threading).unwrap();
+        universe.set_buffer_size(1024 * 16);
         assert_eq!(
             threading, threading_initialized,
             "Could not initialize MPI with Multithreading"
