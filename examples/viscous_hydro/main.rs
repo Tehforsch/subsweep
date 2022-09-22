@@ -1,8 +1,6 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-use std::path::Path;
-
 use bevy::prelude::*;
 use rand::Rng;
 use raxiom::prelude::*;
@@ -37,9 +35,10 @@ impl Named for ViscousGravityParameters {
 
 fn main() {
     let mut sim = SimulationBuilder::mpi();
-    sim.parameter_file_path(Path::new("examples/viscous_hydro/parameters.yml"))
+    sim.parameters_from_relative_path(file!(), "parameters.yml")
         .headless(false)
         .read_initial_conditions(false)
+        .update_from_command_line_options()
         .build()
         .add_parameter_type::<ViscousGravityParameters>()
         .add_plugin(HydrodynamicsPlugin)

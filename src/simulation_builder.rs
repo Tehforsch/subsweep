@@ -50,7 +50,7 @@ pub fn main() {
 pub struct SimulationBuilder {
     pub headless: bool,
     pub num_worker_threads: Option<usize>,
-    pub parameter_file_path: PathBuf,
+    pub parameter_file_path: Option<PathBuf>,
     pub verbosity: usize,
     pub read_initial_conditions: bool,
     base_communication: Option<BaseCommunicationPlugin>,
@@ -61,7 +61,7 @@ impl Default for SimulationBuilder {
         Self {
             headless: true,
             num_worker_threads: None,
-            parameter_file_path: PathBuf::new(),
+            parameter_file_path: None,
             verbosity: 0,
             read_initial_conditions: true,
             base_communication: None,
@@ -83,11 +83,35 @@ impl SimulationBuilder {
         }
     }
 
+    pub fn update_from_command_line_options(&mut self) -> &mut Self {
+        self.with_command_line_options(&CommandLineOptions::parse())
+    }
+
+    pub fn parameters_from_relative_path(
+        &mut self,
+        file_path: &str,
+        param_file_name: &str,
+    ) -> &mut Self {
+        self.parameter_file_path(
+            &Path::new(file_path)
+                .parent()
+                .expect("Failed to get parent directory of source file")
+                .join(param_file_name),
+        )
+    }
+
     pub fn with_command_line_options(&mut self, opts: &CommandLineOptions) -> &mut Self {
-        self.headless(opts.headless)
-            .num_worker_threads(opts.num_worker_threads)
-            .parameter_file_path(&opts.parameter_file_path)
-            .verbosity(opts.verbosity)
+        if let Some(headless) = opts.headless {
+            self.headless(headless);
+        }
+        if let Some(num_worker_threads) = opts.num_worker_threads {
+            self.num_worker_threads(Some(num_worker_threads));
+        }
+        if let Some(ref path) = opts.parameter_file_path {
+            self.parameter_file_path(path);
+        }
+        self.verbosity(opts.verbosity);
+        self
     }
 
     pub fn headless(&mut self, headless: bool) -> &mut Self {
@@ -101,7 +125,7 @@ impl SimulationBuilder {
     }
 
     pub fn parameter_file_path(&mut self, parameter_file_path: &Path) -> &mut Self {
-        self.parameter_file_path = parameter_file_path.to_owned();
+        self.parameter_file_path = Some(parameter_file_path.to_owned());
         self
     }
 
@@ -116,16 +140,21 @@ impl SimulationBuilder {
     }
 
     fn build_with_sim(&self, sim: &mut Simulation) {
-        sim.add_parameters_from_file(&self.parameter_file_path)
-            .insert_resource(self.task_pool_opts())
-            .insert_resource(self.log_setup())
-            .insert_resource(self.winit_settings())
-            .insert_resource(ShouldReadInitialConditions(self.read_initial_conditions))
-            .add_bevy_plugin(LogPlugin)
-            .maybe_add_plugin(self.base_communication.clone())
-            .add_plugin(SimulationStagesPlugin)
-            .add_plugin(PhysicsPlugin)
-            .add_plugin(DomainDecompositionPlugin);
+        sim.add_parameters_from_file(
+            &self
+                .parameter_file_path
+                .clone()
+                .expect("No parameter file path given"),
+        )
+        .insert_resource(self.task_pool_opts())
+        .insert_resource(self.log_setup())
+        .insert_resource(self.winit_settings())
+        .insert_resource(ShouldReadInitialConditions(self.read_initial_conditions))
+        .add_bevy_plugin(LogPlugin)
+        .maybe_add_plugin(self.base_communication.clone())
+        .add_plugin(SimulationStagesPlugin)
+        .add_plugin(PhysicsPlugin)
+        .add_plugin(DomainDecompositionPlugin);
         self.add_default_bevy_plugins(sim);
         if self.headless {
             // Only show execution order ambiguities when running without render plugins

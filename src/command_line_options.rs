@@ -7,9 +7,9 @@ use clap::Parser;
 pub struct CommandLineOptions {
     #[cfg(not(feature = "mpi"))]
     pub num_threads: usize,
-    pub parameter_file_path: PathBuf,
+    pub parameter_file_path: Option<PathBuf>,
     #[clap(long)]
-    pub headless: bool,
+    pub headless: Option<bool>,
     #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
     #[clap(long)]

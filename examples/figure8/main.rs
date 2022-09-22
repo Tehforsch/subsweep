@@ -1,12 +1,10 @@
-use std::path::Path;
-
 use raxiom::prelude::*;
 
 fn main() {
     let mut sim = SimulationBuilder::mpi();
-    sim.parameter_file_path(Path::new("examples/figure8/parameters.yml"))
+    sim.parameters_from_relative_path(file!(), "parameters.yml")
         .headless(false)
-        .verbosity(1)
+        .update_from_command_line_options()
         .build()
         .add_plugin(GravityPlugin)
         .run();

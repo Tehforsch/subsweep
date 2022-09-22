@@ -2,7 +2,6 @@
 #![feature(generic_const_exprs)]
 
 use std::ops::Div;
-use std::path::Path;
 
 use bevy::prelude::*;
 use rand::Rng;
@@ -42,19 +41,18 @@ impl Named for Parameters {
 
 fn main() {
     let mut sim = SimulationBuilder::mpi();
-    sim.parameter_file_path(Path::new(
-        "examples/fake_periodic_boundary_conditions/parameters.yml",
-    ))
-    .headless(false)
-    .read_initial_conditions(false)
-    .build()
-    .add_parameter_type::<Parameters>()
-    .add_plugin(HydrodynamicsPlugin)
-    .add_startup_system(spawn_particles_system)
-    .add_system(external_force_system)
-    .add_system(fake_periodic_boundaries_system)
-    .add_system(fake_viscosity_system.after(external_force_system))
-    .run();
+    sim.parameters_from_relative_path(file!(), "parameters.yml")
+        .read_initial_conditions(false)
+        .headless(false)
+        .update_from_command_line_options()
+        .build()
+        .add_parameter_type::<Parameters>()
+        .add_plugin(HydrodynamicsPlugin)
+        .add_startup_system(spawn_particles_system)
+        .add_system(external_force_system)
+        .add_system(fake_periodic_boundaries_system)
+        .add_system(fake_viscosity_system.after(external_force_system))
+        .run();
 }
 
 fn get_y_offset_of_particle_type(parameters: &Parameters, type_: &ParticleType) -> Length {

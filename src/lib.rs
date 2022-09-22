@@ -8,7 +8,7 @@
 // perfectly readable.
 #![allow(clippy::type_complexity)]
 
-pub(crate) mod command_line_options;
+pub mod command_line_options;
 pub mod communication;
 pub(crate) mod density;
 pub(crate) mod domain;
