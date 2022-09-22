@@ -82,8 +82,8 @@ fn fake_viscosity_system(
 fn set_gravity_center_system(
     mut center: ResMut<GravityCenter>,
     mut events_reader_cursor: EventReader<CursorMoved>,
-    vis_parameters: Res<VisualizationParameters>,
     windows: Res<Windows>,
+    camera_transform: Res<CameraTransform>,
 ) {
     if let Some(mouse_event) = events_reader_cursor.iter().next() {
         let screen_pos = mouse_event.position
@@ -91,10 +91,7 @@ fn set_gravity_center_system(
                 windows.primary().width() as f32 / 2.0,
                 windows.primary().height() as f32 / 2.0,
             );
-        **center = VecLength::new(
-            vis_parameters.camera_zoom * screen_pos.x as f64,
-            vis_parameters.camera_zoom * screen_pos.y as f64,
-        );
+        **center = camera_transform.pixels_to_position(screen_pos);
     }
 }
 

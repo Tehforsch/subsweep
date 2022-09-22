@@ -9,7 +9,6 @@ tree:
   max_num_particles_per_leaf: 1
 visualization:
   show_quadtree: false
-  camera_zoom: 2e-3 m
 input:
   paths:
     - examples/figure8/ics.hdf5

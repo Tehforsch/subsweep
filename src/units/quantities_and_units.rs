@@ -59,6 +59,10 @@ impl<const D: Dimension> Quantity<glam::DVec2, D> {
         Self(DVec2::new(0.0, y.unwrap_value()))
     }
 
+    pub fn from_vector_and_scale(vec: DVec2, scale: Quantity<f64, D>) -> Self {
+        Self::new(vec.x * scale, vec.y * scale)
+    }
+
     pub fn abs(&self) -> Self {
         Self(self.0.abs())
     }

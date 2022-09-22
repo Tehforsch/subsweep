@@ -9,7 +9,6 @@ tree:
   max_num_particles_per_leaf: 1
 visualization:
   show_quadtree: false
-  camera_zoom: 1 au
 output:
   output_dir: "output"
   time_between_snapshots: 0.1 yr
@@ -19,7 +18,7 @@ output:
     - mass
     - time
 example:
-  num_particles: 5000
+  num_particles: 1000
   box_size: (1000 1000) au
-  particle_mass: 0.2 Msol
+  particle_mass: 1.0 Msol
   angular_velocity_factor: 5e-10 s^-1

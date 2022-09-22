@@ -8,7 +8,6 @@ tree:
   max_num_particles_per_leaf: 1
 visualization:
   show_quadtree: false
-  camera_zoom: 8e7 m
 output:
   output_dir: "output"
   time_between_snapshots: 0.1 yr

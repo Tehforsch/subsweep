@@ -1,3 +1,4 @@
+mod camera_transform;
 mod drawing;
 pub mod parameters;
 pub mod remote;
@@ -5,6 +6,7 @@ pub mod remote;
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::ShapePlugin;
+pub use camera_transform::CameraTransform;
 pub use drawing::DrawCircle;
 pub use drawing::DrawRect;
 use mpi::traits::Equivalence;
@@ -22,6 +24,7 @@ use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Rank;
+use crate::domain::determine_global_extent_system;
 use crate::domain::GlobalExtent;
 use crate::named::Named;
 use crate::physics::LocalParticle;
@@ -65,11 +68,16 @@ impl RaxiomPlugin for VisualizationPlugin {
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<VisualizationParameters>()
+            .insert_resource(CameraTransform::default())
             .add_bevy_plugin(ShapePlugin)
             .add_plugin(DrawBundlePlugin::<DrawRect>::default())
             .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
             .add_plugin(QuadTreeVisualizationPlugin)
             .add_startup_system(setup_camera_system)
+            .add_startup_system_to_stage(
+                StartupStage::PostStartup,
+                camera_scale_system.after(determine_global_extent_system),
+            )
             .add_startup_system_to_stage(StartupStage::PostStartup, camera_translation_system)
             .add_system_to_stage(
                 VisualizationStage::Synchronize,
@@ -107,12 +115,23 @@ impl RaxiomPlugin for VisualizationPlugin {
 fn camera_translation_system(
     mut camera: Query<&mut Transform, With<WorldCamera>>,
     extent: Res<GlobalExtent>,
-    parameters: Res<VisualizationParameters>,
+    camera_transform: Res<CameraTransform>,
 ) {
-    let mut camera_transform = camera.single_mut();
-    let pos = extent.center.in_units(parameters.camera_zoom);
-    camera_transform.translation.x = pos.x as f32;
-    camera_transform.translation.y = pos.y as f32;
+    let mut camera = camera.single_mut();
+    let pos = camera_transform.position_to_pixels(extent.center);
+    camera.translation.x = pos.x;
+    camera.translation.y = pos.y;
+}
+
+fn camera_scale_system(
+    extent: Res<GlobalExtent>,
+    mut camera_transform: ResMut<CameraTransform>,
+    windows: Res<Windows>,
+) {
+    let length = extent.max_side_length();
+    let window = windows.primary();
+    let max_side = window.width().max(window.height()).min(1000.0);
+    *camera_transform = CameraTransform::from_scale(length / (max_side as f64));
 }
 
 pub fn get_color(rank: Rank) -> Color {

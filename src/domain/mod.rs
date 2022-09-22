@@ -76,7 +76,7 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
 #[derive(Debug, Deref, DerefMut)]
 pub struct GlobalExtent(Extent);
 
-fn determine_global_extent_system(
+pub(super) fn determine_global_extent_system(
     particles: Query<&Position>,
     mut extent_communicator: NonSendMut<AllGatherCommunicator<CommunicatedOption<Extent>>>,
     mut global_extent: ResMut<GlobalExtent>,

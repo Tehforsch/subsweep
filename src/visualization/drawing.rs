@@ -5,7 +5,7 @@ use bevy::sprite::Mesh2dHandle;
 use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::*;
 
-use super::parameters::VisualizationParameters;
+use super::camera_transform::CameraTransform;
 use super::VisualizationStage;
 use super::CIRCLE_RADIUS;
 use crate::named::Named;
@@ -44,17 +44,17 @@ impl DrawCircle {
 }
 pub(super) trait IntoBundle {
     type Output: Bundle;
-    fn get_bundle(&self, camera_zoom: &Length) -> Self::Output;
+    fn get_bundle(&self, camera_transform: &CameraTransform) -> Self::Output;
     fn translation(&self) -> &VecLength;
     fn set_translation(&mut self, pos: &VecLength);
 }
 
 impl IntoBundle for DrawCircle {
     type Output = ShapeBundle;
-    fn get_bundle(&self, camera_zoom: &Length) -> Self::Output {
+    fn get_bundle(&self, camera_transform: &CameraTransform) -> Self::Output {
         let shape = shapes::Circle {
             radius: match self.radius {
-                LengthOrPixels::Length(length) => length.in_units(*camera_zoom) as f32,
+                LengthOrPixels::Length(length) => camera_transform.length_to_pixels(length),
                 LengthOrPixels::Pixels(pixels) => pixels as f32,
             },
             center: Vec2::new(0.0, 0.0),
@@ -78,11 +78,9 @@ impl IntoBundle for DrawCircle {
 
 impl IntoBundle for DrawRect {
     type Output = ShapeBundle;
-    fn get_bundle(&self, camera_zoom: &Length) -> Self::Output {
+    fn get_bundle(&self, camera_transform: &CameraTransform) -> Self::Output {
         let shape = shapes::Rectangle {
-            extents: (self.upper_right - self.lower_left)
-                .in_units(*camera_zoom)
-                .as_vec2(),
+            extents: camera_transform.position_to_pixels(self.upper_right - self.lower_left),
             origin: RectangleOrigin::BottomLeft,
         };
 
@@ -132,26 +130,22 @@ impl<T: IntoBundle + Component + Sync + Send + 'static> RaxiomPlugin for DrawBun
 fn spawn_visualization_item_system<T: Component + IntoBundle>(
     mut commands: Commands,
     query: Query<(Entity, &T), Without<Mesh2dHandle>>,
-    parameters: Res<VisualizationParameters>,
+    transform: Res<CameraTransform>,
 ) {
     for (entity, item) in query.iter() {
         commands
             .entity(entity)
-            .insert_bundle(item.get_bundle(&parameters.camera_zoom));
+            .insert_bundle(item.get_bundle(&transform));
     }
-}
-
-fn position_to_translation(position: &VecLength, camera_zoom: &Length) -> Vec3 {
-    let pos = position.in_units(*camera_zoom);
-    Vec3::new(pos.x as f32, pos.y as f32, 0.0)
 }
 
 pub(super) fn draw_translation_system<T: Component + IntoBundle>(
     mut query: Query<(&mut Transform, &T)>,
-    parameters: Res<VisualizationParameters>,
+    camera_transform: Res<CameraTransform>,
 ) {
     for (mut transform, item) in query.iter_mut() {
-        transform.translation =
-            position_to_translation(item.translation(), &parameters.camera_zoom);
+        let pixel_pos = camera_transform.position_to_pixels(*item.translation());
+        transform.translation.x = pixel_pos.x;
+        transform.translation.y = pixel_pos.y;
     }
 }
