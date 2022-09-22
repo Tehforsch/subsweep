@@ -1,5 +1,7 @@
 simulation:
   timestep: 15e2 s
+hydrodynamics:
+  smoothing_length: 0.1 au
 tree:
   max_depth: 20
   min_depth: 4
