@@ -1,0 +1,28 @@
+simulation:
+  timestep: 1e-3 s
+hydrodynamics:
+  smoothing_length: 1 m
+tree:
+  max_depth: 20
+  min_depth: 4
+  max_num_particles_per_leaf: 1
+visualization:
+  show_quadtree: false
+  camera_zoom: 0.03 m
+output:
+  output_dir: "output"
+  time_between_snapshots: 0.1 yr
+  fields:
+    - position
+    - velocity
+    - mass
+    - time
+example:
+  num_particles: 1500
+  fake_viscosity_timescale: 0.1 s
+  boundary_width: 45 m
+  boundary_height: 8 m
+  x_force: 2000 N
+  y_force_factor: 100 N m^-1
+  y_offset: 5 m
+  particle_mass: 1.0 kg
