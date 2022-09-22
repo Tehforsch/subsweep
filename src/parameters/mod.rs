@@ -93,8 +93,12 @@ impl<T: Named + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Parame
         all_parameters
             .get(name)
             .map(|plugin_parameters| {
-                serde_yaml::from_value(plugin_parameters.clone()).unwrap_or_else(|_| {
-                    panic!("Failed to read parameter file section {}", T::name())
+                serde_yaml::from_value(plugin_parameters.clone()).unwrap_or_else(|err| {
+                    panic!(
+                        "Failed to read parameter file section \"{}\": \n{}",
+                        T::name(),
+                        err
+                    )
                 })
             })
             .unwrap_or_else(|| match from_empty() {

@@ -95,8 +95,8 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<D> {
             Ok(Quantity::<f64, D>(numerical_value * total_factor))
         } else {
             Err(E::custom(format!(
-                "mismatch in dimensions: needed: {:?} given: {:?}",
-                D, total_dimension
+                "mismatch in dimensions: needed: {:?} given: {:?} in string: {}",
+                D, total_dimension, value
             )))
         }
     }
