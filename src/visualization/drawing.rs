@@ -8,8 +8,8 @@ use bevy_prototype_lyon::prelude::*;
 use super::parameters::VisualizationParameters;
 use super::VisualizationStage;
 use crate::named::Named;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 use crate::units::Length;
 use crate::units::VecLength;
 
@@ -97,7 +97,7 @@ impl<T> Default for DrawBundlePlugin<T> {
     }
 }
 
-impl<T: IntoBundle + Component + Sync + Send + 'static> TenetPlugin for DrawBundlePlugin<T> {
+impl<T: IntoBundle + Component + Sync + Send + 'static> RaxiomPlugin for DrawBundlePlugin<T> {
     fn allow_adding_twice(&self) -> bool {
         true
     }

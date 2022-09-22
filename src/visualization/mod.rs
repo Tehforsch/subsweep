@@ -28,8 +28,8 @@ use crate::physics::LocalParticle;
 use crate::physics::StopSimulationEvent;
 use crate::position::Position;
 use crate::quadtree::QuadTreeVisualizationPlugin;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
@@ -53,7 +53,7 @@ pub struct VisualizationPlugin;
 #[derive(Component)]
 struct WorldCamera;
 
-impl TenetPlugin for VisualizationPlugin {
+impl RaxiomPlugin for VisualizationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_plugin(
             CommunicationPlugin::<ParticleVisualizationExchangeData>::new(CommunicationType::Sync),

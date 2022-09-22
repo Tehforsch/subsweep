@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use tenet::prelude::*;
+use raxiom::prelude::*;
 
 fn main() {
     let mut sim = SimulationBuilder::mpi();

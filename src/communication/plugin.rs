@@ -12,8 +12,8 @@ use super::SyncCommunicator;
 use super::WorldRank;
 use super::WorldSize;
 use crate::named::Named;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 pub(super) const INITIAL_TAG: Tag = 0;
 
@@ -42,7 +42,7 @@ impl BaseCommunicationPlugin {
     }
 }
 
-impl TenetPlugin for BaseCommunicationPlugin {
+impl RaxiomPlugin for BaseCommunicationPlugin {
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(self.world_rank)
             .insert_resource(self.num_ranks);
@@ -75,7 +75,7 @@ pub(super) fn get_next_tag(sim: &mut Simulation) -> Tag {
 }
 
 #[cfg(feature = "mpi")]
-impl<T: Equivalence + Sync + Send + 'static> TenetPlugin for CommunicationPlugin<T>
+impl<T: Equivalence + Sync + Send + 'static> RaxiomPlugin for CommunicationPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,
 {

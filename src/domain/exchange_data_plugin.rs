@@ -26,8 +26,8 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::physics::LocalParticle;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 
 #[derive(Default)]
 struct ExchangePluginExists;
@@ -72,7 +72,7 @@ impl<T> Default for ExchangeDataPlugin<T> {
 #[derive(Equivalence, Deref, DerefMut)]
 struct NumEntities(usize);
 
-impl<T: Sync + Send + 'static + Component + Clone + Equivalence> TenetPlugin
+impl<T: Sync + Send + 'static + Component + Clone + Equivalence> RaxiomPlugin
     for ExchangeDataPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,

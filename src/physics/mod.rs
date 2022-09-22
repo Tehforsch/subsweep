@@ -19,8 +19,8 @@ use crate::io::output::DatasetOutputPlugin;
 use crate::mass::Mass;
 use crate::named::Named;
 use crate::position::Position;
+use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation::TenetPlugin;
 use crate::units;
 use crate::velocity::Velocity;
 
@@ -39,7 +39,7 @@ pub enum PhysicsStages {
     Physics,
 }
 
-impl TenetPlugin for PhysicsPlugin {
+impl RaxiomPlugin for PhysicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let parameters = sim
             .add_parameter_type_and_get_result::<SimulationParameters>()

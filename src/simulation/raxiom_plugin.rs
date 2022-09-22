@@ -1,7 +1,7 @@
 use super::Simulation;
 use crate::named::Named;
 
-pub trait TenetPlugin: Named {
+pub trait RaxiomPlugin: Named {
     /// A conditional determines whether the plugin should be built at
     /// all. Defaults to true. Note that build_always_once is run before
     /// should_build and will always run, regardless of the result of
