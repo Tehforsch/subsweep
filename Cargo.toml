@@ -33,9 +33,6 @@ serde_yaml = "0.9.9"
 derive_named = { path = "derive_named" }
 rand = "0.8.5"
 
-[dev-dependencies]
-rand = "0.8.5"
-
 # Optimize dependencies even in a debug build
 [profile.dev.package."*"]
 opt-level = 3
