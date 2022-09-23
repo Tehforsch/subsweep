@@ -30,8 +30,8 @@ fn main() {
     let mut sim = SimulationBuilder::mpi();
     sim.parameters_from_relative_path(file!(), "parameters.yml")
         .read_initial_conditions(false)
-        .update_from_command_line_options()
         .headless(false)
+        .update_from_command_line_options()
         .build()
         .add_parameter_type::<Parameters>()
         .add_startup_system(spawn_particles_system)
