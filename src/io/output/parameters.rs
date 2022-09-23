@@ -21,6 +21,8 @@ pub struct OutputParameters {
     pub fields: Vec<String>,
     #[serde(default = "default_snapshot_padding")]
     pub snapshot_padding: usize,
+    #[serde(default = "default_used_parameters_filename")]
+    pub used_parameters_filename: String,
 }
 
 fn default_snapshot_padding() -> usize {
@@ -39,6 +41,10 @@ fn default_fields() -> Vec<String> {
     ["position", "mass", "velocity"]
         .map(|x| x.to_string())
         .to_vec()
+}
+
+fn default_used_parameters_filename() -> String {
+    "parameters.yml".into()
 }
 
 impl OutputParameters {

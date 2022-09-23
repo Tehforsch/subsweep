@@ -3,6 +3,8 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
+use bevy::prelude::Deref;
+use bevy::prelude::DerefMut;
 use serde::Deserialize;
 use serde_yaml::Value;
 
@@ -12,7 +14,8 @@ use crate::simulation::Simulation;
 
 pub struct ReadParametersError(String);
 
-struct ParameterFileContents(String);
+#[derive(Deref, DerefMut)]
+pub(super) struct ParameterFileContents(pub String);
 
 impl Simulation {
     pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {

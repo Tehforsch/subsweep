@@ -22,6 +22,7 @@ pub use self::parameters::OutputParameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
+use crate::parameters::ParameterFileContents;
 use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 
@@ -45,6 +46,7 @@ fn output_setup(sim: &mut Simulation) {
         .insert_resource(OutputFile::default())
         .add_startup_system(Timer::initialize_system)
         .add_startup_system(make_output_dirs_system)
+        .add_startup_system(write_used_parameters_system)
         .add_system_to_stage(
             OutputStages::Output,
             open_file_system.with_run_criteria(Timer::run_criterion),
@@ -61,6 +63,24 @@ fn output_setup(sim: &mut Simulation) {
                 .after(close_file_system)
                 .with_run_criteria(Timer::run_criterion),
         );
+}
+
+fn write_used_parameters_system(
+    parameter_file_contents: Res<ParameterFileContents>,
+    parameters: Res<OutputParameters>,
+) {
+    fs::write(
+        &parameters
+            .output_dir
+            .join(&parameters.used_parameters_filename),
+        &**parameter_file_contents,
+    )
+    .unwrap_or_else(|e| {
+        panic!(
+            "Failed to write used parameters to file: {}: {}",
+            **parameter_file_contents, e
+        )
+    });
 }
 
 fn make_output_dirs_system(parameters: Res<OutputParameters>) {
