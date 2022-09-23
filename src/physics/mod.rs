@@ -3,6 +3,7 @@ pub(super) mod hydrodynamics;
 mod parameters;
 mod time;
 
+use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
@@ -12,6 +13,10 @@ pub use self::gravity::plugin::GravityPlugin;
 pub use self::hydrodynamics::HydrodynamicsPlugin;
 use self::parameters::SimulationParameters;
 pub use self::time::Time;
+use crate::communication::AllGatherCommunicator;
+use crate::communication::CollectiveCommunicator;
+use crate::communication::CommunicationPlugin;
+use crate::communication::CommunicationType;
 use crate::domain::ExchangeDataPlugin;
 use crate::io::input::DatasetInputPlugin;
 use crate::io::output::AttributeOutputPlugin;
@@ -39,6 +44,9 @@ pub enum PhysicsStages {
     Physics,
 }
 
+#[derive(Equivalence, Clone)]
+pub(super) struct ShouldExit(bool);
+
 impl RaxiomPlugin for PhysicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let parameters = sim
@@ -54,6 +62,9 @@ impl RaxiomPlugin for PhysicsPlugin {
             .add_plugin(DatasetInputPlugin::<Velocity>::default())
             .add_plugin(DatasetInputPlugin::<Mass>::default())
             .add_plugin(AttributeOutputPlugin::<Time>::default())
+            .add_plugin(CommunicationPlugin::<ShouldExit>::new(
+                CommunicationType::AllGather,
+            ))
             .add_event::<StopSimulationEvent>()
             .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::seconds(0.00)))
@@ -69,6 +80,10 @@ impl RaxiomPlugin for PhysicsPlugin {
             .add_system_to_stage(
                 PhysicsStages::Physics,
                 stop_simulation_system.after(time_system),
+            )
+            .add_system_to_stage(
+                PhysicsStages::Physics,
+                handle_app_exit_system.after(stop_simulation_system),
             );
     }
 }
@@ -84,6 +99,22 @@ fn stop_simulation_system(
         if **current_time >= time {
             stop_sim.send(StopSimulationEvent);
         }
+    }
+}
+
+fn handle_app_exit_system(
+    mut event_reader: EventReader<StopSimulationEvent>,
+    mut event_writer: EventWriter<AppExit>,
+    mut comm: NonSendMut<AllGatherCommunicator<ShouldExit>>,
+) {
+    let result = if event_reader.iter().count() > 0 {
+        comm.all_gather(&ShouldExit(true))
+    } else {
+        comm.all_gather(&ShouldExit(false))
+    };
+    let should_exit = result.into_iter().any(|x| x.0);
+    if should_exit {
+        event_writer.send(AppExit);
     }
 }
 

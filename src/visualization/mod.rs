@@ -4,13 +4,11 @@ mod drawing;
 pub mod parameters;
 pub mod remote;
 
-use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy_prototype_lyon::prelude::ShapePlugin;
 pub use camera_transform::CameraTransform;
 pub use drawing::DrawCircle;
 pub use drawing::DrawRect;
-use mpi::traits::Equivalence;
 
 use self::camera::camera_scale_system;
 use self::camera::camera_translation_system;
@@ -23,8 +21,6 @@ use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
 use self::remote::RemoteParticleVisualization;
-use crate::communication::AllGatherCommunicator;
-use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Rank;
@@ -40,9 +36,6 @@ use crate::simulation::Simulation;
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 
 pub static CIRCLE_RADIUS: f64 = 3.0;
-
-#[derive(Equivalence, Clone)]
-struct ShouldExit(bool);
 
 #[derive(StageLabel)]
 pub enum VisualizationStage {
@@ -60,10 +53,7 @@ impl RaxiomPlugin for VisualizationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_plugin(
             CommunicationPlugin::<ParticleVisualizationExchangeData>::new(CommunicationType::Sync),
-        )
-        .add_plugin(CommunicationPlugin::<ShouldExit>::new(
-            CommunicationType::AllGather,
-        ));
+        );
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
@@ -96,19 +86,14 @@ impl RaxiomPlugin for VisualizationPlugin {
                 position_to_translation_system::<DrawCircle>
                     .before(draw_translation_system::<DrawCircle>),
             )
-            .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system)
-            .add_system_to_stage(
-                VisualizationStage::AppExit,
-                handle_app_exit_system.after(keyboard_app_exit_system),
-            );
+            .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system);
     }
 
     fn build_on_other_ranks(&self, sim: &mut Simulation) {
         sim.add_system_to_stage(
             VisualizationStage::Synchronize,
             send_particles_to_main_thread_system,
-        )
-        .add_system_to_stage(VisualizationStage::AppExit, handle_app_exit_system);
+        );
     }
 }
 
@@ -144,22 +129,6 @@ fn keyboard_app_exit_system(
 ) {
     if input.just_pressed(KeyCode::Escape) && input.get_pressed().len() == 1 {
         event_writer.send(StopSimulationEvent);
-    }
-}
-
-fn handle_app_exit_system(
-    mut event_reader: EventReader<StopSimulationEvent>,
-    mut event_writer: EventWriter<AppExit>,
-    mut comm: NonSendMut<AllGatherCommunicator<ShouldExit>>,
-) {
-    let result = if event_reader.iter().count() > 0 {
-        comm.all_gather(&ShouldExit(true))
-    } else {
-        comm.all_gather(&ShouldExit(false))
-    };
-    let should_exit = result.into_iter().any(|x| x.0);
-    if should_exit {
-        event_writer.send(AppExit);
     }
 }
 
