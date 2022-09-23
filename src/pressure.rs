@@ -9,5 +9,5 @@ use crate::named::Named;
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
 #[name = "pressure"]
-#[repr(C)]
+#[repr(transparent)]
 pub struct Pressure(pub crate::units::Pressure);

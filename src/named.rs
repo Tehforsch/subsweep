@@ -33,7 +33,7 @@ mod tests {
     #[test]
     fn name_derive_more_attributes() {
         #[derive(Named)]
-        #[repr(C)]
+        #[repr(transparent)]
         #[name = "A"]
         struct A {
             _x: i32,

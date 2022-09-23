@@ -10,5 +10,5 @@ use crate::units::VecLength;
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "position"]
-#[repr(C)]
+#[repr(transparent)]
 pub struct Position(pub VecLength);

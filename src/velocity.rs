@@ -10,5 +10,5 @@ use crate::units::VecVelocity;
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "velocity"]
-#[repr(C)]
+#[repr(transparent)]
 pub struct Velocity(pub VecVelocity);
