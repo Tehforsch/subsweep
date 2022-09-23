@@ -5,6 +5,7 @@ mod parameters;
 mod timer;
 
 use std::fs;
+use std::path::Path;
 
 use bevy::prelude::info;
 use bevy::prelude::AmbiguitySetLabel;
@@ -43,7 +44,7 @@ fn output_setup(sim: &mut Simulation) {
     sim.add_parameter_type::<OutputParameters>()
         .insert_resource(OutputFile::default())
         .add_startup_system(Timer::initialize_system)
-        .add_startup_system(make_output_dir_system)
+        .add_startup_system(make_output_dirs_system)
         .add_system_to_stage(
             OutputStages::Output,
             open_file_system.with_run_criteria(Timer::run_criterion),
@@ -62,9 +63,20 @@ fn output_setup(sim: &mut Simulation) {
         );
 }
 
-fn make_output_dir_system(parameters: Res<OutputParameters>) {
+fn make_output_dirs_system(parameters: Res<OutputParameters>) {
     fs::create_dir_all(&parameters.output_dir)
         .unwrap_or_else(|_| panic!("Failed to create output dir: {:?}", parameters.output_dir));
+    fs::create_dir_all(&parameters.snapshot_dir()).unwrap_or_else(|_| {
+        panic!(
+            "Failed to create snapshots dir: {:?}",
+            parameters.snapshot_dir()
+        )
+    });
+}
+
+fn make_snapshot_dir(snapshot_dir: &Path) {
+    fs::create_dir_all(snapshot_dir)
+        .unwrap_or_else(|_| panic!("Failed to create snapshot dir: {:?}", snapshot_dir));
 }
 
 fn open_file_system(
@@ -76,17 +88,20 @@ fn open_file_system(
 ) {
     assert!(file.f.is_none());
     let rank_padding = ((**world_size as f64).log10().floor() as usize) + 1;
-    let filename = &format!(
-        "snapshot_{:0snap_padding$}_{:0rank_padding$}.hdf5",
+    let snapshot_name = format!(
+        "{:0snap_padding$}",
         output_timer.snapshot_num(),
+        snap_padding = parameters.snapshot_padding
+    );
+    let snapshot_dir = parameters.snapshot_dir().join(&snapshot_name);
+    make_snapshot_dir(&snapshot_dir);
+    let filename = &format!(
+        "{:0rank_padding$}.hdf5",
         rank.0,
-        snap_padding = parameters.snapshot_padding,
         rank_padding = rank_padding
     );
-    info!("Writing snapshot: {}", output_timer.snapshot_num());
-    file.f = Some(
-        File::create(&parameters.output_dir.join(filename)).expect("Failed to open output file"),
-    );
+    info!("Writing snapshot: {}", &snapshot_name);
+    file.f = Some(File::create(snapshot_dir.join(filename)).expect("Failed to open output file"));
 }
 
 fn close_file_system(mut file: ResMut<OutputFile>) {

@@ -15,6 +15,8 @@ pub struct OutputParameters {
     pub time_first_snapshot: Option<Time>,
     #[serde(default = "default_output_dir")]
     pub output_dir: PathBuf,
+    #[serde(default = "default_snapshots_dir")]
+    snapshots_dir: PathBuf,
     #[serde(default = "default_fields")]
     pub fields: Vec<String>,
     #[serde(default = "default_snapshot_padding")]
@@ -29,6 +31,10 @@ fn default_output_dir() -> PathBuf {
     "output".into()
 }
 
+fn default_snapshots_dir() -> PathBuf {
+    "snapshots".into()
+}
+
 fn default_fields() -> Vec<String> {
     ["position", "mass", "velocity"]
         .map(|x| x.to_string())
@@ -41,5 +47,9 @@ impl OutputParameters {
             .fields
             .iter()
             .any(|field| field == T::name())
+    }
+
+    pub fn snapshot_dir(&self) -> PathBuf {
+        self.output_dir.join(&self.snapshots_dir)
     }
 }
