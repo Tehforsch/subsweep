@@ -12,7 +12,7 @@ default = ["mpi"]
 mpi = []
 
 [dependencies]
-bevy = { version = "0.8.0", default-features = false, features = ["render", "x11", "bevy_winit", "serialize", "filesystem_watcher"]}
+bevy = { version = "0.8.0", default-features = false, features = ["render", "x11", "bevy_winit"]}
 bevy_prototype_lyon = "0.6.0"
 clap = {version = "3.2.17", features = ["derive"]}
 derive_more = "0.99.17"
