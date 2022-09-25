@@ -35,7 +35,7 @@ impl Dimension {
         }
     }
 
-    pub const fn dimension_neg(self) -> Self {
+    pub const fn dimension_inv(self) -> Self {
         Self {
             length: -self.length,
             mass: -self.mass,
