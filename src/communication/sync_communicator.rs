@@ -4,9 +4,9 @@ use std::collections::HashSet;
 use bevy::prelude::Entity;
 use mpi::traits::Equivalence;
 
+use super::communicator::Communicator;
 use super::exchange_communicator::ExchangeCommunicator;
 use super::identified::EntityKey;
-use super::Communicator;
 use super::DataByRank;
 use super::Identified;
 use super::Rank;

@@ -19,8 +19,8 @@ pub use sized_communicator::SizedCommunicator;
 
 // Will be used eventually, so allow dead code for now
 #[allow(dead_code)]
-pub type AllReduceCommunicator<T> = Communicator<T>;
-pub type AllGatherCommunicator<T> = Communicator<T>;
+pub type AllReduceCommunicator<T> = communicator::Communicator<T>;
+pub type AllGatherCommunicator<T> = communicator::Communicator<T>;
 pub type ExchangeCommunicator<T> = exchange_communicator::ExchangeCommunicator<T>;
 pub type SyncCommunicator<T> = sync_communicator::SyncCommunicator<T>;
 
@@ -41,7 +41,9 @@ mod local_reexport {
 
     pub mod local_sim_building;
 
-    pub type Communicator<T> = super::local::LocalCommunicator<T>;
+    pub(super) mod communicator {
+        pub type Communicator<T> = super::super::local::LocalCommunicator<T>;
+    }
 }
 
 #[cfg(feature = "mpi")]
@@ -56,7 +58,9 @@ mod mpi_reexport {
     pub use super::mpi_world::MpiWorld;
     pub use super::mpi_world::MPI_UNIVERSE;
 
-    pub type Communicator<T> = super::mpi_world::MpiWorld<T>;
+    pub(super) mod communicator {
+        pub type Communicator<T> = super::super::mpi_world::MpiWorld<T>;
+    }
 }
 
 pub type Rank = mpi::Rank;

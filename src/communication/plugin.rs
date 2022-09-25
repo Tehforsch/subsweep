@@ -4,7 +4,7 @@ use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
-use super::Communicator;
+use super::communicator::Communicator;
 use super::ExchangeCommunicator;
 use super::Rank;
 use super::SyncCommunicator;
