@@ -22,6 +22,20 @@ impl<S> Quantity<S, { NONE }> {
     }
 }
 
+impl<S> std::ops::Deref for Quantity<S, NONE> {
+    type Target = S;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<S> std::ops::DerefMut for Quantity<S, NONE> {
+    fn deref_mut(&mut self) -> &mut S {
+        &mut self.0
+    }
+}
+
 impl<S, const D: Dimension> Quantity<S, D>
 where
     S: Clone,
