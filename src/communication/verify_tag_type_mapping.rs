@@ -6,7 +6,6 @@ use std::hash::Hasher;
 use mpi::traits::Equivalence;
 use mpi::Tag;
 
-use super::CollectiveCommunicator;
 use super::MpiWorld;
 use super::SizedCommunicator;
 
@@ -27,15 +26,13 @@ pub(super) fn verify_tag_type_mapping<T>(tag: Tag) {
         type_hash: calculate_hash(&type_name.to_owned()),
     };
     let mut world = MpiWorld::<TagTypeMapping>::new(VERIFICATION_TAG);
-    let mappings = world.all_gather(&mapping);
-    for other_rank_mapping in mappings {
-        if mapping != other_rank_mapping {
-            let rank = world.rank();
-            panic!(
-                "Different tag <-> type mapping between ranks! On rank {}, tag {} communicates {}.",
-                rank, tag, type_name
-            );
-        }
+    if !world.all_ranks_have_same_value(&mapping) {
+        panic!(
+            "Different tag <-> type mapping between ranks! On rank {}, tag {} communicates {}.",
+            world.rank(),
+            tag,
+            type_name
+        );
     }
 }
 

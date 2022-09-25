@@ -84,6 +84,22 @@ impl<T> MpiWorld<T> {
     }
 }
 
+impl<T> MpiWorld<T>
+where
+    T: Equivalence,
+{
+    /// Should be called before any collective operation.  Checks that
+    /// the tag being communicated is the same across all ranks. This
+    /// is an additional check to prevent any kind of mixing of the
+    /// type involved in collective operations. This is done
+    /// explicitly here since collective MPI operations do not support
+    /// tags.
+    fn verify_tag(&mut self) {
+        let tag = self.tag;
+        assert!(self.all_ranks_have_same_value(&tag), "Initializing allgather operation but different ranks have different tags. Tag on rank {}: {}!", self.world.rank(), self.tag)
+    }
+}
+
 impl<S, T> WorldCommunicator<S> for MpiWorld<T>
 where
     S: Equivalence,
@@ -147,13 +163,12 @@ unsafe fn get_buffer<T>(num_elements: usize) -> Vec<T> {
 
 impl<T: Equivalence> CollectiveCommunicator<T> for MpiWorld<T> {
     fn all_gather(&mut self, send: &T) -> Vec<T> {
-        let world_size = self.world.size() as usize;
-        let mut result_buffer = unsafe { get_buffer(world_size) };
-        self.world.all_gather_into(send, &mut result_buffer[..]);
-        result_buffer
+        self.verify_tag();
+        unchecked_all_gather(self.world, send)
     }
 
     fn all_gather_vec(&mut self, send: &[T]) -> DataByRank<Vec<T>> {
+        self.verify_tag();
         let world_size = self.world.size() as usize;
         let num_elements = send.len();
         let mut result_buffer = unsafe { get_buffer::<T>(world_size * num_elements) };
@@ -166,6 +181,7 @@ impl<T: Equivalence> CollectiveCommunicator<T> for MpiWorld<T> {
     }
 
     fn all_gather_varcount(&mut self, send: &[T], counts: &[Count]) -> Vec<T> {
+        self.verify_tag();
         let mut result_buffer: Vec<T> =
             unsafe { get_buffer(counts.iter().map(|x| *x as usize).sum()) };
         let displacements: Vec<Count> = counts
@@ -184,11 +200,30 @@ impl<T: Equivalence> CollectiveCommunicator<T> for MpiWorld<T> {
 
 impl<T: Equivalence + Clone> SumCommunicator<T> for MpiWorld<T> {
     fn collective_sum(&mut self, send: &T) -> T {
+        self.verify_tag();
         let mut result = send.clone();
         self.world
             .all_reduce_into(send, &mut result, SystemOperation::sum());
         result
     }
+}
+
+impl<S> MpiWorld<S> {
+    pub fn all_ranks_have_same_value<T: Equivalence + PartialEq>(&mut self, value: &T) -> bool {
+        let values = unchecked_all_gather(self.world, value);
+        for other_value in values {
+            if *value != other_value {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+fn unchecked_all_gather<T: Equivalence>(world: SystemCommunicator, send: &T) -> Vec<T> {
+    let mut result_buffer = unsafe { get_buffer(world.size() as usize) };
+    world.all_gather_into(send, &mut result_buffer[..]);
+    result_buffer
 }
 
 impl<T> From<MpiWorld<T>> for MpiWorld<Identified<T>> {
