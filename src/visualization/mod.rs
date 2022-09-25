@@ -68,7 +68,12 @@ impl RaxiomPlugin for VisualizationPlugin {
                 StartupStage::PostStartup,
                 camera_scale_system.after(determine_global_extent_system),
             )
-            .add_startup_system_to_stage(StartupStage::PostStartup, camera_translation_system)
+            .add_startup_system_to_stage(
+                StartupStage::PostStartup,
+                camera_translation_system
+                    .after(determine_global_extent_system)
+                    .after(camera_scale_system),
+            )
             .add_system_to_stage(
                 VisualizationStage::Synchronize,
                 receive_particles_on_main_thread_system,

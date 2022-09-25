@@ -14,6 +14,9 @@ use crate::simulation::Simulation;
 use crate::units::Length;
 use crate::units::VecLength;
 
+#[derive(AmbiguitySetLabel)]
+pub struct DrawAmbiguitySet;
+
 pub enum LengthOrPixels {
     Length(Length),
     Pixels(f64),
@@ -123,7 +126,10 @@ impl<T: IntoBundle + Component + Sync + Send + 'static> RaxiomPlugin for DrawBun
             VisualizationStage::AddDrawComponents,
             spawn_visualization_item_system::<T>,
         )
-        .add_system_to_stage(VisualizationStage::Draw, draw_translation_system::<T>);
+        .add_system_to_stage(
+            VisualizationStage::Draw,
+            draw_translation_system::<T>.in_ambiguity_set(DrawAmbiguitySet),
+        );
     }
 }
 
