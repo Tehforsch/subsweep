@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use mpi::request::scope;
 use mpi::traits::Equivalence;
 
-use super::world_communicator::WorldCommunicator;
 use super::Communicator;
 use super::DataByRank;
 use super::Rank;

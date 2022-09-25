@@ -10,7 +10,6 @@ mod identified;
 mod plugin;
 mod sized_communicator;
 mod sync_communicator;
-mod world_communicator;
 
 pub use collective_communicator::CollectiveCommunicator;
 pub use collective_communicator::SumCommunicator;
@@ -21,7 +20,6 @@ pub use plugin::BaseCommunicationPlugin;
 pub use plugin::CommunicationPlugin;
 pub use plugin::CommunicationType;
 pub use sized_communicator::SizedCommunicator;
-pub use world_communicator::WorldCommunicator;
 
 // Will be used eventually, so allow dead code for now
 #[allow(dead_code)]

@@ -13,7 +13,6 @@ use raxiom::communication::DataByRank;
 use raxiom::communication::ExchangeCommunicator;
 use raxiom::communication::MpiWorld;
 use raxiom::communication::SizedCommunicator;
-use raxiom::communication::WorldCommunicator;
 use raxiom::communication::MPI_UNIVERSE;
 
 pub fn main() {
@@ -37,15 +36,9 @@ fn send_receive() {
     let x1: Vec<i32> = vec![3, 2, 1];
     if rank == 0 {
         world.blocking_send_vec(1, &x0);
-        assert_eq!(
-            <MpiWorld<i32> as WorldCommunicator<i32>>::receive_vec(&mut world, 1),
-            x1
-        );
+        assert_eq!(MpiWorld::<i32>::receive_vec(&mut world, 1), x1);
     } else if rank == 1 {
-        assert_eq!(
-            <MpiWorld<i32> as WorldCommunicator<i32>>::receive_vec(&mut world, 0),
-            x0
-        );
+        assert_eq!(MpiWorld::<i32>::receive_vec(&mut world, 0), x0);
         world.blocking_send_vec(0, &x1);
     }
 }

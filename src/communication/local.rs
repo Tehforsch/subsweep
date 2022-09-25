@@ -13,7 +13,6 @@ use mpi::Tag;
 
 use crate::communication::collective_communicator::SumCommunicator;
 use crate::communication::sized_communicator::SizedCommunicator;
-use crate::communication::world_communicator::WorldCommunicator;
 use crate::communication::CollectiveCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::Identified;
@@ -55,8 +54,8 @@ impl<T> LocalCommunicator<T> {
     }
 }
 
-impl<T> WorldCommunicator<T> for LocalCommunicator<T> {
-    fn receive_vec(&mut self, rank: Rank) -> Vec<T> {
+impl<T> LocalCommunicator<T> {
+    pub fn receive_vec(&mut self, rank: Rank) -> Vec<T> {
         let bytes = &self.receivers[rank].recv().unwrap().bytes;
         let size = mem::size_of::<T>();
         debug_assert_eq!(bytes.len().rem_euclid(size), 0);
@@ -66,7 +65,7 @@ impl<T> WorldCommunicator<T> for LocalCommunicator<T> {
             .collect()
     }
 
-    fn blocking_send_vec(&mut self, rank: Rank, data: &[T]) {
+    pub fn blocking_send_vec(&mut self, rank: Rank, data: &[T]) {
         let bytes = unsafe {
             slice::from_raw_parts(
                 (data as *const [T]) as *const u8,
@@ -79,7 +78,7 @@ impl<T> WorldCommunicator<T> for LocalCommunicator<T> {
         self.senders[rank].send(payload).unwrap();
     }
 
-    fn immediate_send_vec<'a, Sc: Scope<'a>>(
+    pub fn immediate_send_vec<'a, Sc: Scope<'a>>(
         &mut self,
         _scope: Sc,
         rank: Rank,
@@ -170,7 +169,6 @@ mod tests {
     use crate::communication::plugin::INITIAL_TAG;
     use crate::communication::sync_communicator::tests::get_communicators;
     use crate::communication::CollectiveCommunicator;
-    use crate::communication::WorldCommunicator;
 
     #[derive(Clone, Debug, PartialEq)]
     struct ComplexStruct {

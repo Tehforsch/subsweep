@@ -25,7 +25,6 @@ use mpi::Tag;
 use mpi::Threading;
 
 use super::collective_communicator::SumCommunicator;
-use super::world_communicator::WorldCommunicator;
 use super::CollectiveCommunicator;
 use super::DataByRank;
 use super::Identified;
@@ -100,11 +99,11 @@ where
     }
 }
 
-impl<S, T> WorldCommunicator<S> for MpiWorld<T>
+impl<S> MpiWorld<S>
 where
     S: Equivalence,
 {
-    fn blocking_send_vec(&mut self, rank: Rank, data: &[S]) {
+    pub fn blocking_send_vec(&mut self, rank: Rank, data: &[S]) {
         let num = data.len();
         let process = self.world.process_at_rank(rank);
         process.send_with_tag(&num, self.tag);
@@ -113,7 +112,7 @@ where
         }
     }
 
-    fn receive_vec(&mut self, rank: Rank) -> Vec<S> {
+    pub fn receive_vec(&mut self, rank: Rank) -> Vec<S> {
         let process = self.world.process_at_rank(rank);
         let (num_received, _): (usize, Status) = process.receive_with_tag(self.tag);
         if num_received > 0 {
@@ -124,7 +123,7 @@ where
     }
 
     #[must_use]
-    fn immediate_send_vec<'a, Sc: Scope<'a>>(
+    pub fn immediate_send_vec<'a, Sc: Scope<'a>>(
         &mut self,
         scope: Sc,
         rank: Rank,
@@ -252,7 +251,6 @@ mod tests {
     use mpi::Tag;
 
     use super::MpiWorld;
-    use crate::communication::WorldCommunicator;
 
     #[test]
     fn immediate_send_receive() {
