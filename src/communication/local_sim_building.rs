@@ -10,11 +10,11 @@ use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
-use super::BaseCommunicationPlugin;
 use crate::communication::local::LocalCommunicator;
 use crate::communication::local::Payload;
 use crate::communication::plugin::add_communicator;
 use crate::communication::plugin::get_next_tag;
+use crate::communication::BaseCommunicationPlugin;
 use crate::communication::CommunicationPlugin;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
@@ -95,7 +95,7 @@ pub fn build_local_communication_sim_with_custom_logic<
 }
 
 #[derive(PartialEq, Eq, Debug, Hash)]
-pub(super) struct Comm {
+pub struct Comm {
     owner: Rank,
     other: Rank,
     tag: Tag,
@@ -142,7 +142,7 @@ where
     }
 }
 
-pub(super) fn add_senders_to_communicator<T>(
+pub fn add_senders_to_communicator<T>(
     communicator: &mut LocalCommunicator<T>,
     senders: &mut HashMap<Comm, Sender<Payload>>,
 ) {
@@ -158,7 +158,7 @@ pub(super) fn add_senders_to_communicator<T>(
     }
 }
 
-pub(super) fn add_receivers_to_communicator<T>(
+pub fn add_receivers_to_communicator<T>(
     communicator: &mut LocalCommunicator<T>,
     receivers: &mut HashMap<Comm, Receiver<Payload>>,
 ) {
@@ -174,7 +174,7 @@ pub(super) fn add_receivers_to_communicator<T>(
     }
 }
 
-pub(super) fn get_senders_and_receivers(
+pub fn get_senders_and_receivers(
     num_threads: usize,
     tag: Tag,
 ) -> (

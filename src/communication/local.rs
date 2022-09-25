@@ -11,15 +11,15 @@ use mpi::request::WaitGuard;
 use mpi::Count;
 use mpi::Tag;
 
-use super::collective_communicator::SumCommunicator;
-use super::sized_communicator::SizedCommunicator;
-use super::world_communicator::WorldCommunicator;
-use super::CollectiveCommunicator;
-use super::DataByRank;
-use super::Identified;
-use super::Rank;
+use crate::communication::collective_communicator::SumCommunicator;
+use crate::communication::sized_communicator::SizedCommunicator;
+use crate::communication::world_communicator::WorldCommunicator;
+use crate::communication::CollectiveCommunicator;
+use crate::communication::DataByRank;
+use crate::communication::Identified;
+use crate::communication::Rank;
 
-pub(super) struct Payload {
+pub struct Payload {
     bytes: Vec<u8>,
 }
 

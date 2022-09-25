@@ -23,6 +23,13 @@ pub use plugin::CommunicationType;
 pub use sized_communicator::SizedCommunicator;
 pub use world_communicator::WorldCommunicator;
 
+// Will be used eventually, so allow dead code for now
+#[allow(dead_code)]
+pub type AllReduceCommunicator<T> = Communicator<T>;
+pub type AllGatherCommunicator<T> = Communicator<T>;
+pub type ExchangeCommunicator<T> = exchange_communicator::ExchangeCommunicator<Communicator<T>, T>;
+pub type SyncCommunicator<T> = sync_communicator::SyncCommunicator<Communicator<Identified<T>>, T>;
+
 #[cfg(feature = "mpi")]
 mod verify_tag_type_mapping;
 
@@ -30,28 +37,16 @@ mod verify_tag_type_mapping;
 mod local;
 
 #[cfg(not(feature = "mpi"))]
-pub mod local_sim_building;
-
-#[cfg(not(feature = "mpi"))]
 pub use local_reexport::*;
 
 #[cfg(not(feature = "mpi"))]
 #[path = ""]
 mod local_reexport {
-    use super::identified::Identified;
     pub use super::local_sim_building::build_local_communication_sim;
     pub use super::local_sim_building::build_local_communication_sim_with_custom_logic;
 
-    // Will be used eventually, so allow dead code for now
-    #[allow(dead_code)]
-    pub type AllReduceCommunicator<T> = super::local::LocalCommunicator<T>;
-    pub type AllGatherCommunicator<T> = super::local::LocalCommunicator<T>;
-    pub type ExchangeCommunicator<T> =
-        super::exchange_communicator::ExchangeCommunicator<super::local::LocalCommunicator<T>, T>;
-    pub type SyncCommunicator<T> = super::sync_communicator::SyncCommunicator<
-        super::local::LocalCommunicator<Identified<T>>,
-        T,
-    >;
+    pub mod local_sim_building;
+
     pub type Communicator<T> = super::local::LocalCommunicator<T>;
 }
 
@@ -64,20 +59,10 @@ pub use mpi_reexport::*;
 #[cfg(feature = "mpi")]
 #[path = ""]
 mod mpi_reexport {
-    use super::identified::Identified;
-    // Will be used eventually, so allow dead code for now
-    #[allow(dead_code)]
-    pub type AllReduceCommunicator<T> = super::mpi_world::MpiWorld<T>;
-    pub type AllGatherCommunicator<T> = super::mpi_world::MpiWorld<T>;
-    pub type ExchangeCommunicator<T> =
-        super::exchange_communicator::ExchangeCommunicator<super::mpi_world::MpiWorld<T>, T>;
-    pub type SyncCommunicator<T> =
-        super::sync_communicator::SyncCommunicator<super::mpi_world::MpiWorld<Identified<T>>, T>;
-
-    pub type Communicator<T> = super::mpi_world::MpiWorld<T>;
-
     pub use super::mpi_world::MpiWorld;
     pub use super::mpi_world::MPI_UNIVERSE;
+
+    pub type Communicator<T> = super::mpi_world::MpiWorld<T>;
 }
 
 pub type Rank = mpi::Rank;
