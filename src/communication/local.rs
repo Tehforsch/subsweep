@@ -55,7 +55,7 @@ impl<T> LocalCommunicator<T> {
     }
 }
 
-impl<T: Sync + Send> WorldCommunicator<T> for LocalCommunicator<T> {
+impl<T> WorldCommunicator<T> for LocalCommunicator<T> {
     fn receive_vec(&mut self, rank: Rank) -> Vec<T> {
         let bytes = &self.receivers[rank].recv().unwrap().bytes;
         let size = mem::size_of::<T>();

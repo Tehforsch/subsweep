@@ -31,13 +31,11 @@ impl<T: std::fmt::Debug> std::fmt::Debug for Identified<T> {
 use mpi::datatype::UserDatatype;
 use mpi::internal::memoffset::offset_of;
 use mpi::traits::Equivalence;
-use mpi::traits::MatchesRaw;
 use mpi::Address;
 
 unsafe impl<T> Equivalence for Identified<T>
 where
     T: Equivalence,
-    <T as Equivalence>::Out: MatchesRaw,
 {
     type Out = UserDatatype;
 

@@ -2,15 +2,15 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use bevy::prelude::Entity;
+use mpi::traits::Equivalence;
 
 use super::exchange_communicator::ExchangeCommunicator;
-use super::from_communicator::FromCommunicator;
 use super::identified::EntityKey;
+use super::Communicator;
 use super::DataByRank;
 use super::Identified;
 use super::Rank;
 use super::SizedCommunicator;
-use super::WorldCommunicator;
 
 pub struct SyncResult<T> {
     pub updated: DataByRank<Vec<(Entity, T)>>,
@@ -26,30 +26,28 @@ impl<T> SyncResult<T> {
     }
 }
 
-pub struct SyncCommunicator<C, T> {
-    communicator: ExchangeCommunicator<C, Identified<T>>,
+pub struct SyncCommunicator<T> {
+    communicator: ExchangeCommunicator<Identified<T>>,
     known: DataByRank<HashMap<EntityKey, Entity>>,
     to_sync: DataByRank<Vec<Identified<T>>>,
 }
 
-impl<C, T> FromCommunicator<C> for SyncCommunicator<C, T>
-where
-    C: WorldCommunicator<Identified<T>> + SizedCommunicator,
-{
-    fn from_communicator(communicator: C) -> Self {
-        let known = DataByRank::from_communicator(&communicator);
-        let to_sync = DataByRank::from_communicator(&communicator);
+impl<T> From<Communicator<T>> for SyncCommunicator<T> {
+    fn from(communicator: Communicator<T>) -> Self {
+        let identified_communicator: Communicator<Identified<T>> = communicator.into();
+        let known = DataByRank::from_communicator(&identified_communicator);
+        let to_sync = DataByRank::from_communicator(&identified_communicator);
         Self {
-            communicator: ExchangeCommunicator::from_communicator(communicator),
+            communicator: identified_communicator.into(),
             known,
             to_sync,
         }
     }
 }
 
-impl<C, T> SyncCommunicator<C, T>
+impl<T> SyncCommunicator<T>
 where
-    C: WorldCommunicator<Identified<T>> + SizedCommunicator,
+    T: Equivalence,
 {
     pub fn send_sync(&mut self, rank: Rank, entity: Entity, data: T) {
         self.to_sync[rank].push(Identified::new(entity, data));
@@ -95,7 +93,6 @@ pub mod tests {
 
     use mpi::Tag;
 
-    use crate::communication::from_communicator::FromCommunicator;
     use crate::communication::local::LocalCommunicator;
     use crate::communication::local_sim_building::add_receivers_to_communicator;
     use crate::communication::local_sim_building::add_senders_to_communicator;
@@ -126,10 +123,8 @@ pub mod tests {
 
         use super::SyncCommunicator;
         let mut communicators = get_communicators(2, 0);
-        let mut communicator0 =
-            SyncCommunicator::from_communicator(communicators.remove(&0).unwrap());
-        let mut communicator1 =
-            SyncCommunicator::from_communicator(communicators.remove(&1).unwrap());
+        let mut communicator0 = SyncCommunicator::from(communicators.remove(&0).unwrap());
+        let mut communicator1 = SyncCommunicator::from(communicators.remove(&1).unwrap());
         let entity_translation = |_, data| {
             // This makes no sense, and is just for test purposes
             Entity::from_raw(data)

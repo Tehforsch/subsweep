@@ -27,8 +27,8 @@ pub use world_communicator::WorldCommunicator;
 #[allow(dead_code)]
 pub type AllReduceCommunicator<T> = Communicator<T>;
 pub type AllGatherCommunicator<T> = Communicator<T>;
-pub type ExchangeCommunicator<T> = exchange_communicator::ExchangeCommunicator<Communicator<T>, T>;
-pub type SyncCommunicator<T> = sync_communicator::SyncCommunicator<Communicator<Identified<T>>, T>;
+pub type ExchangeCommunicator<T> = exchange_communicator::ExchangeCommunicator<T>;
+pub type SyncCommunicator<T> = sync_communicator::SyncCommunicator<T>;
 
 #[cfg(feature = "mpi")]
 mod verify_tag_type_mapping;

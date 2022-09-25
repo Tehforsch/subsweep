@@ -9,7 +9,6 @@
 
 use mpi::traits::Communicator;
 use mpi::Tag;
-use raxiom::communication::from_communicator::FromCommunicator;
 use raxiom::communication::DataByRank;
 use raxiom::communication::ExchangeCommunicator;
 use raxiom::communication::MpiWorld;
@@ -54,7 +53,7 @@ fn send_receive() {
 fn exchange_all() {
     let world = MpiWorld::<i32>::new(Tag::default());
     let rank = world.rank();
-    let mut exchange_comm = ExchangeCommunicator::from_communicator(world);
+    let mut exchange_comm = ExchangeCommunicator::from(world);
     for _ in 0..100 {
         let x0: Vec<i32> = (0..100).collect();
         let x1: Vec<i32> = (0..100).rev().collect();

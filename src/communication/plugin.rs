@@ -4,7 +4,6 @@ use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
-use super::from_communicator::FromCommunicator;
 use super::Communicator;
 use super::ExchangeCommunicator;
 use super::Rank;
@@ -99,10 +98,10 @@ pub(super) fn add_communicator<T: Equivalence + 'static + Sync + Send>(
 {
     match type_ {
         CommunicationType::Exchange => {
-            sim.insert_non_send_resource(ExchangeCommunicator::from_communicator(communicator));
+            sim.insert_non_send_resource(ExchangeCommunicator::from(communicator));
         }
         CommunicationType::Sync => {
-            sim.insert_non_send_resource(SyncCommunicator::from_communicator(communicator.into()));
+            sim.insert_non_send_resource(SyncCommunicator::from(communicator));
         }
         CommunicationType::Sum => {
             sim.insert_non_send_resource(communicator);
