@@ -7,7 +7,6 @@ pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 use self::extent::Extent;
 use crate::communication::AllGatherCommunicator;
-use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicatedOption;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;

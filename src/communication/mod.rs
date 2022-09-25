@@ -1,18 +1,14 @@
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 
-mod collective_communicator;
 mod communicated_option;
 mod data_by_rank;
 mod exchange_communicator;
-pub mod from_communicator;
 mod identified;
 mod plugin;
 mod sized_communicator;
 mod sync_communicator;
 
-pub use collective_communicator::CollectiveCommunicator;
-pub use collective_communicator::SumCommunicator;
 pub use communicated_option::CommunicatedOption;
 pub use data_by_rank::DataByRank;
 pub use identified::Identified;

@@ -11,9 +11,7 @@ use mpi::request::WaitGuard;
 use mpi::Count;
 use mpi::Tag;
 
-use crate::communication::collective_communicator::SumCommunicator;
 use crate::communication::sized_communicator::SizedCommunicator;
-use crate::communication::CollectiveCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::Identified;
 use crate::communication::Rank;
@@ -100,15 +98,15 @@ impl<T> SizedCommunicator for LocalCommunicator<T> {
     }
 }
 
-impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> {
-    fn all_gather(&mut self, data: &T) -> Vec<T> {
+impl<T: Clone + Sync + Send> LocalCommunicator<T> {
+    pub fn all_gather(&mut self, data: &T) -> Vec<T> {
         self.all_gather_vec(&[data.clone()])
             .drain_all()
             .flat_map(|(_, data)| data)
             .collect()
     }
 
-    fn all_gather_vec(&mut self, data: &[T]) -> DataByRank<Vec<T>> {
+    pub fn all_gather_vec(&mut self, data: &[T]) -> DataByRank<Vec<T>> {
         for rank in self.other_ranks() {
             self.blocking_send_vec(rank, data);
         }
@@ -124,7 +122,7 @@ impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> 
         result
     }
 
-    fn all_gather_varcount(&mut self, data: &[T], _counts: &[Count]) -> Vec<T> {
+    pub fn all_gather_varcount(&mut self, data: &[T], _counts: &[Count]) -> Vec<T> {
         for rank in self.other_ranks() {
             self.blocking_send_vec(rank, data);
         }
@@ -139,10 +137,11 @@ impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> 
         }
         result
     }
-}
 
-impl<T: Sum + Clone + Sync + Send> SumCommunicator<T> for LocalCommunicator<T> {
-    fn collective_sum(&mut self, send: &T) -> T {
+    pub fn collective_sum(&mut self, send: &T) -> T
+    where
+        T: Sum,
+    {
         // We don't care about efficiency in the local communicator
         let result = self.all_gather(send);
         result.into_iter().sum()
@@ -168,7 +167,6 @@ mod tests {
 
     use crate::communication::plugin::INITIAL_TAG;
     use crate::communication::sync_communicator::tests::get_communicators;
-    use crate::communication::CollectiveCommunicator;
 
     #[derive(Clone, Debug, PartialEq)]
     struct ComplexStruct {

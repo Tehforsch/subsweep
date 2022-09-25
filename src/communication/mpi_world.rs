@@ -24,8 +24,6 @@ use mpi::Count;
 use mpi::Tag;
 use mpi::Threading;
 
-use super::collective_communicator::SumCommunicator;
-use super::CollectiveCommunicator;
 use super::DataByRank;
 use super::Identified;
 use super::SizedCommunicator;
@@ -142,6 +140,54 @@ where
     }
 }
 
+impl<S> MpiWorld<S>
+where
+    S: Equivalence + Clone,
+{
+    pub fn all_gather(&mut self, send: &S) -> Vec<S> {
+        self.verify_tag();
+        unchecked_all_gather(self.world, send)
+    }
+
+    pub fn all_gather_vec(&mut self, send: &[S]) -> DataByRank<Vec<S>> {
+        self.verify_tag();
+        let world_size = self.world.size() as usize;
+        let num_elements = send.len();
+        let mut result_buffer = unsafe { get_buffer::<S>(world_size * num_elements) };
+        self.world.all_gather_into(send, &mut result_buffer[..]);
+        let mut data = DataByRank::empty();
+        for i in 0..world_size {
+            data.insert(i as Rank, result_buffer.drain(0..num_elements).collect())
+        }
+        data
+    }
+
+    pub fn all_gather_varcount(&mut self, send: &[S], counts: &[Count]) -> Vec<S> {
+        self.verify_tag();
+        let mut result_buffer: Vec<S> =
+            unsafe { get_buffer(counts.iter().map(|x| *x as usize).sum()) };
+        let displacements: Vec<Count> = counts
+            .iter()
+            .scan(0, |acc, &x| {
+                let tmp = *acc;
+                *acc += x;
+                Some(tmp)
+            })
+            .collect();
+        let mut partition = PartitionMut::new(&mut result_buffer, counts, &displacements[..]);
+        self.world.all_gather_varcount_into(send, &mut partition);
+        result_buffer
+    }
+
+    pub fn collective_sum(&mut self, send: &S) -> S {
+        self.verify_tag();
+        let mut result = send.clone();
+        self.world
+            .all_reduce_into(send, &mut result, SystemOperation::sum());
+        result
+    }
+}
+
 impl<T> SizedCommunicator for MpiWorld<T> {
     fn rank(&self) -> i32 {
         self.world.rank()
@@ -157,53 +203,6 @@ unsafe fn get_buffer<T>(num_elements: usize) -> Vec<T> {
     unsafe {
         buffer.set_len(num_elements);
         mem::transmute(buffer)
-    }
-}
-
-impl<T: Equivalence> CollectiveCommunicator<T> for MpiWorld<T> {
-    fn all_gather(&mut self, send: &T) -> Vec<T> {
-        self.verify_tag();
-        unchecked_all_gather(self.world, send)
-    }
-
-    fn all_gather_vec(&mut self, send: &[T]) -> DataByRank<Vec<T>> {
-        self.verify_tag();
-        let world_size = self.world.size() as usize;
-        let num_elements = send.len();
-        let mut result_buffer = unsafe { get_buffer::<T>(world_size * num_elements) };
-        self.world.all_gather_into(send, &mut result_buffer[..]);
-        let mut data = DataByRank::empty();
-        for i in 0..world_size {
-            data.insert(i as Rank, result_buffer.drain(0..num_elements).collect())
-        }
-        data
-    }
-
-    fn all_gather_varcount(&mut self, send: &[T], counts: &[Count]) -> Vec<T> {
-        self.verify_tag();
-        let mut result_buffer: Vec<T> =
-            unsafe { get_buffer(counts.iter().map(|x| *x as usize).sum()) };
-        let displacements: Vec<Count> = counts
-            .iter()
-            .scan(0, |acc, &x| {
-                let tmp = *acc;
-                *acc += x;
-                Some(tmp)
-            })
-            .collect();
-        let mut partition = PartitionMut::new(&mut result_buffer, counts, &displacements[..]);
-        self.world.all_gather_varcount_into(send, &mut partition);
-        result_buffer
-    }
-}
-
-impl<T: Equivalence + Clone> SumCommunicator<T> for MpiWorld<T> {
-    fn collective_sum(&mut self, send: &T) -> T {
-        self.verify_tag();
-        let mut result = send.clone();
-        self.world
-            .all_reduce_into(send, &mut result, SystemOperation::sum());
-        result
     }
 }
 

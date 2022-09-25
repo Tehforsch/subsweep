@@ -14,7 +14,6 @@ pub use self::hydrodynamics::HydrodynamicsPlugin;
 use self::parameters::SimulationParameters;
 pub use self::time::Time;
 use crate::communication::AllGatherCommunicator;
-use crate::communication::CollectiveCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::domain::ExchangeDataPlugin;
