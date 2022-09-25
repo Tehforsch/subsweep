@@ -81,6 +81,7 @@ where
 {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let tag = get_next_tag(sim);
+        super::verify_tag_type_mapping::verify_tag_type_mapping::<T>(tag);
         add_communicator(self.type_, sim, Communicator::<T>::new(tag));
     }
 

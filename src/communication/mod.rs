@@ -22,6 +22,10 @@ pub use plugin::CommunicationPlugin;
 pub use plugin::CommunicationType;
 pub use sized_communicator::SizedCommunicator;
 pub use world_communicator::WorldCommunicator;
+
+#[cfg(feature = "mpi")]
+mod verify_tag_type_mapping;
+
 #[cfg(not(feature = "mpi"))]
 mod local;
 
