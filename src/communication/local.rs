@@ -1,4 +1,3 @@
-use std::iter::Sum;
 use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
@@ -136,15 +135,6 @@ impl<T: Clone + Sync + Send> LocalCommunicator<T> {
             }
         }
         result
-    }
-
-    pub fn collective_sum(&mut self, send: &T) -> T
-    where
-        T: Sum,
-    {
-        // We don't care about efficiency in the local communicator
-        let result = self.all_gather(send);
-        result.into_iter().sum()
     }
 }
 

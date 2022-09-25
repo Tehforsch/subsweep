@@ -7,7 +7,6 @@ use std::sync::Mutex;
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use lazy_static::lazy_static;
-use mpi::collective::SystemOperation;
 use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
@@ -177,14 +176,6 @@ where
         let mut partition = PartitionMut::new(&mut result_buffer, counts, &displacements[..]);
         self.world.all_gather_varcount_into(send, &mut partition);
         result_buffer
-    }
-
-    pub fn collective_sum(&mut self, send: &S) -> S {
-        self.verify_tag();
-        let mut result = send.clone();
-        self.world
-            .all_reduce_into(send, &mut result, SystemOperation::sum());
-        result
     }
 }
 
