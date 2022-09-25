@@ -6,10 +6,10 @@ pub mod extent;
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 use self::extent::Extent;
-use crate::communication::AllGatherCommunicator;
 use crate::communication::CommunicatedOption;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
+use crate::communication::Communicator;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
 use crate::communication::WorldRank;
@@ -77,7 +77,7 @@ pub struct GlobalExtent(Extent);
 
 pub(super) fn determine_global_extent_system(
     particles: Query<&Position>,
-    mut extent_communicator: NonSendMut<AllGatherCommunicator<CommunicatedOption<Extent>>>,
+    mut extent_communicator: Communicator<CommunicatedOption<Extent>>,
     mut global_extent: ResMut<GlobalExtent>,
 ) {
     let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
@@ -190,7 +190,7 @@ fn get_top_level_indices(depth: usize) -> Vec<QuadTreeIndex> {
 pub fn communicate_mass_moments_system(
     mut tree: ResMut<QuadTree>,
     config: Res<QuadTreeConfig>,
-    mut comm: NonSendMut<AllGatherCommunicator<MassMoments>>,
+    mut comm: Communicator<MassMoments>,
 ) {
     // Use the particle counts at depth config.min_depth for
     // decomposition for now. This obviously needs to be fixed and

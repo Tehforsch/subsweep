@@ -13,9 +13,9 @@ pub use self::gravity::plugin::GravityPlugin;
 pub use self::hydrodynamics::HydrodynamicsPlugin;
 use self::parameters::SimulationParameters;
 pub use self::time::Time;
-use crate::communication::AllGatherCommunicator;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
+use crate::communication::Communicator;
 use crate::domain::ExchangeDataPlugin;
 use crate::io::input::DatasetInputPlugin;
 use crate::io::output::AttributeOutputPlugin;
@@ -104,7 +104,7 @@ fn stop_simulation_system(
 fn handle_app_exit_system(
     mut event_reader: EventReader<StopSimulationEvent>,
     mut event_writer: EventWriter<AppExit>,
-    mut comm: NonSendMut<AllGatherCommunicator<ShouldExit>>,
+    mut comm: Communicator<ShouldExit>,
 ) {
     let result = if event_reader.iter().count() > 0 {
         comm.all_gather(&ShouldExit(true))

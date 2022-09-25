@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn exchange_communicator() {
-        use crate::communication::ExchangeCommunicator;
+        use crate::communication::exchange_communicator::ExchangeCommunicator;
         use crate::communication::Rank;
         let num_threads = 4 as i32;
         let tag = 0;

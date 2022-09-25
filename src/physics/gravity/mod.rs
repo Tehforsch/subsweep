@@ -107,8 +107,8 @@ pub(super) fn gravity_system(
     indices: Res<TopLevelIndices>,
     mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
     parameters: Res<GravityParameters>,
-    mut request_comm: NonSendMut<ExchangeCommunicator<Identified<GravityCalculationRequest>>>,
-    mut reply_comm: NonSendMut<ExchangeCommunicator<Identified<GravityCalculationReply>>>,
+    mut request_comm: ExchangeCommunicator<Identified<GravityCalculationRequest>>,
+    mut reply_comm: ExchangeCommunicator<Identified<GravityCalculationReply>>,
 ) {
     let gravity = Solver::from_parameters(&parameters);
     let mut outgoing_requests = DataByRank::from_communicator(&*request_comm);

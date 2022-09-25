@@ -7,7 +7,6 @@ use bevy::prelude::Component;
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use bevy::prelude::Entity;
-use bevy::prelude::NonSendMut;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Query;
 use bevy::prelude::Res;
@@ -160,7 +159,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
 
     fn exchange_buffers_system(
         mut commands: Commands,
-        mut communicator: NonSendMut<ExchangeCommunicator<T>>,
+        mut communicator: ExchangeCommunicator<T>,
         mut buffers: ResMut<ExchangeBuffers<T>>,
         spawned_entities: Res<SpawnedEntities>,
     ) {
@@ -184,7 +183,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
 }
 
 fn send_num_outgoing_entities_system(
-    mut communicator: NonSendMut<ExchangeCommunicator<NumEntities>>,
+    mut communicator: ExchangeCommunicator<NumEntities>,
     num_outgoing: Res<OutgoingEntities>,
 ) {
     for rank in communicator.other_ranks() {
@@ -194,7 +193,7 @@ fn send_num_outgoing_entities_system(
 
 fn spawn_incoming_entities_system(
     mut commands: Commands,
-    mut communicator: NonSendMut<ExchangeCommunicator<NumEntities>>,
+    mut communicator: ExchangeCommunicator<NumEntities>,
     mut spawned_entities: ResMut<SpawnedEntities>,
 ) {
     for (rank, num_incoming) in communicator.receive() {

@@ -5,9 +5,9 @@ use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
 use super::communicator::Communicator;
-use super::ExchangeCommunicator;
+use super::exchange_communicator::ExchangeCommunicator;
+use super::sync_communicator::SyncCommunicator;
 use super::Rank;
-use super::SyncCommunicator;
 use super::WorldRank;
 use super::WorldSize;
 use crate::named::Named;

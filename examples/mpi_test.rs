@@ -9,8 +9,8 @@
 
 use mpi::traits::Communicator;
 use mpi::Tag;
+use raxiom::communication::exchange_communicator::ExchangeCommunicator;
 use raxiom::communication::DataByRank;
-use raxiom::communication::ExchangeCommunicator;
 use raxiom::communication::MpiWorld;
 use raxiom::communication::SizedCommunicator;
 use raxiom::communication::MPI_UNIVERSE;
