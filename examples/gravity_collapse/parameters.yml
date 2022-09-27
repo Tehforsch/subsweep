@@ -11,7 +11,7 @@ visualization:
   show_quadtree: false
 output:
   output_dir: "output"
-  time_between_snapshots: 0.1 yr
+  time_between_snapshots: 10 yr
   fields:
     - position
     - velocity
