@@ -56,6 +56,16 @@ where
     }
 }
 
+impl<const D: Dimension> Quantity<f64, D> {
+    pub fn min(self, other: Self) -> Self {
+        Self(self.0.min(other.0))
+    }
+
+    pub fn max(self, other: Self) -> Self {
+        Self(self.0.max(other.0))
+    }
+}
+
 impl<S, const D: Dimension> Add for Quantity<S, D>
 where
     S: Add<Output = S>,

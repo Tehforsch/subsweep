@@ -52,7 +52,7 @@ impl Extent {
 
     pub fn max_side_length(&self) -> Length {
         let side_length = self.side_lengths();
-        side_length.x().max(&side_length.y())
+        side_length.x().max(side_length.y())
     }
 
     pub fn from_positions<'a>(positions: impl Iterator<Item = &'a VecLength>) -> Option<Self> {

@@ -28,8 +28,12 @@ pub(super) fn camera_scale_system(
     mut camera_transform: ResMut<CameraTransform>,
     windows: Res<Windows>,
 ) {
-    let length = extent.max_side_length();
+    let simulation_width = extent.side_lengths().x();
+    let simulation_height = extent.side_lengths().y();
     let window = windows.primary();
-    let max_side = window.width().max(window.height()).min(1000.0);
-    *camera_transform = CameraTransform::from_scale(length / (max_side as f64));
+    let window_width = window.width().max(1000.0);
+    let window_height = window.height().max(1000.0);
+    let max_ratio =
+        (simulation_width / window_width as f64).max(simulation_height / window_height as f64);
+    *camera_transform = CameraTransform::from_scale(0.5 * max_ratio);
 }
