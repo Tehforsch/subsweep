@@ -4,6 +4,7 @@ use crate::named::Named;
 
 #[derive(Deserialize, Named)]
 #[name = "tree"]
+#[serde(deny_unknown_fields)]
 pub struct QuadTreeConfig {
     pub min_depth: usize,
     pub max_depth: usize,

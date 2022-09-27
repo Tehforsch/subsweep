@@ -6,6 +6,7 @@ use crate::units::Length;
 
 #[derive(Clone, Deserialize, Named)]
 #[name = "gravity"]
+#[serde(deny_unknown_fields)]
 pub struct GravityParameters {
     #[serde(default)]
     pub softening_length: Length,

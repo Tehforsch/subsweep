@@ -22,6 +22,7 @@ struct InputSystemsAmbiguitySet;
 
 #[derive(Clone, Default, Deserialize, Named)]
 #[name = "input"]
+#[serde(deny_unknown_fields)]
 pub struct InputParameters {
     pub paths: Vec<PathBuf>,
 }

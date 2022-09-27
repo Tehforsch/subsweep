@@ -8,6 +8,7 @@ use crate::units::Time;
 
 #[derive(Deserialize, Named)]
 #[name = "output"]
+#[serde(deny_unknown_fields)]
 pub struct OutputParameters {
     #[serde(default)]
     pub time_between_snapshots: Time,
