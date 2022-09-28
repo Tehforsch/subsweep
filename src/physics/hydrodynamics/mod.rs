@@ -1,13 +1,19 @@
 mod parameters;
+mod quadtree;
 
 use std::f64::consts::PI;
 
 use bevy::prelude::*;
 
 use self::parameters::HydrodynamicsParameters;
+use self::quadtree::construct_quad_tree_system;
+use self::quadtree::QuadTree;
 use super::LocalParticle;
 use super::Timestep;
 use crate::density;
+use crate::domain::determine_global_extent_system;
+use crate::domain::extent::Extent;
+use crate::domain::DomainDecompositionStages;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass;
 use crate::mass::Mass;
@@ -32,6 +38,7 @@ pub struct HydrodynamicsPlugin;
 impl RaxiomPlugin for HydrodynamicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<HydrodynamicsParameters>()
+            .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
                 compute_pressure_and_density_system,
@@ -43,6 +50,10 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
             .add_startup_system_to_stage(
                 StartupStage::PostStartup,
                 insert_pressure_and_density_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                construct_quad_tree_system.after(determine_global_extent_system),
             )
             .add_plugin(ExchangeDataPlugin::<pressure::Pressure>::default())
             .add_plugin(ExchangeDataPlugin::<density::Density>::default());
