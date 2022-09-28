@@ -18,13 +18,16 @@ use crate::mass::Mass;
 use crate::named::Named;
 use crate::physics::MassMoments;
 use crate::position::Position;
+use crate::quadtree;
 use crate::quadtree::LeafData;
-use crate::quadtree::QuadTree;
+use crate::quadtree::NodeData;
 use crate::quadtree::QuadTreeConfig;
 use crate::quadtree::QuadTreeIndex;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::velocity::Velocity;
+
+pub type QuadTree = quadtree::QuadTree<NodeData, LeafData>;
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {

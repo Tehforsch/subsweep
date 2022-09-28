@@ -24,28 +24,42 @@ pub struct LeafData {
     pub pos: VecLength,
 }
 
+pub trait QuadTreeLeafData: Clone {
+    fn pos(&self) -> &VecLength;
+}
+
+impl QuadTreeLeafData for LeafData {
+    fn pos(&self) -> &VecLength {
+        &self.pos
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct NodeData {
     pub moments: MassMoments,
 }
 
-impl NodeData {
-    fn update_with(&mut self, pos: &VecLength, mass: &Mass) {
-        self.moments.add_mass_at(pos, mass);
+pub trait QuadTreeNodeData<L>: Default {
+    fn update_with(&mut self, leaf: &L);
+}
+
+impl QuadTreeNodeData<LeafData> for NodeData {
+    fn update_with(&mut self, leaf: &LeafData) {
+        self.moments.add_mass_at(&leaf.pos, &leaf.mass);
     }
 }
 
-type Tree = Box<[QuadTree; 4]>;
-type Leaf = Vec<LeafData>;
+type Tree<N, L> = Box<[QuadTree<N, L>; 4]>;
+type Leaf<L> = Vec<L>;
 
 #[derive(Debug)]
-pub enum Node {
-    Tree(Tree),
-    Leaf(Leaf),
+pub enum Node<N, L> {
+    Tree(Tree<N, L>),
+    Leaf(Leaf<L>),
 }
 
-impl Node {
-    fn make_node(&mut self, children: Tree) -> Leaf {
+impl<N, L> Node<N, L> {
+    fn make_node(&mut self, children: Tree<N, L>) -> Leaf<L> {
         let value = std::mem::replace(self, Node::Tree(children));
         if let Self::Leaf(leaf) = value {
             leaf
@@ -56,14 +70,14 @@ impl Node {
 }
 
 #[derive(Debug)]
-pub struct QuadTree {
-    pub node: Node,
-    pub data: NodeData,
+pub struct QuadTree<N, L> {
+    pub node: Node<N, L>,
+    pub data: N,
     pub extent: Extent,
 }
 
-impl QuadTree {
-    pub fn new(config: &QuadTreeConfig, particles: Vec<LeafData>, extent: &Extent) -> Self {
+impl<N: QuadTreeNodeData<L>, L: QuadTreeLeafData> QuadTree<N, L> {
+    pub fn new(config: &QuadTreeConfig, particles: Vec<L>, extent: &Extent) -> Self {
         let mut tree = Self::make_empty_leaf_from_extent(extent.clone());
         tree.subdivide_to_depth(config, config.min_depth);
         for particle in particles.iter() {
@@ -85,12 +99,12 @@ impl QuadTree {
         }
     }
 
-    fn insert_new(&mut self, config: &QuadTreeConfig, leaf_data: LeafData, depth: usize) {
-        self.data.update_with(&leaf_data.pos, &leaf_data.mass);
+    fn insert_new(&mut self, config: &QuadTreeConfig, leaf_data: L, depth: usize) {
+        self.data.update_with(&leaf_data);
         self.insert(config, leaf_data, depth)
     }
 
-    fn insert(&mut self, config: &QuadTreeConfig, leaf_data: LeafData, depth: usize) {
+    fn insert(&mut self, config: &QuadTreeConfig, leaf_data: L, depth: usize) {
         if let Node::Leaf(ref mut leaf) = self.node {
             if depth < config.max_depth && leaf.len() > config.max_num_particles_per_leaf {
                 self.subdivide(config, depth);
@@ -100,7 +114,7 @@ impl QuadTree {
             }
         }
         if let Node::Tree(ref mut children) = self.node {
-            let quadrant = &mut children[self.extent.get_quadrant_index(&leaf_data.pos)];
+            let quadrant = &mut children[self.extent.get_quadrant_index(leaf_data.pos())];
             quadrant.insert_new(config, leaf_data, depth + 1);
         }
     }
@@ -118,15 +132,12 @@ impl QuadTree {
     pub fn make_empty_leaf_from_extent(extent: Extent) -> Self {
         Self {
             node: Node::Leaf(vec![]),
-            data: NodeData::default(),
+            data: N::default(),
             extent,
         }
     }
 
-    pub fn depth_first_map_leaf<'a>(
-        &'a self,
-        closure: &mut impl FnMut(&'a Extent, &'a [LeafData]),
-    ) {
+    pub fn depth_first_map_leaf<'a>(&'a self, closure: &mut impl FnMut(&'a Extent, &'a [L])) {
         match self.node {
             Node::Tree(ref node) => {
                 for child in node.iter() {
@@ -145,6 +156,15 @@ pub mod tests {
     use super::*;
     use crate::units::DVec2Length;
     use crate::units::Length;
+
+    impl QuadTreeLeafData for VecLength {
+        fn pos(&self) -> &VecLength {
+            self
+        }
+    }
+    impl<T> QuadTreeNodeData<T> for () {
+        fn update_with(&mut self, _: &T) {}
+    }
 
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
@@ -171,10 +191,12 @@ pub mod tests {
         };
         let extent =
             Extent::from_positions(positions.iter().map(|particle| &particle.pos)).unwrap();
-        QuadTree::new(&config, positions.into_iter().collect(), &extent);
+        QuadTree::<(), LeafData>::new(&config, positions.into_iter().collect(), &extent);
     }
 
-    pub fn get_min_depth_quadtree(min_depth: usize) -> QuadTree {
+    pub fn get_min_depth_quadtree<N: QuadTreeNodeData<L>, L: QuadTreeLeafData>(
+        min_depth: usize,
+    ) -> QuadTree<N, L> {
         let positions = [];
         let config = QuadTreeConfig {
             min_depth,
@@ -193,7 +215,7 @@ pub mod tests {
     #[test]
     fn min_depth_works() {
         for min_depth in 0..5 {
-            let tree = get_min_depth_quadtree(min_depth);
+            let tree: QuadTree<(), VecLength> = get_min_depth_quadtree(min_depth);
             let mut num_nodes = 0;
             let mut count = |_, _| {
                 num_nodes += 1;

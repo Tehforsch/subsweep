@@ -1,6 +1,10 @@
+use std::marker::PhantomData;
+
 use bevy::prelude::*;
 
 use super::QuadTree;
+use super::QuadTreeLeafData;
+use super::QuadTreeNodeData;
 use crate::domain::TopLevelIndices;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
@@ -14,11 +18,30 @@ use crate::visualization::VisualizationStage;
 struct Outline;
 
 #[derive(Named)]
-pub struct QuadTreeVisualizationPlugin;
+pub struct QuadTreeVisualizationPlugin<N, L> {
+    _marker_n: PhantomData<N>,
+    _marker_l: PhantomData<L>,
+}
 
-impl RaxiomPlugin for QuadTreeVisualizationPlugin {
+impl<N, L> Default for QuadTreeVisualizationPlugin<N, L> {
+    fn default() -> Self {
+        Self {
+            _marker_n: PhantomData::default(),
+            _marker_l: PhantomData::default(),
+        }
+    }
+}
+
+impl<
+        N: QuadTreeNodeData<L> + Sync + Send + 'static,
+        L: QuadTreeLeafData + Sync + Send + 'static,
+    > RaxiomPlugin for QuadTreeVisualizationPlugin<N, L>
+{
     fn build_on_main_rank(&self, sim: &mut Simulation) {
-        sim.add_system_to_stage(VisualizationStage::AddVisualization, show_quadtree_system);
+        sim.add_system_to_stage(
+            VisualizationStage::AddVisualization,
+            show_quadtree_system::<N, L>,
+        );
     }
 
     fn should_build(&self, sim: &Simulation) -> bool {
@@ -27,9 +50,12 @@ impl RaxiomPlugin for QuadTreeVisualizationPlugin {
     }
 }
 
-fn show_quadtree_system(
+fn show_quadtree_system<
+    N: QuadTreeNodeData<L> + Sync + Send + 'static,
+    L: QuadTreeLeafData + Sync + Send + 'static,
+>(
     mut commands: Commands,
-    quadtree: Res<QuadTree>,
+    quadtree: Res<QuadTree<N, L>>,
     indices: Res<TopLevelIndices>,
     outlines: Query<Entity, With<Outline>>,
 ) {

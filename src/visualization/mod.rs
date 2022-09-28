@@ -29,6 +29,8 @@ use crate::named::Named;
 use crate::physics::LocalParticle;
 use crate::physics::StopSimulationEvent;
 use crate::position::Position;
+use crate::quadtree::LeafData;
+use crate::quadtree::NodeData;
 use crate::quadtree::QuadTreeVisualizationPlugin;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -62,7 +64,7 @@ impl RaxiomPlugin for VisualizationPlugin {
             .add_bevy_plugin(ShapePlugin)
             .add_plugin(DrawBundlePlugin::<DrawRect>::default())
             .add_plugin(DrawBundlePlugin::<DrawCircle>::default())
-            .add_plugin(QuadTreeVisualizationPlugin)
+            .add_plugin(QuadTreeVisualizationPlugin::<NodeData, LeafData>::default())
             .add_startup_system(setup_camera_system)
             .add_startup_system_to_stage(
                 StartupStage::PostStartup,

@@ -74,21 +74,21 @@ impl QuadTreeIndex {
     }
 }
 
-impl Index<&QuadTreeIndex> for QuadTree {
-    type Output = QuadTree;
+impl<N, L> Index<&QuadTreeIndex> for QuadTree<N, L> {
+    type Output = QuadTree<N, L>;
 
     fn index(&self, idx: &QuadTreeIndex) -> &Self::Output {
         self.index_into_depth(idx, 0)
     }
 }
 
-impl IndexMut<&QuadTreeIndex> for QuadTree {
+impl<N, L> IndexMut<&QuadTreeIndex> for QuadTree<N, L> {
     fn index_mut(&mut self, index: &QuadTreeIndex) -> &mut Self::Output {
         self.index_into_depth_mut(index, 0)
     }
 }
 
-impl QuadTree {
+impl<N, L> QuadTree<N, L> {
     fn index_into_depth(&self, idx: &QuadTreeIndex, depth: usize) -> &Self {
         match idx.0[depth].into() {
             NodeIndex::ThisNode => self,
@@ -126,13 +126,14 @@ mod tests {
     use crate::quadtree::tests::get_min_depth_quadtree;
     use crate::quadtree::LeafData;
     use crate::quadtree::Node;
+    use crate::quadtree::QuadTree;
     use crate::quadtree::QuadTreeConfig;
     use crate::units::Mass;
 
     #[test]
     fn quadtree_index() {
         let min_depth = 5;
-        let mut tree = get_min_depth_quadtree(min_depth);
+        let mut tree: QuadTree<(), LeafData> = get_min_depth_quadtree(min_depth);
         // obtain a list of particles we can add into the quadtree
         // from the centers of all the leaf ectents
         let config = QuadTreeConfig::default();
