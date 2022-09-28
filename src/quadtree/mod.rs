@@ -3,50 +3,23 @@ mod index;
 mod node_index;
 mod visualization;
 
-use bevy::prelude::Entity;
 pub use config::QuadTreeConfig;
 pub use index::QuadTreeIndex;
 pub use visualization::QuadTreeVisualizationPlugin;
 
 use crate::domain::extent::Extent;
-use crate::physics::MassMoments;
-use crate::units::Mass;
 use crate::units::VecLength;
 
 pub const MAX_DEPTH: usize = 32;
 pub const NUM_DIMENSIONS: usize = 2;
 pub const NUM_SUBDIVISIONS: usize = 2usize.pow(NUM_DIMENSIONS as u32);
 
-#[derive(Debug, Clone)]
-pub struct LeafData {
-    pub entity: Entity,
-    pub mass: Mass,
-    pub pos: VecLength,
-}
-
 pub trait QuadTreeLeafData: Clone {
     fn pos(&self) -> &VecLength;
 }
 
-impl QuadTreeLeafData for LeafData {
-    fn pos(&self) -> &VecLength {
-        &self.pos
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct NodeData {
-    pub moments: MassMoments,
-}
-
 pub trait QuadTreeNodeData<L>: Default {
     fn update_with(&mut self, leaf: &L);
-}
-
-impl QuadTreeNodeData<LeafData> for NodeData {
-    fn update_with(&mut self, leaf: &LeafData) {
-        self.moments.add_mass_at(&leaf.pos, &leaf.mass);
-    }
 }
 
 type Tree<N, L> = Box<[QuadTree<N, L>; 4]>;
@@ -153,9 +126,13 @@ impl<N: QuadTreeNodeData<L>, L: QuadTreeLeafData> QuadTree<N, L> {
 
 #[cfg(test)]
 pub mod tests {
+    use bevy::prelude::Entity;
+
     use super::*;
+    use crate::physics::gravity::LeafData;
     use crate::units::DVec2Length;
     use crate::units::Length;
+    use crate::units::Mass;
 
     impl QuadTreeLeafData for VecLength {
         fn pos(&self) -> &VecLength {

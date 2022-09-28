@@ -11,7 +11,6 @@ use crate::communication::Identified;
 use crate::communication::WorldRank;
 use crate::domain::TopLevelIndices;
 use crate::position::Position;
-use crate::quadtree;
 use crate::quadtree::Node;
 use crate::quadtree::*;
 use crate::units;
@@ -26,11 +25,14 @@ pub(super) mod mass_moments;
 
 pub(super) mod plugin;
 
+pub use quadtree::LeafData;
+pub use quadtree::NodeData;
+pub use quadtree::QuadTree;
+
 mod parameters;
+mod quadtree;
 #[cfg(test)]
 mod tests;
-
-pub type QuadTree = quadtree::QuadTree<NodeData, LeafData>;
 
 struct Solver {
     softening_length: Length,
