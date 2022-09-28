@@ -14,11 +14,11 @@ pub const MAX_DEPTH: usize = 32;
 pub const NUM_DIMENSIONS: usize = 2;
 pub const NUM_SUBDIVISIONS: usize = 2usize.pow(NUM_DIMENSIONS as u32);
 
-pub trait QuadTreeLeafData: Clone {
+pub trait LeafDataType: Clone {
     fn pos(&self) -> &VecLength;
 }
 
-pub trait QuadTreeNodeData<L>: Default {
+pub trait NodeDataType<L>: Default {
     fn update_with(&mut self, leaf: &L);
 }
 
@@ -49,7 +49,7 @@ pub struct QuadTree<N, L> {
     pub extent: Extent,
 }
 
-impl<N: QuadTreeNodeData<L>, L: QuadTreeLeafData> QuadTree<N, L> {
+impl<N: NodeDataType<L>, L: LeafDataType> QuadTree<N, L> {
     pub fn new(config: &QuadTreeConfig, particles: Vec<L>, extent: &Extent) -> Self {
         let mut tree = Self::make_empty_leaf_from_extent(extent.clone());
         tree.subdivide_to_depth(config, config.min_depth);
@@ -134,12 +134,12 @@ pub mod tests {
     use crate::units::Length;
     use crate::units::Mass;
 
-    impl QuadTreeLeafData for VecLength {
+    impl LeafDataType for VecLength {
         fn pos(&self) -> &VecLength {
             self
         }
     }
-    impl<T> QuadTreeNodeData<T> for () {
+    impl<T> NodeDataType<T> for () {
         fn update_with(&mut self, _: &T) {}
     }
 
@@ -171,7 +171,7 @@ pub mod tests {
         QuadTree::<(), LeafData>::new(&config, positions.into_iter().collect(), &extent);
     }
 
-    pub fn get_min_depth_quadtree<N: QuadTreeNodeData<L>, L: QuadTreeLeafData>(
+    pub fn get_min_depth_quadtree<N: NodeDataType<L>, L: LeafDataType>(
         min_depth: usize,
     ) -> QuadTree<N, L> {
         let positions = [];

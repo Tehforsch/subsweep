@@ -2,9 +2,9 @@ use std::marker::PhantomData;
 
 use bevy::prelude::*;
 
+use super::LeafDataType;
+use super::NodeDataType;
 use super::QuadTree;
-use super::QuadTreeLeafData;
-use super::QuadTreeNodeData;
 use crate::domain::TopLevelIndices;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
@@ -32,10 +32,8 @@ impl<N, L> Default for QuadTreeVisualizationPlugin<N, L> {
     }
 }
 
-impl<
-        N: QuadTreeNodeData<L> + Sync + Send + 'static,
-        L: QuadTreeLeafData + Sync + Send + 'static,
-    > RaxiomPlugin for QuadTreeVisualizationPlugin<N, L>
+impl<N: NodeDataType<L> + Sync + Send + 'static, L: LeafDataType + Sync + Send + 'static>
+    RaxiomPlugin for QuadTreeVisualizationPlugin<N, L>
 {
     fn build_on_main_rank(&self, sim: &mut Simulation) {
         sim.add_system_to_stage(
@@ -51,8 +49,8 @@ impl<
 }
 
 fn show_quadtree_system<
-    N: QuadTreeNodeData<L> + Sync + Send + 'static,
-    L: QuadTreeLeafData + Sync + Send + 'static,
+    N: NodeDataType<L> + Sync + Send + 'static,
+    L: LeafDataType + Sync + Send + 'static,
 >(
     mut commands: Commands,
     quadtree: Res<QuadTree<N, L>>,
