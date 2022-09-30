@@ -50,7 +50,7 @@ fn main() {
         .add_plugin(HydrodynamicsPlugin)
         .add_startup_system(spawn_particles_system)
         .add_system(external_force_system)
-        .add_system(fake_periodic_boundaries_system)
+        .add_system(fake_periodic_boundaries_system.after(external_force_system))
         .add_system(fake_viscosity_system.after(external_force_system))
         .run();
 }
