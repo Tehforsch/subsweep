@@ -46,7 +46,7 @@ fn output_setup(sim: &mut Simulation) {
         .insert_resource(OutputFile::default())
         .add_startup_system(Timer::initialize_system)
         .add_startup_system(make_output_dirs_system)
-        .add_startup_system(write_used_parameters_system)
+        .add_startup_system(write_used_parameters_system.after(make_output_dirs_system))
         .add_system_to_stage(
             OutputStages::Output,
             open_file_system.with_run_criteria(Timer::run_criterion),
