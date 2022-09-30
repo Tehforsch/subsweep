@@ -12,9 +12,7 @@ use self::quadtree::QuadTree;
 use super::LocalParticle;
 use super::Timestep;
 use crate::density;
-use crate::domain::determine_global_extent_system;
 use crate::domain::extent::Extent;
-use crate::domain::DomainDecompositionStages;
 use crate::domain::ExchangeDataPlugin;
 use crate::mass;
 use crate::mass::Mass;
@@ -42,19 +40,21 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
-                compute_pressure_and_density_system,
+                construct_quad_tree_system,
             )
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
-                compute_forces_system.after(compute_pressure_and_density_system),
+                compute_pressure_and_density_system.after(construct_quad_tree_system),
+            )
+            .add_system_to_stage(
+                HydrodynamicsStages::Hydrodynamics,
+                compute_forces_system
+                    .after(compute_pressure_and_density_system)
+                    .after(construct_quad_tree_system),
             )
             .add_startup_system_to_stage(
                 StartupStage::PostStartup,
                 insert_pressure_and_density_system,
-            )
-            .add_system_to_stage(
-                DomainDecompositionStages::TopLevelTreeConstruction,
-                construct_quad_tree_system.after(determine_global_extent_system),
             )
             .add_plugin(ExchangeDataPlugin::<pressure::Pressure>::default())
             .add_plugin(ExchangeDataPlugin::<density::Density>::default());
@@ -111,20 +111,26 @@ fn compute_pressure_and_density_system(
 }
 
 fn compute_forces_system(
-    mut particles1: Query<(
-        Entity,
-        &mut Velocity,
-        &Position,
-        &pressure::Pressure,
-        &density::Density,
-    )>,
-    particles2: Query<(
-        Entity,
-        &Position,
-        &pressure::Pressure,
-        &density::Density,
-        &mass::Mass,
-    )>,
+    mut particles1: Query<
+        (
+            Entity,
+            &mut Velocity,
+            &Position,
+            &pressure::Pressure,
+            &density::Density,
+        ),
+        With<LocalParticle>,
+    >,
+    particles2: Query<
+        (
+            Entity,
+            &Position,
+            &pressure::Pressure,
+            &density::Density,
+            &mass::Mass,
+        ),
+        With<LocalParticle>,
+    >,
     tree: Res<QuadTree>,
     timestep: Res<Timestep>,
     parameters: Res<HydrodynamicsParameters>,
