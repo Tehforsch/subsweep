@@ -7,6 +7,7 @@ use bevy::prelude::*;
 
 use self::parameters::HydrodynamicsParameters;
 use self::quadtree::construct_quad_tree_system;
+use self::quadtree::get_particles_in_radius;
 use self::quadtree::QuadTree;
 use super::LocalParticle;
 use super::Timestep;
@@ -87,8 +88,8 @@ fn compute_pressure_and_density_system(
         ),
         With<LocalParticle>,
     >,
-    particles: Query<&Position, (With<pressure::Pressure>, With<Mass>, With<LocalParticle>)>,
     parameters: Res<HydrodynamicsParameters>,
+    tree: Res<QuadTree>,
 ) {
     let cutoff_squared = parameters.smoothing_length.squared();
     let poly_6 = 4.0 / (PI * parameters.smoothing_length.powi::<8>());
@@ -96,7 +97,7 @@ fn compute_pressure_and_density_system(
     let gas_const = Pressure::pascals(100000.0) / rest_density;
     for (mut pressure, mut density, pos1, mass) in pressures.iter_mut() {
         **density = Density::zero();
-        for pos2 in particles.iter() {
+        for (pos2, _) in get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter() {
             {
                 let distance_squared = pos1.distance_squared(pos2);
 
@@ -124,18 +125,28 @@ fn compute_forces_system(
         &density::Density,
         &mass::Mass,
     )>,
+    tree: Res<QuadTree>,
     timestep: Res<Timestep>,
     parameters: Res<HydrodynamicsParameters>,
 ) {
     let spiky_grad = -10.0 / (PI * parameters.smoothing_length.powi::<5>());
     for (entity1, mut vel, pos1, pressure1, density1) in particles1.iter_mut() {
         let mut acc = VecAcceleration::zero();
-        for (entity2, pos2, pressure2, density2, mass2) in particles2.iter() {
-            if entity1 == entity2 {
+        for (pos2, entity2) in
+            get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter()
+        {
+            if entity1 == *entity2 {
                 continue;
             }
+            let mass2 = particles2.get_component::<mass::Mass>(*entity2).unwrap();
+            let pressure2 = particles2
+                .get_component::<pressure::Pressure>(*entity2)
+                .unwrap();
+            let density2 = particles2
+                .get_component::<density::Density>(*entity2)
+                .unwrap();
 
-            let distance = **pos2 - **pos1;
+            let distance = *pos2 - **pos1;
             let distance_normalized = distance.normalize();
             let length = distance.length();
 

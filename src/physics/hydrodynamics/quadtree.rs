@@ -35,7 +35,68 @@ impl NodeDataType<LeafData> for NodeData {
     }
 }
 
-pub fn construct_quad_tree_system(
+fn bounding_boxes_overlap(
+    pos1: &VecLength,
+    size1: &VecLength,
+    pos2: &VecLength,
+    size2: &VecLength,
+) -> bool {
+    (pos1.x() - pos2.x()).abs() < size1.x() + size2.x()
+        && (pos1.y() - pos2.y()).abs() < size1.y() + size2.y()
+}
+
+fn add_particles_in_box(
+    particles: &mut Vec<(VecLength, Entity)>,
+    tree: &QuadTree,
+    pos: &VecLength,
+    side_length: &Length,
+) {
+    let node_extent = tree.extent.side_lengths()
+        + VecLength::new(
+            tree.data.largest_smoothing_length,
+            tree.data.largest_smoothing_length,
+        );
+    if bounding_boxes_overlap(
+        &tree.extent.center(),
+        &node_extent,
+        pos,
+        &VecLength::new(*side_length, *side_length),
+    ) {
+        match &tree.node {
+            quadtree::Node::Tree(tree) => {
+                for child in tree.iter() {
+                    add_particles_in_box(particles, child, pos, side_length);
+                }
+            }
+            quadtree::Node::Leaf(leaf) => {
+                particles.extend(leaf.iter().map(|leaf| (leaf.pos, leaf.entity)));
+            }
+        }
+    }
+}
+
+fn get_particles_in_box(
+    tree: &QuadTree,
+    pos: &VecLength,
+    side_length: &Length,
+) -> Vec<(VecLength, Entity)> {
+    let mut particles = vec![];
+    add_particles_in_box(&mut particles, tree, pos, side_length);
+    particles
+}
+
+pub(super) fn get_particles_in_radius(
+    tree: &QuadTree,
+    pos: &VecLength,
+    radius: &Length,
+) -> Vec<(VecLength, Entity)> {
+    get_particles_in_box(tree, pos, radius)
+        .into_iter()
+        .filter(|(p, _)| p.distance(pos) < *radius)
+        .collect()
+}
+
+pub(super) fn construct_quad_tree_system(
     parameters: Res<HydrodynamicsParameters>,
     particles: Query<(Entity, &Position)>,
     extent: Res<GlobalExtent>,
