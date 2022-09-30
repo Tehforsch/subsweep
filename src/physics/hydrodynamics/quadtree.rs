@@ -46,9 +46,9 @@ fn bounding_boxes_overlap(
         && (pos1.y() - pos2.y()).abs() < size1.y() + size2.y()
 }
 
-fn add_particles_in_box(
-    particles: &mut Vec<(VecLength, Entity)>,
-    tree: &QuadTree,
+fn add_particles_in_box<'a>(
+    particles: &mut Vec<&'a LeafData>,
+    tree: &'a QuadTree,
     pos: &VecLength,
     side_length: &Length,
 ) {
@@ -70,30 +70,30 @@ fn add_particles_in_box(
                 }
             }
             quadtree::Node::Leaf(leaf) => {
-                particles.extend(leaf.iter().map(|leaf| (leaf.pos, leaf.entity)));
+                particles.extend(leaf.iter());
             }
         }
     }
 }
 
-fn get_particles_in_box(
-    tree: &QuadTree,
+fn get_particles_in_box<'a>(
+    tree: &'a QuadTree,
     pos: &VecLength,
     side_length: &Length,
-) -> Vec<(VecLength, Entity)> {
+) -> Vec<&'a LeafData> {
     let mut particles = vec![];
     add_particles_in_box(&mut particles, tree, pos, side_length);
     particles
 }
 
-pub(super) fn get_particles_in_radius(
-    tree: &QuadTree,
+pub(super) fn get_particles_in_radius<'a>(
+    tree: &'a QuadTree,
     pos: &VecLength,
     radius: &Length,
-) -> Vec<(VecLength, Entity)> {
+) -> Vec<&'a LeafData> {
     get_particles_in_box(tree, pos, radius)
         .into_iter()
-        .filter(|(p, _)| p.distance(pos) < *radius)
+        .filter(|particle| particle.pos().distance(pos) < *radius)
         .collect()
 }
 

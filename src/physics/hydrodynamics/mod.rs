@@ -19,6 +19,7 @@ use crate::mass::Mass;
 use crate::named::Named;
 use crate::position::Position;
 use crate::pressure;
+use crate::quadtree::LeafDataType;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::Density;
@@ -97,9 +98,9 @@ fn compute_pressure_and_density_system(
     let gas_const = Pressure::pascals(100000.0) / rest_density;
     for (mut pressure, mut density, pos1, mass) in pressures.iter_mut() {
         **density = Density::zero();
-        for (pos2, _) in get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter() {
+        for particle in get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter() {
             {
-                let distance_squared = pos1.distance_squared(pos2);
+                let distance_squared = pos1.distance_squared(particle.pos());
 
                 if distance_squared < cutoff_squared {
                     **density += **mass * poly_6 * (cutoff_squared - distance_squared).powi::<3>();
@@ -138,21 +139,21 @@ fn compute_forces_system(
     let spiky_grad = -10.0 / (PI * parameters.smoothing_length.powi::<5>());
     for (entity1, mut vel, pos1, pressure1, density1) in particles1.iter_mut() {
         let mut acc = VecAcceleration::zero();
-        for (pos2, entity2) in
-            get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter()
-        {
-            if entity1 == *entity2 {
+        for particle in get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter() {
+            let entity2 = particle.entity;
+            if entity1 == entity2 {
                 continue;
             }
-            let mass2 = particles2.get_component::<mass::Mass>(*entity2).unwrap();
+            let pos2 = particle.pos;
+            let mass2 = particles2.get_component::<mass::Mass>(entity2).unwrap();
             let pressure2 = particles2
-                .get_component::<pressure::Pressure>(*entity2)
+                .get_component::<pressure::Pressure>(entity2)
                 .unwrap();
             let density2 = particles2
-                .get_component::<density::Density>(*entity2)
+                .get_component::<density::Density>(entity2)
                 .unwrap();
 
-            let distance = *pos2 - **pos1;
+            let distance = pos2 - **pos1;
             let distance_normalized = distance.normalize();
             let length = distance.length();
 
