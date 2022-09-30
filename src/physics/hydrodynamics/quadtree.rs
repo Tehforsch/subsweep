@@ -93,7 +93,7 @@ pub(super) fn get_particles_in_radius<'a>(
 ) -> Vec<&'a LeafData> {
     get_particles_in_box(tree, pos, radius)
         .into_iter()
-        .filter(|particle| particle.pos().distance(pos) < *radius)
+        .filter(|particle| particle.pos().distance(pos) < radius.max(particle.smoothing_length))
         .collect()
 }
 
@@ -112,4 +112,61 @@ pub(super) fn construct_quad_tree_system(
         })
         .collect();
     *quadtree = QuadTree::new(&parameters.tree, particles, &extent);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use bevy::prelude::Entity;
+
+    use super::get_particles_in_radius;
+    use super::LeafData;
+    use super::QuadTree;
+    use crate::domain::extent::Extent;
+    use crate::quadtree::QuadTreeConfig;
+    use crate::units::Length;
+    use crate::units::VecLength;
+
+    pub(super) fn direct_neighbour_search<'a>(
+        particles: &'a [LeafData],
+        pos: &VecLength,
+        radius: &Length,
+    ) -> Vec<&'a LeafData> {
+        particles
+            .iter()
+            .filter(|particle| particle.pos.distance(pos) < radius.max(particle.smoothing_length))
+            .collect()
+    }
+
+    #[test]
+    fn radius_search() {
+        let n = 20;
+        let m = 20;
+        let radius = Length::meters(2.0);
+        let particles: Vec<_> = (0..n)
+            .flat_map(move |x| {
+                (0..m).map(move |y| LeafData {
+                    entity: Entity::from_raw(x * n + y),
+                    pos: VecLength::meters(x as f64, y as f64),
+                    smoothing_length: Length::meters(x as f64 * 0.2),
+                })
+            })
+            .collect();
+        let extent = Extent::from_positions(particles.iter().map(|leaf| &leaf.pos)).unwrap();
+        let tree = QuadTree::new(&QuadTreeConfig::default(), particles.clone(), &extent);
+        for particle in particles.iter() {
+            let tree_neighbours = get_particles_in_radius(&tree, &particle.pos, &radius);
+            let direct_neighbours = direct_neighbour_search(&particles, &particle.pos, &radius);
+            let tree_entities: HashSet<_> = tree_neighbours
+                .into_iter()
+                .map(|particle| particle.entity)
+                .collect();
+            let direct_entities: HashSet<_> = direct_neighbours
+                .into_iter()
+                .map(|particle| particle.entity)
+                .collect();
+            assert_eq!(tree_entities, direct_entities);
+        }
+    }
 }
