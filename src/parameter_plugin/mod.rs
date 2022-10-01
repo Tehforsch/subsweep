@@ -123,9 +123,9 @@ impl<T: Named + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> Parame
 mod tests {
     use serde::Deserialize;
 
+    use super::ParameterFileContents;
+    use super::ParameterPlugin;
     use crate::named::Named;
-    use crate::parameters::ParameterFileContents;
-    use crate::parameters::ParameterPlugin;
     use crate::simulation::Simulation;
 
     #[derive(Clone, Deserialize, Default, Named)]

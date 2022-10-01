@@ -87,7 +87,7 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 
 #[cfg(not(feature = "mpi"))]
 fn build_parallel_gravity_sim(sim: &mut Simulation) {
-    use crate::domain::DomainTreeConfig;
+    use crate::domain::DomainTreeParameters;
     use crate::domain::ExchangeDataPlugin;
     use crate::io::output::ShouldWriteOutput;
     use crate::physics::SimulationParameters;
@@ -104,7 +104,7 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
         opening_angle: Dimensionless::dimensionless(0.0),
         softening_length: Length::meters(1e-30),
     })
-    .insert_resource(DomainTreeConfig::default())
+    .insert_resource(DomainTreeParameters::default())
     .insert_resource(ShouldWriteOutput(false))
     .add_startup_system(spawn_particles_system)
     .add_bevy_plugins(MinimalPlugins)

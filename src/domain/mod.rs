@@ -31,7 +31,7 @@ pub type QuadTree = gravity::QuadTree;
 
 #[derive(Default, Deserialize, Deref, DerefMut, Named)]
 #[name = "tree"]
-pub struct DomainTreeConfig(QuadTreeConfig);
+pub struct DomainTreeParameters(QuadTreeConfig);
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
@@ -47,7 +47,7 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
-            .add_parameter_type::<DomainTreeConfig>()
+            .add_parameter_type::<DomainTreeParameters>()
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
                 DomainDecompositionStages::TopLevelTreeConstruction,
@@ -105,7 +105,7 @@ pub(super) struct ParticleExchangeData {
 }
 
 pub fn construct_quad_tree_system(
-    config: Res<DomainTreeConfig>,
+    config: Res<DomainTreeParameters>,
     particles: Query<(Entity, &Position, &Mass)>,
     extent: Res<GlobalExtent>,
     mut quadtree: ResMut<QuadTree>,
@@ -196,7 +196,7 @@ fn get_top_level_indices(depth: usize) -> Vec<QuadTreeIndex> {
 
 pub fn communicate_mass_moments_system(
     mut tree: ResMut<QuadTree>,
-    config: Res<DomainTreeConfig>,
+    config: Res<DomainTreeParameters>,
     mut comm: Communicator<MassMoments>,
 ) {
     // Use the particle counts at depth config.min_depth for
@@ -219,7 +219,7 @@ pub fn communicate_mass_moments_system(
 
 fn distribute_top_level_nodes_system(
     tree: Res<QuadTree>,
-    config: Res<DomainTreeConfig>,
+    config: Res<DomainTreeParameters>,
     num_ranks: Res<WorldSize>,
     mut indices: ResMut<TopLevelIndices>,
 ) {

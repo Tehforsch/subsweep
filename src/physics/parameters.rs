@@ -6,7 +6,7 @@ use crate::units::Time;
 #[derive(Clone, Deserialize, Named)]
 #[name = "simulation"]
 #[serde(deny_unknown_fields)]
-pub(super) struct SimulationParameters {
+pub struct SimulationParameters {
     pub timestep: Time,
     #[serde(default)]
     pub final_time: Option<Time>,

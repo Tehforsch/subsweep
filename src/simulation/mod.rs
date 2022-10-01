@@ -20,7 +20,7 @@ use serde::Deserialize;
 
 use crate::communication::WorldRank;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
+use crate::parameter_plugin::ParameterPlugin;
 
 #[derive(Default)]
 pub struct Simulation {
@@ -225,6 +225,10 @@ impl Simulation {
     {
         self.add_plugin(ParameterPlugin::<T>::default());
         self.unwrap_resource::<T>()
+    }
+
+    pub fn add_parameters_explicitly<T: Sync + Send + 'static>(&mut self, parameters: T) {
+        self.insert_resource(parameters);
     }
 }
 

@@ -15,7 +15,7 @@ pub(crate) mod domain;
 pub(crate) mod io;
 pub(crate) mod mass;
 pub(crate) mod named;
-pub(crate) mod parameters;
+pub(crate) mod parameter_plugin;
 pub mod particle;
 pub(crate) mod performance_parameters;
 pub(crate) mod physics;
@@ -44,8 +44,18 @@ pub mod prelude {
     pub use super::position::Position;
     pub use super::simulation_builder::SimulationBuilder;
     pub use super::velocity::Velocity;
-    pub use super::visualization::parameters::VisualizationParameters;
     pub use super::visualization::CameraTransform;
     pub use super::visualization::DrawCircle;
     pub use super::visualization::DrawRect;
+}
+
+pub mod parameters {
+    pub use crate::domain::DomainTreeParameters;
+    pub use crate::io::input::InputParameters;
+    pub use crate::io::output::OutputParameters;
+    pub use crate::performance_parameters::PerformanceParameters;
+    pub use crate::physics::gravity::GravityParameters;
+    pub use crate::physics::hydrodynamics::HydrodynamicsParameters;
+    pub use crate::physics::SimulationParameters;
+    pub use crate::visualization::VisualizationParameters;
 }

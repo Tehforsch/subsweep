@@ -5,7 +5,7 @@ use std::f64::consts::PI;
 
 use bevy::prelude::*;
 
-use self::parameters::HydrodynamicsParameters;
+pub use self::parameters::HydrodynamicsParameters;
 use self::quadtree::construct_quad_tree_system;
 use self::quadtree::get_particles_in_radius;
 use self::quadtree::QuadTree;

@@ -22,7 +22,7 @@ pub use self::parameters::OutputParameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
-use crate::parameters::ParameterFileContents;
+use crate::parameter_plugin::ParameterFileContents;
 use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 

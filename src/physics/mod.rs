@@ -11,7 +11,7 @@ use self::gravity::gravity_system;
 pub use self::gravity::mass_moments::MassMoments;
 pub use self::gravity::plugin::GravityPlugin;
 pub use self::hydrodynamics::HydrodynamicsPlugin;
-use self::parameters::SimulationParameters;
+pub use self::parameters::SimulationParameters;
 pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;

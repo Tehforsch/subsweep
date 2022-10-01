@@ -16,7 +16,7 @@ use self::camera::setup_camera_system;
 use self::drawing::draw_translation_system;
 use self::drawing::DrawBundlePlugin;
 use self::drawing::IntoBundle;
-use self::parameters::VisualizationParameters;
+pub use self::parameters::VisualizationParameters;
 use self::remote::receive_particles_on_main_thread_system;
 use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
