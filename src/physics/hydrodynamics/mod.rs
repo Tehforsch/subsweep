@@ -17,6 +17,7 @@ use crate::domain::ExchangeDataPlugin;
 use crate::mass;
 use crate::mass::Mass;
 use crate::named::Named;
+use crate::performance_parameters::PerformanceParameters;
 use crate::position::Position;
 use crate::pressure;
 use crate::quadtree::LeafDataType;
@@ -91,24 +92,31 @@ fn compute_pressure_and_density_system(
     >,
     parameters: Res<HydrodynamicsParameters>,
     tree: Res<QuadTree>,
+    performance_parameters: Res<PerformanceParameters>,
 ) {
     let cutoff_squared = parameters.smoothing_length.squared();
     let poly_6 = 4.0 / (PI * parameters.smoothing_length.powi::<8>());
     let rest_density = Density::kilogram_per_square_meter(1.0);
     let gas_const = Pressure::pascals(100000.0) / rest_density;
-    for (mut pressure, mut density, pos1, mass) in pressures.iter_mut() {
-        **density = Density::zero();
-        for particle in get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter() {
+    pressures.par_for_each_mut(
+        performance_parameters.batch_size(),
+        |(mut pressure, mut density, pos1, mass)| {
+            **density = Density::zero();
+            for particle in
+                get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter()
             {
-                let distance_squared = pos1.distance_squared(particle.pos());
+                {
+                    let distance_squared = pos1.distance_squared(particle.pos());
 
-                if distance_squared < cutoff_squared {
-                    **density += **mass * poly_6 * (cutoff_squared - distance_squared).powi::<3>();
+                    if distance_squared < cutoff_squared {
+                        **density +=
+                            **mass * poly_6 * (cutoff_squared - distance_squared).powi::<3>();
+                    }
                 }
+                **pressure = gas_const * (**density - rest_density);
             }
-            **pressure = gas_const * (**density - rest_density);
-        }
-    }
+        },
+    );
 }
 
 fn compute_forces_system(
@@ -135,36 +143,42 @@ fn compute_forces_system(
     tree: Res<QuadTree>,
     timestep: Res<Timestep>,
     parameters: Res<HydrodynamicsParameters>,
+    performance_parameters: Res<PerformanceParameters>,
 ) {
     let spiky_grad = -10.0 / (PI * parameters.smoothing_length.powi::<5>());
-    for (entity1, mut vel, pos1, pressure1, density1) in particles1.iter_mut() {
-        let mut acc = VecAcceleration::zero();
-        for particle in get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter() {
-            let entity2 = particle.entity;
-            if entity1 == entity2 {
-                continue;
-            }
-            let pos2 = particle.pos;
-            let mass2 = particles2.get_component::<mass::Mass>(entity2).unwrap();
-            let pressure2 = particles2
-                .get_component::<pressure::Pressure>(entity2)
-                .unwrap();
-            let density2 = particles2
-                .get_component::<density::Density>(entity2)
-                .unwrap();
+    particles1.par_for_each_mut(
+        performance_parameters.batch_size(),
+        |(entity1, mut vel, pos1, pressure1, density1)| {
+            let mut acc = VecAcceleration::zero();
+            for particle in
+                get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter()
+            {
+                let entity2 = particle.entity;
+                if entity1 == entity2 {
+                    continue;
+                }
+                let pos2 = particle.pos;
+                let mass2 = particles2.get_component::<mass::Mass>(entity2).unwrap();
+                let pressure2 = particles2
+                    .get_component::<pressure::Pressure>(entity2)
+                    .unwrap();
+                let density2 = particles2
+                    .get_component::<density::Density>(entity2)
+                    .unwrap();
 
-            let distance = pos2 - **pos1;
-            let distance_normalized = distance.normalize();
-            let length = distance.length();
+                let distance = pos2 - **pos1;
+                let distance_normalized = distance.normalize();
+                let length = distance.length();
 
-            if length < parameters.smoothing_length {
-                acc += distance_normalized * **mass2 * (**pressure1 + **pressure2)
-                    / (2.0 * **density2)
-                    * spiky_grad
-                    * (parameters.smoothing_length - length).cubed()
-                    / **density1;
+                if length < parameters.smoothing_length {
+                    acc += distance_normalized * **mass2 * (**pressure1 + **pressure2)
+                        / (2.0 * **density2)
+                        * spiky_grad
+                        * (parameters.smoothing_length - length).cubed()
+                        / **density1;
+                }
             }
-        }
-        **vel += acc * **timestep;
-    }
+            **vel += acc * **timestep;
+        },
+    );
 }

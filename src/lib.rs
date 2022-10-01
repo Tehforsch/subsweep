@@ -17,6 +17,7 @@ pub(crate) mod mass;
 pub(crate) mod named;
 pub(crate) mod parameters;
 pub mod particle;
+pub(crate) mod performance_parameters;
 pub(crate) mod physics;
 pub(crate) mod position;
 pub(crate) mod pressure;

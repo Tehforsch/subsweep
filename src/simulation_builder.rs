@@ -17,6 +17,7 @@ use super::physics::PhysicsPlugin;
 use super::visualization::VisualizationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::io::input::ShouldReadInitialConditions;
+use crate::performance_parameters::PerformanceParameters;
 use crate::simulation::Simulation;
 use crate::stages::SimulationStagesPlugin;
 
@@ -146,6 +147,7 @@ impl SimulationBuilder {
                 .clone()
                 .expect("No parameter file path given"),
         )
+        .add_parameter_type::<PerformanceParameters>()
         .insert_resource(self.task_pool_opts())
         .insert_resource(self.log_setup())
         .insert_resource(self.winit_settings())
