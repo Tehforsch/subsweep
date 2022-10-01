@@ -13,7 +13,7 @@ impl Default for QuadTreeConfig {
         Self {
             min_depth: 1,
             max_depth: 20,
-            max_num_particles_per_leaf: 1,
+            max_num_particles_per_leaf: 30,
         }
     }
 }
