@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 pub use parameters::GravityParameters;
+pub use plugin::GravityPlugin;
 
 use super::LocalParticle;
 use super::MassMoments;

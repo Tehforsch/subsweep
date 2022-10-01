@@ -6,22 +6,39 @@ use crate::named::Named;
 use crate::simulation::Simulation;
 use crate::units::Time;
 
+/// Parameters for the output of the simulation.
+/// Only required if write_output
+/// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
 #[derive(Deserialize, Named)]
 #[name = "output"]
 #[serde(deny_unknown_fields)]
 pub struct OutputParameters {
+    /// The time between two subsequent snapshots. If set to zero,
+    /// snapshots will be written at every timestep.
     #[serde(default)]
     pub time_between_snapshots: Time,
+    /// The time at which the first snapshot is written. If None, the
+    /// first snapshot is written at the first timestep.
     #[serde(default)]
     pub time_first_snapshot: Option<Time>,
+    /// The directory to which the output is written.
     #[serde(default = "default_output_dir")]
     pub output_dir: PathBuf,
+    /// The name of the sub-directory of the output directory
+    /// to which the snapshots are written
     #[serde(default = "default_snapshots_dir")]
     snapshots_dir: PathBuf,
+    /// Names of all the fields that should be written to snapshots.
+    /// Can be names of both attributes and datasets. Example value:
+    /// ["position", "velocity", "time"]
     #[serde(default = "default_fields")]
     pub fields: Vec<String>,
+    /// The number of digits that the snapshot numbers should be
+    /// zero-padded to.
     #[serde(default = "default_snapshot_padding")]
     pub snapshot_padding: usize,
+    /// The name of the file which contains a copy of parameters used
+    /// in the simulation.
     #[serde(default = "default_used_parameters_filename")]
     pub used_parameters_filename: String,
 }

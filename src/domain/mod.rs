@@ -29,6 +29,7 @@ use crate::velocity::Velocity;
 
 pub type QuadTree = gravity::QuadTree;
 
+/// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
 #[derive(Default, Deserialize, Deref, DerefMut, Named)]
 #[name = "tree"]
 pub struct DomainTreeParameters(QuadTreeConfig);
