@@ -15,10 +15,20 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v3
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            override: true
+            components: rustfmt
       - name: Install hdf5 libraries
         run: |
           sudo apt-get update
           sudo apt-get install libhdf5-dev
+      - name: Install mpich libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install mpich
       - name: Build
         run: cargo build --verbose --all-targets
       - name: Run tests
