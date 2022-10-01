@@ -11,14 +11,17 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose --all-targets
-    - name: Run tests
-      run: cargo test --verbose
-    - name: Run local communication tests
-      run: cargo test --verbose --no-default-features
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - name: Install hdf5 libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install libhdf5 libhdf5-dev
+      - name: Build
+        run: cargo build --verbose --all-targets
+      - name: Run tests
+        run: cargo test --verbose
+      - name: Run local communication tests
+        run: cargo test --verbose --no-default-features
