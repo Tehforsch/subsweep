@@ -22,8 +22,8 @@ pub(crate) mod physics;
 pub(crate) mod position;
 pub(crate) mod pressure;
 pub(crate) mod quadtree;
-pub mod simulation;
-pub mod simulation_builder;
+pub(crate) mod simulation;
+pub(crate) mod simulation_builder;
 pub(crate) mod stages;
 pub mod units;
 pub(crate) mod velocity;
@@ -32,30 +32,5 @@ pub(crate) mod visualization;
 #[cfg(feature = "mpi")]
 pub mod mpi_log;
 
-pub mod prelude {
-    pub use super::communication::WorldRank;
-    pub use super::communication::WorldSize;
-    pub use super::mass::Mass;
-    pub use super::named::*;
-    pub use super::physics::hydrodynamics::HydrodynamicsPlugin;
-    pub use super::physics::GravityPlugin;
-    pub use super::physics::LocalParticle;
-    pub use super::physics::Timestep;
-    pub use super::position::Position;
-    pub use super::simulation_builder::SimulationBuilder;
-    pub use super::velocity::Velocity;
-    pub use super::visualization::CameraTransform;
-    pub use super::visualization::DrawCircle;
-    pub use super::visualization::DrawRect;
-}
-
-pub mod parameters {
-    pub use crate::domain::DomainTreeParameters;
-    pub use crate::io::input::InputParameters;
-    pub use crate::io::output::OutputParameters;
-    pub use crate::performance_parameters::PerformanceParameters;
-    pub use crate::physics::gravity::GravityParameters;
-    pub use crate::physics::hydrodynamics::HydrodynamicsParameters;
-    pub use crate::physics::SimulationParameters;
-    pub use crate::visualization::VisualizationParameters;
-}
+pub mod parameters;
+pub mod prelude;
