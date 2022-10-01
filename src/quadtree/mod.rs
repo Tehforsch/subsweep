@@ -1,4 +1,4 @@
-mod config;
+pub mod config;
 mod index;
 mod node_index;
 mod visualization;

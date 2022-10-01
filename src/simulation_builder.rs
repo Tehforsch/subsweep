@@ -17,36 +17,10 @@ use super::physics::PhysicsPlugin;
 use super::visualization::VisualizationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::io::input::ShouldReadInitialConditions;
+use crate::io::output::ShouldWriteOutput;
 use crate::performance_parameters::PerformanceParameters;
 use crate::simulation::Simulation;
 use crate::stages::SimulationStagesPlugin;
-
-fn get_command_line_options() -> CommandLineOptions {
-    CommandLineOptions::parse()
-}
-
-#[cfg(feature = "mpi")]
-pub fn main() {
-    let opts = get_command_line_options();
-    let mut sim = SimulationBuilder::mpi();
-    sim.with_command_line_options(&opts).build().run();
-}
-
-#[cfg(not(feature = "mpi"))]
-pub fn main() {
-    use crate::communication::build_local_communication_sim;
-
-    let opts = get_command_line_options();
-    build_local_communication_sim(
-        |sim| {
-            let opts = get_command_line_options();
-            SimulationBuilder::default()
-                .with_command_line_options(&opts)
-                .build_with_sim(sim);
-        },
-        opts.num_threads,
-    );
-}
 
 pub struct SimulationBuilder {
     pub headless: bool,
@@ -54,6 +28,8 @@ pub struct SimulationBuilder {
     pub parameter_file_path: Option<PathBuf>,
     pub verbosity: usize,
     pub read_initial_conditions: bool,
+    pub write_output: bool,
+    pub log: bool,
     base_communication: Option<BaseCommunicationPlugin>,
 }
 
@@ -65,6 +41,8 @@ impl Default for SimulationBuilder {
             parameter_file_path: None,
             verbosity: 0,
             read_initial_conditions: true,
+            write_output: true,
+            log: true,
             base_communication: None,
         }
     }
@@ -140,20 +118,28 @@ impl SimulationBuilder {
         self
     }
 
-    fn build_with_sim(&self, sim: &mut Simulation) {
-        sim.add_parameters_from_file(
-            &self
-                .parameter_file_path
-                .clone()
-                .expect("No parameter file path given"),
-        )
-        .add_parameter_type::<PerformanceParameters>()
-        .insert_resource(self.task_pool_opts())
-        .insert_resource(self.log_setup())
-        .insert_resource(self.winit_settings())
-        .insert_resource(ShouldReadInitialConditions(self.read_initial_conditions))
-        .maybe_add_plugin(self.base_communication.clone());
-        if sim.on_main_rank() {
+    pub fn write_output(&mut self, write_output: bool) -> &mut Self {
+        self.write_output = write_output;
+        self
+    }
+
+    pub fn log(&mut self, log: bool) -> &mut Self {
+        self.log = log;
+        self
+    }
+
+    pub fn build_with_sim<'a>(&self, sim: &'a mut Simulation) -> &'a mut Simulation {
+        if let Some(ref file) = self.parameter_file_path {
+            sim.add_parameters_from_file(file);
+        }
+        sim.add_parameter_type::<PerformanceParameters>()
+            .insert_resource(self.task_pool_opts())
+            .insert_resource(self.log_setup())
+            .insert_resource(self.winit_settings())
+            .insert_resource(ShouldReadInitialConditions(self.read_initial_conditions))
+            .insert_resource(ShouldWriteOutput(self.write_output))
+            .maybe_add_plugin(self.base_communication.clone());
+        if sim.on_main_rank() && self.log {
             sim.add_bevy_plugin(LogPlugin);
         }
         sim.add_plugin(SimulationStagesPlugin)
@@ -166,6 +152,7 @@ impl SimulationBuilder {
         } else {
             sim.add_plugin(VisualizationPlugin);
         }
+        sim
     }
 
     pub fn build(&mut self) -> Simulation {

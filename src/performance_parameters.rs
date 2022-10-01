@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::named::Named;
 
-#[derive(Deserialize, Default, Named)]
+#[derive(Deserialize, Named)]
 #[name = "performance"]
 pub struct PerformanceParameters {
     /// The batch size for parallel iterations. Low batch sizes
@@ -11,6 +11,14 @@ pub struct PerformanceParameters {
     /// parallelization but reduce overhead
     /// A value of None will force effectively serial iterations.
     batch_size: Option<usize>,
+}
+
+impl Default for PerformanceParameters {
+    fn default() -> Self {
+        Self {
+            batch_size: Some(1000),
+        }
+    }
 }
 
 impl PerformanceParameters {

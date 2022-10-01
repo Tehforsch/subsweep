@@ -154,9 +154,21 @@ impl Simulation {
     }
 
     pub fn run(&mut self) {
-        self.app.run();
+        self.run_without_finalize();
+        Simulation::finalize();
+    }
+
+    pub fn finalize() {
         #[cfg(feature = "mpi")]
         crate::communication::MPI_UNIVERSE.drop();
+    }
+
+    /// Runs the simulation without calling MPI_FINALIZE.  This should
+    /// only be used for benchmarks and other use cases where multiple
+    /// simulations are run.  Make sure to call finalize() explicitly
+    /// after the last run
+    pub fn run_without_finalize(&mut self) {
+        self.app.run();
     }
 
     pub fn update(&mut self) {
