@@ -96,15 +96,15 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::units::Length;
     use crate::units::Time;
 
-    sim.insert_resource(SimulationParameters {
+    sim.add_parameters_explicitly(SimulationParameters {
         timestep: Time::seconds(1.0),
         ..Default::default()
     })
-    .insert_resource(GravityParameters {
+    .add_parameters_explicitly(GravityParameters {
         opening_angle: Dimensionless::dimensionless(0.0),
         softening_length: Length::meters(1e-30),
     })
-    .insert_resource(DomainTreeParameters::default())
+    .add_parameters_explicitly(DomainTreeParameters::default())
     .insert_resource(ShouldWriteOutput(false))
     .add_startup_system(spawn_particles_system)
     .add_bevy_plugins(MinimalPlugins)

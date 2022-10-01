@@ -227,8 +227,12 @@ impl Simulation {
         self.unwrap_resource::<T>()
     }
 
-    pub fn add_parameters_explicitly<T: Sync + Send + 'static>(&mut self, parameters: T) {
+    pub fn add_parameters_explicitly<T: Sync + Send + 'static>(
+        &mut self,
+        parameters: T,
+    ) -> &mut Self {
         self.insert_resource(parameters);
+        self
     }
 }
 
