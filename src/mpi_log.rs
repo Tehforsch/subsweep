@@ -8,11 +8,12 @@ use crate::communication::MPI_UNIVERSE;
 pub static RANK: AtomicUsize = AtomicUsize::new(0);
 pub static SIZE: AtomicUsize = AtomicUsize::new(0);
 
-pub fn initialize(rank: i32, size: usize) {
+pub(crate) fn initialize(rank: i32, size: usize) {
     RANK.swap(rank as usize, Ordering::SeqCst);
     SIZE.swap(size, Ordering::SeqCst);
 }
 
+/// Debug print the expression only on MPI rank 0
 #[macro_export]
 macro_rules! maindbg {
     () => {
@@ -38,6 +39,8 @@ macro_rules! maindbg {
     };
 }
 
+/// Debug prints the expression and adds the MPI rank number to the
+/// beginning.
 #[macro_export]
 macro_rules! mpidbg {
     () => {
@@ -80,6 +83,9 @@ pub fn end_barrier() {
     }
 }
 
+/// Debug print the expression in turns on each MPI rank.  Beginning
+/// with rank 0, each rank prints the expression and the next rank
+/// will only start when the printing is finished
 #[macro_export]
 macro_rules! barrierdbg {
     () => {

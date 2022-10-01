@@ -28,12 +28,17 @@ pub(crate) mod quadtree;
 pub(crate) mod simulation;
 pub(crate) mod simulation_builder;
 pub(crate) mod stages;
-pub mod units;
 pub(crate) mod velocity;
 pub(crate) mod visualization;
 
+/// Debug printing utilities for MPI simulations
 #[cfg(feature = "mpi")]
 pub mod mpi_log;
+/// Compile-time units and quantities for the simulation.
+pub mod units;
 
+/// Contains all the parameter types of the simulation.
 pub mod parameters;
+/// `use raxiom::prelude::*` to import some commonly used
+/// plugins and components when building a simulation.
 pub mod prelude;
