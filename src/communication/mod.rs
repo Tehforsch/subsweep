@@ -35,9 +35,6 @@ pub use local_reexport::*;
 #[cfg(not(feature = "mpi"))]
 #[path = ""]
 mod local_reexport {
-    pub use super::local_sim_building::build_local_communication_sim;
-    pub use super::local_sim_building::build_local_communication_sim_with_custom_logic;
-
     pub mod local_sim_building;
 
     pub(super) mod communicator {

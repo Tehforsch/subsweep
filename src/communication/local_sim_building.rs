@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
-use std::thread;
 
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
@@ -14,7 +13,6 @@ use crate::communication::local::LocalCommunicator;
 use crate::communication::local::Payload;
 use crate::communication::plugin::add_communicator;
 use crate::communication::plugin::get_next_tag;
-use crate::communication::BaseCommunicationPlugin;
 use crate::communication::CommunicationPlugin;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
@@ -24,6 +22,7 @@ use crate::communication::WorldSize;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
+#[cfg(test)]
 fn create_and_build_sim<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     build_sim: F,
     receivers: Receivers,
@@ -32,24 +31,17 @@ fn create_and_build_sim<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     rank: Rank,
 ) -> Simulation {
     let mut sim = Simulation::default();
-    sim.add_plugin(BaseCommunicationPlugin::new(num_threads, rank));
+    sim.add_plugin(crate::communication::BaseCommunicationPlugin::new(
+        num_threads,
+        rank,
+    ));
     sim.insert_non_send_resource(receivers);
     sim.insert_non_send_resource(senders);
     build_sim(&mut sim);
     sim
 }
 
-pub fn build_local_communication_sim<F: 'static + Sync + Copy + Send + Fn(&mut Simulation)>(
-    build_sim: F,
-    num_threads: usize,
-) {
-    build_local_communication_sim_with_custom_logic(
-        build_sim,
-        |mut sim: Simulation| sim.run(),
-        num_threads,
-    );
-}
-
+#[cfg(test)]
 pub fn build_local_communication_sim_with_custom_logic<
     F: 'static + Sync + Copy + Send + Fn(&mut Simulation),
     G: 'static + Sync + Copy + Send + Fn(Simulation),
@@ -81,7 +73,7 @@ pub fn build_local_communication_sim_with_custom_logic<
                 .collect();
             to_move
         });
-        let handle = thread::spawn(move || {
+        let handle = std::thread::spawn(move || {
             let sim =
                 create_and_build_sim(build_sim, receivers, senders, num_threads, rank as Rank);
             custom_logic(sim);

@@ -74,10 +74,6 @@ impl<T> MpiWorld<T> {
             _marker: PhantomData::default(),
         }
     }
-
-    pub fn world(&self) -> &SystemCommunicator {
-        &self.world
-    }
 }
 
 impl<T> MpiWorld<T>
@@ -161,6 +157,7 @@ where
         data
     }
 
+    #[allow(dead_code)] // Will most likely be used eventually
     pub fn all_gather_varcount(&mut self, send: &[S], counts: &[Count]) -> Vec<S> {
         self.verify_tag();
         let mut result_buffer: Vec<S> =

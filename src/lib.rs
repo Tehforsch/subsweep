@@ -8,15 +8,18 @@
 // perfectly readable.
 #![allow(clippy::type_complexity)]
 
-pub mod command_line_options;
+pub(crate) mod command_line_options;
+#[cfg(feature = "mpi_test")]
 pub mod communication;
+#[cfg(not(feature = "mpi_test"))]
+pub(crate) mod communication;
 pub(crate) mod density;
 pub(crate) mod domain;
 pub(crate) mod io;
 pub(crate) mod mass;
 pub(crate) mod named;
 pub(crate) mod parameter_plugin;
-pub mod particle;
+pub(crate) mod particle;
 pub(crate) mod performance_parameters;
 pub(crate) mod physics;
 pub(crate) mod position;

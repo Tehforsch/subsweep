@@ -234,7 +234,7 @@ mod tests {
     use bevy::prelude::Component;
     use mpi::traits::Equivalence;
 
-    use crate::communication::build_local_communication_sim_with_custom_logic;
+    use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
     use crate::communication::WorldRank;
     use crate::domain::exchange_data_plugin::ExchangeDataPlugin;
     use crate::domain::exchange_data_plugin::OutgoingEntities;

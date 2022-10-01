@@ -22,7 +22,7 @@ then
     exit 1
 fi
 
-if ! cargo mpirun --np 2 --example mpi_test
+if ! cargo mpirun --np 2 --example mpi_test --features mpi_test
 then
     echo "There are some mpi test issues."
     exit 1

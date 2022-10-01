@@ -10,7 +10,7 @@ use mpi::traits::Equivalence;
 
 use super::compare_accelerations;
 use super::direct_sum;
-use crate::communication::build_local_communication_sim_with_custom_logic;
+use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::communication::WorldRank;
 use crate::domain::DomainDecompositionPlugin;
 use crate::mass;

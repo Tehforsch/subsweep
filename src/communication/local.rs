@@ -121,6 +121,7 @@ impl<T: Clone + Sync + Send> LocalCommunicator<T> {
         result
     }
 
+    #[allow(dead_code)]
     pub fn all_gather_varcount(&mut self, data: &[T], _counts: &[Count]) -> Vec<T> {
         for rank in self.other_ranks() {
             self.blocking_send_vec(rank, data);

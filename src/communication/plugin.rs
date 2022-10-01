@@ -7,7 +7,6 @@ use mpi::Tag;
 use super::communicator::Communicator;
 use super::exchange_communicator::ExchangeCommunicator;
 use super::sync_communicator::SyncCommunicator;
-use super::Rank;
 use super::WorldRank;
 use super::WorldSize;
 use crate::named::Named;
@@ -20,7 +19,6 @@ pub(super) const INITIAL_TAG: Tag = 0;
 pub enum CommunicationType {
     Exchange,
     Sync,
-    Sum,
     AllGather,
 }
 
@@ -33,7 +31,8 @@ pub struct BaseCommunicationPlugin {
 }
 
 impl BaseCommunicationPlugin {
-    pub fn new(size: usize, rank: Rank) -> Self {
+    #[cfg(any(feature = "mpi", test))]
+    pub fn new(size: usize, rank: super::Rank) -> Self {
         Self {
             num_ranks: WorldSize(size),
             world_rank: WorldRank(rank),
@@ -102,9 +101,6 @@ pub(super) fn add_communicator<T: Equivalence + 'static + Sync + Send>(
         }
         CommunicationType::Sync => {
             sim.insert_non_send_resource(SyncCommunicator::from(communicator));
-        }
-        CommunicationType::Sum => {
-            sim.insert_non_send_resource(communicator);
         }
         CommunicationType::AllGather => {
             sim.insert_non_send_resource(communicator);

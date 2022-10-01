@@ -12,14 +12,3 @@ pub struct LocalParticleBundle {
     mass: Mass,
     _local: LocalParticle,
 }
-
-impl LocalParticleBundle {
-    pub fn new(pos: Position, vel: Velocity, mass: Mass) -> Self {
-        Self {
-            pos,
-            vel,
-            mass,
-            _local: LocalParticle,
-        }
-    }
-}

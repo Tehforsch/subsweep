@@ -10,6 +10,7 @@ authors = [
 [features]
 default = ["mpi"]
 mpi = []
+mpi_test = []
 
 [dependencies]
 bevy = { version = "0.8.0", default-features = false, features = ["render", "x11", "bevy_winit"]}
@@ -37,7 +38,7 @@ opt-level = 3
 
 [[example]]
 name = "mpi_test"
-required-features = ["mpi"]
+required-features = ["mpi", "mpi_test"]
 
 [[example]]
 name = "figure8"
