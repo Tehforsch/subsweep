@@ -16,11 +16,11 @@ use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
 use bevy::prelude::World;
 pub use raxiom_plugin::RaxiomPlugin;
-use serde::Deserialize;
 
 use crate::communication::WorldRank;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterPlugin;
+use crate::parameter_plugin::Parameters;
 
 #[derive(Default)]
 pub struct Simulation {
@@ -225,7 +225,7 @@ impl Simulation {
 
     pub fn add_parameter_type<T>(&mut self) -> &mut Self
     where
-        T: Named + Sync + Send + 'static + for<'de> Deserialize<'de>,
+        T: Parameters,
     {
         self.add_plugin(ParameterPlugin::<T>::default());
         self
@@ -233,16 +233,13 @@ impl Simulation {
 
     pub fn add_parameter_type_and_get_result<T>(&mut self) -> &T
     where
-        T: Named + Sync + Send + 'static + for<'de> Deserialize<'de>,
+        T: Parameters,
     {
         self.add_plugin(ParameterPlugin::<T>::default());
         self.unwrap_resource::<T>()
     }
 
-    pub fn add_parameters_explicitly<T: Sync + Send + 'static>(
-        &mut self,
-        parameters: T,
-    ) -> &mut Self {
+    pub fn add_parameters_explicitly<T: Parameters>(&mut self, parameters: T) -> &mut Self {
         self.insert_resource(parameters);
         self
     }

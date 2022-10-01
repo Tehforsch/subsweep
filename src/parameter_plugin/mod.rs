@@ -12,6 +12,10 @@ use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
+pub trait Parameters: Named + for<'de> Deserialize<'de> + Sync + Send + 'static {}
+
+impl<T> Parameters for T where T: Named + for<'de> Deserialize<'de> + Sync + Send + 'static {}
+
 pub struct ReadParametersError(String);
 
 #[derive(Deref, DerefMut)]
@@ -45,7 +49,7 @@ impl<T> Default for ParameterPlugin<T> {
 
 fn from_empty<T>() -> Result<T, ReadParametersError>
 where
-    T: Named + for<'de> Deserialize<'de>,
+    T: Parameters,
 {
     serde_yaml::from_str::<T>("").map_err(|_| {
         ReadParametersError(format!(
@@ -57,7 +61,7 @@ where
 
 impl<T> RaxiomPlugin for ParameterPlugin<T>
 where
-    T: Named + Sync + Send + 'static + for<'de> serde::Deserialize<'de>,
+    T: Parameters,
 {
     fn allow_adding_twice(&self) -> bool {
         true
@@ -86,7 +90,7 @@ where
     }
 }
 
-impl<T: Named + Sync + Send + 'static + for<'de> serde::Deserialize<'de>> ParameterPlugin<T> {
+impl<T: Parameters> ParameterPlugin<T> {
     fn get_parameter_struct_from_parameter_file_contents(
         name: &str,
         parameter_file_contents: &str,
