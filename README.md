@@ -1,10 +1,10 @@
 # Raxiom
 Raxiom is an (experimental) astrophysical simulation library
-using the rust game engine [`Bevy`](https://docs.rs/bevy/*/bevy).
+using the rust game engine [`bevy`](https://docs.rs/bevy/*/bevy).
 
 At this point, Raxiom supports a Barnes-Hut tree gravity solver as
 well as smoothed particle hydrodynamics. In order to allow highly
-parallel simulations, raxiom uses MPI communication between
+parallel simulations, Raxiom uses MPI communication between
 multiple Bevy apps. Moreover, each Bevy app is parallelized
 internally using Bevys inherent parallelism and parallel queries.
 This reduces the amount of MPI ranks needed and might even allow
@@ -19,7 +19,7 @@ the formation of stars and black holes, radiation transport and
 many more.  Raxiom enables building such simulations in the "Bevy
 way", treating these phenomena as modular plugins which can be
 added and configured individually.  The reason Raxiom exposes a
-library structure instead of consisting of a single all-powerful,
+library structure instead of consisting of a single, all-powerful,
 configurable binary is that this allows the user to easily add
 additional behavior to the simulation without requiring an ever
 increasing set of configuration flags and parameters for the

@@ -29,7 +29,7 @@ watch = ["tests"]
 [jobs.test]
 command = ["cargo", "test", "--color", "always"]
 need_stdout = true
-watch = ["tests"]
+watch = ["tests", "benches", "examples"]
 
 [jobs.test-local]
 command = ["cargo", "test", "--no-default-features", "--color", "always"]
