@@ -23,6 +23,17 @@ use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
 #[cfg(test)]
+fn drain_filter_by_rank<T>(rank: Rank, items: &mut HashMap<Comm, T>) -> HashMap<Comm, T> {
+    let mut drained = HashMap::new();
+    std::mem::swap(&mut drained, items);
+    let (removed, remaining): (HashMap<Comm, _>, HashMap<Comm, _>) = drained
+        .into_iter()
+        .partition(|(comm, _)| comm.owner == rank);
+    *items = remaining;
+    removed
+}
+
+#[cfg(test)]
 fn create_and_build_sim<F: 'static + Sync + Send + Copy + Fn(&mut Simulation)>(
     build_sim: F,
     receivers: Receivers,
@@ -61,16 +72,12 @@ pub fn build_local_communication_sim_with_custom_logic<
     for rank in 1..num_threads {
         let receivers = Receivers({
             let all = &mut sim.unwrap_non_send_resource_mut::<Receivers>();
-            let to_move = all
-                .drain_filter(|comm, _| comm.owner == rank as Rank)
-                .collect();
+            let to_move = drain_filter_by_rank(rank as Rank, all);
             to_move
         });
         let senders = Senders({
             let all = &mut sim.unwrap_non_send_resource_mut::<Senders>();
-            let to_move = all
-                .drain_filter(|comm, _| comm.owner == rank as Rank)
-                .collect();
+            let to_move = drain_filter_by_rank(rank as Rank, all);
             to_move
         });
         let handle = std::thread::spawn(move || {

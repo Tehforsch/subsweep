@@ -1,5 +1,5 @@
 #![allow(incomplete_features)]
-#![feature(generic_const_exprs, adt_const_params, hash_drain_filter)]
+#![feature(generic_const_exprs, adt_const_params)]
 #![feature(const_fn_floating_point_arithmetic)]
 // Some or our '*_system' functions have a large number of arguments.
 // That is not necessarily a bad thing, as they are auto-provided by bevy.
@@ -11,7 +11,7 @@
 //! # Raxiom
 //! Raxiom is an (experimental) astrophysical simulation library
 //! using the rust game engine [`bevy`](https://docs.rs/bevy/*/bevy).
-//! 
+//!
 //! At this point, Raxiom supports a Barnes-Hut tree gravity solver as
 //! well as smoothed particle hydrodynamics. In order to allow highly
 //! parallel simulations, Raxiom uses MPI communication between
@@ -21,7 +21,7 @@
 //! automatic "zero-effort" latency hiding by running non-conflicting
 //! systems in parallel - systems which are currently blocked by
 //! communication latency or delay do not block program execution.
-//! 
+//!
 //! In order to properly understand the multi-physical nature of
 //! astrophysics, simulations require accurate treatment of many
 //! different phenomena, such as gravity, hydrodynamics, chemistry,
@@ -36,7 +36,7 @@
 //! binary. Injecting such custom behavior into the "main loop"
 //! of the code is made easy by the structure of ECS in general and
 //! Bevys amazing modularity in particular.
-//! 
+//!
 //! Here is how this might look in practice:
 //!
 //! ## A basic example
