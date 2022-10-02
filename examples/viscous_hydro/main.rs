@@ -33,7 +33,7 @@ impl Named for ViscousGravityParameters {
 }
 
 fn main() {
-    let mut sim = SimulationBuilder::mpi();
+    let mut sim = SimulationBuilder::new();
     sim.parameters_from_relative_path(file!(), "parameters.yml")
         .headless(false)
         .read_initial_conditions(false)

@@ -9,6 +9,7 @@ pub use crate::physics::Timestep;
 pub use crate::position::Position;
 pub use crate::simulation::Simulation;
 pub use crate::simulation_builder::SimulationBuilder;
+pub use crate::units;
 pub use crate::velocity::Velocity;
 pub use crate::visualization::CameraTransform;
 pub use crate::visualization::DrawCircle;

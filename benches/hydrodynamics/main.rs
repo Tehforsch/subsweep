@@ -20,7 +20,7 @@ use raxiom::units::Time;
 use raxiom::units::*;
 
 fn run_hydro() {
-    let mut builder = SimulationBuilder::mpi();
+    let mut builder = SimulationBuilder::new();
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(PerformanceParameters::default())
         .add_parameters_explicitly(DomainTreeParameters::default())

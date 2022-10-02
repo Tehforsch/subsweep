@@ -50,7 +50,7 @@ impl Default for SimulationBuilder {
 
 impl SimulationBuilder {
     #[cfg(feature = "mpi")]
-    pub fn mpi() -> Self {
+    pub fn new() -> Self {
         use crate::communication::MpiWorld;
         use crate::communication::SizedCommunicator;
 
@@ -58,6 +58,13 @@ impl SimulationBuilder {
         crate::mpi_log::initialize(world.rank(), world.size());
         Self {
             base_communication: Some(BaseCommunicationPlugin::new(world.size(), world.rank())),
+            ..Default::default()
+        }
+    }
+
+    #[cfg(not(feature = "mpi"))]
+    pub fn new() -> Self {
+        Self {
             ..Default::default()
         }
     }

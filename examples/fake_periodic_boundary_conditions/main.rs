@@ -40,7 +40,7 @@ impl Named for Parameters {
 }
 
 fn main() {
-    let mut sim = SimulationBuilder::mpi();
+    let mut sim = SimulationBuilder::new();
     sim.parameters_from_relative_path(file!(), "parameters.yml")
         .read_initial_conditions(false)
         .headless(false)
