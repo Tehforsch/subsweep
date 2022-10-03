@@ -93,6 +93,9 @@ pub(crate) mod stages;
 pub(crate) mod velocity;
 pub(crate) mod visualization;
 
+#[cfg(test)]
+pub(crate) mod test_utils;
+
 /// Debug printing utilities for MPI simulations
 #[cfg(feature = "mpi")]
 pub mod mpi_log;

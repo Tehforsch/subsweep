@@ -1,10 +1,7 @@
-use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Query;
 use bevy::prelude::Res;
-use bevy::prelude::Stage;
-use bevy::prelude::SystemStage;
 use bevy::MinimalPlugins;
 use mpi::traits::Equivalence;
 
@@ -22,6 +19,7 @@ use crate::physics::PhysicsPlugin;
 use crate::physics::Timestep;
 use crate::position::Position;
 use crate::simulation::Simulation;
+use crate::test_utils::run_system_on_sim;
 use crate::units::Mass;
 use crate::units::VecLength;
 use crate::units::VecVelocity;
@@ -39,11 +37,6 @@ fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
             )
         })
         .collect()
-}
-
-fn run_system_on_sim<P>(sim: &mut Simulation, system: impl IntoSystemDescriptor<P>) {
-    let mut stage = SystemStage::parallel().with_system(system);
-    stage.run(&mut sim.world());
 }
 
 fn check_system(

@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use std::marker::PhantomData;
 use std::path::PathBuf;
 
