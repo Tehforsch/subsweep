@@ -6,6 +6,21 @@ use crate::named::Named;
 use crate::simulation::Simulation;
 use crate::units::Time;
 
+/// How to handle the case of an already existing output directory.
+#[derive(Default, Deserialize)]
+pub enum HandleExistingOutput {
+    /// Halt program execution.
+    #[default]
+    Panic,
+    /// Overwrite already existing files if the names match. This can
+    /// cause inconsistent states in which, for example, snapshots
+    /// with higher numbers are from an older simulation.
+    Overwrite,
+    /// Delete the existing output folder. This will erase all
+    /// data of the previous simulation.
+    Delete,
+}
+
 /// Parameters for the output of the simulation.
 /// Only required if write_output
 /// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
@@ -27,7 +42,7 @@ pub struct OutputParameters {
     /// The name of the sub-directory of the output directory
     /// to which the snapshots are written
     #[serde(default = "default_snapshots_dir")]
-    snapshots_dir: PathBuf,
+    pub snapshots_dir: PathBuf,
     /// Names of all the fields that should be written to snapshots.
     /// Can be names of both attributes and datasets. Example value:
     /// ["position", "velocity", "time"]
@@ -41,6 +56,9 @@ pub struct OutputParameters {
     /// in the simulation.
     #[serde(default = "default_used_parameters_filename")]
     pub used_parameters_filename: String,
+    /// What to do when the output folder already exists.
+    #[serde(default)]
+    pub handle_existing_output: HandleExistingOutput,
 }
 
 fn default_snapshot_padding() -> usize {

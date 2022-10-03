@@ -1,7 +1,7 @@
 mod attribute;
 mod attribute_plugin;
 pub(super) mod dataset_plugin;
-mod parameters;
+pub(crate) mod parameters;
 mod timer;
 
 use std::fs;
@@ -18,7 +18,7 @@ use hdf5::File;
 pub use self::attribute::Attribute;
 pub use self::attribute_plugin::AttributeOutputPlugin;
 pub use self::dataset_plugin::DatasetOutputPlugin;
-pub use self::parameters::OutputParameters;
+use self::parameters::OutputParameters;
 use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::named::Named;
@@ -84,6 +84,19 @@ fn write_used_parameters_system(
 }
 
 fn make_output_dirs_system(parameters: Res<OutputParameters>) {
+    if parameters.output_dir.exists() {
+        match parameters.handle_existing_output {
+            parameters::HandleExistingOutput::Panic => panic!(
+                "Output folder at {} already exists.",
+                parameters.output_dir.to_str().unwrap()
+            ),
+            parameters::HandleExistingOutput::Delete => {
+                fs::remove_dir_all(&parameters.output_dir)
+                    .unwrap_or_else(|e| panic!("Failed to remove output directory. {}", e));
+            }
+            parameters::HandleExistingOutput::Overwrite => {}
+        }
+    }
     fs::create_dir_all(&parameters.output_dir)
         .unwrap_or_else(|_| panic!("Failed to create output dir: {:?}", parameters.output_dir));
     fs::create_dir_all(&parameters.snapshot_dir()).unwrap_or_else(|_| {

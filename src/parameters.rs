@@ -1,6 +1,6 @@
 pub use crate::domain::DomainTreeParameters;
 pub use crate::io::input::InputParameters;
-pub use crate::io::output::OutputParameters;
+pub use crate::io::output::parameters::*;
 pub use crate::performance_parameters::PerformanceParameters;
 pub use crate::physics::gravity::GravityParameters;
 pub use crate::physics::hydrodynamics::HydrodynamicsParameters;
