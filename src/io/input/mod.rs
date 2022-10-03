@@ -5,10 +5,14 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 
 use bevy::prelude::*;
+use hdf5::Dataset;
 use hdf5::File;
 use serde::Deserialize;
 
+use super::output::dataset_plugin::LENGTH_IDENTIFIER;
+use super::output::dataset_plugin::MASS_IDENTIFIER;
 use super::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
+use super::output::dataset_plugin::TIME_IDENTIFIER;
 use super::to_dataset::ToDataset;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
@@ -16,6 +20,7 @@ use crate::named::Named;
 use crate::physics::LocalParticle;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::units::Dimension;
 
 #[derive(Default, Deref, DerefMut)]
 struct InputFiles(Vec<File>);
@@ -172,6 +177,12 @@ fn read_dataset_system<T: ToDataset + Component>(
             .expect("No scale factor in dataset")
             .read_scalar()
             .unwrap();
+        assert_eq!(
+            read_dimension(&set),
+            T::dimension(),
+            "Mismatch in dimension while reading dataset {}.",
+            name
+        );
         (data, conversion_factor)
     });
     for ((item, factor_written), entity) in data
@@ -183,6 +194,25 @@ fn read_dataset_system<T: ToDataset + Component>(
             .entity(*entity)
             .insert(item.convert_base_units(factor_written / factor_read));
     }
+}
+
+fn read_dimension(dataset: &Dataset) -> Dimension {
+    let length: i32 = dataset
+        .attr(LENGTH_IDENTIFIER)
+        .expect("No length scale factor in dataset")
+        .read_scalar()
+        .unwrap();
+    let mass: i32 = dataset
+        .attr(MASS_IDENTIFIER)
+        .expect("No mass scale factor in dataset")
+        .read_scalar()
+        .unwrap();
+    let time: i32 = dataset
+        .attr(TIME_IDENTIFIER)
+        .expect("No time scale factor in dataset")
+        .read_scalar()
+        .unwrap();
+    Dimension { length, mass, time }
 }
 
 pub struct ShouldReadInitialConditions(pub bool);
