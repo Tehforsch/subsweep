@@ -14,7 +14,7 @@ pub fn run_system_on_sim<P>(sim: &mut Simulation, system: impl IntoSystemDescrip
 }
 
 pub fn run_system_on_world<P>(world: &mut World, system: impl IntoSystemDescriptor<P>) {
-    let mut stage = SystemStage::parallel().with_system(system);
+    let mut stage = SystemStage::single_threaded().with_system(system);
     stage.run(world);
 }
 
