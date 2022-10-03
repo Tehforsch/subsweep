@@ -19,6 +19,7 @@ pub use raxiom_plugin::RaxiomPlugin;
 
 use crate::communication::WorldRank;
 use crate::named::Named;
+use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
 use crate::parameter_plugin::Parameters;
 
@@ -26,6 +27,7 @@ use crate::parameter_plugin::Parameters;
 pub struct Simulation {
     pub app: App,
     labels: HashSet<&'static str>,
+    parameter_sections: HashSet<String>,
 }
 
 impl Simulation {
@@ -168,6 +170,7 @@ impl Simulation {
     /// simulations are run.  Make sure to call finalize() explicitly
     /// after the last run
     pub fn run_without_finalize(&mut self) {
+        self.validate();
         self.app.run();
     }
 
@@ -227,6 +230,7 @@ impl Simulation {
     where
         T: Parameters,
     {
+        self.parameter_sections.insert(T::name().into());
         self.add_plugin(ParameterPlugin::<T>::default());
         self
     }
@@ -235,7 +239,7 @@ impl Simulation {
     where
         T: Parameters,
     {
-        self.add_plugin(ParameterPlugin::<T>::default());
+        self.add_parameter_type::<T>();
         self.unwrap_resource::<T>()
     }
 
@@ -243,11 +247,33 @@ impl Simulation {
         self.insert_resource(parameters);
         self
     }
+
+    fn validate(&self) {
+        let contents = self.unwrap_resource::<ParameterFileContents>();
+        let mut unused = vec![];
+        for param in contents.get_section_names() {
+            if !self.parameter_sections.contains(&param) {
+                unused.push(param);
+            }
+        }
+        if !unused.is_empty() {
+            panic!(
+                "Unused parameter sections: {}. Used parameter sections: {}",
+                unused.join(", "),
+                self.parameter_sections
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::named::Named;
+    use crate::parameter_plugin::ParameterFileContents;
     use crate::simulation::RaxiomPlugin;
     use crate::simulation::Simulation;
 
@@ -261,5 +287,18 @@ mod tests {
         let mut sim = Simulation::default();
         sim.add_plugin(MyPlugin);
         sim.add_plugin(MyPlugin);
+    }
+
+    #[test]
+    #[should_panic(expected = "Unused parameter sections")]
+    fn panic_on_unused_parameter_section() {
+        let mut sim = Simulation::default();
+        let contents = "
+parameters1:
+  x:
+    3.0
+";
+        sim.insert_resource(ParameterFileContents(contents.into()));
+        sim.run();
     }
 }

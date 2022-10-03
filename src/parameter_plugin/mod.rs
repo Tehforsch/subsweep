@@ -21,6 +21,25 @@ pub struct ReadParametersError(String);
 #[derive(Deref, DerefMut)]
 pub(super) struct ParameterFileContents(pub String);
 
+impl ParameterFileContents {
+    pub fn get_section_names(&self) -> Vec<String> {
+        self.value()
+            .as_mapping()
+            .unwrap()
+            .keys()
+            .map(|key| {
+                key.as_str()
+                    .expect("Non-string parameter section")
+                    .to_owned()
+            })
+            .collect()
+    }
+
+    fn value(&self) -> Value {
+        serde_yaml::from_str::<Value>(&self.0).unwrap_or(Value::Null)
+    }
+}
+
 impl Simulation {
     pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {
         let contents = fs::read_to_string(parameter_file_name).unwrap_or_else(|_| {
@@ -81,7 +100,7 @@ where
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let parameter_file_contents = &sim.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameters_from_file?", T::name())).0;
+        let parameter_file_contents = &sim.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameters_from_file?", T::name()));
         let parameters = Self::get_parameter_struct_from_parameter_file_contents(
             T::name(),
             parameter_file_contents,
@@ -93,11 +112,10 @@ where
 impl<T: Parameters> ParameterPlugin<T> {
     fn get_parameter_struct_from_parameter_file_contents(
         name: &str,
-        parameter_file_contents: &str,
+        parameter_file_contents: &ParameterFileContents,
     ) -> T {
-        let all_parameters: Value =
-            serde_yaml::from_str(parameter_file_contents).unwrap_or(Value::Null);
-        all_parameters
+        parameter_file_contents
+            .value()
             .get(name)
             .map(|plugin_parameters| {
                 serde_yaml::from_value(plugin_parameters.clone()).unwrap_or_else(|err| {
