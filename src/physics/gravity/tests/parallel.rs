@@ -109,6 +109,7 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
 }
 
 #[test]
+#[ignore]
 #[cfg(not(feature = "mpi"))]
 fn compare_parallel_quadtree_gravity_to_direct_sum() {
     let check = |mut sim: Simulation| {

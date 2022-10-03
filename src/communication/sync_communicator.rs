@@ -118,6 +118,7 @@ pub mod tests {
     }
 
     #[test]
+    #[ignore]
     fn sync_communicator() {
         use bevy::prelude::Entity;
 

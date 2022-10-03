@@ -104,6 +104,7 @@ mod tests {
     use crate::communication::SizedCommunicator;
 
     #[test]
+    #[ignore]
     fn exchange_communicator() {
         use crate::communication::exchange_communicator::ExchangeCommunicator;
         use crate::communication::Rank;

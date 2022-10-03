@@ -307,6 +307,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn exchange_data_plugin() {
         build_local_communication_sim_with_custom_logic(build_sim, check_received, 2);
     }
