@@ -1,11 +1,9 @@
 use std::marker::PhantomData;
 
-use bevy::prelude::Component;
 use bevy::prelude::Query;
 use bevy::prelude::ResMut;
 use bevy::prelude::With;
 use hdf5::Dataset;
-use hdf5::H5Type;
 
 use super::add_output_system;
 use super::OutputFile;
@@ -35,9 +33,7 @@ impl<T> Default for DatasetOutputPlugin<T> {
     }
 }
 
-impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> RaxiomPlugin
-    for DatasetOutputPlugin<T>
-{
+impl<T: ToDataset> RaxiomPlugin for DatasetOutputPlugin<T> {
     fn should_build(&self, sim: &Simulation) -> bool {
         sim.get_resource::<ShouldWriteOutput>()
             .map(|x| x.0)
@@ -53,9 +49,7 @@ impl<T: ToDataset + Named + Clone + Component + Sync + Send + 'static> RaxiomPlu
     }
 }
 
-impl<T: ToDataset + Named + Sync + Send + 'static + Clone + H5Type + Component>
-    DatasetOutputPlugin<T>
-{
+impl<T: ToDataset> DatasetOutputPlugin<T> {
     fn write_dataset(query: Query<&T, With<LocalParticle>>, file: ResMut<OutputFile>) {
         let f = file.f.as_ref().unwrap();
         let data: Vec<T> = query.iter().cloned().collect();
