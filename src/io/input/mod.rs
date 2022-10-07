@@ -9,13 +9,13 @@ use hdf5::Dataset;
 use hdf5::File;
 use serde::Deserialize;
 
-use super::output::dataset_plugin::LENGTH_IDENTIFIER;
-use super::output::dataset_plugin::MASS_IDENTIFIER;
-use super::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
-use super::output::dataset_plugin::TIME_IDENTIFIER;
 use super::to_dataset::ToDataset;
+use super::to_dataset::LENGTH_IDENTIFIER;
+use super::to_dataset::MASS_IDENTIFIER;
+use super::to_dataset::TIME_IDENTIFIER;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
+use crate::io::to_dataset::SCALE_FACTOR_IDENTIFIER;
 use crate::named::Named;
 use crate::physics::LocalParticle;
 use crate::simulation::RaxiomPlugin;

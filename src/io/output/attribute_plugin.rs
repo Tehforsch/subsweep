@@ -25,7 +25,7 @@ impl<T> Default for AttributeOutputPlugin<T> {
 }
 
 impl<T: Attribute + Sync + Send + 'static> IntoOutputSystem for AttributeOutputPlugin<T> {
-    fn system(&self) -> ParallelSystemDescriptor {
+    fn system() -> ParallelSystemDescriptor {
         Self::write_attribute.in_ambiguity_set(OutputSystemsAmbiguitySet)
     }
 }

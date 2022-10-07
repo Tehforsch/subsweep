@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bevy::ecs::schedule::ParallelSystemDescriptor;
 use bevy::prelude::*;
 
@@ -15,12 +17,22 @@ use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 
-pub trait IntoOutputSystem {
-    fn system(&self) -> ParallelSystemDescriptor;
+pub(crate) trait IntoOutputSystem {
+    fn system() -> ParallelSystemDescriptor;
 }
 
 #[derive(Named)]
-pub struct OutputPlugin<T>(pub T);
+pub struct OutputPlugin<T> {
+    _marker: PhantomData<T>,
+}
+
+impl<T> Default for OutputPlugin<T> {
+    fn default() -> Self {
+        Self {
+            _marker: PhantomData::default(),
+        }
+    }
+}
 
 impl<T> RaxiomPlugin for OutputPlugin<T>
 where
@@ -67,8 +79,7 @@ where
         if OutputParameters::is_desired_field::<T>(sim) {
             sim.add_system_to_stage(
                 OutputStages::Output,
-                self.0
-                    .system()
+                T::system()
                     .after(open_file_system)
                     .before(close_file_system)
                     .in_ambiguity_set(OutputSystemsAmbiguitySet)

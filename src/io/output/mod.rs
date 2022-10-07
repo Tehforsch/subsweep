@@ -1,8 +1,7 @@
 mod attribute;
 mod attribute_plugin;
-pub(super) mod dataset_plugin;
 pub(crate) mod parameters;
-mod plugin;
+pub(super) mod plugin;
 mod timer;
 
 use std::fs;
@@ -17,7 +16,6 @@ use hdf5::File;
 
 pub use self::attribute::Attribute;
 pub use self::attribute_plugin::AttributeOutputPlugin;
-pub use self::dataset_plugin::DatasetOutputPlugin;
 use self::parameters::OutputParameters;
 pub use self::plugin::OutputPlugin;
 use self::timer::Timer;
@@ -34,8 +32,8 @@ pub enum OutputStages {
 }
 
 #[derive(Default)]
-struct OutputFile {
-    f: Option<File>,
+pub(super) struct OutputFile {
+    pub f: Option<File>,
 }
 
 pub struct ShouldWriteOutput(pub bool);
