@@ -16,8 +16,6 @@ pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Communicator;
-use crate::domain::ExchangeDataPlugin;
-use crate::io::input::DatasetInputPlugin;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::mass::Mass;
@@ -51,15 +49,9 @@ impl RaxiomPlugin for PhysicsPlugin {
         let parameters = sim
             .add_parameter_type_and_get_result::<SimulationParameters>()
             .clone();
-        sim.add_plugin(ExchangeDataPlugin::<Position>::default())
-            .add_plugin(ExchangeDataPlugin::<Velocity>::default())
-            .add_plugin(ExchangeDataPlugin::<Mass>::default())
-            .add_plugin(OutputPlugin::<Position>::default())
-            .add_plugin(OutputPlugin::<Velocity>::default())
-            .add_plugin(OutputPlugin::<Mass>::default())
-            .add_plugin(DatasetInputPlugin::<Position>::default())
-            .add_plugin(DatasetInputPlugin::<Velocity>::default())
-            .add_plugin(DatasetInputPlugin::<Mass>::default())
+        sim.add_required_component::<Position>()
+            .add_required_component::<Mass>()
+            .add_required_component::<Velocity>()
             .add_plugin(OutputPlugin::<Attribute<Time>>::default())
             .add_plugin(CommunicationPlugin::<ShouldExit>::new(
                 CommunicationType::AllGather,

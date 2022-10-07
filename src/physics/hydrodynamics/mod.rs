@@ -13,7 +13,6 @@ use super::LocalParticle;
 use super::Timestep;
 use crate::density;
 use crate::domain::extent::Extent;
-use crate::domain::ExchangeDataPlugin;
 use crate::mass;
 use crate::mass::Mass;
 use crate::named::Named;
@@ -58,8 +57,8 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
                 StartupStage::PostStartup,
                 insert_pressure_and_density_system,
             )
-            .add_plugin(ExchangeDataPlugin::<pressure::Pressure>::default())
-            .add_plugin(ExchangeDataPlugin::<density::Density>::default());
+            .add_derived_component::<pressure::Pressure>()
+            .add_derived_component::<density::Density>();
     }
 }
 

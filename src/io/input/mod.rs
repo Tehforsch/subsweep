@@ -22,6 +22,15 @@ use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::Dimension;
 
+/// Determines how a component is input into the simulation.
+pub enum ComponentInput {
+    /// The component needs to be present when the initial conditions are read.
+    Required,
+    /// The component does not need to be present and will be inserted
+    /// by a startup system.
+    Derived,
+}
+
 #[derive(Default, Deref, DerefMut)]
 struct InputFiles(Vec<File>);
 

@@ -9,15 +9,23 @@ use bevy::ecs::system::Resource;
 use bevy::prelude::debug;
 use bevy::prelude::warn;
 use bevy::prelude::App;
+use bevy::prelude::Component;
 use bevy::prelude::Mut;
 use bevy::prelude::Plugin;
 use bevy::prelude::PluginGroup;
 use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
 use bevy::prelude::World;
+use mpi::traits::Equivalence;
+use mpi::traits::MatchesRaw;
 pub use raxiom_plugin::RaxiomPlugin;
 
 use crate::communication::WorldRank;
+use crate::domain::ExchangeDataPlugin;
+use crate::io::input::ComponentInput;
+use crate::io::input::DatasetInputPlugin;
+use crate::io::output::OutputPlugin;
+use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
@@ -250,6 +258,38 @@ impl Simulation {
     pub fn add_parameters_explicitly<T: Parameters>(&mut self, parameters: T) -> &mut Self {
         self.insert_resource(parameters);
         self
+    }
+
+    pub fn add_component<T>(&mut self, input: ComponentInput) -> &mut Self
+    where
+        T: Equivalence + ToDataset + Component,
+        <T as Equivalence>::Out: MatchesRaw,
+    {
+        self.add_plugin(ExchangeDataPlugin::<T>::default())
+            .add_plugin(OutputPlugin::<T>::default());
+        match input {
+            ComponentInput::Required => {
+                self.add_plugin(DatasetInputPlugin::<T>::default());
+            }
+            ComponentInput::Derived => {}
+        }
+        self
+    }
+
+    pub fn add_required_component<T>(&mut self) -> &mut Self
+    where
+        T: Equivalence + ToDataset + Component,
+        <T as Equivalence>::Out: MatchesRaw,
+    {
+        self.add_component::<T>(ComponentInput::Required)
+    }
+
+    pub fn add_derived_component<T>(&mut self) -> &mut Self
+    where
+        T: Equivalence + ToDataset + Component,
+        <T as Equivalence>::Out: MatchesRaw,
+    {
+        self.add_component::<T>(ComponentInput::Derived)
     }
 
     fn validate(&self) {
