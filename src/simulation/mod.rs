@@ -170,7 +170,11 @@ impl Simulation {
     /// simulations are run.  Make sure to call finalize() explicitly
     /// after the last run
     pub fn run_without_finalize(&mut self) {
-        self.validate();
+        // Since this is called from tests which don't have a BaseCommunication plugin, make sure we only unwrap
+        // world rank if it exists and default to validating otherwise.
+        if self.get_resource::<WorldRank>().is_none() || self.on_main_rank() {
+            self.validate();
+        }
         self.app.run();
     }
 
