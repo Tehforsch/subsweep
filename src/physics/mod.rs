@@ -18,7 +18,7 @@ use crate::communication::CommunicationType;
 use crate::communication::Communicator;
 use crate::domain::ExchangeDataPlugin;
 use crate::io::input::DatasetInputPlugin;
-use crate::io::output::AttributeOutputPlugin;
+use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::mass::Mass;
 use crate::named::Named;
@@ -60,7 +60,7 @@ impl RaxiomPlugin for PhysicsPlugin {
             .add_plugin(DatasetInputPlugin::<Position>::default())
             .add_plugin(DatasetInputPlugin::<Velocity>::default())
             .add_plugin(DatasetInputPlugin::<Mass>::default())
-            .add_plugin(OutputPlugin::<AttributeOutputPlugin<Time>>::default())
+            .add_plugin(OutputPlugin::<Attribute<Time>>::default())
             .add_plugin(CommunicationPlugin::<ShouldExit>::new(
                 CommunicationType::AllGather,
             ))

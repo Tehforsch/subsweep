@@ -1,5 +1,4 @@
 mod attribute;
-mod attribute_plugin;
 pub(crate) mod parameters;
 pub(super) mod plugin;
 mod timer;
@@ -15,7 +14,7 @@ use bevy::prelude::StageLabel;
 use hdf5::File;
 
 pub use self::attribute::Attribute;
-pub use self::attribute_plugin::AttributeOutputPlugin;
+pub use self::attribute::ToAttribute;
 use self::parameters::OutputParameters;
 pub use self::plugin::OutputPlugin;
 use self::timer::Timer;
