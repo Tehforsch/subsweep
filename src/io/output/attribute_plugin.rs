@@ -1,15 +1,15 @@
 use std::marker::PhantomData;
 
+use bevy::ecs::schedule::ParallelSystemDescriptor;
+use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 
-use super::add_output_system;
 use super::attribute::Attribute;
+use super::plugin::IntoOutputSystem;
 use super::OutputFile;
-use super::ShouldWriteOutput;
+use super::OutputSystemsAmbiguitySet;
 use crate::named::Named;
-use crate::simulation::RaxiomPlugin;
-use crate::simulation::Simulation;
 
 #[derive(Named)]
 pub struct AttributeOutputPlugin<T> {
@@ -24,22 +24,9 @@ impl<T> Default for AttributeOutputPlugin<T> {
     }
 }
 
-impl<T> RaxiomPlugin for AttributeOutputPlugin<T>
-where
-    T: Attribute + Sync + Send + 'static,
-{
-    fn should_build(&self, sim: &Simulation) -> bool {
-        sim.get_resource::<ShouldWriteOutput>()
-            .map(|x| x.0)
-            .unwrap_or(true)
-    }
-
-    fn allow_adding_twice(&self) -> bool {
-        true
-    }
-
-    fn build_everywhere(&self, sim: &mut Simulation) {
-        add_output_system::<T, _>(sim, Self::write_attribute);
+impl<T: Attribute + Sync + Send + 'static> IntoOutputSystem for AttributeOutputPlugin<T> {
+    fn system(&self) -> ParallelSystemDescriptor {
+        Self::write_attribute.in_ambiguity_set(OutputSystemsAmbiguitySet)
     }
 }
 

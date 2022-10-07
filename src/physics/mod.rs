@@ -20,6 +20,7 @@ use crate::domain::ExchangeDataPlugin;
 use crate::io::input::DatasetInputPlugin;
 use crate::io::output::AttributeOutputPlugin;
 use crate::io::output::DatasetOutputPlugin;
+use crate::io::output::OutputPlugin;
 use crate::mass::Mass;
 use crate::named::Named;
 use crate::position::Position;
@@ -54,13 +55,13 @@ impl RaxiomPlugin for PhysicsPlugin {
         sim.add_plugin(ExchangeDataPlugin::<Position>::default())
             .add_plugin(ExchangeDataPlugin::<Velocity>::default())
             .add_plugin(ExchangeDataPlugin::<Mass>::default())
-            .add_plugin(DatasetOutputPlugin::<Position>::default())
-            .add_plugin(DatasetOutputPlugin::<Velocity>::default())
-            .add_plugin(DatasetOutputPlugin::<Mass>::default())
+            .add_plugin(OutputPlugin(DatasetOutputPlugin::<Position>::default()))
+            .add_plugin(OutputPlugin(DatasetOutputPlugin::<Velocity>::default()))
+            .add_plugin(OutputPlugin(DatasetOutputPlugin::<Mass>::default()))
             .add_plugin(DatasetInputPlugin::<Position>::default())
             .add_plugin(DatasetInputPlugin::<Velocity>::default())
             .add_plugin(DatasetInputPlugin::<Mass>::default())
-            .add_plugin(AttributeOutputPlugin::<Time>::default())
+            .add_plugin(OutputPlugin(AttributeOutputPlugin::<Time>::default()))
             .add_plugin(CommunicationPlugin::<ShouldExit>::new(
                 CommunicationType::AllGather,
             ))

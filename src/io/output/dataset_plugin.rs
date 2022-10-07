@@ -1,18 +1,18 @@
 use std::marker::PhantomData;
 
+use bevy::ecs::schedule::ParallelSystemDescriptor;
+use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Query;
 use bevy::prelude::ResMut;
 use bevy::prelude::With;
 use hdf5::Dataset;
 
-use super::add_output_system;
+use super::plugin::IntoOutputSystem;
 use super::OutputFile;
-use super::ShouldWriteOutput;
+use super::OutputSystemsAmbiguitySet;
 use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::physics::LocalParticle;
-use crate::simulation::RaxiomPlugin;
-use crate::simulation::Simulation;
 use crate::units::Dimension;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor_si";
@@ -33,19 +33,9 @@ impl<T> Default for DatasetOutputPlugin<T> {
     }
 }
 
-impl<T: ToDataset> RaxiomPlugin for DatasetOutputPlugin<T> {
-    fn should_build(&self, sim: &Simulation) -> bool {
-        sim.get_resource::<ShouldWriteOutput>()
-            .map(|x| x.0)
-            .unwrap_or(true)
-    }
-
-    fn allow_adding_twice(&self) -> bool {
-        true
-    }
-
-    fn build_everywhere(&self, sim: &mut Simulation) {
-        add_output_system::<T, _>(sim, Self::write_dataset);
+impl<T: ToDataset> IntoOutputSystem for DatasetOutputPlugin<T> {
+    fn system(&self) -> ParallelSystemDescriptor {
+        Self::write_dataset.in_ambiguity_set(OutputSystemsAmbiguitySet)
     }
 }
 

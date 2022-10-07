@@ -2,6 +2,7 @@ mod attribute;
 mod attribute_plugin;
 pub(super) mod dataset_plugin;
 pub(crate) mod parameters;
+mod plugin;
 mod timer;
 
 use std::fs;
@@ -9,7 +10,6 @@ use std::path::Path;
 
 use bevy::prelude::info;
 use bevy::prelude::AmbiguitySetLabel;
-use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 use bevy::prelude::StageLabel;
@@ -19,15 +19,14 @@ pub use self::attribute::Attribute;
 pub use self::attribute_plugin::AttributeOutputPlugin;
 pub use self::dataset_plugin::DatasetOutputPlugin;
 use self::parameters::OutputParameters;
+pub use self::plugin::OutputPlugin;
 use self::timer::Timer;
 use crate::communication::WorldRank;
-use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::prelude::WorldSize;
-use crate::simulation::Simulation;
 
 #[derive(AmbiguitySetLabel)]
-struct OutputSystemsAmbiguitySet;
+pub(super) struct OutputSystemsAmbiguitySet;
 
 #[derive(StageLabel)]
 pub enum OutputStages {
@@ -40,30 +39,6 @@ struct OutputFile {
 }
 
 pub struct ShouldWriteOutput(pub bool);
-
-fn output_setup(sim: &mut Simulation) {
-    sim.add_parameter_type::<OutputParameters>()
-        .insert_resource(OutputFile::default())
-        .add_startup_system(Timer::initialize_system)
-        .add_startup_system(make_output_dirs_system)
-        .add_startup_system(write_used_parameters_system.after(make_output_dirs_system))
-        .add_system_to_stage(
-            OutputStages::Output,
-            open_file_system.with_run_criteria(Timer::run_criterion),
-        )
-        .add_system_to_stage(
-            OutputStages::Output,
-            close_file_system
-                .after(open_file_system)
-                .with_run_criteria(Timer::run_criterion),
-        )
-        .add_system_to_stage(
-            OutputStages::Output,
-            Timer::update_system
-                .after(close_file_system)
-                .with_run_criteria(Timer::run_criterion),
-        );
-}
 
 fn write_used_parameters_system(
     parameter_file_contents: Res<ParameterFileContents>,
@@ -139,26 +114,4 @@ fn open_file_system(
 
 fn close_file_system(mut file: ResMut<OutputFile>) {
     file.f = None;
-}
-
-#[derive(Named)]
-struct OutputMarker;
-
-fn add_output_system<T: Named, P>(
-    sim: &mut Simulation,
-    system: impl ParallelSystemDescriptorCoercion<P>,
-) {
-    if !sim.already_added::<OutputMarker>() {
-        output_setup(sim)
-    }
-    if OutputParameters::is_desired_field::<T>(sim) {
-        sim.add_system_to_stage(
-            OutputStages::Output,
-            system
-                .after(open_file_system)
-                .before(close_file_system)
-                .in_ambiguity_set(OutputSystemsAmbiguitySet)
-                .with_run_criteria(Timer::run_criterion),
-        );
-    }
 }
