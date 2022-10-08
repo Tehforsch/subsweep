@@ -37,6 +37,7 @@ fn main() {
     sim.parameters_from_relative_path(file!(), "parameters.yml")
         .headless(false)
         .read_initial_conditions(false)
+        .write_output(false)
         .update_from_command_line_options()
         .build()
         .add_parameter_type::<ViscousGravityParameters>()

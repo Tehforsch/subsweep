@@ -7,14 +7,6 @@ tree:
   max_depth: 20
   min_depth: 4
   max_num_particles_per_leaf: 1
-output:
-  output_dir: "output"
-  time_between_snapshots: 10 yr
-  fields:
-    - position
-    - velocity
-    - mass
-    - time
 example:
   num_particles: 1000
   box_size: (1000 1000) au
