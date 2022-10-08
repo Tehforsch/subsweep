@@ -20,6 +20,7 @@ use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::mass::Mass;
 use crate::named::Named;
+use crate::particle::ParticlePlugin;
 use crate::position::Position;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -52,6 +53,7 @@ impl RaxiomPlugin for PhysicsPlugin {
         sim.add_required_component::<Position>()
             .add_required_component::<Mass>()
             .add_required_component::<Velocity>()
+            .add_plugin(ParticlePlugin)
             .add_plugin(OutputPlugin::<Attribute<Time>>::default())
             .add_plugin(CommunicationPlugin::<ShouldExit>::new(
                 CommunicationType::AllGather,
