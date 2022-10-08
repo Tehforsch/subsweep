@@ -7,8 +7,6 @@ tree:
   max_depth: 20
   min_depth: 4
   max_num_particles_per_leaf: 1
-visualization:
-  show_quadtree: false
 input:
   paths:
     - examples/figure8/ics.hdf5

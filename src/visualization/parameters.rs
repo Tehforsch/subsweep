@@ -9,5 +9,6 @@ use crate::named::Named;
 #[name = "visualization"]
 #[serde(deny_unknown_fields)]
 pub struct VisualizationParameters {
+    #[serde(default)]
     pub show_quadtree: bool,
 }

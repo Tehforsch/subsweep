@@ -6,8 +6,6 @@ tree:
   max_depth: 20
   min_depth: 4
   max_num_particles_per_leaf: 1
-visualization:
-  show_quadtree: false
 output:
   output_dir: "output"
   time_between_snapshots: 0.1 yr
