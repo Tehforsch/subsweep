@@ -2,31 +2,15 @@
 macro_rules! impl_vector_methods {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident, $vector_type: ident, $float_type: ident) => {
         impl<const D: $dimension> $quantity<$vector_type, D> {
-            pub fn new(x: $quantity<$float_type, D>, y: $quantity<$float_type, D>) -> Self {
-                Self($vector_type::new(x.unwrap_value(), y.unwrap_value()))
-            }
-
-            pub fn new_x(x: $quantity<$float_type, D>) -> Self {
-                Self($vector_type::new(x.unwrap_value(), 0.0))
-            }
-
-            pub fn new_y(y: $quantity<$float_type, D>) -> Self {
-                Self($vector_type::new(0.0, y.unwrap_value()))
-            }
-
             pub fn from_vector_and_scale(
                 vec: $vector_type,
                 scale: $quantity<$float_type, D>,
             ) -> Self {
-                Self::new(vec.x * scale, vec.y * scale)
+                Self(vec) * scale.0
             }
 
             pub fn abs(&self) -> Self {
                 Self(self.0.abs())
-            }
-
-            pub fn zero() -> Self {
-                Self($vector_type::new(0.0, 0.0))
             }
 
             pub fn x(&self) -> $quantity<$float_type, D> {
@@ -65,6 +49,71 @@ macro_rules! impl_vector_methods {
 
             pub fn normalize(&self) -> $quantity<$vector_type, NONE> {
                 $quantity::<$vector_type, NONE>(self.0.normalize())
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_vector2_methods {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident, $vector_type: ident, $float_type: ident) => {
+        impl<const D: $dimension> $quantity<$vector_type, D> {
+            pub fn new(x: $quantity<$float_type, D>, y: $quantity<$float_type, D>) -> Self {
+                Self($vector_type::new(x.unwrap_value(), y.unwrap_value()))
+            }
+
+            pub fn new_x(x: $quantity<$float_type, D>) -> Self {
+                Self($vector_type::new(x.unwrap_value(), 0.0))
+            }
+
+            pub fn new_y(y: $quantity<$float_type, D>) -> Self {
+                Self($vector_type::new(0.0, y.unwrap_value()))
+            }
+
+            pub fn zero() -> Self {
+                Self($vector_type::new(0.0, 0.0))
+            }
+        }
+    };
+}
+#[macro_export]
+macro_rules! impl_vector3_methods {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident, $vector_type: ident, $float_type: ident) => {
+        impl<const D: $dimension> $quantity<$vector_type, D> {
+            pub fn new(
+                x: $quantity<$float_type, D>,
+                y: $quantity<$float_type, D>,
+                z: $quantity<$float_type, D>,
+            ) -> Self {
+                Self($vector_type::new(
+                    x.unwrap_value(),
+                    y.unwrap_value(),
+                    z.unwrap_value(),
+                ))
+            }
+
+            pub fn new_x(x: $quantity<$float_type, D>) -> Self {
+                Self($vector_type::new(x.unwrap_value(), 0.0, 0.0))
+            }
+
+            pub fn new_y(y: $quantity<$float_type, D>) -> Self {
+                Self($vector_type::new(0.0, y.unwrap_value(), 0.0))
+            }
+
+            pub fn new_z(z: $quantity<$float_type, D>) -> Self {
+                Self($vector_type::new(0.0, 0.0, z.unwrap_value()))
+            }
+
+            pub fn z(&self) -> $quantity<$float_type, D> {
+                $quantity(self.0.z)
+            }
+
+            pub fn set_z(&mut self, new_z: $quantity<$float_type, D>) {
+                self.0.z = new_z.unwrap_value();
+            }
+
+            pub fn zero() -> Self {
+                Self($vector_type::new(0.0, 0.0, 0.0))
             }
         }
     };

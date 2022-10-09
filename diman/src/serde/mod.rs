@@ -8,7 +8,7 @@ macro_rules! impl_serde {
         crate::impl_serde_float!($quantity, $dimension, $dimensionless_const, f32);
         crate::impl_serde_float!($quantity, $dimension, $dimensionless_const, f64);
         crate::impl_serde_vector!($quantity, $dimension, $dimensionless_const, DVec2, f64, 2);
-        crate::impl_serde_vector!($quantity, $dimension, $dimensionless_const, Vec2, f32, 2);
+        crate::impl_serde_vector!($quantity, $dimension, $dimensionless_const, DVec3, f64, 3);
     };
 }
 

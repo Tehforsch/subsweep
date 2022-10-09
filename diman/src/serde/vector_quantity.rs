@@ -14,7 +14,12 @@ macro_rules! impl_serde_vector {
             type Value = $quantity<$vector_type, D>;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("two numerical values surrounded by () followed by a series of powers of units, e.g. (1.0 2.0) m s^-2")
+                let num_expected = match $num_dims {
+                    2 => "two",
+                    3 => "three",
+                    _ => unimplemented!(),
+                };
+                formatter.write_str(&format!("{} numerical values surrounded by () followed by a series of powers of units, e.g. (1.0 2.0) m s^-2", num_expected))
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -31,8 +36,8 @@ macro_rules! impl_serde_vector {
                     .ok_or_else(|| E::custom("No opening bracket in vector string"))?;
                 let vector_part = vector_part[bracket_begin + 1..vector_part.len() - 1].to_string();
                 let vector_components = &vector_part.split_whitespace().collect::<Vec<_>>();
-                if vector_components.len() != 2 {
-                    return Err(E::custom("found {} substrings in brackets, expected 2"))?;
+                if vector_components.len() != $num_dims {
+                    return Err(E::custom(format!("found {} substrings in brackets, expected {}", vector_components.len(), $num_dims)))?;
                 }
                 let mut array = [0.0; $num_dims];
                 for dim in 0..$num_dims {
@@ -57,25 +62,46 @@ macro_rules! impl_serde_vector {
 #[cfg(test)]
 mod tests {
     use crate::si::Length;
-    use crate::si::VecLength;
+    use crate::si::Vec2Length;
+    use crate::si::Vec3Length;
     use crate::tests::assert_is_close;
 
     #[test]
-    fn deserialize_vector() {
-        let q: VecLength = serde_yaml::from_str("(5.0 3.0) km").unwrap();
+    fn deserialize_vector_2() {
+        let q: Vec2Length = serde_yaml::from_str("(5.0 3.0) km").unwrap();
         assert_is_close(q.x(), Length::kilometers(5.0));
         assert_is_close(q.y(), Length::kilometers(3.0));
     }
 
     #[test]
-    #[should_panic]
-    fn deserialize_vector_fails_with_fewer_than_2_components() {
-        let _: VecLength = serde_yaml::from_str("(5.0) km").unwrap();
+    fn deserialize_vector_3() {
+        let q: Vec3Length = serde_yaml::from_str("(5.0 3.0 7.0) km").unwrap();
+        assert_is_close(q.x(), Length::kilometers(5.0));
+        assert_is_close(q.y(), Length::kilometers(3.0));
+        assert_is_close(q.z(), Length::kilometers(7.0));
     }
 
     #[test]
     #[should_panic]
-    fn deserialize_vector_fails_with_more_than_2_components() {
-        let _: VecLength = serde_yaml::from_str("(5.0 3.0 7.0) km").unwrap();
+    fn deserialize_vector_2_fails_with_fewer_than_2_components() {
+        let _: Vec2Length = serde_yaml::from_str("(5.0) km").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn deserialize_vector_2_fails_with_more_than_2_components() {
+        let _: Vec2Length = serde_yaml::from_str("(5.0 3.0 7.0) km").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn deserialize_vector_3_fails_with_fewer_than_3_components() {
+        let _: Vec3Length = serde_yaml::from_str("(5.0 4.0) km").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn deserialize_vector_3_fails_with_more_than_3_components() {
+        let _: Vec3Length = serde_yaml::from_str("(5.0 3.0 7.0 9.0) km").unwrap();
     }
 }

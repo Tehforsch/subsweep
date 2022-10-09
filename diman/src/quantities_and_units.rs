@@ -23,7 +23,8 @@ macro_rules! unit_system {
             pub type $quantity_name = $quantity<f64, $const>;
             paste!{
                 pub type [<Vec $quantity_name>] = $quantity<glam::DVec2, $const>;
-                pub type [<DVec2 $quantity_name>] = $quantity<glam::DVec2, $const>;
+                pub type [<Vec2 $quantity_name>] = $quantity<glam::DVec2, $const>;
+                pub type [<Vec3 $quantity_name>] = $quantity<glam::DVec3, $const>;
             }
             impl $quantity_name {
                 $(
