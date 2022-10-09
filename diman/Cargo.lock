@@ -149,12 +149,14 @@ version = "0.1.0"
 dependencies = [
  "glam",
  "hdf5",
+ "lazy_static",
  "mpi",
  "num-traits",
  "once_cell",
  "paste",
  "rand",
  "serde",
+ "serde_yaml",
 ]
 
 [[package]]
@@ -294,6 +296,12 @@ checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
 dependencies = [
  "cfg-if",
 ]
+
+[[package]]
+name = "itoa"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 
 [[package]]
 name = "lazy_static"
@@ -608,6 +616,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
+name = "ryu"
+version = "1.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4501abdff3ae82a1c1b477a17252eb69cee9e66eb915c1abaa4f44d873df9f09"
+
+[[package]]
 name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -631,6 +645,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serde_yaml"
+version = "0.9.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8613d593412a0deb7bbd8de9d908efff5a0cb9ccd8f62c641e7b2ed2f57291d1"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
 ]
 
 [[package]]
@@ -682,6 +709,12 @@ name = "unicode-ident"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ceab39d59e4c9499d4e5a8ee0e2735b891bb7308ac83dfb4e80cad195c9f6f3"
+
+[[package]]
+name = "unsafe-libyaml"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1e5fa573d8ac5f1a856f8d7be41d390ee973daf97c806b2c1a465e4e1406e68"
 
 [[package]]
 name = "wasi"

@@ -14,8 +14,8 @@ use crate::dimension::NONE;
 use crate::impl_concrete_float_methods;
 use crate::impl_float_methods;
 use crate::impl_hdf5;
-use crate::impl_vector_methods;
 use crate::impl_mpi;
+use crate::impl_vector_methods;
 
 macro_rules! quantity {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {

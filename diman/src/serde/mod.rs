@@ -70,10 +70,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::units::tests::assert_is_close;
-    use crate::units::Dimensionless;
-    use crate::units::Force;
-    use crate::units::Length;
+    use crate::si::Dimensionless;
+    use crate::si::Force;
+    use crate::si::Length;
+    use crate::tests::assert_is_close;
 
     #[test]
     fn deserialize_basic_units() {

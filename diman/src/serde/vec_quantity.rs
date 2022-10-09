@@ -65,9 +65,9 @@ impl<'de, const D: Dimension> Visitor<'de> for QuantityVisitor<DVec2, D> {
 
 #[cfg(test)]
 mod tests {
-    use crate::units::assert_is_close;
-    use crate::units::Length;
-    use crate::units::VecLength;
+    use crate::si::Length;
+    use crate::si::VecLength;
+    use crate::tests::assert_is_close;
 
     #[test]
     fn deserialize_vector() {

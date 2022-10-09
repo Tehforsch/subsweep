@@ -8,6 +8,9 @@ mod quantities_and_units;
 mod quantity;
 mod vectors;
 
+#[cfg(feature = "si")]
+mod si;
+
 #[cfg(feature = "hdf5")]
 mod hdf5;
 
@@ -23,8 +26,6 @@ mod rand;
 pub use dimension::Dimension;
 pub use quantities_and_units::*;
 pub use quantity::Quantity;
-#[cfg(test)]
-pub use tests::assert_is_close;
 
 #[cfg(test)]
 mod tests {

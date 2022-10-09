@@ -32,16 +32,25 @@ macro_rules! impl_mpi {
 #[cfg(test)]
 #[cfg(feature = "mpi")]
 mod tests {
+    use mpi::environment::Universe;
     use mpi::traits::Communicator;
+    use mpi::Threading;
 
-    use crate::communication::MPI_UNIVERSE;
-    use crate::units::Length;
-    use crate::units::VecLength;
+    use crate::si::Length;
+    use crate::si::VecLength;
+
+    lazy_static::lazy_static! {
+        pub static ref MPI_UNIVERSE: Universe = {
+            let threading = Threading::Single;
+            let (universe, _) =
+                mpi::initialize_with_threading(threading).unwrap();
+            universe
+        };
+    }
 
     #[test]
     fn pack_unpack_f64_quantity() {
         let world = MPI_UNIVERSE.world();
-
         let q1 = Length::meters(1.0);
         let mut q2 = Length::meters(2.0);
         let a = world.pack(&q1);

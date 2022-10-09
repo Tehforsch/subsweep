@@ -42,7 +42,7 @@ impl<const D: Dimension> SampleUniform for Quantity<f64, D> {
 mod tests {
     use rand::Rng;
 
-    use crate::units::Length;
+    use crate::Length;
 
     #[test]
     fn test_random_quantity_generation() {
