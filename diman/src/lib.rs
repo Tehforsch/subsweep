@@ -2,14 +2,13 @@
 #![feature(generic_const_exprs, adt_const_params)]
 #![feature(const_fn_floating_point_arithmetic)]
 
-mod dimension;
 mod floats;
-mod quantities_and_units;
 mod quantity;
+mod unit_system;
 mod vectors;
 
 #[cfg(feature = "si")]
-mod si;
+pub mod si;
 
 #[cfg(feature = "hdf5")]
 mod hdf5;
@@ -23,16 +22,12 @@ mod serde;
 #[cfg(feature = "rand")]
 mod rand;
 
-pub use dimension::Dimension;
-pub use quantities_and_units::*;
-pub use quantity::Quantity;
-
 #[cfg(test)]
 mod tests {
-    use super::dimension::Dimension;
-    use super::quantity::Quantity;
-    use super::Dimensionless;
-    use super::Length;
+    use crate::si::Dimension;
+    use crate::si::Dimensionless;
+    use crate::si::Length;
+    use crate::si::Quantity;
 
     pub(crate) fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64, U>) {
         const EPSILON: f64 = 1e-20;
