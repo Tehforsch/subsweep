@@ -3,10 +3,10 @@ use std::path::PathBuf;
 
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::prelude::*;
-use diman::Dimension;
-use diman::Quantity;
 
 use crate::prelude::Simulation;
+use crate::units::Dimension;
+use crate::units::Quantity;
 
 // This is currently only used in tests with the local communication
 // but will very likely be used more, so prevent dead code warning

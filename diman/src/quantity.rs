@@ -1,7 +1,7 @@
 #[macro_export]
-macro_rules! quantity {
+macro_rules! define_quantity {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-        #[derive(Clone, Copy, PartialEq, PartialOrd, Default)]
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Default)]
         pub struct $quantity<S: 'static, const D: $dimension>(pub(crate) S);
 
         impl<S> $quantity<S, { $dimensionless_const }> {
@@ -203,21 +203,83 @@ macro_rules! quantity {
 #[macro_export]
 macro_rules! define_system {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-        quantity!($quantity, $dimension, $dimensionless_const);
-        impl_float_methods!($quantity, $dimension, $dimensionless_const);
-        impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f32);
-        impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f64);
-        impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
-        impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
-        impl_vector2_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
-        impl_vector3_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
-        #[cfg(feature = "hdf5")]
-        impl_hdf5!($quantity, $dimension, $dimensionless_const);
-        #[cfg(feature = "mpi")]
-        impl_mpi!($quantity, $dimension, $dimensionless_const);
-        #[cfg(feature = "serde")]
-        impl_serde!($quantity, $dimension, $dimensionless_const);
-        #[cfg(feature = "rand")]
-        impl_rand!($quantity, $dimension, $dimensionless_const);
+        $crate::define_quantity!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_float_methods!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f32);
+        $crate::impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f64);
+        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
+        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
+        $crate::impl_vector2_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
+        $crate::impl_vector3_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
+        $crate::impl_hdf5_gated!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_mpi_gated!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_rand_gated!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_serde_gated!($quantity, $dimension, $dimensionless_const);
     };
+}
+
+// #[cfg(...)] attributes are evaluated in the context of the caller.
+// This makes passing feature flags of the macro crate into the macro
+// tricky, which is why each of the following macros are defined twice.
+// There has to be a better way to do this but I don't know what it is.
+
+#[cfg(feature = "hdf5")]
+#[macro_export]
+macro_rules! impl_hdf5_gated {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+        $crate::impl_hdf5!($quantity, $dimension, $dimensionless_const);
+    }
+}
+
+#[cfg(not(feature = "hdf5"))]
+#[macro_export]
+macro_rules! impl_hdf5_gated {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+    }
+}
+
+#[cfg(feature = "mpi")]
+#[macro_export]
+macro_rules! impl_mpi_gated {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+        $crate::impl_mpi!($quantity, $dimension, $dimensionless_const);
+    }
+}
+
+#[cfg(not(feature = "mpi"))]
+#[macro_export]
+macro_rules! impl_mpi_gated {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+    }
+}
+
+
+#[cfg(feature = "rand")]
+#[macro_export]
+macro_rules! impl_rand_gated {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+        $crate::impl_rand!($quantity, $dimension, $dimensionless_const);
+    }
+}
+
+#[cfg(not(feature = "rand"))]
+#[macro_export]
+macro_rules! impl_rand_gated {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+    }
+}
+
+#[cfg(feature = "serde")]
+#[macro_export]
+macro_rules! impl_serde_gated {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+        $crate::impl_serde!($quantity, $dimension, $dimensionless_const);
+    }
+}
+
+#[cfg(not(feature = "serde"))]
+#[macro_export]
+macro_rules! impl_serde_gated {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+    }
 }

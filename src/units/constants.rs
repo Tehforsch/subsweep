@@ -1,5 +1,5 @@
-use diman::Dimension;
-use diman::Quantity;
+use crate::units::Dimension;
+use crate::units::Quantity;
 
 const GRAVITY_CONSTANT_DIMENSION: Dimension = Dimension {
     length: 3,

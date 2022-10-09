@@ -4,11 +4,11 @@ mod vector_quantity;
 #[macro_export]
 macro_rules! impl_serde {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-        crate::impl_serde_helpers!($quantity, $dimension, $dimensionless_const);
-        crate::impl_serde_float!($quantity, $dimension, $dimensionless_const, f32);
-        crate::impl_serde_float!($quantity, $dimension, $dimensionless_const, f64);
-        crate::impl_serde_vector!($quantity, $dimension, $dimensionless_const, DVec2, f64, 2);
-        crate::impl_serde_vector!($quantity, $dimension, $dimensionless_const, DVec3, f64, 3);
+        $crate::impl_serde_helpers!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_serde_float!($quantity, $dimension, $dimensionless_const, f32);
+        $crate::impl_serde_float!($quantity, $dimension, $dimensionless_const, f64);
+        $crate::impl_serde_vector!($quantity, $dimension, $dimensionless_const, DVec2, f64, 2);
+        $crate::impl_serde_vector!($quantity, $dimension, $dimensionless_const, DVec3, f64, 3);
     };
 }
 

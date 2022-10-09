@@ -6,7 +6,10 @@ edition = "2021"
 [features]
 si = []
 mpi = ["dep:once_cell", "dep:mpi"]
-default = ["si", "mpi", "rand", "hdf5", "serde"]
+hdf5 = ["dep:hdf5"]
+rand = ["dep:rand"]
+serde = ["dep:serde"]
+default = ["si"]
 
 [lib]
 

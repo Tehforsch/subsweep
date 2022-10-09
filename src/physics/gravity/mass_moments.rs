@@ -3,7 +3,6 @@ use std::ops::AddAssign;
 
 use mpi::traits::Equivalence;
 
-use crate::units::DVec2Length;
 use crate::units::Mass;
 use crate::units::VecLength;
 use crate::units::VecLengthMass;
@@ -38,8 +37,8 @@ impl MassMoments {
     }
 }
 
-impl Sum<(Mass, DVec2Length)> for MassMoments {
-    fn sum<I: Iterator<Item = (Mass, DVec2Length)>>(iter: I) -> Self {
+impl Sum<(Mass, VecLength)> for MassMoments {
+    fn sum<I: Iterator<Item = (Mass, VecLength)>>(iter: I) -> Self {
         let mut s = Self::default();
         for (mass, pos) in iter {
             s.add_mass_at(&pos, &mass);

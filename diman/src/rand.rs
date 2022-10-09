@@ -10,8 +10,8 @@ macro_rules! impl_rand {
         #[derive(Clone, Copy, Debug)]
         pub struct UniformQuantity<S, const D: $dimension>(UniformFloat<S>);
 
-        crate::impl_rand_floats!($quantity, $dimension, $dimensionless_const, f32);
-        crate::impl_rand_floats!($quantity, $dimension, $dimensionless_const, f64);
+        $crate::impl_rand_floats!($quantity, $dimension, $dimensionless_const, f32);
+        $crate::impl_rand_floats!($quantity, $dimension, $dimensionless_const, f64);
     };
 }
 #[macro_export]
