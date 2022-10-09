@@ -3,10 +3,11 @@
 #![feature(const_fn_floating_point_arithmetic)]
 
 mod dimension;
+mod floats;
 mod quantities_and_units;
 mod quantity;
 mod sampling;
-mod floats;
+mod vectors;
 
 #[cfg(feature = "hdf5")]
 mod hdf5;

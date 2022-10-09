@@ -5,13 +5,12 @@ use serde::de::{self};
 use serde::Deserialize;
 use serde::Deserializer;
 
-use crate::dimension::NONE;
-
 use super::super::dimension::Dimension;
 use super::super::quantity::Quantity;
 use super::get_quantity_if_dimensions_match;
 use super::read_unit_str;
 use super::QuantityVisitor;
+use crate::dimension::NONE;
 
 impl<'de, const D: Dimension> Deserialize<'de> for Quantity<f64, D> {
     fn deserialize<DE>(deserializer: DE) -> Result<Quantity<f64, D>, DE::Error>

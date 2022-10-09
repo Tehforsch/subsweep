@@ -6,11 +6,10 @@ use std::str::SplitWhitespace;
 
 use serde::de::{self};
 
-use crate::dimension::NONE;
-
 use super::dimension::Dimension;
 use super::quantity::Quantity;
 use super::UNIT_NAMES;
+use crate::dimension::NONE;
 
 #[derive(Default)]
 struct QuantityVisitor<S, const D: Dimension>(PhantomData<S>);

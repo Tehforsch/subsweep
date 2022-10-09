@@ -13,6 +13,7 @@ use super::UNIT_NAMES;
 use crate::dimension::NONE;
 use crate::impl_concrete_float_methods;
 use crate::impl_float_methods;
+use crate::impl_vector_methods;
 
 macro_rules! quantity {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
@@ -26,8 +27,7 @@ macro_rules! quantity {
             }
         }
 
-        impl<S, const D: $dimension> $quantity<S, D>
-        {
+        impl<S, const D: $dimension> $quantity<S, D> {
             /// Unwrap the value of a quantity, regardless of whether
             /// it is dimensionless or not. Use this carefully, since the
             /// result depends on the underlying base units
@@ -164,6 +164,16 @@ macro_rules! quantity {
             }
         }
 
+        impl<const D: $dimension, S: Default + AddAssign<S>> std::iter::Sum for $quantity<S, D> {
+            fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+                let mut total = Self::default();
+                for item in iter {
+                    total += item;
+                }
+                total
+            }
+        }
+
         impl<S> std::ops::Deref for $quantity<S, $dimensionless_const> {
             type Target = S;
 
@@ -206,7 +216,14 @@ macro_rules! quantity {
     };
 }
 
-quantity!(Quantity, Dimension, NONE);
-impl_float_methods!(Quantity, Dimension, NONE);
-impl_concrete_float_methods!(Quantity, Dimension, NONE, f32);
-impl_concrete_float_methods!(Quantity, Dimension, NONE, f64);
+macro_rules! define_system {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+        quantity!($quantity, $dimension, $dimensionless_const);
+        impl_float_methods!($quantity, $dimension, $dimensionless_const);
+        impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f32);
+        impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f64);
+        impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
+    };
+}
+
+define_system!(Quantity, Dimension, NONE);
