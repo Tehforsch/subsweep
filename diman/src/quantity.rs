@@ -13,8 +13,9 @@ use super::UNIT_NAMES;
 use crate::dimension::NONE;
 use crate::impl_concrete_float_methods;
 use crate::impl_float_methods;
-use crate::impl_vector_methods;
 use crate::impl_hdf5;
+use crate::impl_vector_methods;
+use crate::impl_mpi;
 
 macro_rules! quantity {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
@@ -226,6 +227,8 @@ macro_rules! define_system {
         impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
         #[cfg(feature = "hdf5")]
         impl_hdf5!($quantity, $dimension, $dimensionless_const);
+        #[cfg(feature = "mpi")]
+        impl_mpi!($quantity, $dimension, $dimensionless_const);
     };
 }
 

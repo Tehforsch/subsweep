@@ -1,31 +1,32 @@
-use glam::DVec2;
-use mpi::datatype::DatatypeRef;
-use mpi::datatype::SystemDatatype;
-use mpi::datatype::UserDatatype;
-use mpi::ffi;
-use mpi::traits::Equivalence;
-use mpi::traits::FromRaw;
-use once_cell::sync::Lazy;
+#[macro_export]
+macro_rules! impl_mpi {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+        use mpi::datatype::DatatypeRef;
+        use mpi::datatype::SystemDatatype;
+        use mpi::datatype::UserDatatype;
+        use mpi::ffi;
+        use mpi::traits::Equivalence;
+        use mpi::traits::FromRaw;
+        use once_cell::sync::Lazy;
 
-use super::dimension::Dimension;
-use super::quantity::Quantity;
+        unsafe impl<const D: $dimension> Equivalence for $quantity<f64, D> {
+            type Out = SystemDatatype;
 
-unsafe impl<const D: Dimension> Equivalence for Quantity<f64, D> {
-    type Out = SystemDatatype;
+            fn equivalent_datatype() -> Self::Out {
+                unsafe { DatatypeRef::from_raw(ffi::RSMPI_DOUBLE) }
+            }
+        }
 
-    fn equivalent_datatype() -> Self::Out {
-        unsafe { DatatypeRef::from_raw(ffi::RSMPI_DOUBLE) }
-    }
-}
+        unsafe impl<const D: $dimension> Equivalence for $quantity<DVec2, D> {
+            type Out = DatatypeRef<'static>;
 
-unsafe impl<const D: Dimension> Equivalence for Quantity<DVec2, D> {
-    type Out = DatatypeRef<'static>;
-
-    fn equivalent_datatype() -> Self::Out {
-        static DATATYPE: Lazy<::mpi::datatype::UserDatatype> =
-            Lazy::new(|| UserDatatype::contiguous(2, &f64::equivalent_datatype()));
-        DATATYPE.as_ref()
-    }
+            fn equivalent_datatype() -> Self::Out {
+                static DATATYPE: Lazy<::mpi::datatype::UserDatatype> =
+                    Lazy::new(|| UserDatatype::contiguous(2, &f64::equivalent_datatype()));
+                DATATYPE.as_ref()
+            }
+        }
+    };
 }
 
 #[cfg(test)]
