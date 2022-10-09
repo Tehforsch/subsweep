@@ -5,9 +5,10 @@ use serde::de::{self};
 use serde::Deserialize;
 use serde::Deserializer;
 
+use crate::dimension::NONE;
+
 use super::super::dimension::Dimension;
 use super::super::quantity::Quantity;
-use super::super::NONE;
 use super::get_quantity_if_dimensions_match;
 use super::read_unit_str;
 use super::QuantityVisitor;

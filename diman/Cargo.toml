@@ -1,0 +1,18 @@
+[package]
+name = "diman"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+mpi = ["dep:once_cell", "dep:mpi"]
+
+[lib]
+
+[dependencies]
+rand = "0.8.5"
+paste = "1.0.8"
+serde = {version = "1.0.143", features = ["derive"], optional = true }
+hdf5 = {version = "0.8.1", optional = true }
+mpi = { version = "0.6", default-features = false, features = ["derive"], optional = true }
+glam = { version = "0.21.3" }
+once_cell = { version = "1.13.0", optional = true }

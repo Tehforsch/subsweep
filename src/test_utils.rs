@@ -3,6 +3,8 @@ use std::path::PathBuf;
 
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::prelude::*;
+use diman::Dimension;
+use diman::Quantity;
 
 use crate::prelude::Simulation;
 
@@ -20,4 +22,14 @@ pub fn run_system_on_world<P>(world: &mut World, system: impl IntoSystemDescript
 
 pub fn tests_path() -> PathBuf {
     Path::new(file!()).parent().unwrap().join("../tests")
+}
+
+pub fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64, U>) {
+    const EPSILON: f64 = 1e-20;
+    assert!(
+        (x - y).abs().unwrap_value() < EPSILON,
+        "{} {}",
+        x.unwrap_value(),
+        y.unwrap_value()
+    )
 }

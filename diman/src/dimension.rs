@@ -4,13 +4,19 @@ const TIME_TO_SI: f64 = 1.0;
 const TEMPERATURE_TO_SI: f64 = 1.0;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-#[non_exhaustive] // Prevents clippy warnings due to ..NONE update in quantities macro
 pub struct Dimension {
     pub length: i32,
     pub time: i32,
     pub mass: i32,
     pub temperature: i32,
 }
+
+pub(super) const NONE: Dimension = Dimension {
+    length: 0,
+    time: 0,
+    mass: 0,
+    temperature: 0,
+};
 
 impl Dimension {
     pub const fn dimension_mul(self, rhs: Self) -> Self {

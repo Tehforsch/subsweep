@@ -8,7 +8,7 @@ use crate::domain::extent::Extent;
 use crate::physics::gravity::Solver;
 use crate::quadtree;
 use crate::quadtree::QuadTreeConfig;
-use crate::units::assert_is_close;
+use crate::test_utils::assert_is_close;
 use crate::units::Acceleration;
 use crate::units::DVec2Acceleration;
 use crate::units::DVec2Length;

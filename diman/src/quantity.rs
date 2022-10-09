@@ -10,7 +10,7 @@ use glam::DVec2;
 
 use super::dimension::Dimension;
 use super::UNIT_NAMES;
-use crate::units::NONE;
+use crate::dimension::NONE;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Default)]
 pub struct Quantity<S: 'static, const D: Dimension>(pub(super) S);

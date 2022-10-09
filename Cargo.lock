@@ -1319,6 +1319,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "diman"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "hdf5",
+ "mpi",
+ "once_cell",
+ "paste",
+ "rand",
+ "serde",
+]
+
+[[package]]
 name = "dispatch"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2533,13 +2546,12 @@ dependencies = [
  "criterion",
  "derive_more",
  "derive_named",
+ "diman",
  "glam",
  "hdf5",
  "lazy_static",
  "mpi",
  "ndarray",
- "once_cell",
- "paste",
  "rand",
  "serde",
  "serde_yaml",

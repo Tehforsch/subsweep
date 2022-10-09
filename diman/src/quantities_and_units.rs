@@ -4,13 +4,7 @@ use glam::DVec2;
 
 use super::dimension::Dimension;
 use super::quantity::Quantity;
-
-pub(super) const NONE: Dimension = Dimension {
-    length: 0,
-    time: 0,
-    mass: 0,
-    temperature: 0,
-};
+use crate::dimension::NONE;
 
 impl<const D: Dimension> Quantity<f64, D> {
     pub fn abs(&self) -> Self {
@@ -124,7 +118,7 @@ impl<const D: Dimension> Sum for Quantity<f64, D> {
     }
 }
 
-macro_rules! unit_functions {
+macro_rules! unit_system {
     ($($const: ident, $quantity:ident, $($dimension_name: ident: $dimension: literal),*, {$($unit:ident, $factor:literal, $($unit_symbol:literal)?),*}),+) => {
         use paste::paste;
         pub const UNIT_NAMES: &[(Dimension, &str, f64)] = &[
@@ -168,7 +162,7 @@ macro_rules! unit_functions {
 }
 
 #[rustfmt::skip]
-unit_functions!(
+unit_system!(
     DIMENSIONLESS, Dimensionless, length: 0,
     {
         dimensionless, 1.0, ""

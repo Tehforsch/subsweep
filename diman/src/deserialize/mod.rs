@@ -6,9 +6,10 @@ use std::str::SplitWhitespace;
 
 use serde::de::{self};
 
+use crate::dimension::NONE;
+
 use super::dimension::Dimension;
 use super::quantity::Quantity;
-use super::NONE;
 use super::UNIT_NAMES;
 
 #[derive(Default)]
