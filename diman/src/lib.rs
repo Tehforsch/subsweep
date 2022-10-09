@@ -6,6 +6,7 @@ mod dimension;
 mod quantities_and_units;
 mod quantity;
 mod sampling;
+mod floats;
 
 #[cfg(feature = "hdf5")]
 mod hdf5;

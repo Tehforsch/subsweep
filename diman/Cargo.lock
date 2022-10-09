@@ -150,6 +150,7 @@ dependencies = [
  "glam",
  "hdf5",
  "mpi",
+ "once_cell",
  "paste",
  "rand",
  "serde",

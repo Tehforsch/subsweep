@@ -11,10 +11,12 @@ use glam::DVec2;
 use super::dimension::Dimension;
 use super::UNIT_NAMES;
 use crate::dimension::NONE;
+use crate::impl_concrete_float_methods;
+use crate::impl_float_methods;
 
 macro_rules! quantity {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Default)]
+        #[derive(Clone, Copy, PartialEq, PartialOrd, Default)]
         pub struct $quantity<S: 'static, const D: $dimension>(pub(crate) S);
 
         impl<S> $quantity<S, { $dimensionless_const }> {
@@ -24,23 +26,7 @@ macro_rules! quantity {
             }
         }
 
-        impl<S> std::ops::Deref for $quantity<S, $dimensionless_const> {
-            type Target = S;
-
-            fn deref(&self) -> &Self::Target {
-                &self.0
-            }
-        }
-
-        impl<S> std::ops::DerefMut for $quantity<S, $dimensionless_const> {
-            fn deref_mut(&mut self) -> &mut S {
-                &mut self.0
-            }
-        }
-
         impl<S, const D: $dimension> $quantity<S, D>
-        where
-            S: Clone,
         {
             /// Unwrap the value of a quantity, regardless of whether
             /// it is dimensionless or not. Use this carefully, since the
@@ -54,14 +40,6 @@ macro_rules! quantity {
             /// used base units.
             pub const fn new_unchecked(s: S) -> Self {
                 Self(s)
-            }
-
-            pub fn in_units(self, other: $quantity<f64, D>) -> S
-            where
-                S: Div<f64, Output = S>,
-                $quantity<S, { D.dimension_div(D) }>:,
-            {
-                (self / other).unwrap_value()
             }
         }
 
@@ -185,25 +163,27 @@ macro_rules! quantity {
                 $quantity(self.0 / rhs.0)
             }
         }
+
+        impl<S> std::ops::Deref for $quantity<S, $dimensionless_const> {
+            type Target = S;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl<S> std::ops::DerefMut for $quantity<S, $dimensionless_const> {
+            fn deref_mut(&mut self) -> &mut S {
+                &mut self.0
+            }
+        }
+
         impl<S> std::fmt::Display for $quantity<S, { $dimensionless_const }>
         where
             S: std::fmt::Display,
         {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.value())
-            }
-        }
-
-        impl<const D: $dimension> std::fmt::Debug for $quantity<f64, D> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let unit_name = UNIT_NAMES
-                    .iter()
-                    .filter(|(d, _, _)| d == &D)
-                    .filter(|(_, _, val)| *val == 1.0)
-                    .map(|(_, name, _)| name)
-                    .next()
-                    .unwrap_or(&"unknown unit");
-                self.0.fmt(f).and_then(|_| write!(f, " {}", unit_name))
             }
         }
 
@@ -227,13 +207,6 @@ macro_rules! quantity {
 }
 
 quantity!(Quantity, Dimension, NONE);
-
-impl<const D: Dimension> Quantity<f64, D> {
-    pub fn min(self, other: Self) -> Self {
-        Self(self.0.min(other.0))
-    }
-
-    pub fn max(self, other: Self) -> Self {
-        Self(self.0.max(other.0))
-    }
-}
+impl_float_methods!(Quantity, Dimension, NONE);
+impl_concrete_float_methods!(Quantity, Dimension, NONE, f32);
+impl_concrete_float_methods!(Quantity, Dimension, NONE, f64);
