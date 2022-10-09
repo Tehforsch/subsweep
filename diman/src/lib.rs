@@ -2,7 +2,6 @@
 #![feature(generic_const_exprs, adt_const_params)]
 #![feature(const_fn_floating_point_arithmetic)]
 
-mod constants;
 mod dimension;
 mod quantities_and_units;
 mod quantity;
@@ -17,7 +16,6 @@ mod mpi;
 #[cfg(feature = "serde")]
 mod deserialize;
 
-pub use constants::*;
 pub use dimension::Dimension;
 pub use quantities_and_units::*;
 pub use quantity::Quantity;
