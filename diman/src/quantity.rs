@@ -7,6 +7,7 @@ use std::ops::Sub;
 use std::ops::SubAssign;
 
 use glam::DVec2;
+use glam::Vec2;
 
 use super::dimension::Dimension;
 use super::UNIT_NAMES;
@@ -15,6 +16,7 @@ use crate::impl_concrete_float_methods;
 use crate::impl_float_methods;
 use crate::impl_hdf5;
 use crate::impl_mpi;
+use crate::impl_serde;
 use crate::impl_vector_methods;
 
 macro_rules! quantity {
@@ -229,6 +231,8 @@ macro_rules! define_system {
         impl_hdf5!($quantity, $dimension, $dimensionless_const);
         #[cfg(feature = "mpi")]
         impl_mpi!($quantity, $dimension, $dimensionless_const);
+        #[cfg(feature = "serde")]
+        impl_serde!($quantity, $dimension, $dimensionless_const);
     };
 }
 
