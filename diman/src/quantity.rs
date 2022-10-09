@@ -16,6 +16,7 @@ use crate::impl_concrete_float_methods;
 use crate::impl_float_methods;
 use crate::impl_hdf5;
 use crate::impl_mpi;
+use crate::impl_rand;
 use crate::impl_serde;
 use crate::impl_vector2_methods;
 use crate::impl_vector3_methods;
@@ -238,6 +239,8 @@ macro_rules! define_system {
         impl_mpi!($quantity, $dimension, $dimensionless_const);
         #[cfg(feature = "serde")]
         impl_serde!($quantity, $dimension, $dimensionless_const);
+        #[cfg(feature = "rand")]
+        impl_rand!($quantity, $dimension, $dimensionless_const);
     };
 }
 
