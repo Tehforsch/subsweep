@@ -1,6 +1,7 @@
 const MASS_TO_SI: f64 = 1.0;
 const LENGTH_TO_SI: f64 = 1.0;
 const TIME_TO_SI: f64 = 1.0;
+const TEMPERATURE_TO_SI: f64 = 1.0;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 #[non_exhaustive] // Prevents clippy warnings due to ..NONE update in quantities macro
@@ -8,6 +9,7 @@ pub struct Dimension {
     pub length: i32,
     pub time: i32,
     pub mass: i32,
+    pub temperature: i32,
 }
 
 impl Dimension {
@@ -16,6 +18,7 @@ impl Dimension {
             length: self.length + rhs.length,
             mass: self.mass + rhs.mass,
             time: self.time + rhs.time,
+            temperature: self.temperature + rhs.temperature,
         }
     }
 
@@ -24,6 +27,7 @@ impl Dimension {
             length: self.length - rhs.length,
             mass: self.mass - rhs.mass,
             time: self.time - rhs.time,
+            temperature: self.temperature - rhs.temperature,
         }
     }
 
@@ -32,6 +36,7 @@ impl Dimension {
             length: self.length * rhs,
             mass: self.mass * rhs,
             time: self.time * rhs,
+            temperature: self.temperature * rhs,
         }
     }
 
@@ -40,6 +45,7 @@ impl Dimension {
             length: -self.length,
             mass: -self.mass,
             time: -self.time,
+            temperature: -self.temperature,
         }
     }
 
@@ -51,5 +57,6 @@ impl Dimension {
         (LENGTH_TO_SI).powi(self.length)
             * (TIME_TO_SI).powi(self.time)
             * (MASS_TO_SI).powi(self.mass)
+            * (TEMPERATURE_TO_SI).powi(self.temperature)
     }
 }

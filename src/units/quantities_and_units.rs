@@ -9,6 +9,7 @@ pub(super) const NONE: Dimension = Dimension {
     length: 0,
     time: 0,
     mass: 0,
+    temperature: 0,
 };
 
 impl<const D: Dimension> Quantity<f64, D> {
@@ -210,9 +211,24 @@ unit_functions!(
     {
         kilogram_per_square_meter, 1.0, "kg/m^2"
     },
+    VOLUME, Volume, mass: 0, length: 3, time: 0,
+    {
+    },
     PRESSURE, Pressure, mass: 1, length: -1, time: -2,
     {
         pascals, 1.0, "Pa"
+    },
+    ENTROPY, Entropy, mass: 1, length: 2, time: -2, temperature: -1,
+    {
+    },
+    ENTROPIC_FUNCTION, EntropicFunction, length: 4, mass: -1, time: 2,
+    {
+    },
+    NUMBERDENSITY3D, NumberDensity3D, length: -3,
+    {
+    },
+    NUMBERDENSITY2D, NumberDensity2D, length: -2,
+    {
     },
     LENGTHMASS, LengthMass, mass: 1, length: 1,
     {

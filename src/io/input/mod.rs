@@ -12,6 +12,7 @@ use serde::Deserialize;
 use super::to_dataset::ToDataset;
 use super::to_dataset::LENGTH_IDENTIFIER;
 use super::to_dataset::MASS_IDENTIFIER;
+use super::to_dataset::TEMPERATURE_IDENTIFIER;
 use super::to_dataset::TIME_IDENTIFIER;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
@@ -221,7 +222,17 @@ fn read_dimension(dataset: &Dataset) -> Dimension {
         .expect("No time scale factor in dataset")
         .read_scalar()
         .unwrap();
-    Dimension { length, mass, time }
+    let temperature: i32 = dataset
+        .attr(TEMPERATURE_IDENTIFIER)
+        .expect("No temperature scale factor in dataset")
+        .read_scalar()
+        .unwrap();
+    Dimension {
+        length,
+        mass,
+        time,
+        temperature,
+    }
 }
 
 pub struct ShouldReadInitialConditions(pub bool);

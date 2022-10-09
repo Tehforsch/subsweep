@@ -17,6 +17,7 @@ pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor_si";
 pub const LENGTH_IDENTIFIER: &str = "scaling_length";
 pub const TIME_IDENTIFIER: &str = "scaling_time";
 pub const MASS_IDENTIFIER: &str = "scaling_mass";
+pub const TEMPERATURE_IDENTIFIER: &str = "scaling_temperature";
 
 pub trait ToDataset: Clone + Component + H5Type + Named + Sync + Send + 'static {
     fn dimension() -> Dimension;
@@ -62,10 +63,16 @@ fn write_dataset<T: ToDataset>(query: Query<&T, With<LocalParticle>>, file: ResM
     // Unpack this slightly awkwardly here to make sure that we
     // remember to extend it once more units are added to the
     // Dimension struct
-    let Dimension { length, time, mass } = dimension;
+    let Dimension {
+        length,
+        time,
+        mass,
+        temperature,
+    } = dimension;
     write_dimension(&dataset, LENGTH_IDENTIFIER, length);
     write_dimension(&dataset, TIME_IDENTIFIER, time);
     write_dimension(&dataset, MASS_IDENTIFIER, mass);
+    write_dimension(&dataset, TEMPERATURE_IDENTIFIER, temperature);
 }
 
 fn write_dimension(dataset: &Dataset, identifier: &str, dimension: i32) {
