@@ -6,7 +6,6 @@ mod dimension;
 mod floats;
 mod quantities_and_units;
 mod quantity;
-mod sampling;
 mod vectors;
 
 #[cfg(feature = "hdf5")]
@@ -16,7 +15,10 @@ mod hdf5;
 mod mpi;
 
 #[cfg(feature = "serde")]
-mod deserialize;
+mod serde;
+
+#[cfg(feature = "rand")]
+mod rand;
 
 pub use dimension::Dimension;
 pub use quantities_and_units::*;
