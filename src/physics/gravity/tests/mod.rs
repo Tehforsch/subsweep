@@ -1,4 +1,4 @@
-#[cfg(all(feature = "2d", not(feature = "mpi")))]
+#[cfg(not(feature = "mpi"))]
 mod parallel;
 use bevy::prelude::Entity;
 

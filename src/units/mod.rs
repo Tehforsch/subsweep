@@ -36,7 +36,7 @@ unit_system!(
     {
         meters, 1.0, "m",
         kilometers, 1000.0, "km",
-        astronomical_units, 1.495978707e11, "au"
+        astronomical_units, 1.4959787e11, "au"
     },
     TIME, Time, time: 1,
     {

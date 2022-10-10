@@ -6,12 +6,14 @@ use mpi::traits::Equivalence;
 
 use super::compare_accelerations;
 use super::direct_sum;
+use super::get_particles;
 use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::communication::WorldRank;
 use crate::domain::DomainDecompositionPlugin;
 use crate::mass;
 use crate::physics::gravity::plugin::GravityPlugin;
 use crate::physics::gravity::GravityParameters;
+use crate::physics::gravity::LeafData;
 use crate::physics::gravity::Solver;
 use crate::physics::PhysicsPlugin;
 use crate::physics::Timestep;
@@ -20,24 +22,10 @@ use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
 use crate::simulation::Simulation;
 use crate::test_utils::run_system_on_sim;
-use crate::units::Mass;
-use crate::units::Vec2Length;
-use crate::units::Vec2Velocity;
+use crate::units::VecVelocity;
 use crate::velocity::Velocity;
 
-pub const NUM_PARTICLES_ONE_DIMENSION: usize = 500;
-
-fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
-    (0..n)
-        .map(move |x| {
-            (
-                Position(Vec2Length::meters(x as f64, 0.0 as f64)),
-                mass::Mass(Mass::kilograms(1e11)),
-                Velocity(Vec2Velocity::zero()),
-            )
-        })
-        .collect()
-}
+pub const NUM_PARTICLES_ONE_DIMENSION: i32 = 20;
 
 fn check_system(
     parameters: Res<GravityParameters>,
@@ -46,16 +34,16 @@ fn check_system(
 ) {
     let solver = Solver::from_parameters(&parameters);
     for (vel, index) in query.iter() {
-        let particles = get_particles(NUM_PARTICLES_ONE_DIMENSION);
+        let particles = get_particles(NUM_PARTICLES_ONE_DIMENSION, NUM_PARTICLES_ONE_DIMENSION);
         // We can't use the particle position from a query here,
         // because that has already been integrated
-        let pos = &particles[index.0].0;
+        let pos = &particles[index.0].pos;
         let direct_sum = direct_sum(
             &solver,
             pos,
             particles
                 .iter()
-                .map(|(pos, mass, _)| (**pos, **mass))
+                .map(|LeafData { pos, mass, .. }| (*pos, *mass))
                 .collect(),
         );
         let acc1 = direct_sum;
@@ -70,10 +58,19 @@ struct IndexIntoArray(usize);
 fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
     if **rank == 0 {
         commands.spawn_batch(
-            get_particles(NUM_PARTICLES_ONE_DIMENSION)
+            get_particles(NUM_PARTICLES_ONE_DIMENSION, NUM_PARTICLES_ONE_DIMENSION)
                 .into_iter()
                 .enumerate()
-                .map(|(i, (pos, mass, vel))| (pos, mass, vel, LocalParticle, IndexIntoArray(i))),
+                .map(|(i, LeafData { pos, mass, .. })| {
+                    let vel = Velocity(VecVelocity::zero());
+                    (
+                        Position(pos),
+                        mass::Mass(mass),
+                        vel,
+                        LocalParticle,
+                        IndexIntoArray(i),
+                    )
+                }),
         )
     }
 }
