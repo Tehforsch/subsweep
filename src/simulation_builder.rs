@@ -8,6 +8,7 @@ use bevy::log::LogPlugin;
 use bevy::log::LogSettings;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
+use bevy::time::TimePlugin;
 use bevy::winit::WinitSettings;
 use clap::Parser;
 
@@ -169,14 +170,10 @@ impl SimulationBuilder {
     }
 
     fn add_default_bevy_plugins(&self, sim: &mut Simulation) {
-        if sim.on_main_rank() {
-            if self.headless {
-                sim.add_bevy_plugins(MinimalPlugins);
-            } else {
-                sim.add_bevy_plugins_with(DefaultPlugins, |group| group.disable::<LogPlugin>());
-            }
+        if sim.on_main_rank() && !self.headless {
+            sim.add_bevy_plugins_with(DefaultPlugins, |group| group.disable::<LogPlugin>());
         } else {
-            sim.add_bevy_plugins(MinimalPlugins);
+            sim.add_bevy_plugins_with(MinimalPlugins, |group| group.disable::<TimePlugin>());
         }
     }
 
