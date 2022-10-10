@@ -24,13 +24,16 @@ macro_rules! unit_system {
                 pub type [<DVec2 $quantity_name>] = $quantity<glam::DVec2, $const>;
                 pub type [<DVec3 $quantity_name>] = $quantity<glam::DVec3, $const>;
             }
+
             impl $quantity::<f64, $const> {
                 $(
                     pub const fn $unit(v: f64) -> $quantity::<f64, $const> {
                         $quantity::<f64, $const>(v * $factor)
                     }
+
                 )*
             }
+
             impl $quantity::<f32, $const> {
                 $(
                     pub const fn $unit(v: f64) -> $quantity::<f32, $const> {
@@ -38,6 +41,7 @@ macro_rules! unit_system {
                     }
                 )*
             }
+
             impl $quantity<glam::DVec2, $const> {
                 $(
                     pub fn $unit(x: f64, y: f64) -> $quantity::<glam::DVec2, $const> {
@@ -45,12 +49,23 @@ macro_rules! unit_system {
                     }
                 )*
             }
+
             impl $quantity<glam::DVec3, $const> {
                 $(
                     pub fn $unit(x: f64, y: f64, z: f64) -> $quantity::<glam::DVec3, $const> {
                         $quantity::<glam::DVec3, $const>(glam::DVec3::new(x, y, z) * $factor)
                     }
                 )*
+            }
+
+            impl<S> $quantity<S, $const> where S: Div<f64, Output = S> {
+                paste! {
+                    $(
+                        pub fn [<in_ $unit>](self) -> S {
+                            self.0 / $factor
+                        }
+                    )*
+                }
             }
         )*
     }
