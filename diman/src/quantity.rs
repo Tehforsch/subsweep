@@ -200,24 +200,6 @@ macro_rules! define_quantity {
     };
 }
 
-#[macro_export]
-macro_rules! define_system {
-    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-        $crate::define_quantity!($quantity, $dimension, $dimensionless_const);
-        $crate::impl_float_methods!($quantity, $dimension, $dimensionless_const);
-        $crate::impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f32);
-        $crate::impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f64);
-        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
-        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
-        $crate::impl_vector2_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
-        $crate::impl_vector3_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
-        $crate::impl_hdf5_gated!($quantity, $dimension, $dimensionless_const);
-        $crate::impl_mpi_gated!($quantity, $dimension, $dimensionless_const);
-        $crate::impl_rand_gated!($quantity, $dimension, $dimensionless_const);
-        $crate::impl_serde_gated!($quantity, $dimension, $dimensionless_const);
-    };
-}
-
 // #[cfg(...)] attributes are evaluated in the context of the caller.
 // This makes passing feature flags of the macro crate into the macro
 // tricky, which is why each of the following macros are defined twice.
@@ -282,4 +264,22 @@ macro_rules! impl_serde_gated {
 macro_rules! impl_serde_gated {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
     }
+}
+
+#[macro_export]
+macro_rules! define_system {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
+        $crate::define_quantity!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_float_methods!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f32);
+        $crate::impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f64);
+        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
+        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
+        $crate::impl_vector2_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
+        $crate::impl_vector3_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
+        $crate::impl_hdf5_gated!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_mpi_gated!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_rand_gated!($quantity, $dimension, $dimensionless_const);
+        $crate::impl_serde_gated!($quantity, $dimension, $dimensionless_const);
+    };
 }
