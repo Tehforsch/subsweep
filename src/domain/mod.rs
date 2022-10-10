@@ -21,6 +21,7 @@ use crate::physics::gravity;
 use crate::physics::gravity::LeafData;
 use crate::physics::MassMoments;
 use crate::position::Position;
+use crate::prelude::Particles;
 use crate::quadtree::QuadTreeConfig;
 use crate::quadtree::QuadTreeIndex;
 use crate::simulation::RaxiomPlugin;
@@ -84,7 +85,7 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
 pub struct GlobalExtent(Extent);
 
 pub(super) fn determine_global_extent_system(
-    particles: Query<&Position>,
+    particles: Particles<&Position>,
     mut extent_communicator: Communicator<CommunicatedOption<Extent>>,
     mut global_extent: ResMut<GlobalExtent>,
 ) {
@@ -107,7 +108,7 @@ pub(super) struct ParticleExchangeData {
 
 pub fn construct_quad_tree_system(
     config: Res<DomainTreeParameters>,
-    particles: Query<(Entity, &Position, &Mass)>,
+    particles: Particles<(Entity, &Position, &Mass)>,
     extent: Res<GlobalExtent>,
     mut quadtree: ResMut<QuadTree>,
 ) {

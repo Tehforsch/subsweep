@@ -9,7 +9,7 @@ use super::output::plugin::IntoOutputSystem;
 use super::output::OutputFile;
 use super::output::OutputSystemsAmbiguitySet;
 use crate::named::Named;
-use crate::prelude::LocalParticle;
+use crate::prelude::Particles;
 use crate::units::Dimension;
 use crate::units::Quantity;
 
@@ -44,7 +44,7 @@ impl<T: ToDataset> IntoOutputSystem for T {
     }
 }
 
-fn write_dataset<T: ToDataset>(query: Query<&T, With<LocalParticle>>, file: ResMut<OutputFile>) {
+fn write_dataset<T: ToDataset>(query: Particles<&T>, file: ResMut<OutputFile>) {
     let f = file.f.as_ref().unwrap();
     let data: Vec<T> = query.iter().cloned().collect();
     let dataset = f

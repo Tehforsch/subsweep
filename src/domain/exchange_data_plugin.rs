@@ -8,7 +8,6 @@ use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use bevy::prelude::Entity;
 use bevy::prelude::ParallelSystemDescriptorCoercion;
-use bevy::prelude::Query;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 use mpi::traits::Equivalence;
@@ -25,6 +24,7 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::prelude::LocalParticle;
+use crate::prelude::Particles;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
@@ -141,7 +141,7 @@ where
 impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlugin<T> {
     fn fill_buffers_system(
         entity_exchange: Res<OutgoingEntities>,
-        query: Query<&T>,
+        query: Particles<&T>,
         mut buffer: ResMut<ExchangeBuffers<T>>,
     ) {
         for (rank, entities) in entity_exchange.iter() {
@@ -238,6 +238,7 @@ mod tests {
     use crate::communication::WorldRank;
     use crate::domain::exchange_data_plugin::ExchangeDataPlugin;
     use crate::domain::exchange_data_plugin::OutgoingEntities;
+    use crate::prelude::LocalParticle;
     use crate::simulation::Simulation;
     use crate::stages::SimulationStagesPlugin;
 
@@ -259,22 +260,19 @@ mod tests {
             entities.push(
                 sim.world()
                     .spawn()
-                    .insert(A { x: 0, y: 5.0 })
-                    .insert(B { x: 0, y: false })
+                    .insert_bundle((A { x: 0, y: 5.0 }, B { x: 0, y: false }, LocalParticle))
                     .id(),
             );
             entities.push(
                 sim.world()
                     .spawn()
-                    .insert(A { x: 1, y: 10.0 })
-                    .insert(B { x: 1, y: true })
+                    .insert_bundle((A { x: 1, y: 10.0 }, B { x: 1, y: true }, LocalParticle))
                     .id(),
             );
             entities.push(
                 sim.world()
                     .spawn()
-                    .insert(A { x: 2, y: 20.0 })
-                    .insert(B { x: 2, y: false })
+                    .insert_bundle((A { x: 2, y: 20.0 }, B { x: 2, y: false }, LocalParticle))
                     .id(),
             );
         }

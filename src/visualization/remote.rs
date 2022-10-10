@@ -7,7 +7,7 @@ use crate::communication::Rank;
 use crate::communication::SyncCommunicator;
 use crate::communication::WorldRank;
 use crate::position::Position;
-use crate::prelude::LocalParticle;
+use crate::prelude::Particles;
 
 #[derive(Component)]
 pub struct RemoteParticleVisualization(Rank);
@@ -32,7 +32,7 @@ pub(super) struct ParticleVisualizationExchangeData {
 pub(super) fn send_particles_to_main_thread_system(
     rank: Res<WorldRank>,
     mut communicator: SyncCommunicator<ParticleVisualizationExchangeData>,
-    particles: Query<(Entity, &Position), With<LocalParticle>>,
+    particles: Particles<(Entity, &Position)>,
 ) {
     debug_assert!(!rank.is_main());
     for (entity, pos) in particles.iter() {

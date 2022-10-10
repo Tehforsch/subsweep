@@ -51,7 +51,7 @@ fn main() {
 }
 
 fn fake_gravity_system(
-    mut particles: Query<(&Position, &mut Velocity, &ParticleType)>,
+    mut particles: Particles<(&Position, &mut Velocity, &ParticleType)>,
     timestep: Res<Timestep>,
     center: Res<GravityCenter>,
     parameters: Res<ViscousGravityParameters>,
@@ -68,7 +68,7 @@ fn fake_gravity_system(
 }
 
 fn fake_viscosity_system(
-    mut particles: Query<&mut Velocity>,
+    mut particles: Particles<&mut Velocity>,
     timestep: Res<Timestep>,
     parameters: Res<ViscousGravityParameters>,
 ) {

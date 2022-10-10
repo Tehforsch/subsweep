@@ -17,7 +17,7 @@ use crate::mass::Mass;
 use crate::named::Named;
 use crate::performance_parameters::PerformanceParameters;
 use crate::position::Position;
-use crate::prelude::LocalParticle;
+use crate::prelude::Particles;
 use crate::pressure;
 use crate::quadtree::LeafDataType;
 use crate::simulation::RaxiomPlugin;
@@ -64,31 +64,21 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
 
 fn insert_pressure_and_density_system(
     mut commands: Commands,
-    query: Query<
-        Entity,
-        (
-            With<LocalParticle>,
-            Without<pressure::Pressure>,
-            Without<density::Density>,
-        ),
-    >,
+    particles: Particles<Entity, (Without<pressure::Pressure>, Without<density::Density>)>,
 ) {
-    for entity in query.iter() {
+    for entity in particles.iter() {
         commands
             .entity(entity)
             .insert_bundle((pressure::Pressure::default(), density::Density::default()));
     }
 }
 fn compute_pressure_and_density_system(
-    mut pressures: Query<
-        (
-            &mut pressure::Pressure,
-            &mut density::Density,
-            &Position,
-            &Mass,
-        ),
-        With<LocalParticle>,
-    >,
+    mut pressures: Particles<(
+        &mut pressure::Pressure,
+        &mut density::Density,
+        &Position,
+        &Mass,
+    )>,
     parameters: Res<HydrodynamicsParameters>,
     tree: Res<QuadTree>,
     performance_parameters: Res<PerformanceParameters>,
@@ -119,26 +109,20 @@ fn compute_pressure_and_density_system(
 }
 
 fn compute_forces_system(
-    mut particles1: Query<
-        (
-            Entity,
-            &mut Velocity,
-            &Position,
-            &pressure::Pressure,
-            &density::Density,
-        ),
-        With<LocalParticle>,
-    >,
-    particles2: Query<
-        (
-            Entity,
-            &Position,
-            &pressure::Pressure,
-            &density::Density,
-            &mass::Mass,
-        ),
-        With<LocalParticle>,
-    >,
+    mut particles1: Particles<(
+        Entity,
+        &mut Velocity,
+        &Position,
+        &pressure::Pressure,
+        &density::Density,
+    )>,
+    particles2: Particles<(
+        Entity,
+        &Position,
+        &pressure::Pressure,
+        &density::Density,
+        &mass::Mass,
+    )>,
     tree: Res<QuadTree>,
     timestep: Res<Timestep>,
     parameters: Res<HydrodynamicsParameters>,

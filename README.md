@@ -47,7 +47,7 @@ fn main() {
 
 fn my_custom_behavior(
     mut commands: Commands,
-    mut particles: Query<(Entity, &Position, &Mass)>,
+    mut particles: Particles<(Entity, &Position, &Mass)>,
 ) {
     for (entity, position, mass) in particles.iter() {
         if **mass > units::Mass::kilograms(9000.0) {

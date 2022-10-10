@@ -22,6 +22,7 @@ use crate::mass::Mass;
 use crate::named::Named;
 use crate::particle::ParticlePlugin;
 use crate::position::Position;
+use crate::prelude::Particles;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units;
@@ -108,7 +109,10 @@ fn handle_app_exit_system(
     }
 }
 
-fn integrate_motion_system(mut query: Query<(&mut Position, &Velocity)>, timestep: Res<Timestep>) {
+fn integrate_motion_system(
+    mut query: Particles<(&mut Position, &Velocity)>,
+    timestep: Res<Timestep>,
+) {
     for (mut pos, velocity) in query.iter_mut() {
         **pos += **velocity * timestep.0;
     }

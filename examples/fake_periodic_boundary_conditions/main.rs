@@ -64,7 +64,7 @@ fn get_y_offset_of_particle_type(parameters: &Parameters, type_: &ParticleType) 
 }
 
 fn external_force_system(
-    mut particles: Query<(
+    mut particles: Particles<(
         &Position,
         &raxiom::prelude::Mass,
         &mut Velocity,
@@ -85,7 +85,7 @@ fn external_force_system(
 }
 
 fn fake_viscosity_system(
-    mut particles: Query<&mut Velocity>,
+    mut particles: Particles<&mut Velocity>,
     timestep: Res<Timestep>,
     parameters: Res<Parameters>,
 ) {
@@ -98,7 +98,7 @@ fn fake_viscosity_system(
 }
 
 fn fake_periodic_boundaries_system(
-    mut particles: Query<&mut Position>,
+    mut particles: Particles<&mut Position>,
     parameters: Res<Parameters>,
 ) {
     for mut pos in particles.iter_mut() {

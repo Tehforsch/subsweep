@@ -11,7 +11,7 @@ use crate::communication::Identified;
 use crate::communication::WorldRank;
 use crate::domain::TopLevelIndices;
 use crate::position::Position;
-use crate::prelude::LocalParticle;
+use crate::prelude::Particles;
 use crate::quadtree::Node;
 use crate::quadtree::*;
 use crate::units;
@@ -111,7 +111,7 @@ pub(super) fn gravity_system(
     tree: Res<QuadTree>,
     world_rank: Res<WorldRank>,
     indices: Res<TopLevelIndices>,
-    mut particles: Query<(Entity, &Position, &mut Velocity), With<LocalParticle>>,
+    mut particles: Particles<(Entity, &Position, &mut Velocity)>,
     parameters: Res<GravityParameters>,
     mut request_comm: ExchangeCommunicator<Identified<GravityCalculationRequest>>,
     mut reply_comm: ExchangeCommunicator<Identified<GravityCalculationReply>>,

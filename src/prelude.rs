@@ -3,6 +3,7 @@ pub use crate::communication::WorldSize;
 pub use crate::mass::Mass;
 pub use crate::named::*;
 pub use crate::particle::LocalParticle;
+pub use crate::particle::Particles;
 pub use crate::physics::hydrodynamics::HydrodynamicsPlugin;
 pub use crate::physics::GravityPlugin;
 pub use crate::physics::Timestep;

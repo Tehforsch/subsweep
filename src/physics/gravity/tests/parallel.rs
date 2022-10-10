@@ -1,6 +1,5 @@
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
-use bevy::prelude::Query;
 use bevy::prelude::Res;
 use bevy::MinimalPlugins;
 use mpi::traits::Equivalence;
@@ -18,6 +17,7 @@ use crate::physics::PhysicsPlugin;
 use crate::physics::Timestep;
 use crate::position::Position;
 use crate::prelude::LocalParticle;
+use crate::prelude::Particles;
 use crate::simulation::Simulation;
 use crate::test_utils::run_system_on_sim;
 use crate::units::Mass;
@@ -42,7 +42,7 @@ fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
 fn check_system(
     parameters: Res<GravityParameters>,
     timestep: Res<Timestep>,
-    query: Query<(&Velocity, &IndexIntoArray)>,
+    query: Particles<(&Velocity, &IndexIntoArray)>,
 ) {
     let solver = Solver::from_parameters(&parameters);
     for (vel, index) in query.iter() {
