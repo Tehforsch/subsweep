@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! impl_vector_methods {
-    ($quantity: ident, $dimension: ident, $dimensionless_const: ident, $vector_type: ident, $float_type: ident) => {
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident, $vector_type: ident, $float_type: ident, $num_dims: literal) => {
         impl<const D: $dimension> $quantity<$vector_type, D> {
             pub fn from_vector_and_scale(
                 vec: $vector_type,
@@ -49,6 +49,27 @@ macro_rules! impl_vector_methods {
 
             pub fn normalize(&self) -> $quantity<$vector_type, NONE> {
                 $quantity::<$vector_type, NONE>(self.0.normalize())
+            }
+        }
+
+        impl<const D: $dimension> std::fmt::Debug for $quantity<$vector_type, D> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                let unit_name = UNIT_NAMES
+                    .iter()
+                    .filter(|(d, _, _)| d == &D)
+                    .filter(|(_, _, val)| *val == 1.0)
+                    .map(|(_, name, _)| name)
+                    .next()
+                    .unwrap_or(&"unknown unit");
+                write!(f, "[")?;
+                let array = self.0.to_array();
+                for dim in 0..$num_dims {
+                    array[dim].fmt(f)?;
+                    if dim != $num_dims - 1 {
+                        write!(f, " ")?;
+                    }
+                }
+                write!(f, "] {}", unit_name)
             }
         }
     };
@@ -117,4 +138,23 @@ macro_rules! impl_vector3_methods {
             }
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn debug_vector_2() {
+        assert_eq!(
+            format!("{:?}", crate::si::DVec2Length::meters(1.0, 5.0)),
+            "[1.0 5.0] m"
+        );
+    }
+
+    #[test]
+    fn debug_vector_3() {
+        assert_eq!(
+            format!("{:?}", crate::si::DVec3Length::meters(1.0, 5.0, 6.0)),
+            "[1.0 5.0 6.0] m"
+        );
+    }
 }

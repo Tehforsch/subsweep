@@ -61,9 +61,9 @@ macro_rules! impl_serde_vector {
 
 #[cfg(test)]
 mod tests {
-    use crate::si::Length;
     use crate::si::DVec2Length;
     use crate::si::DVec3Length;
+    use crate::si::Length;
     use crate::tests::assert_is_close;
 
     #[test]

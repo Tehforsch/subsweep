@@ -180,23 +180,6 @@ macro_rules! define_quantity {
                 write!(f, "{}", self.value())
             }
         }
-
-        impl<const D: $dimension> std::fmt::Debug for $quantity<DVec2, D> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let unit_name = UNIT_NAMES
-                    .iter()
-                    .filter(|(d, _, _)| d == &D)
-                    .filter(|(_, _, val)| *val == 1.0)
-                    .map(|(_, name, _)| name)
-                    .next()
-                    .unwrap_or(&"unknown unit");
-                write!(f, "[")?;
-                self.0.x.fmt(f)?;
-                write!(f, " ")?;
-                self.0.y.fmt(f)?;
-                write!(f, "] {}", unit_name)
-            }
-        }
     };
 }
 
@@ -210,14 +193,13 @@ macro_rules! define_quantity {
 macro_rules! impl_hdf5_gated {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
         $crate::impl_hdf5!($quantity, $dimension, $dimensionless_const);
-    }
+    };
 }
 
 #[cfg(not(feature = "hdf5"))]
 #[macro_export]
 macro_rules! impl_hdf5_gated {
-    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-    }
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {};
 }
 
 #[cfg(feature = "mpi")]
@@ -225,30 +207,27 @@ macro_rules! impl_hdf5_gated {
 macro_rules! impl_mpi_gated {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
         $crate::impl_mpi!($quantity, $dimension, $dimensionless_const);
-    }
+    };
 }
 
 #[cfg(not(feature = "mpi"))]
 #[macro_export]
 macro_rules! impl_mpi_gated {
-    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-    }
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {};
 }
-
 
 #[cfg(feature = "rand")]
 #[macro_export]
 macro_rules! impl_rand_gated {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
         $crate::impl_rand!($quantity, $dimension, $dimensionless_const);
-    }
+    };
 }
 
 #[cfg(not(feature = "rand"))]
 #[macro_export]
 macro_rules! impl_rand_gated {
-    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-    }
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {};
 }
 
 #[cfg(feature = "serde")]
@@ -256,14 +235,13 @@ macro_rules! impl_rand_gated {
 macro_rules! impl_serde_gated {
     ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
         $crate::impl_serde!($quantity, $dimension, $dimensionless_const);
-    }
+    };
 }
 
 #[cfg(not(feature = "serde"))]
 #[macro_export]
 macro_rules! impl_serde_gated {
-    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {
-    }
+    ($quantity: ident, $dimension: ident, $dimensionless_const: ident) => {};
 }
 
 #[macro_export]
@@ -273,8 +251,8 @@ macro_rules! define_system {
         $crate::impl_float_methods!($quantity, $dimension, $dimensionless_const);
         $crate::impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f32);
         $crate::impl_concrete_float_methods!($quantity, $dimension, $dimensionless_const, f64);
-        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
-        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
+        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64, 2);
+        $crate::impl_vector_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64, 3);
         $crate::impl_vector2_methods!($quantity, $dimension, $dimensionless_const, DVec2, f64);
         $crate::impl_vector3_methods!($quantity, $dimension, $dimensionless_const, DVec3, f64);
         $crate::impl_hdf5_gated!($quantity, $dimension, $dimensionless_const);
