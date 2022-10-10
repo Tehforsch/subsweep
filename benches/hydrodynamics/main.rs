@@ -4,14 +4,15 @@ use bevy::prelude::*;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::Criterion;
-use rand::Rng;
 use raxiom::parameters::DomainTreeParameters;
 use raxiom::parameters::HydrodynamicsParameters;
 use raxiom::parameters::PerformanceParameters;
 use raxiom::parameters::QuadTreeConfig;
 use raxiom::parameters::SimulationParameters;
+use raxiom::prelude::gen_range;
 use raxiom::prelude::HydrodynamicsPlugin;
 use raxiom::prelude::LocalParticle;
+use raxiom::prelude::MVec;
 use raxiom::prelude::Position;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationBuilder;
@@ -61,14 +62,12 @@ fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
         return;
     }
     let num_particles = 10000;
-    let box_size = VecLength::meters(100.0, 100.0);
-    let mut rng = rand::thread_rng();
+    let box_size = Length::meters(100.0) * MVec::ONE;
     for _ in 0..num_particles {
-        let x = rng.gen_range(-box_size.x()..box_size.x());
-        let y = rng.gen_range(-box_size.y()..box_size.y());
+        let pos = gen_range(-box_size, box_size);
         spawn_particle(
             &mut commands,
-            VecLength::new(x, y),
+            pos,
             VecVelocity::zero(),
             Mass::kilograms(1.0),
         )

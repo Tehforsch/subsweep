@@ -180,7 +180,9 @@ impl Simulation {
     pub fn run_without_finalize(&mut self) {
         // Since this is called from tests which don't have a BaseCommunication plugin, make sure we only unwrap
         // world rank if it exists and default to validating otherwise.
-        if self.get_resource::<WorldRank>().is_none() || self.on_main_rank() {
+        if !self.contains_resource::<WorldRank>()
+            || self.on_main_rank() && self.contains_resource::<ParameterFileContents>()
+        {
             self.validate();
         }
         self.app.run();

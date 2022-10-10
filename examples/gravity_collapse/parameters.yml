@@ -9,6 +9,6 @@ tree:
   max_num_particles_per_leaf: 1
 example:
   num_particles: 1000
-  box_size: (1000 1000) au
+  box_size: (1000 1000 1000) au
   particle_mass: 1.0 Msol
   angular_velocity_factor: 5e-10 s^-1

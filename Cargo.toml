@@ -45,11 +45,7 @@ required-features = ["mpi", "mpi_test"]
 
 [[example]]
 name = "figure8"
-required-features = ["mpi", "2d"]
-
-[[example]]
-name = "viscous_hydro"
-required-features = ["mpi", "2d"]
+required-features = ["mpi"]
 
 [[example]]
 name = "fake_periodic_boundary_conditions"
@@ -57,9 +53,8 @@ required-features = ["mpi", "2d"]
 
 [[example]]
 name = "gravity_collapse"
-required-features = ["mpi", "2d"]
+required-features = ["mpi"]
 
 [[bench]]
 name = "hydrodynamics"
-required-features = ["2d"]
 harness = false

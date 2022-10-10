@@ -8,15 +8,13 @@ pub use crate::physics::hydrodynamics::HydrodynamicsPlugin;
 pub use crate::physics::GravityPlugin;
 pub use crate::physics::Timestep;
 pub use crate::position::Position;
+pub use crate::rand::gen_range;
 pub use crate::simulation::Simulation;
 pub use crate::simulation_builder::SimulationBuilder;
 pub use crate::units;
+pub use crate::units::helpers::Float;
+pub use crate::units::helpers::MVec;
 pub use crate::velocity::Velocity;
 pub use crate::visualization::CameraTransform;
 pub use crate::visualization::DrawCircle;
 pub use crate::visualization::DrawRect;
-
-#[cfg(feature = "2d")]
-pub type MVec = glam::DVec2;
-#[cfg(not(feature = "2d"))]
-pub type MVec = glam::DVec3;

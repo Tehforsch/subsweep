@@ -2,7 +2,6 @@
 #![feature(generic_const_exprs)]
 
 use bevy::prelude::*;
-use rand::Rng;
 use raxiom::prelude::*;
 use raxiom::units::InverseTime;
 use raxiom::units::Mass;
@@ -48,13 +47,10 @@ fn spawn_particles_system(
     if !rank.is_main() {
         return;
     }
-    let mut rng = rand::thread_rng();
     let box_size = parameters.box_size;
     for _ in 0..parameters.num_particles {
-        let x = rng.gen_range((-box_size.x() / 2.0)..(box_size.x() / 2.0));
-        let y = rng.gen_range((-box_size.y() / 2.0)..(box_size.y() / 2.0));
-        let pos = VecLength::new(x, y);
-        let vel = VecLength::new(-pos.y(), pos.x()) * parameters.angular_velocity_factor;
+        let pos = gen_range(-box_size, box_size);
+        let vel = VecLength::from_xy(-pos.y(), pos.x()) * parameters.angular_velocity_factor;
         spawn_particle(&mut commands, pos, vel, parameters.particle_mass)
     }
 }

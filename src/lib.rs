@@ -88,6 +88,7 @@ pub(crate) mod physics;
 pub(crate) mod position;
 pub(crate) mod pressure;
 pub(crate) mod quadtree;
+pub(crate) mod rand;
 pub(crate) mod simulation;
 pub(crate) mod simulation_builder;
 pub(crate) mod stages;

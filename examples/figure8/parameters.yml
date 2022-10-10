@@ -10,11 +10,3 @@ tree:
 input:
   paths:
     - examples/figure8/ics.hdf5
-output:
-  output_dir: "output"
-  time_between_snapshots: 0.1 yr
-  fields:
-    - position
-    - velocity
-    - mass
-    - time
