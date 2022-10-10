@@ -18,7 +18,7 @@ use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::io::to_dataset::SCALE_FACTOR_IDENTIFIER;
 use crate::named::Named;
-use crate::physics::LocalParticle;
+use crate::prelude::LocalParticle;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::Dimension;

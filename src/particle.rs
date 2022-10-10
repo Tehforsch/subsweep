@@ -2,15 +2,18 @@ use bevy::ecs::archetype::Archetypes;
 use bevy::ecs::component::Components;
 use bevy::prelude::debug;
 use bevy::prelude::Bundle;
+use bevy::prelude::Component;
 use bevy::prelude::StartupStage;
 
 use crate::mass::Mass;
 use crate::named::Named;
-use crate::physics::LocalParticle;
 use crate::position::Position;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 use crate::velocity::Velocity;
+
+#[derive(Component)]
+pub struct LocalParticle;
 
 #[derive(Bundle)]
 pub struct LocalParticleBundle {

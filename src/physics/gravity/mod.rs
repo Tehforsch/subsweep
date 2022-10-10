@@ -3,7 +3,6 @@ use mpi::traits::Equivalence;
 pub use parameters::GravityParameters;
 pub use plugin::GravityPlugin;
 
-use super::LocalParticle;
 use super::MassMoments;
 use super::Timestep;
 use crate::communication::DataByRank;
@@ -12,6 +11,7 @@ use crate::communication::Identified;
 use crate::communication::WorldRank;
 use crate::domain::TopLevelIndices;
 use crate::position::Position;
+use crate::prelude::LocalParticle;
 use crate::quadtree::Node;
 use crate::quadtree::*;
 use crate::units;

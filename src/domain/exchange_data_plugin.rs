@@ -24,7 +24,7 @@ use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::named::Named;
-use crate::physics::LocalParticle;
+use crate::prelude::LocalParticle;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 

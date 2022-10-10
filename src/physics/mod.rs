@@ -27,9 +27,6 @@ use crate::simulation::Simulation;
 use crate::units;
 use crate::velocity::Velocity;
 
-#[derive(Component)]
-pub struct LocalParticle;
-
 #[derive(Equivalence, Deref, DerefMut)]
 pub struct Timestep(crate::units::Time);
 

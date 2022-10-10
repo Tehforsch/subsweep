@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::parameters::HydrodynamicsParameters;
 use crate::domain::GlobalExtent;
-use crate::physics::LocalParticle;
+use crate::prelude::LocalParticle;
 use crate::prelude::Position;
 use crate::quadtree::LeafDataType;
 use crate::quadtree::NodeDataType;

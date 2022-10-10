@@ -6,8 +6,8 @@ use super::GetColor;
 use crate::communication::Rank;
 use crate::communication::SyncCommunicator;
 use crate::communication::WorldRank;
-use crate::physics::LocalParticle;
 use crate::position::Position;
+use crate::prelude::LocalParticle;
 
 #[derive(Component)]
 pub struct RemoteParticleVisualization(Rank);
