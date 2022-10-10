@@ -22,6 +22,12 @@ then
     exit 1
 fi
 
+if ! cargo test --no-default-features --features mpi,2d -- --ignored
+then
+    echo "There are some 2d test issues."
+    exit 1
+fi
+
 if ! cargo mpirun --np 2 --example mpi_test --features mpi_test
 then
     echo "There are some mpi test issues."

@@ -1,5 +1,6 @@
 use mpi::traits::Equivalence;
 
+use crate::config::TWO_TO_NUM_DIMENSIONS;
 use crate::units::Length;
 use crate::units::VecLength;
 
@@ -11,11 +12,11 @@ pub struct Extent {
 }
 
 impl Extent {
-    pub fn new(min_x: Length, max_x: Length, min_y: Length, max_y: Length) -> Self {
-        debug_assert!(min_x <= max_x);
-        debug_assert!(min_y <= max_y);
-        let min = VecLength::new(min_x, min_y);
-        let max = VecLength::new(max_x, max_y);
+    pub fn new(min: VecLength, max: VecLength) -> Self {
+        debug_assert!(min.x() <= max.x());
+        debug_assert!(min.y() <= max.y());
+        #[cfg(not(feature = "2d"))]
+        debug_assert!(min.z() <= max.z());
         Self {
             min,
             max,
@@ -43,7 +44,7 @@ impl Extent {
     }
 
     pub fn center(&self) -> VecLength {
-        VecLength::new(self.center.x(), self.center.y())
+        self.center
     }
 
     pub fn side_lengths(&self) -> VecLength {
@@ -56,36 +57,52 @@ impl Extent {
     }
 
     pub fn from_positions<'a>(positions: impl Iterator<Item = &'a VecLength>) -> Option<Self> {
-        let mut min_x = None;
-        let mut max_x = None;
-        let mut min_y = None;
-        let mut max_y = None;
-        let update_min = |x: &mut Option<Length>, y: Length| {
-            if x.is_none() || y < x.unwrap() {
-                *x = Some(y);
+        let mut min = None;
+        let mut max = None;
+        let update_min = |min: &mut Option<VecLength>, pos: VecLength| {
+            if let Some(ref mut min) = min {
+                *min = min.min(pos);
+            } else {
+                *min = Some(pos);
             }
         };
-        let update_max = |x: &mut Option<Length>, y: Length| {
-            if x.is_none() || y > x.unwrap() {
-                *x = Some(y);
+        let update_max = |max: &mut Option<VecLength>, pos: VecLength| {
+            if let Some(ref mut max) = max {
+                *max = max.max(pos);
+            } else {
+                *max = Some(pos);
             }
         };
         for pos in positions {
-            update_min(&mut min_x, pos.x());
-            update_max(&mut max_x, pos.x());
-            update_min(&mut min_y, pos.y());
-            update_max(&mut max_y, pos.y());
+            update_min(&mut min, *pos);
+            update_max(&mut max, *pos);
         }
-        Some(Self::new(min_x?, max_x?, min_y?, max_y?))
+        Some(Self::new(min?, max?))
     }
 
     pub fn get_quadrant_index(&self, pos: &VecLength) -> usize {
         debug_assert!(self.contains(pos));
+        #[cfg(feature = "2d")]
         match (pos.x() < self.center.x(), pos.y() < self.center.y()) {
             (true, true) => 0,
             (false, true) => 1,
-            (false, false) => 2,
-            (true, false) => 3,
+            (true, false) => 2,
+            (false, false) => 3,
+        }
+        #[cfg(not(feature = "2d"))]
+        match (
+            pos.x() < self.center.x(),
+            pos.y() < self.center.y(),
+            pos.z() < self.center.z(),
+        ) {
+            (true, true, true) => 0,
+            (false, true, true) => 1,
+            (true, false, true) => 2,
+            (false, false, true) => 3,
+            (true, true, false) => 4,
+            (false, true, false) => 5,
+            (true, false, false) => 6,
+            (false, false, false) => 7,
         }
     }
 
@@ -96,12 +113,52 @@ impl Extent {
             && pos.y() <= self.max.y()
     }
 
-    pub fn get_quadrants(&self) -> [Self; 4] {
-        let lower_left = Self::new(self.min.x(), self.center.x(), self.min.y(), self.center.y());
-        let lower_right = Self::new(self.center.x(), self.max.x(), self.min.y(), self.center.y());
-        let upper_right = Self::new(self.center.x(), self.max.x(), self.center.y(), self.max.y());
-        let upper_left = Self::new(self.min.x(), self.center.x(), self.center.y(), self.max.y());
-        [lower_left, lower_right, upper_right, upper_left]
+    #[cfg(feature = "2d")]
+    pub fn get_quadrants(&self) -> [Self; TWO_TO_NUM_DIMENSIONS] {
+        let min_00 = VecLength::new(self.min.x(), self.min.y());
+        let min_10 = VecLength::new(self.center.x(), self.min.y());
+        let min_01 = VecLength::new(self.min.x(), self.center.y());
+        let min_11 = VecLength::new(self.center.x(), self.center.y());
+        let max_00 = VecLength::new(self.center.x(), self.center.y());
+        let max_10 = VecLength::new(self.max.x(), self.center.y());
+        let max_01 = VecLength::new(self.center.x(), self.max.y());
+        let max_11 = VecLength::new(self.max.x(), self.max.y());
+        [
+            Self::new(min_00, max_00),
+            Self::new(min_10, max_10),
+            Self::new(min_01, max_01),
+            Self::new(min_11, max_11),
+        ]
+    }
+
+    #[cfg(not(feature = "2d"))]
+    pub fn get_quadrants(&self) -> [Self; TWO_TO_NUM_DIMENSIONS] {
+        let min_000 = VecLength::new(self.min.x(), self.min.y(), self.min.z());
+        let min_100 = VecLength::new(self.center.x(), self.min.y(), self.min.z());
+        let min_010 = VecLength::new(self.min.x(), self.center.y(), self.min.z());
+        let min_110 = VecLength::new(self.center.x(), self.center.y(), self.min.z());
+        let min_001 = VecLength::new(self.min.x(), self.min.y(), self.center.z());
+        let min_101 = VecLength::new(self.center.x(), self.min.y(), self.center.z());
+        let min_011 = VecLength::new(self.min.x(), self.center.y(), self.center.z());
+        let min_111 = VecLength::new(self.center.x(), self.center.y(), self.center.z());
+        let max_000 = VecLength::new(self.center.x(), self.center.y(), self.center.z());
+        let max_100 = VecLength::new(self.max.x(), self.center.y(), self.center.z());
+        let max_010 = VecLength::new(self.center.x(), self.max.y(), self.center.z());
+        let max_110 = VecLength::new(self.max.x(), self.max.y(), self.center.z());
+        let max_001 = VecLength::new(self.center.x(), self.center.y(), self.max.z());
+        let max_101 = VecLength::new(self.max.x(), self.center.y(), self.max.z());
+        let max_011 = VecLength::new(self.center.x(), self.max.y(), self.max.z());
+        let max_111 = VecLength::new(self.max.x(), self.max.y(), self.max.z());
+        [
+            Self::new(min_000, max_000),
+            Self::new(min_100, max_100),
+            Self::new(min_010, max_010),
+            Self::new(min_110, max_110),
+            Self::new(min_001, max_001),
+            Self::new(min_101, max_101),
+            Self::new(min_011, max_011),
+            Self::new(min_111, max_111),
+        ]
     }
 }
 
@@ -113,54 +170,134 @@ impl std::fmt::Debug for Extent {
 
 #[cfg(test)]
 mod tests {
-    use glam::DVec2;
-
-    use crate::domain::Extent;
-    use crate::units::Length;
+    use crate::prelude::MVec;
     use crate::units::VecLength;
 
-    fn assert_is_close(a: VecLength, b: DVec2) {
-        const EPSILON: f64 = 1e-20;
-        assert!((a - VecLength::meters(b.x, b.y)).length().unwrap_value() < EPSILON)
+    fn assert_is_close(a: VecLength, b: MVec) {
+        assert!((a.in_meters() - b).length() < f64::EPSILON)
     }
 
-    #[test]
-    fn extent_quadrants() {
-        let root_extent = Extent::new(
-            Length::meters(-1.0),
-            Length::meters(1.0),
-            Length::meters(-2.0),
-            Length::meters(2.0),
-        );
-        let quadrants = root_extent.get_quadrants();
-        assert_is_close(quadrants[0].min, DVec2::new(-1.0, -2.0));
-        assert_is_close(quadrants[0].max, DVec2::new(0.0, 0.0));
+    #[cfg(all(test, feature = "2d"))]
+    mod two_d {
+        use glam::DVec2;
 
-        assert_is_close(quadrants[1].min, DVec2::new(0.0, -2.0));
-        assert_is_close(quadrants[1].max, DVec2::new(1.0, 0.0));
+        use super::assert_is_close;
+        use crate::domain::Extent;
+        use crate::prelude::MVec;
+        use crate::units::VecLength;
 
-        assert_is_close(quadrants[2].min, DVec2::new(0.0, 0.0));
-        assert_is_close(quadrants[2].max, DVec2::new(1.0, 2.0));
+        #[test]
+        #[ignore]
+        fn extent_quadrants() {
+            let root_extent =
+                Extent::new(VecLength::meters(-1.0, -2.0), VecLength::meters(1.0, 2.0));
+            let quadrants = root_extent.get_quadrants();
+            assert_is_close(quadrants[0].min, MVec::new(-1.0, -2.0));
+            assert_is_close(quadrants[0].max, MVec::new(0.0, 0.0));
 
-        assert_is_close(quadrants[3].min, DVec2::new(-1.0, 0.0));
-        assert_is_close(quadrants[3].max, DVec2::new(0.0, 2.0));
+            assert_is_close(quadrants[1].min, MVec::new(0.0, -2.0));
+            assert_is_close(quadrants[1].max, MVec::new(1.0, 0.0));
+
+            assert_is_close(quadrants[2].min, MVec::new(-1.0, 0.0));
+            assert_is_close(quadrants[2].max, MVec::new(0.0, 2.0));
+
+            assert_is_close(quadrants[3].min, MVec::new(0.0, 0.0));
+            assert_is_close(quadrants[3].max, MVec::new(1.0, 2.0));
+        }
+
+        #[test]
+        #[ignore]
+        fn extent_from_positions() {
+            let positions = &[
+                VecLength::meters(1.0, 0.0),
+                VecLength::meters(-1.0, 0.0),
+                VecLength::meters(0.0, -2.0),
+                VecLength::meters(0.0, 2.0),
+            ];
+            let extent = Extent::from_positions(positions.iter()).unwrap();
+            assert_is_close(extent.min, DVec2::new(-1.0, -2.0));
+            assert_is_close(extent.max, DVec2::new(1.0, 2.0));
+        }
+
+        #[test]
+        #[ignore]
+        fn quadrant_index() {
+            let root_extent =
+                Extent::new(VecLength::meters(-1.0, -2.0), VecLength::meters(1.0, 2.0));
+            for (i, quadrant) in root_extent.get_quadrants().iter().enumerate() {
+                assert_eq!(i, root_extent.get_quadrant_index(&quadrant.center));
+            }
+        }
     }
 
-    #[test]
-    fn extent_from_positions() {
-        let positions = &[
-            VecLength::meters(1.0, 0.0),
-            VecLength::meters(-1.0, 0.0),
-            VecLength::meters(0.0, -2.0),
-            VecLength::meters(0.0, 2.0),
-        ];
-        let extent = Extent::from_positions(positions.iter()).unwrap();
-        assert_is_close(extent.min, DVec2::new(-1.0, -2.0));
-        assert_is_close(extent.max, DVec2::new(1.0, 2.0));
-    }
+    #[cfg(all(test, not(feature = "2d")))]
+    mod three_d {
+        use glam::DVec3;
 
-    #[test]
-    fn extent_from_positions_is_none_with_zero_positions() {
-        assert!(Extent::from_positions([].iter()).is_none());
+        use super::super::Extent;
+        use super::assert_is_close;
+        use crate::prelude::MVec;
+        use crate::units::VecLength;
+
+        #[test]
+        fn extent_from_positions() {
+            let positions = &[
+                VecLength::meters(1.0, 0.0, -1.0),
+                VecLength::meters(-1.0, 0.0, 0.0),
+                VecLength::meters(0.0, -2.0, 0.0),
+                VecLength::meters(0.0, 2.0, 1.0),
+            ];
+            let extent = Extent::from_positions(positions.iter()).unwrap();
+            assert_is_close(extent.min, DVec3::new(-1.0, -2.0, -1.0));
+            assert_is_close(extent.max, DVec3::new(1.0, 2.0, 1.0));
+        }
+
+        #[test]
+        fn extent_quadrants() {
+            let root_extent = Extent::new(
+                VecLength::meters(-1.0, -2.0, -3.0),
+                VecLength::meters(1.0, 2.0, 3.0),
+            );
+            let quadrants = root_extent.get_quadrants();
+            assert_is_close(quadrants[0].min, MVec::new(-1.0, -2.0, -3.0));
+            assert_is_close(quadrants[0].max, MVec::new(0.0, 0.0, 0.0));
+
+            assert_is_close(quadrants[1].min, MVec::new(0.0, -2.0, -3.0));
+            assert_is_close(quadrants[1].max, MVec::new(1.0, 0.0, 0.0));
+
+            assert_is_close(quadrants[2].min, MVec::new(-1.0, 0.0, -3.0));
+            assert_is_close(quadrants[2].max, MVec::new(0.0, 2.0, 0.0));
+
+            assert_is_close(quadrants[3].min, MVec::new(0.0, 0.0, -3.0));
+            assert_is_close(quadrants[3].max, MVec::new(1.0, 2.0, 0.0));
+
+            assert_is_close(quadrants[4].min, MVec::new(-1.0, -2.0, 0.0));
+            assert_is_close(quadrants[4].max, MVec::new(0.0, 0.0, 3.0));
+
+            assert_is_close(quadrants[5].min, MVec::new(0.0, -2.0, 0.0));
+            assert_is_close(quadrants[5].max, MVec::new(1.0, 0.0, 3.0));
+
+            assert_is_close(quadrants[6].min, MVec::new(-1.0, 0.0, 0.0));
+            assert_is_close(quadrants[6].max, MVec::new(0.0, 2.0, 3.0));
+
+            assert_is_close(quadrants[7].min, MVec::new(0.0, 0.0, 0.0));
+            assert_is_close(quadrants[7].max, MVec::new(1.0, 2.0, 3.0));
+        }
+
+        #[test]
+        fn extent_from_positions_is_none_with_zero_positions() {
+            assert!(Extent::from_positions([].iter()).is_none());
+        }
+
+        #[test]
+        fn quadrant_index() {
+            let root_extent = Extent::new(
+                VecLength::meters(-1.0, -2.0, -3.0),
+                VecLength::meters(1.0, 2.0, 3.0),
+            );
+            for (i, quadrant) in root_extent.get_quadrants().iter().enumerate() {
+                assert_eq!(i, root_extent.get_quadrant_index(&quadrant.center));
+            }
+        }
     }
 }

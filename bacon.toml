@@ -36,6 +36,11 @@ command = ["cargo", "test", "--no-default-features", "--color", "always"]
 need_stdout = true
 watch = ["tests"]
 
+[jobs.test-2d]
+command = ["cargo", "test", "--no-default-features", "--features", "mpi,2d", "--color", "always"]
+need_stdout = true
+watch = ["tests"]
+
 [jobs.mpi-test]
 command = ["cargo", "mpirun", "--np", "2", "--example", "mpi_test", "--color", "always"]
 need_stdout = true
@@ -51,6 +56,7 @@ command = ["cargo", "doc", "--color", "always"]
 need_stdout = true
 
 [keybindings]
+2 = "job:test-2d"
 a = "job:test-all"
 i = "job:initial"
 c = "job:clippy-all"

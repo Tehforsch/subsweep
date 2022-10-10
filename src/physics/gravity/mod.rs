@@ -33,7 +33,7 @@ pub use quadtree::QuadTree;
 mod parameters;
 mod quadtree;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 struct Solver {
     softening_length: Length,

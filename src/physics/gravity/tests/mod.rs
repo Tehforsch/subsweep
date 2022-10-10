@@ -1,4 +1,4 @@
-#[cfg(not(feature = "mpi"))]
+#[cfg(all(feature = "2d", not(feature = "mpi")))]
 mod parallel;
 use bevy::prelude::Entity;
 
@@ -10,19 +10,21 @@ use crate::quadtree;
 use crate::quadtree::QuadTreeConfig;
 use crate::test_utils::assert_is_close;
 use crate::units::Acceleration;
-use crate::units::DVec2Acceleration;
-use crate::units::DVec2Length;
 use crate::units::Dimensionless;
 use crate::units::Length;
 use crate::units::Mass;
 use crate::units::VecAcceleration;
+use crate::units::VecLength;
 
-fn get_particles(n: i32) -> Vec<LeafData> {
+pub(crate) fn get_particles(n: i32, m: i32) -> Vec<LeafData> {
     (1..n)
         .flat_map(move |x| {
-            (1..n).map(move |y| LeafData {
+            (1..m).map(move |y| LeafData {
                 entity: Entity::from_raw((x * n + y) as u32),
-                pos: DVec2Length::meters(x as f64, y as f64),
+                #[cfg(feature = "2d")]
+                pos: VecLength::meters(x as f64, y as f64),
+                #[cfg(not(feature = "2d"))]
+                pos: VecLength::meters(x as f64, y as f64, x as f64 * y as f64),
                 mass: Mass::kilograms(x as f64 * y as f64),
             })
         })
@@ -30,7 +32,7 @@ fn get_particles(n: i32) -> Vec<LeafData> {
 }
 
 fn get_tree_for_particles(n: i32) -> QuadTree {
-    let particles = get_particles(n);
+    let particles = get_particles(n, n);
     let extent = Extent::from_positions(particles.iter().map(|part| &part.pos)).unwrap();
     QuadTree::new(&QuadTreeConfig::default(), particles, &extent)
 }
@@ -63,7 +65,10 @@ fn check_mass(tree: &QuadTree) {
 fn compare_quadtree_gravity_to_direct_sum() {
     let n_particles = 50;
     let tree = get_tree_for_particles(n_particles);
-    let pos = DVec2Length::meters(3.5, 3.5);
+    #[cfg(feature = "2d")]
+    let pos = VecLength::meters(3.5, 3.5);
+    #[cfg(not(feature = "2d"))]
+    let pos = VecLength::meters(3.5, 3.5, 3.5);
     let solver = Solver {
         opening_angle: Dimensionless::zero(),
         softening_length: Length::zero(),
@@ -72,7 +77,7 @@ fn compare_quadtree_gravity_to_direct_sum() {
     let acc2 = direct_sum(
         &solver,
         &pos,
-        get_particles(n_particles)
+        get_particles(n_particles, n_particles)
             .iter()
             .map(|part| (part.pos, part.mass))
             .collect(),
@@ -88,10 +93,10 @@ pub(super) fn compare_accelerations(acc1: VecAcceleration, acc2: VecAcceleration
 
 pub(super) fn direct_sum(
     solver: &Solver,
-    pos1: &DVec2Length,
-    other_positions: Vec<(DVec2Length, Mass)>,
-) -> DVec2Acceleration {
-    let mut total = DVec2Acceleration::zero();
+    pos1: &VecLength,
+    other_positions: Vec<(VecLength, Mass)>,
+) -> VecAcceleration {
+    let mut total = VecAcceleration::zero();
     for (pos, mass) in other_positions.into_iter() {
         total += solver.calc_gravity_acceleration(pos1, &pos, mass);
     }

@@ -11,6 +11,7 @@ authors = [
 default = ["mpi"]
 mpi = []
 mpi_test = []
+2d = ["diman/default-2d"]
 
 [dependencies]
 bevy = { version = "0.8.0", default-features = false, features = ["render", "x11", "bevy_winit"]}
@@ -25,7 +26,7 @@ ndarray = "0.15.6"
 serde = {version = "1.0.143", features = ["derive"] }
 serde_yaml = "0.9.9"
 derive_named = { path = "derive_named" }
-diman = { path = "diman", features = ["mpi", "hdf5", "serde", "rand"] }
+diman = { path = "../diman", features = ["mpi", "hdf5", "serde", "rand"] }
 rand = "0.8.5"
 paste = "1.0.8"
 once_cell = "1.13.0"
@@ -44,20 +45,21 @@ required-features = ["mpi", "mpi_test"]
 
 [[example]]
 name = "figure8"
-required-features = ["mpi"]
+required-features = ["mpi", "2d"]
 
 [[example]]
 name = "viscous_hydro"
-required-features = ["mpi"]
+required-features = ["mpi", "2d"]
 
 [[example]]
 name = "fake_periodic_boundary_conditions"
-required-features = ["mpi"]
+required-features = ["mpi", "2d"]
 
 [[example]]
 name = "gravity_collapse"
-required-features = ["mpi"]
+required-features = ["mpi", "2d"]
 
 [[bench]]
 name = "hydrodynamics"
+required-features = ["2d"]
 harness = false

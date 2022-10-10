@@ -21,8 +21,8 @@ use crate::prelude::Particles;
 use crate::simulation::Simulation;
 use crate::test_utils::run_system_on_sim;
 use crate::units::Mass;
-use crate::units::VecLength;
-use crate::units::VecVelocity;
+use crate::units::Vec2Length;
+use crate::units::Vec2Velocity;
 use crate::velocity::Velocity;
 
 pub const NUM_PARTICLES_ONE_DIMENSION: usize = 500;
@@ -31,9 +31,9 @@ fn get_particles(n: usize) -> Vec<(Position, mass::Mass, Velocity)> {
     (0..n)
         .map(move |x| {
             (
-                Position(VecLength::meters(x as f64, 0.0 as f64)),
+                Position(Vec2Length::meters(x as f64, 0.0 as f64)),
                 mass::Mass(Mass::kilograms(1e11)),
-                Velocity(VecVelocity::zero()),
+                Velocity(Vec2Velocity::zero()),
             )
         })
         .collect()

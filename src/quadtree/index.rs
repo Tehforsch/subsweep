@@ -7,7 +7,7 @@ use super::node_index::NodeIndex;
 use super::Node;
 use super::QuadTree;
 use super::MAX_DEPTH;
-use super::NUM_SUBDIVISIONS;
+use crate::config::TWO_TO_NUM_DIMENSIONS;
 
 #[derive(Equivalence, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct QuadTreeIndex([u8; MAX_DEPTH]);
@@ -35,7 +35,7 @@ impl QuadTreeIndex {
         current_depth: usize,
     ) -> Box<dyn Iterator<Item = Self>> {
         if current_depth < depth {
-            Box::new((0..NUM_SUBDIVISIONS).flat_map(move |num_child| {
+            Box::new((0..TWO_TO_NUM_DIMENSIONS).flat_map(move |num_child| {
                 current_index.0[current_depth] = NodeIndex::Child(num_child as u8).into();
                 Self::internal_iter_all_at_depth(depth, current_index, current_depth + 1)
             }))

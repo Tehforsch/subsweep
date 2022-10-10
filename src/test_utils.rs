@@ -25,9 +25,8 @@ pub fn tests_path() -> PathBuf {
 }
 
 pub fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64, U>) {
-    const EPSILON: f64 = 1e-20;
     assert!(
-        (x - y).abs().unwrap_value() < EPSILON,
+        (x - y).abs().unwrap_value() < f64::EPSILON,
         "{} {}",
         x.unwrap_value(),
         y.unwrap_value()

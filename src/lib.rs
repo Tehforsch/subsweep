@@ -75,6 +75,7 @@ pub(crate) mod command_line_options;
 pub mod communication;
 #[cfg(not(feature = "mpi_test"))]
 pub(crate) mod communication;
+pub(crate) mod config;
 pub(crate) mod density;
 pub(crate) mod domain;
 pub(crate) mod io;

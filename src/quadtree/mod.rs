@@ -7,12 +7,11 @@ pub use config::QuadTreeConfig;
 pub use index::QuadTreeIndex;
 pub use visualization::QuadTreeVisualizationPlugin;
 
+use crate::config::TWO_TO_NUM_DIMENSIONS;
 use crate::domain::extent::Extent;
 use crate::units::VecLength;
 
 pub const MAX_DEPTH: usize = 32;
-pub const NUM_DIMENSIONS: usize = 2;
-pub const NUM_SUBDIVISIONS: usize = 2usize.pow(NUM_DIMENSIONS as u32);
 
 pub trait LeafDataType: Clone {
     fn pos(&self) -> &VecLength;
@@ -22,7 +21,7 @@ pub trait NodeDataType<L>: Default {
     fn update_with(&mut self, leaf: &L);
 }
 
-type Tree<N, L> = Box<[QuadTree<N, L>; 4]>;
+type Tree<N, L> = Box<[QuadTree<N, L>; TWO_TO_NUM_DIMENSIONS]>;
 type Leaf<L> = Vec<L>;
 
 #[derive(Debug)]
@@ -126,19 +125,16 @@ impl<N: NodeDataType<L>, L: LeafDataType> QuadTree<N, L> {
 
 #[cfg(test)]
 pub mod tests {
-    use bevy::prelude::Entity;
-
     use super::*;
-    use crate::physics::gravity::LeafData;
-    use crate::units::DVec2Length;
+    use crate::prelude::MVec;
     use crate::units::Length;
-    use crate::units::Mass;
 
     impl LeafDataType for VecLength {
         fn pos(&self) -> &VecLength {
             self
         }
     }
+
     impl<T> NodeDataType<T> for () {
         fn update_with(&mut self, _: &T) {}
     }
@@ -146,29 +142,16 @@ pub mod tests {
     #[test]
     fn no_infinite_recursion_in_tree_construction_with_close_particles() {
         let positions = [
-            LeafData {
-                entity: Entity::from_raw(0),
-                pos: DVec2Length::meters(1.0, 1.0),
-                mass: Mass::zero(),
-            },
-            LeafData {
-                entity: Entity::from_raw(0),
-                pos: DVec2Length::meters(1.0, 1.0),
-                mass: Mass::zero(),
-            },
-            LeafData {
-                entity: Entity::from_raw(0),
-                pos: DVec2Length::meters(2.0, 2.0),
-                mass: Mass::zero(),
-            },
+            VecLength::from_vector_and_scale(MVec::ONE, Length::meters(1.0)),
+            VecLength::from_vector_and_scale(MVec::ONE, Length::meters(1.0)),
+            VecLength::from_vector_and_scale(MVec::ONE, Length::meters(2.0)),
         ];
         let config = QuadTreeConfig {
             max_depth: 10,
             ..Default::default()
         };
-        let extent =
-            Extent::from_positions(positions.iter().map(|particle| &particle.pos)).unwrap();
-        QuadTree::<(), LeafData>::new(&config, positions.into_iter().collect(), &extent);
+        let extent = Extent::from_positions(positions.iter()).unwrap();
+        QuadTree::<(), VecLength>::new(&config, positions.into_iter().collect(), &extent);
     }
 
     pub fn get_min_depth_quadtree<N: NodeDataType<L>, L: LeafDataType>(
@@ -181,24 +164,22 @@ pub mod tests {
             ..Default::default()
         };
         let extent = Extent::new(
-            Length::meters(0.0),
-            Length::meters(1.0),
-            Length::meters(0.0),
-            Length::meters(1.0),
+            VecLength::from_vector_and_scale(MVec::ONE, Length::meters(0.0)),
+            VecLength::from_vector_and_scale(MVec::ONE, Length::meters(1.0)),
         );
         QuadTree::new(&config, positions.into_iter().collect(), &extent)
     }
 
     #[test]
     fn min_depth_works() {
-        for min_depth in 0..5 {
+        for min_depth in 0..4 {
             let tree: QuadTree<(), VecLength> = get_min_depth_quadtree(min_depth);
             let mut num_nodes = 0;
             let mut count = |_, _| {
                 num_nodes += 1;
             };
             tree.depth_first_map_leaf(&mut count);
-            assert_eq!(num_nodes, 4usize.pow(min_depth as u32));
+            assert_eq!(num_nodes, TWO_TO_NUM_DIMENSIONS.pow(min_depth as u32));
         }
     }
 }

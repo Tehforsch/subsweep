@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use super::parameters::HydrodynamicsParameters;
 use crate::domain::GlobalExtent;
+use crate::prelude::MVec;
 use crate::prelude::Particles;
 use crate::prelude::Position;
 use crate::quadtree::LeafDataType;
@@ -53,15 +54,12 @@ fn add_particles_in_box<'a>(
     side_length: &Length,
 ) {
     let node_extent = tree.extent.side_lengths()
-        + VecLength::new(
-            tree.data.largest_smoothing_length,
-            tree.data.largest_smoothing_length,
-        );
+        + VecLength::from_vector_and_scale(MVec::ONE, tree.data.largest_smoothing_length);
     if bounding_boxes_overlap(
         &tree.extent.center(),
         &node_extent,
         pos,
-        &VecLength::new(*side_length, *side_length),
+        &VecLength::from_vector_and_scale(MVec::ONE, *side_length),
     ) {
         match &tree.node {
             quadtree::Node::Tree(tree) => {
@@ -118,12 +116,11 @@ pub(super) fn construct_quad_tree_system(
 mod tests {
     use std::collections::HashSet;
 
-    use bevy::prelude::Entity;
-
     use super::get_particles_in_radius;
     use super::LeafData;
     use super::QuadTree;
     use crate::domain::extent::Extent;
+    use crate::physics::gravity::tests::get_particles;
     use crate::quadtree::QuadTreeConfig;
     use crate::units::Length;
     use crate::units::VecLength;
@@ -141,16 +138,16 @@ mod tests {
 
     #[test]
     fn radius_search() {
-        let n = 20;
-        let m = 20;
+        let n = 12;
+        let m = 12;
         let radius = Length::meters(2.0);
-        let particles: Vec<_> = (0..n)
-            .flat_map(move |x| {
-                (0..m).map(move |y| LeafData {
-                    entity: Entity::from_raw(x * n + y),
-                    pos: VecLength::meters(x as f64, y as f64),
-                    smoothing_length: Length::meters(x as f64 * 0.2),
-                })
+        let particles = get_particles(n, m);
+        let particles: Vec<_> = particles
+            .into_iter()
+            .map(|particle| LeafData {
+                entity: particle.entity,
+                pos: particle.pos,
+                smoothing_length: particle.pos.x() * 0.2,
             })
             .collect();
         let extent = Extent::from_positions(particles.iter().map(|leaf| &leaf.pos)).unwrap();

@@ -15,3 +15,8 @@ pub use crate::velocity::Velocity;
 pub use crate::visualization::CameraTransform;
 pub use crate::visualization::DrawCircle;
 pub use crate::visualization::DrawRect;
+
+#[cfg(feature = "2d")]
+pub type MVec = glam::DVec2;
+#[cfg(not(feature = "2d"))]
+pub type MVec = glam::DVec3;

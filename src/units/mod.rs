@@ -17,14 +17,17 @@ pub use dimension::Dimension;
 use dimension::NONE;
 use glam::DVec2;
 use glam::DVec3;
+use glam::Vec2;
+use glam::Vec3;
 
-define_system!(Quantity, Dimension, NONE);
+define_system!(Quantity, Dimension, NONE, UNIT_NAMES);
 
 #[rustfmt::skip]
 unit_system!(
     Dimension,
     Quantity,
     NONE,
+    UNIT_NAMES,
     DIMENSIONLESS, Dimensionless, length: 0,
     {
         dimensionless, 1.0, ""
