@@ -15,18 +15,18 @@ use crate::communication::DataByRank;
 use crate::communication::Rank;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
-use crate::mass::Mass;
+use crate::components::Mass;
+use crate::components::Position;
+use crate::components::Velocity;
 use crate::named::Named;
 use crate::physics::gravity;
 use crate::physics::gravity::LeafData;
 use crate::physics::MassMoments;
-use crate::position::Position;
 use crate::prelude::Particles;
 use crate::quadtree::QuadTreeConfig;
 use crate::quadtree::QuadTreeIndex;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::velocity::Velocity;
 
 pub type QuadTree = gravity::QuadTree;
 

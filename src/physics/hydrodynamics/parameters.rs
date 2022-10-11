@@ -11,7 +11,8 @@ use crate::units::Length;
 #[name = "hydrodynamics"]
 #[serde(deny_unknown_fields)]
 pub struct HydrodynamicsParameters {
-    pub smoothing_length: Length,
+    /// The minimum allowed smoothing length.
+    pub min_smoothing_length: Length,
     /// Parameters of the tree used for the neighbour search in the
     /// hydrodynamic density and force calculation. See
     /// [QuadTreeConfig](crate::quadtree::QuadTreeConfig)

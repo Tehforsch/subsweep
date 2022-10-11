@@ -1,3 +1,4 @@
+pub(crate) mod hydro_components;
 mod parameters;
 mod quadtree;
 
@@ -5,27 +6,51 @@ use std::f64::consts::PI;
 
 use bevy::prelude::*;
 
+use self::hydro_components::SmoothingLength;
 pub use self::parameters::HydrodynamicsParameters;
 use self::quadtree::construct_quad_tree_system;
 use self::quadtree::get_particles_in_radius;
 use self::quadtree::QuadTree;
 use super::Timestep;
-use crate::density;
+use crate::components;
+use crate::components::Mass;
+use crate::components::Position;
+use crate::components::Velocity;
 use crate::domain::extent::Extent;
-use crate::mass;
-use crate::mass::Mass;
 use crate::named::Named;
 use crate::performance_parameters::PerformanceParameters;
-use crate::position::Position;
+use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
-use crate::pressure;
-use crate::quadtree::LeafDataType;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::Density;
-use crate::units::Pressure;
+use crate::units::Length;
+use crate::units::NumberDensity;
 use crate::units::VecAcceleration;
-use crate::velocity::Velocity;
+
+const GAMMA: f64 = 5.0 / 3.0;
+
+fn kernel(r: Length, h: Length) -> f64 {
+    // Spline Kernel, Monaghan & Lattanzio 1985
+    let ratio = *(r / h).value();
+    if ratio < 0.5 {
+        1.0 - 6.0 * ratio.powi(2) + 6.0 * ratio.powi(3)
+    } else if ratio < 1.0 {
+        2.0 * (1.0 - ratio).powi(3)
+    } else {
+        0.0
+    }
+}
+
+#[cfg(feature = "2d")]
+fn kernel_function(r: Length, h: Length) -> NumberDensity {
+    80.0 / (7.0 * PI * h.squared()) * kernel(r, h)
+}
+
+#[cfg(not(feature = "2d"))]
+fn kernel_function(r: Length, h: Length) -> NumberDensity {
+    8.0 / (PI * h.cubed()) * kernel(r, h)
+}
 
 #[derive(StageLabel)]
 pub enum HydrodynamicsStages {
@@ -57,111 +82,95 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
                 StartupStage::PostStartup,
                 insert_pressure_and_density_system,
             )
-            .add_derived_component::<pressure::Pressure>()
-            .add_derived_component::<density::Density>();
+            .add_derived_component::<components::Pressure>()
+            .add_derived_component::<components::Density>();
+    }
+}
+
+fn set_smoothing_lengths_system(
+    parameters: Res<HydrodynamicsParameters>,
+    mut query: Particles<&mut SmoothingLength>,
+) {
+    for mut p in query.iter_mut() {
+        **p = parameters.min_smoothing_length;
     }
 }
 
 fn insert_pressure_and_density_system(
     mut commands: Commands,
-    particles: Particles<Entity, (Without<pressure::Pressure>, Without<density::Density>)>,
+    particles: Particles<Entity, (Without<components::Pressure>, Without<components::Density>)>,
 ) {
     for entity in particles.iter() {
-        commands
-            .entity(entity)
-            .insert_bundle((pressure::Pressure::default(), density::Density::default()));
+        commands.entity(entity).insert_bundle((
+            components::Pressure::default(),
+            components::Density::default(),
+        ));
     }
 }
+
 fn compute_pressure_and_density_system(
-    mut pressures: Particles<(
-        &mut pressure::Pressure,
-        &mut density::Density,
-        &Position,
-        &Mass,
-    )>,
-    parameters: Res<HydrodynamicsParameters>,
+    mut pressures: Query<
+        (
+            &mut components::Pressure,
+            &mut components::Density,
+            &SmoothingLength,
+            &Position,
+            &Mass,
+        ),
+        With<LocalParticle>,
+    >,
+    masses: Query<&Mass, With<LocalParticle>>,
     tree: Res<QuadTree>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
-    let cutoff_squared = parameters.smoothing_length.squared();
-    let poly_6 = 4.0 / (PI * parameters.smoothing_length.powi::<8>());
-    let rest_density = Density::kilogram_per_square_meter(1.0);
-    let gas_const = Pressure::pascals(100000.0) / rest_density;
     pressures.par_for_each_mut(
         performance_parameters.batch_size(),
-        |(mut pressure, mut density, pos1, mass)| {
+        |(mut pressure, mut density, smoothing_length, pos, mass)| {
             **density = Density::zero();
-            for particle in
-                get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter()
-            {
-                {
-                    let distance_squared = pos1.distance_squared(particle.pos());
-
-                    if distance_squared < cutoff_squared {
-                        **density +=
-                            **mass * poly_6 * (cutoff_squared - distance_squared).powi::<3>();
-                    }
-                }
-                **pressure = gas_const * (**density - rest_density);
+            for particle in get_particles_in_radius(&tree, pos, &smoothing_length).iter() {
+                let mass2 = masses.get(particle.entity).unwrap();
+                let distance = particle.pos.distance(pos);
+                todo!("{:?} {:?} {:?}", mass2, distance, density)
+                // **density += **mass2 * kernel2d(distance, **smoothing_length);
+                // // P = A * rho^gamma
+                // **pressure = **entropy * density.powi::<-3>() * density.powi::<5>();
             }
         },
     );
 }
 
 fn compute_forces_system(
-    mut particles1: Particles<(
-        Entity,
-        &mut Velocity,
-        &Position,
-        &pressure::Pressure,
-        &density::Density,
-    )>,
-    particles2: Particles<(
-        Entity,
-        &Position,
-        &pressure::Pressure,
-        &density::Density,
-        &mass::Mass,
-    )>,
+    mut particles1: Query<
+        (
+            Entity,
+            &mut Velocity,
+            &Position,
+            &SmoothingLength,
+            &components::Pressure,
+            &components::Density,
+        ),
+        With<LocalParticle>,
+    >,
+    particles2: Query<
+        (
+            Entity,
+            &Position,
+            &components::Pressure,
+            &components::Density,
+            &components::Mass,
+        ),
+        With<LocalParticle>,
+    >,
     tree: Res<QuadTree>,
     timestep: Res<Timestep>,
     parameters: Res<HydrodynamicsParameters>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
-    let spiky_grad = -10.0 / (PI * parameters.smoothing_length.powi::<5>());
     particles1.par_for_each_mut(
         performance_parameters.batch_size(),
-        |(entity1, mut vel, pos1, pressure1, density1)| {
+        |(entity1, mut vel, pos1, smoothing_length1, pressure1, density1)| {
             let mut acc = VecAcceleration::zero();
-            for particle in
-                get_particles_in_radius(&tree, pos1, &parameters.smoothing_length).iter()
-            {
-                let entity2 = particle.entity;
-                if entity1 == entity2 {
-                    continue;
-                }
-                let pos2 = particle.pos;
-                let mass2 = particles2.get_component::<mass::Mass>(entity2).unwrap();
-                let pressure2 = particles2
-                    .get_component::<pressure::Pressure>(entity2)
-                    .unwrap();
-                let density2 = particles2
-                    .get_component::<density::Density>(entity2)
-                    .unwrap();
-
-                let distance = pos2 - **pos1;
-                let distance_normalized = distance.normalize();
-                let length = distance.length();
-
-                if length < parameters.smoothing_length {
-                    acc += distance_normalized * **mass2 * (**pressure1 + **pressure2)
-                        / (2.0 * **density2)
-                        * spiky_grad
-                        * (parameters.smoothing_length - length).cubed()
-                        / **density1;
-                }
-            }
-            **vel += acc * **timestep;
+            for particle in get_particles_in_radius(&tree, pos1, &smoothing_length1).iter() {}
         },
     );
 }

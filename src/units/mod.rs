@@ -67,10 +67,6 @@ unit_system!(
     {
         joules, 1.0, "J"
     },
-    DENSITY, Density, mass: 1, length: -2, time: 0,
-    {
-        kilogram_per_square_meter, 1.0, "kg/m^2"
-    },
     VOLUME, Volume, mass: 0, length: 3, time: 0,
     {
     },
@@ -81,8 +77,13 @@ unit_system!(
     ENTROPY, Entropy, mass: 1, length: 2, time: -2, temperature: -1,
     {
     },
-    ENTROPIC_FUNCTION, EntropicFunction, length: 4, mass: -1, time: 2,
+    DENSITY2D, Density2D, mass: 1, length: -2, time: 0,
     {
+        kilogram_per_square_meter, 1.0, "kg/m^2"
+    },
+    DENSITY3D, Density3D, mass: 1, length: -3, time: 0,
+    {
+        kilogram_per_cubic_meter, 1.0, "kg/m^3"
     },
     NUMBERDENSITY3D, NumberDensity3D, length: -3,
     {
@@ -99,4 +100,18 @@ unit_system!(
     INVERSE_TIME_SQUARED, InverseTimeSquared, time: -2,
     {
     }
-    );
+);
+
+#[cfg(feature = "2d")]
+mod reexport {
+    pub type Density = super::Density2D;
+    pub type NumberDensity = super::NumberDensity2D;
+}
+
+#[cfg(not(feature = "2d"))]
+mod reexport {
+    pub type Density = super::Density3D;
+    pub type NumberDensity = super::NumberDensity3D;
+}
+
+pub use reexport::*;

@@ -9,8 +9,9 @@ use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Identified;
 use crate::communication::WorldRank;
+use crate::components::Position;
+use crate::components::Velocity;
 use crate::domain::TopLevelIndices;
-use crate::position::Position;
 use crate::prelude::Particles;
 use crate::quadtree::Node;
 use crate::quadtree::*;
@@ -20,7 +21,6 @@ use crate::units::Length;
 use crate::units::VecAcceleration;
 use crate::units::VecLength;
 use crate::units::GRAVITY_CONSTANT;
-use crate::velocity::Velocity;
 
 pub(super) mod mass_moments;
 

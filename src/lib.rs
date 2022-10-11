@@ -42,6 +42,7 @@
 //! ## A basic example
 //! ```no_run
 //! use raxiom::prelude::*;
+//! use raxiom::components::*;
 //! use bevy::prelude::*;
 //!
 //! fn main() {
@@ -75,24 +76,20 @@ pub(crate) mod command_line_options;
 pub mod communication;
 #[cfg(not(feature = "mpi_test"))]
 pub(crate) mod communication;
+pub mod components;
 pub(crate) mod config;
-pub(crate) mod density;
 pub(crate) mod domain;
 pub(crate) mod io;
-pub(crate) mod mass;
 pub(crate) mod named;
 pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
 pub(crate) mod performance_parameters;
 pub(crate) mod physics;
-pub(crate) mod position;
-pub(crate) mod pressure;
 pub(crate) mod quadtree;
 pub(crate) mod rand;
 pub(crate) mod simulation;
 pub(crate) mod simulation_builder;
 pub(crate) mod stages;
-pub(crate) mod velocity;
 pub(crate) mod visualization;
 
 #[cfg(test)]

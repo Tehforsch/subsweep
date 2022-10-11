@@ -7,20 +7,20 @@ use bevy::prelude::Query;
 use bevy::prelude::StartupStage;
 use bevy::prelude::With;
 
-use crate::mass::Mass;
+use crate::components::Mass;
+use crate::components::Position;
+use crate::components::Velocity;
 use crate::named::Named;
-use crate::position::Position;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
-use crate::velocity::Velocity;
 
 #[derive(Component)]
 pub struct LocalParticle;
 
 /// A convenience type to query for particles.
 /// ```
-/// # use raxiom::prelude::Velocity;
-/// # use raxiom::prelude::Mass;
+/// # use raxiom::components::Velocity;
+/// # use raxiom::components::Mass;
 /// # use raxiom::prelude::Particles;
 /// fn my_system(particles: Particles<(&Velocity, &Mass)>) {
 ///     for (velocity, mass) in particles.iter() {

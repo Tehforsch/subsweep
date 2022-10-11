@@ -16,17 +16,17 @@ pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
 use crate::communication::CommunicationType;
 use crate::communication::Communicator;
+use crate::components::Mass;
+use crate::components::Position;
+use crate::components::Velocity;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
-use crate::mass::Mass;
 use crate::named::Named;
 use crate::particle::ParticlePlugin;
-use crate::position::Position;
 use crate::prelude::Particles;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units;
-use crate::velocity::Velocity;
 
 #[derive(Equivalence, Deref, DerefMut)]
 pub struct Timestep(crate::units::Time);

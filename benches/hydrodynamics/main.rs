@@ -4,6 +4,8 @@ use bevy::prelude::*;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::Criterion;
+use raxiom::components;
+use raxiom::components::Position;
 use raxiom::parameters::DomainTreeParameters;
 use raxiom::parameters::HydrodynamicsParameters;
 use raxiom::parameters::PerformanceParameters;
@@ -13,7 +15,6 @@ use raxiom::prelude::gen_range;
 use raxiom::prelude::HydrodynamicsPlugin;
 use raxiom::prelude::LocalParticle;
 use raxiom::prelude::MVec;
-use raxiom::prelude::Position;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationBuilder;
 use raxiom::prelude::WorldRank;
@@ -26,7 +27,7 @@ fn run_hydro() {
     sim.add_parameters_explicitly(PerformanceParameters::default())
         .add_parameters_explicitly(DomainTreeParameters::default())
         .add_parameters_explicitly(HydrodynamicsParameters {
-            smoothing_length: Length::meters(1.0),
+            min_smoothing_length: Length::meters(1.0),
             tree: QuadTreeConfig::default(),
         })
         .add_parameters_explicitly(SimulationParameters {
@@ -78,7 +79,7 @@ fn spawn_particle(commands: &mut Commands, pos: VecLength, vel: VecVelocity, mas
     commands.spawn_bundle((
         LocalParticle,
         Position(pos),
-        raxiom::prelude::Velocity(vel),
-        raxiom::prelude::Mass(mass),
+        components::Velocity(vel),
+        components::Mass(mass),
     ));
 }

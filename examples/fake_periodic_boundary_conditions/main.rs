@@ -5,6 +5,9 @@ use std::ops::Div;
 
 use bevy::prelude::*;
 use rand::Rng;
+use raxiom::components;
+use raxiom::components::Position;
+use raxiom::components::Velocity;
 use raxiom::prelude::*;
 use raxiom::units::Force;
 use raxiom::units::Length;
@@ -64,12 +67,7 @@ fn get_y_offset_of_particle_type(parameters: &Parameters, type_: &ParticleType) 
 }
 
 fn external_force_system(
-    mut particles: Particles<(
-        &Position,
-        &raxiom::prelude::Mass,
-        &mut Velocity,
-        &ParticleType,
-    )>,
+    mut particles: Particles<(&Position, &components::Mass, &mut Velocity, &ParticleType)>,
     timestep: Res<Timestep>,
     parameters: Res<Parameters>,
 ) {
@@ -147,7 +145,7 @@ fn spawn_particle(
         LocalParticle,
         Position(pos),
         Velocity(vel),
-        raxiom::prelude::Mass(mass),
+        components::Mass(mass),
         type_,
         DrawCircle::from_position_and_color(
             pos,

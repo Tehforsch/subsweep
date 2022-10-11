@@ -6,7 +6,7 @@ use super::GetColor;
 use crate::communication::Rank;
 use crate::communication::SyncCommunicator;
 use crate::communication::WorldRank;
-use crate::position::Position;
+use crate::components::Position;
 use crate::prelude::Particles;
 
 #[derive(Component)]

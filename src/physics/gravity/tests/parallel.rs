@@ -9,21 +9,21 @@ use super::direct_sum;
 use super::get_particles;
 use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::communication::WorldRank;
+use crate::components;
+use crate::components::Position;
+use crate::components::Velocity;
 use crate::domain::DomainDecompositionPlugin;
-use crate::mass;
 use crate::physics::gravity::plugin::GravityPlugin;
 use crate::physics::gravity::GravityParameters;
 use crate::physics::gravity::LeafData;
 use crate::physics::gravity::Solver;
 use crate::physics::PhysicsPlugin;
 use crate::physics::Timestep;
-use crate::position::Position;
 use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
 use crate::simulation::Simulation;
 use crate::test_utils::run_system_on_sim;
 use crate::units::VecVelocity;
-use crate::velocity::Velocity;
 
 pub const NUM_PARTICLES_ONE_DIMENSION: i32 = 20;
 
@@ -65,7 +65,7 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
                     let vel = Velocity(VecVelocity::zero());
                     (
                         Position(pos),
-                        mass::Mass(mass),
+                        components::Mass(mass),
                         vel,
                         LocalParticle,
                         IndexIntoArray(i),

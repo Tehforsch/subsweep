@@ -2,6 +2,7 @@
 #![feature(generic_const_exprs)]
 
 use bevy::prelude::*;
+use raxiom::components;
 use raxiom::prelude::*;
 use raxiom::units::InverseTime;
 use raxiom::units::Mass;
@@ -58,8 +59,8 @@ fn spawn_particles_system(
 fn spawn_particle(commands: &mut Commands, pos: VecLength, vel: VecVelocity, mass: Mass) {
     commands.spawn_bundle((
         LocalParticle,
-        Position(pos),
-        Velocity(vel),
-        raxiom::prelude::Mass(mass),
+        components::Position(pos),
+        components::Velocity(vel),
+        components::Mass(mass),
     ));
 }
