@@ -2,24 +2,11 @@ mod constants;
 mod dimension;
 pub(crate) mod helpers;
 
-// todo: remove
-use std::ops::Add;
-use std::ops::AddAssign;
-use std::ops::Div;
-use std::ops::Mul;
-use std::ops::Neg;
-use std::ops::Sub;
-use std::ops::SubAssign;
-
 pub use constants::*;
 use diman::define_system;
 use diman::unit_system;
 pub use dimension::Dimension;
 pub use dimension::NONE;
-use glam::DVec2;
-use glam::DVec3;
-use glam::Vec2;
-use glam::Vec3;
 
 define_system!(Quantity, Dimension, NONE, UNIT_NAMES);
 
