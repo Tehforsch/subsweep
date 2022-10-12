@@ -67,6 +67,10 @@ unit_system!(
     {
         joules, 1.0, "J"
     },
+    ENERGYPERMASS, EnergyPerMass, mass: 0, length: 2, time: -2,
+    {
+        joules_per_kilogram, 1.0, "J/kg"
+    },
     VOLUME, Volume, mass: 0, length: 3, time: 0,
     {
     },

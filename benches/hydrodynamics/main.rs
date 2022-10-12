@@ -8,6 +8,7 @@ use raxiom::components;
 use raxiom::components::Position;
 use raxiom::parameters::DomainTreeParameters;
 use raxiom::parameters::HydrodynamicsParameters;
+use raxiom::parameters::InitialGasEnergy;
 use raxiom::parameters::PerformanceParameters;
 use raxiom::parameters::QuadTreeConfig;
 use raxiom::parameters::SimulationParameters;
@@ -28,6 +29,10 @@ fn run_hydro() {
         .add_parameters_explicitly(DomainTreeParameters::default())
         .add_parameters_explicitly(HydrodynamicsParameters {
             min_smoothing_length: Length::meters(1.0),
+            initial_gas_energy: InitialGasEnergy::TemperatureAndMolecularWeight {
+                temperature: Temperature::kelvins(1e5),
+                molecular_weight: Dimensionless::dimensionless(1.0),
+            },
             tree: QuadTreeConfig::default(),
         })
         .add_parameters_explicitly(SimulationParameters {

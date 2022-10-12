@@ -9,6 +9,7 @@ use bevy::prelude::*;
 use self::hydro_components::InternalEnergy;
 use self::hydro_components::SmoothingLength;
 pub use self::parameters::HydrodynamicsParameters;
+pub use self::parameters::InitialGasEnergy;
 use self::quadtree::construct_quad_tree_system;
 use self::quadtree::get_particles_in_radius;
 use self::quadtree::QuadTree;
@@ -32,7 +33,9 @@ use crate::units::Length;
 use crate::units::NumberDensity;
 use crate::units::VecAcceleration;
 use crate::units::VecLength;
+use crate::units::BOLTZMANN_CONSTANT;
 use crate::units::NONE;
+use crate::units::PROTON_MASS;
 
 const GAMMA: f64 = 5.0 / 3.0;
 
@@ -149,14 +152,29 @@ fn set_smoothing_lengths_system(
 
 fn insert_pressure_and_density_system(
     mut commands: Commands,
-    particles: Particles<Entity, (Without<components::Pressure>, Without<components::Density>)>,
+    particles: Particles<
+        (Entity, &Mass),
+        (Without<components::Pressure>, Without<components::Density>),
+    >,
+    parameters: Res<HydrodynamicsParameters>,
 ) {
-    for entity in particles.iter() {
+    for (entity, mass) in particles.iter() {
+        let energy = match parameters.initial_gas_energy {
+            InitialGasEnergy::TemperatureAndMolecularWeight {
+                temperature,
+                molecular_weight,
+            } => {
+                temperature * (BOLTZMANN_CONSTANT / PROTON_MASS) * (1.0 / (GAMMA - 1.0))
+                    / molecular_weight
+                    * **mass
+            }
+            InitialGasEnergy::Energy(energy) => energy * **mass,
+        };
         commands.entity(entity).insert_bundle((
             components::Pressure::default(),
             components::Density::default(),
             components::SmoothingLength::default(),
-            components::InternalEnergy(Energy::joules(1e6)),
+            components::InternalEnergy(energy),
         ));
     }
 }

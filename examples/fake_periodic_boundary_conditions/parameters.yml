@@ -1,8 +1,10 @@
 simulation:
-  timestep: 1e-4 s
+  timestep: 4e-4 s
 hydrodynamics:
   min_smoothing_length: 10 m
-  initial_gas_temperature: 300 K
+  initial_gas_energy:
+    temperature: 1e3 K
+    molecular_weight: '4'
 tree:
   max_depth: 20
   min_depth: 4
@@ -11,7 +13,7 @@ example:
   num_particles: 1000
   fake_viscosity_timescale: 0.1 s
   box_size: (45 8) m
-  x_force: 2000 N
-  y_force_factor: 100 N m^-1
-  y_offset: 5 m
+  x_force: 5000 N
+  y_force_factor: 5000 N m^-1
+  y_offset: 2 m
   particle_mass: 1.0 kg
