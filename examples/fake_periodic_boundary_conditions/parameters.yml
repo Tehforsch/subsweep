@@ -1,13 +1,14 @@
 simulation:
-  timestep: 1e-3 s
+  timestep: 1e-4 s
 hydrodynamics:
-  smoothing_length: 1 m
+  min_smoothing_length: 10 m
+  initial_gas_temperature: 300 K
 tree:
   max_depth: 20
   min_depth: 4
   max_num_particles_per_leaf: 1
 example:
-  num_particles: 1500
+  num_particles: 1000
   fake_viscosity_timescale: 0.1 s
   box_size: (45 8) m
   x_force: 2000 N

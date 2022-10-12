@@ -21,3 +21,8 @@ pub struct Pressure(pub crate::units::Pressure);
 #[name = "smoothing_length"]
 #[repr(transparent)]
 pub struct SmoothingLength(pub crate::units::Length);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
+#[name = "internal_energy"]
+#[repr(transparent)]
+pub struct InternalEnergy(pub crate::units::Energy);

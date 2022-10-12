@@ -3,6 +3,7 @@ use serde::Deserialize;
 use crate::named::Named;
 use crate::quadtree::QuadTreeConfig;
 use crate::units::Length;
+use crate::units::Temperature;
 
 /// Parameters for hydrodynamics. Only needed if the
 /// [HydrodynamicsPlugin](crate::physics::hydrodynamics::HydrodynamicsPlugin)
@@ -13,6 +14,8 @@ use crate::units::Length;
 pub struct HydrodynamicsParameters {
     /// The minimum allowed smoothing length.
     pub min_smoothing_length: Length,
+    /// The initial temperature of gas particles.
+    pub initial_gas_temperature: Temperature,
     /// Parameters of the tree used for the neighbour search in the
     /// hydrodynamic density and force calculation. See
     /// [QuadTreeConfig](crate::quadtree::QuadTreeConfig)

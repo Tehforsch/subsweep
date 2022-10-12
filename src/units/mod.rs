@@ -15,7 +15,7 @@ pub use constants::*;
 use diman::define_system;
 use diman::unit_system;
 pub use dimension::Dimension;
-use dimension::NONE;
+pub use dimension::NONE;
 use glam::DVec2;
 use glam::DVec3;
 use glam::Vec2;
@@ -70,7 +70,15 @@ unit_system!(
     VOLUME, Volume, mass: 0, length: 3, time: 0,
     {
     },
-    PRESSURE, Pressure, mass: 1, length: -1, time: -2,
+    TEMPERATURE, Temperature, temperature: 1, 
+    {
+        kelvins, 1.0, "K"
+    },
+    PRESSURE3D, Pressure3D, mass: 1, length: -1, time: -2,
+    {
+        pascals, 1.0, "Pa"
+    },
+    PRESSURE2D, Pressure2D, mass: 1, length: 0, time: -2,
     {
         pascals, 1.0, "Pa"
     },
@@ -106,12 +114,14 @@ unit_system!(
 mod reexport {
     pub type Density = super::Density2D;
     pub type NumberDensity = super::NumberDensity2D;
+    pub type Pressure = super::Pressure2D;
 }
 
 #[cfg(not(feature = "2d"))]
 mod reexport {
     pub type Density = super::Density3D;
     pub type NumberDensity = super::NumberDensity3D;
+    pub type Pressure = super::Pressure3D;
 }
 
 pub use reexport::*;
