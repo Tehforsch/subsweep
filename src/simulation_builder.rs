@@ -14,7 +14,7 @@ use clap::Parser;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainDecompositionPlugin;
-use super::physics::PhysicsPlugin;
+use super::simulation_plugin::SimulationPlugin;
 use super::visualization::VisualizationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::io::input::ShouldReadInitialConditions;
@@ -151,7 +151,7 @@ impl SimulationBuilder {
             sim.add_bevy_plugin(LogPlugin);
         }
         sim.add_plugin(SimulationStagesPlugin)
-            .add_plugin(PhysicsPlugin)
+            .add_plugin(SimulationPlugin)
             .add_plugin(DomainDecompositionPlugin);
         self.add_default_bevy_plugins(sim);
         if self.headless {

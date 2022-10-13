@@ -27,18 +27,18 @@ use crate::units;
 pub struct Timestep(crate::units::Time);
 
 #[derive(Named)]
-pub struct PhysicsPlugin;
+pub struct SimulationPlugin;
 
 // Cannot wait for stageless
 #[derive(StageLabel)]
-pub enum PhysicsStages {
+pub enum SimulationStages {
     Physics,
 }
 
 #[derive(Equivalence, Clone)]
 pub(super) struct ShouldExit(bool);
 
-impl RaxiomPlugin for PhysicsPlugin {
+impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let parameters = sim
             .add_parameter_type_and_get_result::<SimulationParameters>()
@@ -55,20 +55,23 @@ impl RaxiomPlugin for PhysicsPlugin {
             .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::seconds(0.00)))
             .add_system_to_stage(
-                PhysicsStages::Physics,
+                SimulationStages::Physics,
                 integrate_motion_system.after(gravity_system),
             )
-            .add_system_to_stage(PhysicsStages::Physics, show_time_system.before(time_system))
             .add_system_to_stage(
-                PhysicsStages::Physics,
+                SimulationStages::Physics,
+                show_time_system.before(time_system),
+            )
+            .add_system_to_stage(
+                SimulationStages::Physics,
                 time_system.after(integrate_motion_system),
             )
             .add_system_to_stage(
-                PhysicsStages::Physics,
+                SimulationStages::Physics,
                 stop_simulation_system.after(time_system),
             )
             .add_system_to_stage(
-                PhysicsStages::Physics,
+                SimulationStages::Physics,
                 handle_app_exit_system.after(stop_simulation_system),
             );
     }

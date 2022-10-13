@@ -28,11 +28,11 @@ use crate::components::Position;
 use crate::domain::determine_global_extent_system;
 use crate::gravity;
 use crate::named::Named;
-use crate::physics::StopSimulationEvent;
 use crate::prelude::LocalParticle;
 use crate::quadtree::QuadTreeVisualizationPlugin;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation_plugin::StopSimulationEvent;
 
 const COLORS: &[Color] = &[Color::RED, Color::BLUE, Color::GREEN, Color::YELLOW];
 

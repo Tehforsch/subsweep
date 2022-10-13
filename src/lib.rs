@@ -86,11 +86,11 @@ pub(crate) mod named;
 pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
 pub(crate) mod performance_parameters;
-pub(crate) mod physics;
 pub(crate) mod quadtree;
 pub(crate) mod rand;
 pub(crate) mod simulation;
 pub(crate) mod simulation_builder;
+pub(crate) mod simulation_plugin;
 pub(crate) mod stages;
 pub(crate) mod visualization;
 

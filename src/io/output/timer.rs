@@ -5,8 +5,8 @@ use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 
 use super::parameters::OutputParameters;
-use crate::physics::StopSimulationEvent;
-use crate::physics::Time;
+use crate::simulation_plugin::StopSimulationEvent;
+use crate::simulation_plugin::Time;
 use crate::units;
 
 pub(super) struct Timer {

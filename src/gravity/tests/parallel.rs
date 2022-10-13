@@ -17,11 +17,11 @@ use crate::gravity::plugin::GravityPlugin;
 use crate::gravity::GravityParameters;
 use crate::gravity::LeafData;
 use crate::gravity::Solver;
-use crate::physics::PhysicsPlugin;
-use crate::physics::Timestep;
 use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
 use crate::simulation::Simulation;
+use crate::simulation_plugin::SimulationPlugin;
+use crate::simulation_plugin::Timestep;
 use crate::test_utils::run_system_on_sim;
 use crate::units::VecVelocity;
 
@@ -80,7 +80,7 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::DomainTreeParameters;
     use crate::domain::ExchangeDataPlugin;
     use crate::io::output::ShouldWriteOutput;
-    use crate::physics::SimulationParameters;
+    use crate::simulation_plugin::SimulationParameters;
     use crate::stages::SimulationStagesPlugin;
     use crate::units::Dimensionless;
     use crate::units::Length;
@@ -100,7 +100,7 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
     .add_bevy_plugins(MinimalPlugins)
     .add_plugin(SimulationStagesPlugin)
     .add_plugin(DomainDecompositionPlugin)
-    .add_plugin(PhysicsPlugin)
+    .add_plugin(SimulationPlugin)
     .add_plugin(GravityPlugin)
     .add_plugin(ExchangeDataPlugin::<IndexIntoArray>::default());
 }

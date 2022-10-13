@@ -5,9 +5,9 @@ use crate::domain::DomainDecompositionStages;
 use crate::hydrodynamics::HydrodynamicsStages;
 use crate::io::output::OutputStages;
 use crate::named::Named;
-use crate::physics::PhysicsStages;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation_plugin::SimulationStages;
 use crate::visualization::VisualizationStage;
 
 #[derive(Named)]
@@ -21,7 +21,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainDecompositionStages::Decomposition.as_label(),
             DomainDecompositionStages::Exchange.as_label(),
             HydrodynamicsStages::Hydrodynamics.as_label(),
-            PhysicsStages::Physics.as_label(),
+            SimulationStages::Physics.as_label(),
             VisualizationStage::Synchronize.as_label(),
             VisualizationStage::AddVisualization.as_label(),
             VisualizationStage::AddDrawComponents.as_label(),
