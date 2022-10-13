@@ -1,10 +1,6 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
-pub use parameters::GravityParameters;
-pub use plugin::GravityPlugin;
 
-use super::MassMoments;
-use super::Timestep;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Identified;
@@ -12,6 +8,7 @@ use crate::communication::WorldRank;
 use crate::components::Position;
 use crate::components::Velocity;
 use crate::domain::TopLevelIndices;
+use crate::physics::Timestep;
 use crate::prelude::Particles;
 use crate::quadtree::Node;
 use crate::quadtree::*;
@@ -23,17 +20,18 @@ use crate::units::VecLength;
 use crate::units::GRAVITY_CONSTANT;
 
 pub(super) mod mass_moments;
-
-pub(super) mod plugin;
-
-pub use quadtree::LeafData;
-pub use quadtree::NodeData;
-pub use quadtree::QuadTree;
-
 mod parameters;
+pub(super) mod plugin;
 mod quadtree;
 #[cfg(test)]
 pub(crate) mod tests;
+
+pub use mass_moments::MassMoments;
+pub use parameters::GravityParameters;
+pub use plugin::GravityPlugin;
+pub use quadtree::LeafData;
+pub use quadtree::NodeData;
+pub use quadtree::QuadTree;
 
 struct Solver {
     softening_length: Length,

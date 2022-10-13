@@ -121,7 +121,7 @@ mod tests {
     use super::LeafData;
     use super::QuadTree;
     use crate::domain::extent::Extent;
-    use crate::physics::gravity::tests::get_particles;
+    use crate::gravity::tests::get_particles;
     use crate::quadtree::QuadTreeConfig;
     use crate::units::Length;
     use crate::units::VecLength;

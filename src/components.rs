@@ -5,8 +5,8 @@ use derive_more::From;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
+pub use crate::hydrodynamics::hydro_components::*;
 use crate::named::Named;
-pub use crate::physics::hydrodynamics::hydro_components::*;
 use crate::units::VecLength;
 use crate::units::VecVelocity;
 

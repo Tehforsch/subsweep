@@ -2,9 +2,9 @@ use bevy::ecs::schedule::StageLabelId;
 use bevy::prelude::*;
 
 use crate::domain::DomainDecompositionStages;
+use crate::hydrodynamics::HydrodynamicsStages;
 use crate::io::output::OutputStages;
 use crate::named::Named;
-use crate::physics::hydrodynamics::HydrodynamicsStages;
 use crate::physics::PhysicsStages;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;

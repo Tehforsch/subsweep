@@ -1,5 +1,3 @@
-pub mod gravity;
-pub(super) mod hydrodynamics;
 mod parameters;
 mod time;
 
@@ -7,10 +5,6 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
-use self::gravity::gravity_system;
-pub use self::gravity::mass_moments::MassMoments;
-pub use self::gravity::plugin::GravityPlugin;
-pub use self::hydrodynamics::HydrodynamicsPlugin;
 pub use self::parameters::SimulationParameters;
 pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
@@ -19,6 +13,7 @@ use crate::communication::Communicator;
 use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Velocity;
+use crate::gravity::gravity_system;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::named::Named;

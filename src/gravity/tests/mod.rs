@@ -5,7 +5,7 @@ use bevy::prelude::Entity;
 use super::LeafData;
 use super::QuadTree;
 use crate::domain::extent::Extent;
-use crate::physics::gravity::Solver;
+use crate::gravity::Solver;
 use crate::quadtree;
 use crate::quadtree::QuadTreeConfig;
 use crate::test_utils::assert_is_close;

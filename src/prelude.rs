@@ -1,10 +1,10 @@
 pub use crate::communication::WorldRank;
 pub use crate::communication::WorldSize;
+pub use crate::gravity::GravityPlugin;
+pub use crate::hydrodynamics::HydrodynamicsPlugin;
 pub use crate::named::*;
 pub use crate::particle::LocalParticle;
 pub use crate::particle::Particles;
-pub use crate::physics::hydrodynamics::HydrodynamicsPlugin;
-pub use crate::physics::GravityPlugin;
 pub use crate::physics::Timestep;
 pub use crate::rand::gen_range;
 pub use crate::simulation::Simulation;

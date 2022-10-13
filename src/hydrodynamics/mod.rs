@@ -1,19 +1,12 @@
-pub(crate) mod hydro_components;
-mod parameters;
-mod quadtree;
-
 use std::f64::consts::PI;
 
 use bevy::prelude::*;
 
 use self::hydro_components::InternalEnergy;
 use self::hydro_components::SmoothingLength;
-pub use self::parameters::HydrodynamicsParameters;
-pub use self::parameters::InitialGasEnergy;
 use self::quadtree::construct_quad_tree_system;
 use self::quadtree::get_particles_in_radius;
 use self::quadtree::QuadTree;
-use super::Timestep;
 use crate::components;
 use crate::components::Mass;
 use crate::components::Position;
@@ -21,6 +14,7 @@ use crate::components::Velocity;
 use crate::domain::extent::Extent;
 use crate::named::Named;
 use crate::performance_parameters::PerformanceParameters;
+use crate::physics::Timestep;
 use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
 use crate::simulation::RaxiomPlugin;
@@ -36,6 +30,13 @@ use crate::units::VecLength;
 use crate::units::BOLTZMANN_CONSTANT;
 use crate::units::NONE;
 use crate::units::PROTON_MASS;
+
+pub(crate) mod hydro_components;
+mod parameters;
+mod quadtree;
+
+pub use self::parameters::HydrodynamicsParameters;
+pub use self::parameters::InitialGasEnergy;
 
 const GAMMA: f64 = 5.0 / 3.0;
 

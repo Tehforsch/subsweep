@@ -1,6 +1,6 @@
 use bevy::prelude::Entity;
 
-use crate::physics::MassMoments;
+use crate::gravity::MassMoments;
 use crate::quadtree::LeafDataType;
 use crate::quadtree::NodeDataType;
 use crate::quadtree::{self};

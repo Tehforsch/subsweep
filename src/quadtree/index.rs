@@ -123,7 +123,7 @@ mod tests {
     use super::super::node_index::NodeIndex;
     use super::QuadTreeIndex;
     use crate::domain::extent::Extent;
-    use crate::physics::gravity::LeafData;
+    use crate::gravity::LeafData;
     use crate::quadtree::tests::get_min_depth_quadtree;
     use crate::quadtree::Node;
     use crate::quadtree::QuadTree;

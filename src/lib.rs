@@ -79,6 +79,8 @@ pub(crate) mod communication;
 pub mod components;
 pub(crate) mod config;
 pub(crate) mod domain;
+pub(crate) mod gravity;
+pub(crate) mod hydrodynamics;
 pub(crate) mod io;
 pub(crate) mod named;
 pub(crate) mod parameter_plugin;
