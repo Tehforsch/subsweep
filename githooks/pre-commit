@@ -16,13 +16,13 @@ then
     exit 1
 fi
 
-if ! cargo test --features bevy/dynamic --no-default-features -- --ignored
+if ! cargo test --features bevy/dynamic --no-default-features --tests -- --ignored
 then
     echo "There are some test issues."
     exit 1
 fi
 
-if ! cargo test --no-default-features --features bevy/dynamic,mpi,2d -- --ignored
+if ! cargo test --no-default-features --features bevy/dynamic,mpi,2d --tests -- --ignored
 then
     echo "There are some 2d test issues."
     exit 1
