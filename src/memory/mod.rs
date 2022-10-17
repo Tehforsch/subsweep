@@ -6,7 +6,6 @@ use mpi::traits::Equivalence;
 use serde::Deserialize;
 
 use crate::communication::CommunicationPlugin;
-use crate::communication::CommunicationType;
 use crate::communication::Communicator;
 use crate::named::Named;
 use crate::prelude::Particles;
@@ -76,9 +75,7 @@ impl<T: Named + Component> RaxiomPlugin for ComponentMemoryUsagePlugin<T> {
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(MemoryUsage::default())
-            .add_plugin(CommunicationPlugin::<Memory>::new(
-                CommunicationType::AllGather,
-            ))
+            .add_plugin(CommunicationPlugin::<Memory>::default())
             .add_system(reset_memory_usage_system)
             .add_system(communicate_memory_usage_system);
     }

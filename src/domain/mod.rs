@@ -9,7 +9,6 @@ use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
 use crate::communication::CommunicatedOption;
 use crate::communication::CommunicationPlugin;
-use crate::communication::CommunicationType;
 use crate::communication::Communicator;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
@@ -82,12 +81,8 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
                 DomainDecompositionStages::Decomposition,
                 domain_decomposition_system.after(distribute_top_level_nodes_system),
             )
-            .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
-                CommunicationType::AllGather,
-            ))
-            .add_plugin(CommunicationPlugin::<MassMoments>::new(
-                CommunicationType::AllGather,
-            ));
+            .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::default())
+            .add_plugin(CommunicationPlugin::<MassMoments>::default());
     }
 }
 

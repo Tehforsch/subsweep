@@ -8,7 +8,6 @@ use mpi::traits::Equivalence;
 pub use self::parameters::SimulationParameters;
 pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
-use crate::communication::CommunicationType;
 use crate::communication::Communicator;
 use crate::components::Mass;
 use crate::components::Position;
@@ -48,9 +47,7 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_required_component::<Velocity>()
             .add_plugin(ParticlePlugin)
             .add_plugin(OutputPlugin::<Attribute<Time>>::default())
-            .add_plugin(CommunicationPlugin::<ShouldExit>::new(
-                CommunicationType::AllGather,
-            ))
+            .add_plugin(CommunicationPlugin::<ShouldExit>::default())
             .add_event::<StopSimulationEvent>()
             .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::seconds(0.00)))

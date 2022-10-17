@@ -53,6 +53,15 @@ pub struct CommunicationPlugin<T> {
     pub(super) type_: CommunicationType,
 }
 
+impl<T> Default for CommunicationPlugin<T> {
+    fn default() -> Self {
+        Self {
+            _marker: PhantomData::default(),
+            type_: CommunicationType::AllGather,
+        }
+    }
+}
+
 impl<T> CommunicationPlugin<T> {
     pub fn new(type_: CommunicationType) -> Self {
         Self {
