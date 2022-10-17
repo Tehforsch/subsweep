@@ -26,6 +26,7 @@ use crate::io::input::ComponentInput;
 use crate::io::input::DatasetInputPlugin;
 use crate::io::output::OutputPlugin;
 use crate::io::to_dataset::ToDataset;
+use crate::memory::ComponentMemoryUsagePlugin;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
@@ -262,13 +263,18 @@ impl Simulation {
         self
     }
 
+    pub fn get_parameters<T: Parameters>(&self) -> &T {
+        self.get_resource::<T>().unwrap()
+    }
+
     pub fn add_component<T>(&mut self, input: ComponentInput) -> &mut Self
     where
         T: Equivalence + ToDataset + Component,
         <T as Equivalence>::Out: MatchesRaw,
     {
         self.add_plugin(ExchangeDataPlugin::<T>::default())
-            .add_plugin(OutputPlugin::<T>::default());
+            .add_plugin(OutputPlugin::<T>::default())
+            .add_plugin(ComponentMemoryUsagePlugin::<T>::default());
         match input {
             ComponentInput::Required => {
                 self.add_plugin(DatasetInputPlugin::<T>::default());

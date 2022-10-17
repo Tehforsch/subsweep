@@ -77,7 +77,6 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 
 #[cfg(not(feature = "mpi"))]
 fn build_parallel_gravity_sim(sim: &mut Simulation) {
-    use crate::domain::DomainTreeParameters;
     use crate::domain::ExchangeDataPlugin;
     use crate::io::output::ShouldWriteOutput;
     use crate::simulation_plugin::SimulationParameters;
@@ -86,23 +85,23 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::units::Length;
     use crate::units::Time;
 
-    sim.add_parameters_explicitly(SimulationParameters {
-        timestep: Time::seconds(1.0),
-        ..Default::default()
-    })
-    .add_parameters_explicitly(GravityParameters {
-        opening_angle: Dimensionless::dimensionless(0.0),
-        softening_length: Length::meters(1e-30),
-    })
-    .add_parameters_explicitly(DomainTreeParameters::default())
-    .insert_resource(ShouldWriteOutput(false))
-    .add_startup_system(spawn_particles_system)
-    .add_bevy_plugins(MinimalPlugins)
-    .add_plugin(SimulationStagesPlugin)
-    .add_plugin(DomainDecompositionPlugin)
-    .add_plugin(SimulationPlugin)
-    .add_plugin(GravityPlugin)
-    .add_plugin(ExchangeDataPlugin::<IndexIntoArray>::default());
+    sim.add_parameter_file_contents("".into())
+        .add_parameters_explicitly(SimulationParameters {
+            timestep: Time::seconds(1.0),
+            ..Default::default()
+        })
+        .add_parameters_explicitly(GravityParameters {
+            opening_angle: Dimensionless::dimensionless(0.0),
+            softening_length: Length::meters(1e-30),
+        })
+        .insert_resource(ShouldWriteOutput(false))
+        .add_startup_system(spawn_particles_system)
+        .add_bevy_plugins(MinimalPlugins)
+        .add_plugin(SimulationStagesPlugin)
+        .add_plugin(DomainDecompositionPlugin)
+        .add_plugin(SimulationPlugin)
+        .add_plugin(GravityPlugin)
+        .add_plugin(ExchangeDataPlugin::<IndexIntoArray>::default());
 }
 
 #[test]

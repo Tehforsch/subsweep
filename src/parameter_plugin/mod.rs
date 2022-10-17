@@ -48,6 +48,10 @@ impl Simulation {
                 &parameter_file_name
             )
         });
+        self.add_parameter_file_contents(contents)
+    }
+
+    pub fn add_parameter_file_contents(&mut self, contents: String) -> &mut Self {
         self.insert_resource(ParameterFileContents(contents));
         self
     }

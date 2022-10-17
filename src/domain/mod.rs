@@ -33,7 +33,17 @@ pub type QuadTree = gravity::QuadTree;
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
 #[derive(Default, Deserialize, Deref, DerefMut, Named)]
 #[name = "tree"]
-pub struct DomainTreeParameters(QuadTreeConfig);
+pub struct DomainTreeParameters {
+    #[serde(default = "default_domain_tree_params")]
+    params: QuadTreeConfig,
+}
+
+fn default_domain_tree_params() -> QuadTreeConfig {
+    QuadTreeConfig {
+        min_depth: 4,
+        ..Default::default()
+    }
+}
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {

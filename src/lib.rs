@@ -20,6 +20,7 @@ pub(crate) mod domain;
 pub(crate) mod gravity;
 pub(crate) mod hydrodynamics;
 pub(crate) mod io;
+pub(crate) mod memory;
 pub(crate) mod named;
 pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
