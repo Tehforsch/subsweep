@@ -69,6 +69,14 @@ impl<T> CommunicationPlugin<T> {
             type_,
         }
     }
+
+    pub fn sync() -> Self {
+        Self::new(CommunicationType::Sync)
+    }
+
+    pub fn exchange() -> Self {
+        Self::new(CommunicationType::Exchange)
+    }
 }
 
 pub(super) fn get_next_tag(sim: &mut Simulation) -> Tag {

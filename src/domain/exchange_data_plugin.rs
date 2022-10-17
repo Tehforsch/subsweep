@@ -15,7 +15,6 @@ use mpi::traits::MatchesRaw;
 
 use super::DomainDecompositionStages;
 use crate::communication::CommunicationPlugin;
-use crate::communication::CommunicationType;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
@@ -86,9 +85,7 @@ where
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(ExchangeOrder::default())
-            .add_plugin(CommunicationPlugin::<NumEntities>::new(
-                CommunicationType::Exchange,
-            ))
+            .add_plugin(CommunicationPlugin::<NumEntities>::exchange())
             .add_system_to_stage(
                 DomainDecompositionStages::Exchange,
                 send_num_outgoing_entities_system,
@@ -126,7 +123,7 @@ where
             size, rank,
         )))
         .add_system_to_stage(DomainDecompositionStages::Exchange, exchange_buffers_system)
-        .add_plugin(CommunicationPlugin::<T>::new(CommunicationType::Exchange))
+        .add_plugin(CommunicationPlugin::<T>::exchange())
         .add_system_to_stage(
             DomainDecompositionStages::Exchange,
             Self::fill_buffers_system,

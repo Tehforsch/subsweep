@@ -5,7 +5,6 @@ use super::parameters::GravityParameters;
 use super::GravityCalculationReply;
 use super::GravityCalculationRequest;
 use crate::communication::CommunicationPlugin;
-use crate::communication::CommunicationType;
 use crate::communication::Identified;
 use crate::domain::communicate_mass_moments_system;
 use crate::domain::construct_quad_tree_system;
@@ -29,15 +28,7 @@ impl RaxiomPlugin for GravityPlugin {
                 SimulationStages::Physics,
                 gravity_system.after(communicate_mass_moments_system),
             )
-            .add_plugin(
-                CommunicationPlugin::<Identified<GravityCalculationRequest>>::new(
-                    CommunicationType::Exchange,
-                ),
-            )
-            .add_plugin(
-                CommunicationPlugin::<Identified<GravityCalculationReply>>::new(
-                    CommunicationType::Exchange,
-                ),
-            );
+            .add_plugin(CommunicationPlugin::<Identified<GravityCalculationRequest>>::exchange())
+            .add_plugin(CommunicationPlugin::<Identified<GravityCalculationReply>>::exchange());
     }
 }

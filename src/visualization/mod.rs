@@ -22,7 +22,6 @@ use self::remote::send_particles_to_main_thread_system;
 use self::remote::ParticleVisualizationExchangeData;
 use self::remote::RemoteParticleVisualization;
 use crate::communication::CommunicationPlugin;
-use crate::communication::CommunicationType;
 use crate::communication::Rank;
 use crate::components::Position;
 use crate::domain::determine_global_extent_system;
@@ -52,9 +51,7 @@ pub struct VisualizationPlugin;
 
 impl RaxiomPlugin for VisualizationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_plugin(
-            CommunicationPlugin::<ParticleVisualizationExchangeData>::new(CommunicationType::Sync),
-        );
+        sim.add_plugin(CommunicationPlugin::<ParticleVisualizationExchangeData>::sync());
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
