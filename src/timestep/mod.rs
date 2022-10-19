@@ -1,3 +1,4 @@
+mod active_particles;
 mod parameters;
 mod time_bins;
 
@@ -6,8 +7,9 @@ use std::marker::PhantomData;
 use bevy::ecs::query::ROQueryItem;
 use bevy::ecs::query::WorldQuery;
 use bevy::ecs::schedule::ShouldRun;
+use bevy::prelude::Deref;
+use bevy::prelude::DerefMut;
 use bevy::prelude::Entity;
-use bevy::prelude::Query;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 
@@ -20,7 +22,7 @@ use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 use crate::units::Time;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deref, DerefMut)]
 pub struct ActiveTimestep {
     /// The currently active timestep. Level 0
     /// is the highest possible timestep T_0 and level i
@@ -53,8 +55,11 @@ impl<T: TimestepCriterion + 'static> RaxiomPlugin for TimestepPlugin<T> {
     }
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
-        sim.add_parameter_type::<TimestepParameters>()
-            .add_state(ActiveTimestep::default());
+        let parameters = sim
+            .add_parameter_type_and_get_result::<TimestepParameters>()
+            .clone();
+        sim.insert_resource(TimeBins::<T>::new(parameters.num_levels))
+            .insert_resource(ActiveTimestep::default());
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
@@ -69,8 +74,9 @@ fn determine_timesteps_system<T: TimestepCriterion + 'static>(
 ) {
     bins.reset();
     for (entity, data) in particles.iter() {
-        let timestep = T::timestep(data);
-        let timestep_ratio = (timestep / parameters.max_timestep).value();
+        let desired_timestep = T::timestep(data);
+        let timestep_ratio = (parameters.max_timestep / desired_timestep).value();
+        // bin = log2(T_0 / T) clamped to [0, num_levels)
         let bin_level = timestep_ratio
             .log2()
             .max(0.0)
@@ -88,15 +94,25 @@ pub fn on_synchronization_step(step: Res<ActiveTimestep>) -> ShouldRun {
 
 #[cfg(test)]
 mod tests {
+    use bevy::prelude::Commands;
     use bevy::prelude::Component;
 
+    use super::parameters::TimestepParameters;
     use super::TimestepCriterion;
     use super::TimestepPlugin;
+    use crate::prelude::Float;
+    use crate::prelude::LocalParticle;
+    use crate::prelude::Particles;
     use crate::prelude::Simulation;
+    use crate::test_utils::run_system_on_sim;
+    use crate::timestep::active_particles::ActiveParticles;
     use crate::units::Time;
 
     #[derive(Component)]
     struct DesiredTimestep(Time);
+
+    #[derive(Component)]
+    struct Counter(usize);
 
     struct DumbCriterion;
     impl TimestepCriterion for DumbCriterion {
@@ -112,6 +128,44 @@ mod tests {
     #[test]
     fn check_timestepping() {
         let mut sim = Simulation::default();
+        const BASE_TIMESTEP: Time = Time::seconds(1.0);
+        fn spawn_particles_system(mut commands: Commands) {
+            let spawn = |commands: &mut Commands, factor: usize| {
+                // Add an epsilon to make sure we slip into the correct bin
+                let epsilon = Time::seconds(1e-5);
+                let timestep = BASE_TIMESTEP / (factor as Float) - epsilon;
+                commands.spawn_bundle((DesiredTimestep(timestep), Counter(0), LocalParticle));
+            };
+            spawn(&mut commands, 1);
+            spawn(&mut commands, 1);
+            spawn(&mut commands, 2);
+            spawn(&mut commands, 2);
+            spawn(&mut commands, 4);
+            spawn(&mut commands, 4);
+            spawn(&mut commands, 8);
+            spawn(&mut commands, 8);
+        }
+        fn count_timesteps_system(mut particles: ActiveParticles<DumbCriterion, &mut Counter>) {
+            for mut counter in particles.iter_mut() {
+                counter.0 += 1;
+            }
+        }
+        fn check_counters_system(particles: Particles<(&Counter, &DesiredTimestep)>) {
+            for (counter, timestep) in particles.iter() {
+                let desired_num_updates = (BASE_TIMESTEP / timestep.0).value() as usize;
+                assert_eq!(desired_num_updates, counter.0);
+            }
+        }
+        sim.add_parameter_file_contents("".into());
+        sim.add_parameters_explicitly(TimestepParameters {
+            num_levels: 4,
+            max_timestep: Time::seconds(1.0),
+        });
         sim.add_plugin(TimestepPlugin::<DumbCriterion>::default());
+        sim.add_startup_system(spawn_particles_system);
+        sim.add_system(count_timesteps_system);
+        // Run one full timestep
+        sim.update();
+        run_system_on_sim(&mut sim, check_counters_system);
     }
 }
