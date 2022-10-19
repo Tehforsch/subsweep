@@ -10,6 +10,12 @@ pub use dimension::NONE;
 
 define_system!(Quantity, Dimension, NONE, UNIT_NAMES);
 
+impl<const D: Dimension> Quantity<Float, D> {
+    pub fn one_unchecked() -> Self {
+        Self(1.0)
+    }
+}
+
 #[rustfmt::skip]
 unit_system!(
     Dimension,
@@ -116,3 +122,5 @@ mod reexport {
 }
 
 pub use reexport::*;
+
+use self::helpers::Float;

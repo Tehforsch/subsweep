@@ -234,8 +234,9 @@ fn compute_energy_change_system(
     particles1.par_for_each_mut(
         performance_parameters.batch_size(),
         |(mut energy1, mass1, velocity1, position1, smoothing_length1, pressure1, density1)| {
-            let mut d_energy =
-                Energy::zero() / crate::units::Mass::one() / crate::units::Time::one();
+            let mut d_energy = Energy::zero()
+                / crate::units::Mass::one_unchecked()
+                / crate::units::Time::one_unchecked();
             for particle in get_particles_in_radius(&tree, position1, smoothing_length1).iter() {
                 let (position2, velocity2, pressure2, density2, mass2, smoothing_length2) =
                     particles2.get(particle.entity).unwrap();
