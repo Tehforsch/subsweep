@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use bevy::app::PluginGroupBuilder;
 use bevy::ecs::event::Event;
 use bevy::ecs::schedule::IntoSystemDescriptor;
+use bevy::ecs::schedule::StateData;
 use bevy::ecs::system::Resource;
 use bevy::prelude::debug;
 use bevy::prelude::warn;
@@ -93,6 +94,11 @@ impl Simulation {
         stage: S,
     ) -> &mut Self {
         self.app.add_stage_after(target, label, stage);
+        self
+    }
+
+    pub fn add_state(&mut self, s: impl StateData) -> &mut Self {
+        self.app.add_state(s);
         self
     }
 
