@@ -2552,7 +2552,6 @@ dependencies = [
  "hdf5",
  "lazy_static",
  "mpi",
- "ndarray",
  "num-traits",
  "once_cell",
  "paste",

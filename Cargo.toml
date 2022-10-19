@@ -22,7 +22,6 @@ glam = "0.21.3"
 hdf5 = "0.8.1"
 lazy_static = "1.4.0"
 mpi = { version = "0.6", default-features = false, features = ["derive"] }
-ndarray = "0.15.6"
 serde = {version = "1.0.143", features = ["derive"] }
 serde_yaml = "0.9.9"
 derive_named = { path = "derive_named" }
