@@ -27,7 +27,13 @@ pub trait ToDataset: Clone + Component + H5Type + Named + Sync + Send + 'static 
 impl<const D: Dimension, S, T> ToDataset for T
 where
     S: Clone + 'static + std::ops::Mul<f64, Output = S>,
-    T: Clone + Component + Named + H5Type + Deref<Target = Quantity<S, D>> + From<Quantity<S, D>>,
+    T: Clone
+        + Component
+        + Named
+        + H5Type
+        + Deref<Target = Quantity<S, D>>
+        + From<<Quantity<S, D> as std::ops::Mul<f64>>::Output>,
+    Quantity<S, D>: std::ops::Mul<f64>,
 {
     fn dimension() -> Dimension {
         D

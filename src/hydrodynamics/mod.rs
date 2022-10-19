@@ -42,7 +42,7 @@ const GAMMA: f64 = 5.0 / 3.0;
 
 fn kernel_function(r: Length, h: Length) -> f64 {
     // Spline Kernel, Monaghan & Lattanzio 1985
-    let ratio = *(r / h).value();
+    let ratio = (r / h).value();
     if ratio < 0.5 {
         1.0 - 6.0 * ratio.powi(2) + 6.0 * ratio.powi(3)
     } else if ratio < 1.0 {
@@ -53,7 +53,7 @@ fn kernel_function(r: Length, h: Length) -> f64 {
 }
 
 fn kernel_derivative_function(r: Length, h: Length) -> f64 {
-    let ratio = *(r / h).value();
+    let ratio = (r / h).value();
     if ratio < 0.5 {
         -2.0 * ratio + 3.0 * ratio.powi(2)
     } else if ratio < 1.0 {

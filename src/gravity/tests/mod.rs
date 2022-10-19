@@ -88,7 +88,7 @@ fn compare_quadtree_gravity_to_direct_sum() {
 pub(super) fn compare_accelerations(acc1: VecAcceleration, acc2: VecAcceleration) {
     let min_acc = Acceleration::meters_per_second_squared(1e-15);
     let relative_diff = (acc1 - acc2).length() / (acc1.length() + acc2.length() + min_acc);
-    assert!(relative_diff.value() < &1e-10);
+    assert!(relative_diff.value() < 1e-10);
 }
 
 pub(super) fn direct_sum(
