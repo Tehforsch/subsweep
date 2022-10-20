@@ -4,11 +4,10 @@ mod time_bins;
 
 use std::marker::PhantomData;
 
+pub use active_particles::ActiveParticles;
 use bevy::ecs::query::ROQueryItem;
 use bevy::ecs::query::WorldQuery;
-use bevy::ecs::schedule::ShouldRun;
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
+use bevy::prelude::CoreStage;
 use bevy::prelude::Entity;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
@@ -22,12 +21,40 @@ use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 use crate::units::Time;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deref, DerefMut)]
-pub struct ActiveTimestep {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TimestepState {
     /// The currently active timestep. Level 0
     /// is the highest possible timestep T_0 and level i
     /// corresponds to the timestep T_i = T_0 2^{-i}
-    level: usize,
+    count: usize,
+    max_num_bins: usize,
+}
+
+impl TimestepState {
+    fn new(max_num_bins: usize) -> Self {
+        Self {
+            max_num_bins,
+            count: 0,
+        }
+    }
+
+    fn next(self) -> Self {
+        let max_count = 2usize.pow(self.max_num_bins as u32);
+        Self {
+            count: (self.count + 1).rem_euclid(max_count),
+            max_num_bins: self.max_num_bins,
+        }
+    }
+
+    fn is_active_bin(&self, level: usize) -> bool {
+        self.count
+            .rem_euclid(2usize.pow((self.max_num_bins - level) as u32))
+            == 0
+    }
+
+    pub fn on_synchronization_step(&self) -> bool {
+        self.count == 0
+    }
 }
 
 trait TimestepCriterion: Sync + Send {
@@ -59,12 +86,18 @@ impl<T: TimestepCriterion + 'static> RaxiomPlugin for TimestepPlugin<T> {
             .add_parameter_type_and_get_result::<TimestepParameters>()
             .clone();
         sim.insert_resource(TimeBins::<T>::new(parameters.num_levels))
-            .insert_resource(ActiveTimestep::default());
+            .insert_resource(TimestepState::new(parameters.num_levels))
+            .add_system_to_stage(CoreStage::PostUpdate, timestep_transition_system);
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_system(determine_timesteps_system::<T>);
+        sim.add_system_to_stage(CoreStage::PreUpdate, determine_timesteps_system::<T>);
     }
+}
+
+fn timestep_transition_system(mut state: ResMut<TimestepState>) {
+    let new_state = state.next();
+    *state = new_state;
 }
 
 fn determine_timesteps_system<T: TimestepCriterion + 'static>(
@@ -79,16 +112,8 @@ fn determine_timesteps_system<T: TimestepCriterion + 'static>(
         // bin = log2(T_0 / T) clamped to [0, num_levels)
         let bin_level = timestep_ratio
             .log2()
-            .max(0.0)
-            .min((parameters.num_levels - 1) as Float) as usize;
-        bins.insert_up_to(bin_level, entity);
-    }
-}
-
-pub fn on_synchronization_step(step: Res<ActiveTimestep>) -> ShouldRun {
-    match step.level {
-        0 => ShouldRun::Yes,
-        _ => ShouldRun::No,
+            .clamp(0.0, (parameters.num_levels - 1) as Float) as usize;
+        bins.insert(bin_level, entity);
     }
 }
 
@@ -127,7 +152,7 @@ mod tests {
 
     #[test]
     fn check_timestepping() {
-        let mut sim = Simulation::default();
+        let mut sim = Simulation::test();
         const BASE_TIMESTEP: Time = Time::seconds(1.0);
         fn spawn_particles_system(mut commands: Commands) {
             let spawn = |commands: &mut Commands, factor: usize| {
@@ -165,7 +190,7 @@ mod tests {
         sim.add_startup_system(spawn_particles_system);
         sim.add_system(count_timesteps_system);
         // Run one full timestep
-        sim.update();
+        sim.timestep();
         run_system_on_sim(&mut sim, check_counters_system);
     }
 }

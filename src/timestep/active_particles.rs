@@ -6,7 +6,7 @@ use bevy::prelude::Res;
 use bevy::utils::HashSet;
 
 use super::time_bins::TimeBins;
-use super::ActiveTimestep;
+use super::TimestepState;
 use crate::prelude::Particles;
 
 #[derive(SystemParam)]
@@ -18,7 +18,7 @@ where
 {
     query: Particles<'w, 's, Q, F>,
     timebins: Res<'w, TimeBins<T>>,
-    active_timestep: Res<'w, ActiveTimestep>,
+    active_timestep: Res<'w, TimestepState>,
 }
 
 impl<'w, 's, T, Q, F> ActiveParticles<'w, 's, T, Q, F>
@@ -32,12 +32,13 @@ where
         Q: WorldQuery,
         F: WorldQuery,
     {
-        self.timebins[**self.active_timestep]
-            .iter()
+        self.timebins
+            .iter_active(&self.active_timestep)
+            .flat_map(|bin| bin.iter())
             .map(move |x| self.query.get(*x).unwrap())
     }
 
-    pub fn iter_mut<'a>(&'a mut self) -> impl Iterator<Item = QueryItem<'a, Q>>
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = QueryItem<'_, Q>>
     where
         Q: WorldQuery,
         F: WorldQuery,
@@ -64,14 +65,20 @@ where
         // possibly be removed if we ensure that the entities in the
         // timebins are always unique
         //
-        let entities: Vec<_> = self.timebins[**self.active_timestep].iter().collect();
+        let entities: Vec<_> = self
+            .timebins
+            .iter_active(&self.active_timestep)
+            .flat_map(|bin| bin.iter())
+            .collect();
         let num = entities.len();
         let entities = entities.into_iter().collect::<HashSet<_>>();
-        assert_eq!(num, entities.len());
-        let pointers: Vec<_> = entities
+        assert_eq!(
+            num,
+            entities.len(),
+            "Some entities are in multiple timebins!"
+        );
+        entities
             .into_iter()
             .map(|x| unsafe { self.query.get_unchecked(*x) }.unwrap())
-            .collect();
-        pointers.into_iter()
     }
 }

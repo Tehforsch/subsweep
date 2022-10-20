@@ -2,15 +2,15 @@ use std::marker::PhantomData;
 
 use bevy::prelude::*;
 
+use super::TimestepState;
+
 pub struct TimeBins<T> {
-    num_bins: usize,
     bins: Vec<TimeBin<T>>,
 }
 
 impl<T> TimeBins<T> {
     pub fn new(num_bins: usize) -> Self {
         Self {
-            num_bins,
             bins: (0..num_bins).map(|_| TimeBin::default()).collect(),
         }
     }
@@ -21,10 +21,19 @@ impl<T> TimeBins<T> {
         }
     }
 
-    pub fn insert_up_to(&mut self, level: usize, entity: Entity) {
-        for bin in self.bins[0..level + 1].iter_mut() {
-            bin.insert(entity);
-        }
+    pub fn insert(&mut self, level: usize, entity: Entity) {
+        self.bins[level].insert(entity);
+    }
+
+    pub fn iter_active<'a>(
+        &'a self,
+        state: &'a TimestepState,
+    ) -> impl Iterator<Item = &TimeBin<T>> + '_ {
+        self.bins
+            .iter()
+            .enumerate()
+            .filter(move |(level, _)| state.is_active_bin(*level))
+            .map(|(_, bin)| bin)
     }
 }
 

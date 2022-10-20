@@ -32,6 +32,7 @@ use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
 use crate::parameter_plugin::Parameters;
+use crate::timestep::TimestepState;
 
 #[derive(Default)]
 pub struct Simulation {
@@ -41,6 +42,15 @@ pub struct Simulation {
 }
 
 impl Simulation {
+    #[cfg(test)]
+    pub fn test() -> Self {
+        use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
+
+        let mut sim = Self::default();
+        sim.insert_resource(ReportExecutionOrderAmbiguities);
+        sim
+    }
+
     pub fn already_added<P: Named>(&mut self) -> bool {
         !self.labels.insert(P::name())
     }
@@ -197,6 +207,21 @@ impl Simulation {
 
     pub fn update(&mut self) {
         self.app.update()
+    }
+
+    pub fn timestep(&mut self) {
+        assert!(self
+            .unwrap_resource::<TimestepState>()
+            .on_synchronization_step());
+        loop {
+            self.app.update();
+            if self
+                .unwrap_resource::<TimestepState>()
+                .on_synchronization_step()
+            {
+                break;
+            }
+        }
     }
 
     pub fn get_resource<T: Sync + Send + 'static>(&self) -> Option<&T> {
