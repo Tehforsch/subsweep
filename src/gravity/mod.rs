@@ -6,12 +6,12 @@ use crate::communication::ExchangeCommunicator;
 use crate::communication::Identified;
 use crate::communication::WorldRank;
 use crate::components::Position;
+use crate::components::Timestep;
 use crate::components::Velocity;
 use crate::domain::TopLevelIndices;
 use crate::prelude::Particles;
 use crate::quadtree::Node;
 use crate::quadtree::*;
-use crate::simulation_plugin::Timestep;
 use crate::units;
 use crate::units::Dimensionless;
 use crate::units::Length;
@@ -105,25 +105,24 @@ pub(super) struct GravityCalculationReply {
 }
 
 pub(super) fn gravity_system(
-    timestep: Res<Timestep>,
     tree: Res<QuadTree>,
     world_rank: Res<WorldRank>,
     indices: Res<TopLevelIndices>,
-    mut particles: Particles<(Entity, &Position, &mut Velocity)>,
+    mut particles: Particles<(Entity, &Position, &mut Velocity, &Timestep)>,
     parameters: Res<GravityParameters>,
     mut request_comm: ExchangeCommunicator<Identified<GravityCalculationRequest>>,
     mut reply_comm: ExchangeCommunicator<Identified<GravityCalculationReply>>,
 ) {
     let gravity = Solver::from_parameters(&parameters);
     let mut outgoing_requests = DataByRank::from_communicator(&*request_comm);
-    let add_acceleration = |vel: &mut Velocity, acceleration| {
+    let add_acceleration = |vel: &mut Velocity, acceleration, timestep: &Timestep| {
         **vel += acceleration * **timestep;
     };
-    for (entity, pos, mut vel) in particles.iter_mut() {
+    for (entity, pos, mut vel, timestep) in particles.iter_mut() {
         for (rank, index) in indices.flat_iter() {
             let sub_tree = &tree[index];
             if rank == **world_rank {
-                add_acceleration(&mut vel, gravity.traverse_tree(sub_tree, pos));
+                add_acceleration(&mut vel, gravity.traverse_tree(sub_tree, pos), timestep);
             } else if gravity.should_be_opened(sub_tree, pos) {
                 outgoing_requests.push(
                     rank,
@@ -139,6 +138,7 @@ pub(super) fn gravity_system(
                 add_acceleration(
                     &mut vel,
                     gravity.calc_gravity_acceleration_for_moments(pos, &sub_tree.data.moments),
+                    timestep,
                 );
             }
         }
@@ -164,8 +164,8 @@ pub(super) fn gravity_system(
     for (_, accelerations) in accelerations.iter() {
         for acc in accelerations {
             let entity = acc.entity();
-            let (_, _, mut vel) = particles.get_mut(entity).unwrap();
-            add_acceleration(&mut vel, acc.data.acc);
+            let (_, _, mut vel, timestep) = particles.get_mut(entity).unwrap();
+            add_acceleration(&mut vel, acc.data.acc, timestep);
         }
     }
 }

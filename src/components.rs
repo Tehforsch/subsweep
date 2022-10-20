@@ -7,6 +7,7 @@ use mpi::traits::Equivalence;
 
 pub use crate::hydrodynamics::hydro_components::*;
 use crate::named::Named;
+use crate::units::Time;
 use crate::units::VecLength;
 use crate::units::VecVelocity;
 
@@ -24,3 +25,8 @@ pub struct Mass(pub crate::units::Mass);
 #[name = "velocity"]
 #[repr(transparent)]
 pub struct Velocity(pub VecVelocity);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "timestep"]
+#[repr(transparent)]
+pub struct Timestep(pub Time);

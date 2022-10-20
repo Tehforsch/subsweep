@@ -11,19 +11,21 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
 use crate::components::Mass;
 use crate::components::Position;
+use crate::components::Timestep;
 use crate::components::Velocity;
 use crate::gravity::gravity_system;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::named::Named;
+use crate::parameters::TimestepParameters;
 use crate::particle::ParticlePlugin;
 use crate::prelude::Particles;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::timestep::ConstantTimestep;
+use crate::timestep::TimestepPlugin;
+use crate::timestep::TimestepState;
 use crate::units;
-
-#[derive(Equivalence, Deref, DerefMut)]
-pub struct Timestep(crate::units::Time);
 
 #[derive(Named)]
 pub struct SimulationPlugin;
@@ -39,18 +41,16 @@ pub(super) struct ShouldExit(bool);
 
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let parameters = sim
-            .add_parameter_type_and_get_result::<SimulationParameters>()
-            .clone();
-        sim.add_required_component::<Position>()
+        sim.add_parameter_type::<SimulationParameters>()
+            .add_required_component::<Position>()
             .add_required_component::<Mass>()
             .add_required_component::<Velocity>()
             .add_plugin(ParticlePlugin)
             .add_plugin(OutputPlugin::<Attribute<Time>>::default())
             .add_plugin(CommunicationPlugin::<ShouldExit>::default())
             .add_event::<StopSimulationEvent>()
-            .insert_resource(Timestep(parameters.timestep))
             .insert_resource(Time(units::Time::seconds(0.00)))
+            .add_plugin(TimestepPlugin::<ConstantTimestep>::default())
             .add_system_to_stage(
                 SimulationStages::Physics,
                 integrate_motion_system.after(gravity_system),
@@ -104,17 +104,20 @@ fn handle_app_exit_system(
     }
 }
 
-fn integrate_motion_system(
-    mut query: Particles<(&mut Position, &Velocity)>,
-    timestep: Res<Timestep>,
-) {
-    for (mut pos, velocity) in query.iter_mut() {
-        **pos += **velocity * timestep.0;
+fn integrate_motion_system(mut query: Particles<(&mut Position, &Velocity, &Timestep)>) {
+    for (mut pos, velocity, timestep) in query.iter_mut() {
+        **pos += **velocity * **timestep;
     }
 }
 
-pub fn time_system(mut time: ResMut<self::Time>, timestep: Res<Timestep>) {
-    **time += **timestep;
+fn time_system(
+    mut time: ResMut<Time>,
+    parameters: Res<TimestepParameters>,
+    timestep_state: Res<TimestepState>,
+) {
+    if timestep_state.on_synchronization_step() {
+        **time += parameters.max_timestep;
+    }
 }
 
 pub fn show_time_system(time: Res<self::Time>) {

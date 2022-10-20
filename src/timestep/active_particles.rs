@@ -79,6 +79,6 @@ where
         );
         entities
             .into_iter()
-            .map(|x| unsafe { self.query.get_unchecked(*x) }.unwrap())
+            .filter_map(|x| unsafe { self.query.get_unchecked(*x).ok() })
     }
 }

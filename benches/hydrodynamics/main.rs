@@ -12,6 +12,7 @@ use raxiom::parameters::InitialGasEnergy;
 use raxiom::parameters::PerformanceParameters;
 use raxiom::parameters::QuadTreeConfig;
 use raxiom::parameters::SimulationParameters;
+use raxiom::parameters::TimestepParameters;
 use raxiom::prelude::gen_range;
 use raxiom::prelude::HydrodynamicsPlugin;
 use raxiom::prelude::LocalParticle;
@@ -36,8 +37,11 @@ fn run_hydro() {
             tree: QuadTreeConfig::default(),
         })
         .add_parameters_explicitly(SimulationParameters {
-            timestep: Time::seconds(1e-3),
             final_time: Some(Time::seconds(10e-3)),
+        })
+        .add_parameters_explicitly(TimestepParameters {
+            max_timestep: Time::seconds(1e-3),
+            num_levels: 1,
         });
     builder
         .read_initial_conditions(false)

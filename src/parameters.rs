@@ -7,4 +7,5 @@ pub use crate::io::output::parameters::*;
 pub use crate::performance_parameters::PerformanceParameters;
 pub use crate::quadtree::QuadTreeConfig;
 pub use crate::simulation_plugin::SimulationParameters;
+pub use crate::timestep::TimestepParameters;
 pub use crate::visualization::VisualizationParameters;

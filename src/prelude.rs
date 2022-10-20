@@ -10,7 +10,6 @@ pub use crate::particle::Particles;
 pub use crate::rand::gen_range;
 pub use crate::simulation::Simulation;
 pub use crate::simulation_builder::SimulationBuilder;
-pub use crate::simulation_plugin::Timestep;
 pub use crate::timestep::ActiveParticles;
 pub use crate::units;
 pub use crate::units::helpers::Float;

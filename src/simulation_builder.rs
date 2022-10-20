@@ -139,6 +139,8 @@ impl SimulationBuilder {
     pub fn build_with_sim<'a>(&self, sim: &'a mut Simulation) -> &'a mut Simulation {
         if let Some(ref file) = self.parameter_file_path {
             sim.add_parameters_from_file(file);
+        } else {
+            sim.add_parameter_file_contents("".into());
         }
         sim.add_parameter_type::<PerformanceParameters>()
             .insert_resource(self.task_pool_opts())

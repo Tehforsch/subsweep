@@ -46,8 +46,11 @@ impl Simulation {
     pub fn test() -> Self {
         use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 
+        use crate::io::output::ShouldWriteOutput;
+
         let mut sim = Self::default();
-        sim.insert_resource(ReportExecutionOrderAmbiguities);
+        sim.insert_resource(ReportExecutionOrderAmbiguities)
+            .insert_resource(ShouldWriteOutput(false));
         sim
     }
 
@@ -197,7 +200,7 @@ impl Simulation {
     pub fn run_without_finalize(&mut self) {
         // Since this is called from tests which don't have a BaseCommunication plugin, make sure we only unwrap
         // world rank if it exists and default to validating otherwise.
-        if !self.contains_resource::<WorldRank>()
+        if !self.has_world_rank()
             || self.on_main_rank() && self.contains_resource::<ParameterFileContents>()
         {
             self.validate();
@@ -303,8 +306,10 @@ impl Simulation {
         T: Equivalence + ToDataset + Component,
         <T as Equivalence>::Out: MatchesRaw,
     {
-        self.add_plugin(ExchangeDataPlugin::<T>::default())
-            .add_plugin(OutputPlugin::<T>::default())
+        if self.has_world_rank() {
+            self.add_plugin(ExchangeDataPlugin::<T>::default());
+        }
+        self.add_plugin(OutputPlugin::<T>::default())
             .add_plugin(ComponentMemoryUsagePlugin::<T>::default());
         match input {
             ComponentInput::Required => {
