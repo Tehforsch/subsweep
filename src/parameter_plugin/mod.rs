@@ -123,13 +123,16 @@ impl<T: Parameters> ParameterPlugin<T> {
             .value()
             .get(name)
             .map(|plugin_parameters| {
-                serde_yaml::from_value(plugin_parameters.clone()).unwrap_or_else(|err| {
-                    panic!(
-                        "Failed to read parameter file section \"{}\": \n{}",
-                        T::name(),
-                        err
-                    )
-                })
+                // The following is a workaround for deserializing a serde_yaml::Value,
+                // which fails when visiting dimensionless quantities (which will be interpreted as floats)
+                serde_yaml::from_str(&serde_yaml::to_string(plugin_parameters).unwrap())
+                    .unwrap_or_else(|err| {
+                        panic!(
+                            "Failed to read parameter file section \"{}\": \n{}",
+                            T::name(),
+                            err
+                        )
+                    })
             })
             .unwrap_or_else(|| match from_empty() {
                 Ok(params) => {

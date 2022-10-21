@@ -24,7 +24,7 @@ unit_system!(
     UNIT_NAMES,
     DIMENSIONLESS, Dimensionless, length: 0,
     {
-        dimensionless, 1.0, ""
+        dimensionless, 1.0, "dimensionless"
     },
     LENGTH, Length, length: 1,
     {

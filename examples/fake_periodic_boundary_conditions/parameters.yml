@@ -4,7 +4,7 @@ hydrodynamics:
   min_smoothing_length: 10 m
   initial_gas_energy:
     temperature: 1e3 K
-    molecular_weight: '4'
+    molecular_weight: 4 dimensionless
 tree:
   max_depth: 20
   min_depth: 4
