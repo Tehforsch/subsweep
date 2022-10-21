@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use rand::Rng;
 use raxiom::components;
 use raxiom::components::Position;
+use raxiom::components::Timestep;
 use raxiom::components::Velocity;
 use raxiom::prelude::*;
 use raxiom::units::Force;
@@ -67,11 +68,16 @@ fn get_y_offset_of_particle_type(parameters: &Parameters, type_: &ParticleType) 
 }
 
 fn external_force_system(
-    mut particles: Particles<(&Position, &components::Mass, &mut Velocity, &ParticleType)>,
-    timestep: Res<Timestep>,
+    mut particles: Particles<(
+        &Position,
+        &components::Mass,
+        &mut Velocity,
+        &ParticleType,
+        &Timestep,
+    )>,
     parameters: Res<Parameters>,
 ) {
-    for (pos, mass, mut vel, type_) in particles.iter_mut() {
+    for (pos, mass, mut vel, type_, timestep) in particles.iter_mut() {
         let center = VecLength::new_y(get_y_offset_of_particle_type(&parameters, type_));
         let mut acceleration = (center - **pos) * parameters.y_force_factor;
         acceleration.set_x(match type_ {
@@ -83,11 +89,10 @@ fn external_force_system(
 }
 
 fn fake_viscosity_system(
-    mut particles: Particles<&mut Velocity>,
-    timestep: Res<Timestep>,
+    mut particles: Particles<(&mut Velocity, &Timestep)>,
     parameters: Res<Parameters>,
 ) {
-    for mut vel in particles.iter_mut() {
+    for (mut vel, timestep) in particles.iter_mut() {
         **vel = **vel
             * (-**timestep / parameters.fake_viscosity_timescale)
                 .value()

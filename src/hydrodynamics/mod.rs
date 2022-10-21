@@ -10,6 +10,7 @@ use self::quadtree::QuadTree;
 use crate::components;
 use crate::components::Mass;
 use crate::components::Position;
+use crate::components::Timestep;
 use crate::components::Velocity;
 use crate::domain::extent::Extent;
 use crate::named::Named;
@@ -18,7 +19,6 @@ use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation_plugin::Timestep;
 use crate::units::helpers::VecQuantity;
 use crate::units::Density;
 use crate::units::Dimension;
@@ -218,6 +218,7 @@ fn compute_energy_change_system(
         &SmoothingLength,
         &components::Pressure,
         &components::Density,
+        &Timestep,
     )>,
     particles2: Particles<(
         &Position,
@@ -228,12 +229,20 @@ fn compute_energy_change_system(
         &SmoothingLength,
     )>,
     tree: Res<QuadTree>,
-    timestep: Res<Timestep>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     particles1.par_for_each_mut(
         performance_parameters.batch_size(),
-        |(mut energy1, mass1, velocity1, position1, smoothing_length1, pressure1, density1)| {
+        |(
+            mut energy1,
+            mass1,
+            velocity1,
+            position1,
+            smoothing_length1,
+            pressure1,
+            density1,
+            timestep,
+        )| {
             let mut d_energy = Energy::zero()
                 / crate::units::Mass::one_unchecked()
                 / crate::units::Time::one_unchecked();
@@ -268,6 +277,7 @@ fn compute_forces_system(
         &SmoothingLength,
         &components::Pressure,
         &components::Density,
+        &Timestep,
     )>,
     particles2: Particles<(
         &Position,
@@ -277,12 +287,11 @@ fn compute_forces_system(
         &SmoothingLength,
     )>,
     tree: Res<QuadTree>,
-    timestep: Res<Timestep>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     particles1.par_for_each_mut(
         performance_parameters.batch_size(),
-        |(mut velocity1, position1, smoothing_length1, pressure1, density1)| {
+        |(mut velocity1, position1, smoothing_length1, pressure1, density1, timestep)| {
             let mut d_vel = VecAcceleration::zero();
             for particle in get_particles_in_radius(&tree, position1, smoothing_length1).iter() {
                 let (position2, pressure2, density2, mass2, smoothing_length2) =

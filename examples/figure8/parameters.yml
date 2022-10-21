@@ -1,5 +1,5 @@
-simulation:
-  timestep: 1e-2 s
+timestep:
+  max_timestep: 1e-2 s
 gravity:
   softening_length: 1e-10 m
   opening_angle: "0.5"

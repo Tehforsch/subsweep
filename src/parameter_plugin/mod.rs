@@ -6,6 +6,7 @@ use bevy::prelude::debug;
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use serde::Deserialize;
+use serde_yaml::Mapping;
 use serde_yaml::Value;
 
 use crate::named::Named;
@@ -25,7 +26,7 @@ impl ParameterFileContents {
     pub fn get_section_names(&self) -> Vec<String> {
         self.value()
             .as_mapping()
-            .unwrap()
+            .unwrap_or(&Mapping::default())
             .keys()
             .map(|key| {
                 key.as_str()

@@ -171,18 +171,6 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     // Even if num_entries_to_fill is zero, we add the final index once to make calculating the index
     // ranges later easier (since we can just use cutoffs[rank]..cutoffs[rank+1], even for the last rank)
     key_cutoffs_by_rank.extend((0..1 + num_entries_to_fill).map(|_| particle_counts.len()));
-    if num_entries_to_fill > 0 {
-        for (i, window) in key_cutoffs_by_rank.windows(2).enumerate() {
-            println!(
-                "{} {}",
-                i,
-                (window[0]..window[1])
-                    .map(|x| particle_counts[x].to_string())
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            );
-        }
-    }
     key_cutoffs_by_rank
 }
 

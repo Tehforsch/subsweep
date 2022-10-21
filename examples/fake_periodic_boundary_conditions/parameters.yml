@@ -1,5 +1,5 @@
-simulation:
-  timestep: 4e-4 s
+timestep:
+  max_timestep: 4e-4 s
 hydrodynamics:
   min_smoothing_length: 10 m
   initial_gas_energy:

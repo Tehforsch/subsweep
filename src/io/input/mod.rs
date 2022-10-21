@@ -178,10 +178,10 @@ fn read_dataset_system<T: ToDataset + Component>(
     let data = files.iter().map(|file| {
         let set = file
             .dataset(name)
-            .unwrap_or_else(|_| panic!("Failed to open dataset: {}", name));
+            .unwrap_or_else(|e| panic!("Failed to open dataset: {}, {:?}", name, e));
         let data = set
             .read_1d::<T>()
-            .unwrap_or_else(|_| panic!("Failed to read dataset: {}", name));
+            .unwrap_or_else(|e| panic!("Failed to read dataset: {}, {:?}", name, e));
         let conversion_factor: f64 = set
             .attr(SCALE_FACTOR_IDENTIFIER)
             .expect("No scale factor in dataset")

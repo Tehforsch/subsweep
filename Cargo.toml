@@ -44,7 +44,7 @@ required-features = ["mpi", "mpi_test"]
 
 [[example]]
 name = "figure8"
-required-features = ["mpi"]
+required-features = ["mpi", "2d"]
 
 [[example]]
 name = "fake_periodic_boundary_conditions"
