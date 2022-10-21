@@ -156,16 +156,17 @@ This is why Raxiom is unit-safe from the beginning to the end.
       final_time: 1 Myr
     output:
       time_between_snapshots: 10 kyr
+      time_first_snapshot: 50 kyr
     hydrodynamics:
       min_smoothing_length: 0.01 pc
     ```
-    These parameters are parsed and then internally translated to code units. For example, the `simulation` section of this parameter file is given by
+    These parameters are parsed and then internally translated to code units. For example, the `output` section of this parameter file is given by
     ```rust ignore
     #[derive(Clone, Deserialize, Named)]
-    #[name = "simulation"]
-    pub struct SimulationParameters {
-        pub minimum_timestep: Time,
-        pub final_time: Option<Time>,
+    #[name = "output"]
+    pub struct OutputParameters {
+        pub time_between_snapshots: Time,
+        pub time_first_snapshot: Option<Time>,
     }
     ```
 2. Initial conditions are read with explicit units. For example, the positions of the particle might be read from a hdf5 dataset containing attributes about how the position is translated into a fixed unit system, such as SI or CGS. This ensures that even when the underlying code units are changed, initial conditions will still be read in the exact same way (resulting in the same physical quantities).
