@@ -63,7 +63,7 @@ impl TimestepState {
     }
 }
 
-trait TimestepCriterion: Sync + Send {
+pub trait TimestepCriterion: Sync + Send {
     type Query: WorldQuery;
     type Filter: WorldQuery;
     fn timestep(parameters: &TimestepParameters, query_item: QueryItem<Self::Query>) -> Time;

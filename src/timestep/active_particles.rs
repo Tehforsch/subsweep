@@ -6,6 +6,7 @@ use bevy::prelude::Res;
 use bevy::utils::HashSet;
 
 use super::time_bins::TimeBins;
+use super::TimestepCriterion;
 use super::TimestepState;
 use crate::prelude::Particles;
 
@@ -14,9 +15,9 @@ pub struct ActiveParticles<'w, 's, T, Q, F = ()>
 where
     Q: WorldQuery + 'static,
     F: WorldQuery + 'static,
-    T: Sync + Send + 'static,
+    T: Sync + Send + 'static + TimestepCriterion,
 {
-    query: Particles<'w, 's, Q, F>,
+    query: Particles<'w, 's, Q, (F, T::Filter)>,
     timebins: Res<'w, TimeBins<T>>,
     active_timestep: Res<'w, TimestepState>,
 }
@@ -25,7 +26,7 @@ impl<'w, 's, T, Q, F> ActiveParticles<'w, 's, T, Q, F>
 where
     Q: WorldQuery + 'static,
     F: WorldQuery + 'static,
-    T: Sync + Send + 'static,
+    T: Sync + Send + 'static + TimestepCriterion,
 {
     pub fn iter(&'w self) -> impl Iterator<Item = ROQueryItem<Q>> + 'w
     where
