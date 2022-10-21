@@ -1,30 +1,48 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
+use serde::Deserialize;
 
 mod exchange_data_plugin;
 pub mod extent;
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
-use self::extent::Extent;
-use crate::communication::AllGatherCommunicator;
-use crate::communication::CollectiveCommunicator;
+pub use self::extent::Extent;
 use crate::communication::CommunicatedOption;
 use crate::communication::CommunicationPlugin;
-use crate::communication::CommunicationType;
+use crate::communication::Communicator;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
-use crate::mass::Mass;
+use crate::components::Mass;
+use crate::components::Position;
+use crate::components::Velocity;
+use crate::gravity;
+use crate::gravity::LeafData;
+use crate::gravity::MassMoments;
 use crate::named::Named;
-use crate::parameters::ParameterPlugin;
-use crate::physics::MassMoments;
-use crate::position::Position;
-use crate::quadtree::LeafData;
-use crate::quadtree::QuadTree;
+use crate::prelude::Particles;
 use crate::quadtree::QuadTreeConfig;
 use crate::quadtree::QuadTreeIndex;
-use crate::velocity::Velocity;
+use crate::simulation::RaxiomPlugin;
+use crate::simulation::Simulation;
+
+pub type QuadTree = gravity::QuadTree;
+
+/// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
+#[derive(Default, Deserialize, Deref, DerefMut, Named)]
+#[name = "tree"]
+pub struct DomainTreeParameters {
+    #[serde(default = "default_domain_tree_params")]
+    params: QuadTreeConfig,
+}
+
+fn default_domain_tree_params() -> QuadTreeConfig {
+    QuadTreeConfig {
+        min_depth: 4,
+        ..Default::default()
+    }
+}
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStages {
@@ -33,56 +51,47 @@ pub enum DomainDecompositionStages {
     Exchange,
 }
 
+#[derive(Named)]
 pub struct DomainDecompositionPlugin;
 
-impl Named for DomainDecompositionPlugin {
-    fn name() -> &'static str {
-        "domain_decomposition_plugin"
-    }
-}
-
-impl Plugin for DomainDecompositionPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(GlobalExtent(Extent::default()))
+impl RaxiomPlugin for DomainDecompositionPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
-            .add_plugin(ParameterPlugin::<QuadTreeConfig>::new("domain_tree"))
-            .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()));
-        app.add_system_to_stage(
-            DomainDecompositionStages::TopLevelTreeConstruction,
-            determine_global_extent_system,
-        )
-        .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
-        .add_system_to_stage(
-            DomainDecompositionStages::TopLevelTreeConstruction,
-            construct_quad_tree_system.after(determine_global_extent_system),
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::TopLevelTreeConstruction,
-            communicate_mass_moments_system.after(construct_quad_tree_system),
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::Decomposition,
-            distribute_top_level_nodes_system,
-        )
-        .add_system_to_stage(
-            DomainDecompositionStages::Decomposition,
-            domain_decomposition_system.after(distribute_top_level_nodes_system),
-        )
-        .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::new(
-            CommunicationType::AllGather,
-        ))
-        .add_plugin(CommunicationPlugin::<MassMoments>::new(
-            CommunicationType::AllGather,
-        ));
+            .add_parameter_type::<DomainTreeParameters>()
+            .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                determine_global_extent_system,
+            )
+            .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                construct_quad_tree_system.after(determine_global_extent_system),
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                communicate_mass_moments_system.after(construct_quad_tree_system),
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Decomposition,
+                distribute_top_level_nodes_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Decomposition,
+                domain_decomposition_system.after(distribute_top_level_nodes_system),
+            )
+            .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::default())
+            .add_plugin(CommunicationPlugin::<MassMoments>::default());
     }
 }
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct GlobalExtent(Extent);
 
-fn determine_global_extent_system(
-    particles: Query<&Position>,
-    mut extent_communicator: NonSendMut<AllGatherCommunicator<CommunicatedOption<Extent>>>,
+pub(super) fn determine_global_extent_system(
+    particles: Particles<&Position>,
+    mut extent_communicator: Communicator<CommunicatedOption<Extent>>,
     mut global_extent: ResMut<GlobalExtent>,
 ) {
     let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
@@ -103,8 +112,8 @@ pub(super) struct ParticleExchangeData {
 }
 
 pub fn construct_quad_tree_system(
-    config: Res<QuadTreeConfig>,
-    particles: Query<(Entity, &Position, &Mass)>,
+    config: Res<DomainTreeParameters>,
+    particles: Particles<(Entity, &Position, &Mass)>,
     extent: Res<GlobalExtent>,
     mut quadtree: ResMut<QuadTree>,
 ) {
@@ -162,18 +171,6 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     // Even if num_entries_to_fill is zero, we add the final index once to make calculating the index
     // ranges later easier (since we can just use cutoffs[rank]..cutoffs[rank+1], even for the last rank)
     key_cutoffs_by_rank.extend((0..1 + num_entries_to_fill).map(|_| particle_counts.len()));
-    if num_entries_to_fill > 0 {
-        for (i, window) in key_cutoffs_by_rank.windows(2).enumerate() {
-            println!(
-                "{} {}",
-                i,
-                (window[0]..window[1])
-                    .map(|x| particle_counts[x].to_string())
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            );
-        }
-    }
     key_cutoffs_by_rank
 }
 
@@ -194,8 +191,8 @@ fn get_top_level_indices(depth: usize) -> Vec<QuadTreeIndex> {
 
 pub fn communicate_mass_moments_system(
     mut tree: ResMut<QuadTree>,
-    config: Res<QuadTreeConfig>,
-    mut comm: NonSendMut<AllGatherCommunicator<MassMoments>>,
+    config: Res<DomainTreeParameters>,
+    mut comm: Communicator<MassMoments>,
 ) {
     // Use the particle counts at depth config.min_depth for
     // decomposition for now. This obviously needs to be fixed and
@@ -217,7 +214,7 @@ pub fn communicate_mass_moments_system(
 
 fn distribute_top_level_nodes_system(
     tree: Res<QuadTree>,
-    config: Res<QuadTreeConfig>,
+    config: Res<DomainTreeParameters>,
     num_ranks: Res<WorldSize>,
     mut indices: ResMut<TopLevelIndices>,
 ) {

@@ -1,5 +1,5 @@
 #![allow(incomplete_features)]
-#![feature(generic_const_exprs, adt_const_params, hash_drain_filter)]
+#![feature(generic_const_exprs, adt_const_params)]
 #![feature(const_fn_floating_point_arithmetic)]
 // Some or our '*_system' functions have a large number of arguments.
 // That is not necessarily a bad thing, as they are auto-provided by bevy.
@@ -7,26 +7,44 @@
 // Some of the Query<…> types appear rather complex to clippy, but are actually
 // perfectly readable.
 #![allow(clippy::type_complexity)]
+#![doc = include_str!("../README.md")]
 
-pub mod app_builder;
 pub(crate) mod command_line_options;
+#[cfg(feature = "mpi_test")]
 pub mod communication;
+#[cfg(not(feature = "mpi_test"))]
+pub(crate) mod communication;
+pub mod components;
 pub(crate) mod config;
 pub(crate) mod domain;
-pub(crate) mod initial_conditions;
+pub(crate) mod gravity;
+pub(crate) mod hydrodynamics;
 pub(crate) mod io;
-pub(crate) mod mass;
+pub(crate) mod memory;
 pub(crate) mod named;
-pub(crate) mod parameters;
+pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
-pub(crate) mod physics;
-pub(crate) mod plugin_utils;
-pub(crate) mod position;
+pub(crate) mod performance_parameters;
 pub(crate) mod quadtree;
+pub(crate) mod rand;
+pub(crate) mod simulation;
+pub(crate) mod simulation_builder;
+pub(crate) mod simulation_plugin;
 pub(crate) mod stages;
-pub mod units;
-pub(crate) mod velocity;
+pub(crate) mod timestep;
 pub(crate) mod visualization;
 
+#[cfg(test)]
+pub(crate) mod test_utils;
+
+/// Debug printing utilities for MPI simulations
 #[cfg(feature = "mpi")]
 pub mod mpi_log;
+/// Compile-time units and quantities for the simulation.
+pub mod units;
+
+/// Contains all the parameter types of the simulation.
+pub mod parameters;
+/// `use raxiom::prelude::*` to import some commonly used
+/// plugins and components when building a simulation.
+pub mod prelude;

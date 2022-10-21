@@ -1,18 +1,17 @@
 use std::marker::PhantomData;
 
-use bevy::prelude::App;
-use bevy::prelude::Plugin;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 use mpi::Tag;
 
-use super::from_communicator::FromCommunicator;
-use super::Communicator;
-use super::ExchangeCommunicator;
-use super::Rank;
-use super::SyncCommunicator;
+use super::communicator::Communicator;
+use super::exchange_communicator::ExchangeCommunicator;
+use super::sync_communicator::SyncCommunicator;
 use super::WorldRank;
 use super::WorldSize;
+use crate::named::Named;
+use crate::simulation::RaxiomPlugin;
+use crate::simulation::Simulation;
 
 pub(super) const INITIAL_TAG: Tag = 0;
 
@@ -20,35 +19,47 @@ pub(super) const INITIAL_TAG: Tag = 0;
 pub enum CommunicationType {
     Exchange,
     Sync,
-    Sum,
     AllGather,
 }
 
 pub(super) struct CurrentTag(pub(super) Tag);
 
+#[derive(Clone, Named)]
 pub struct BaseCommunicationPlugin {
     num_ranks: WorldSize,
     world_rank: WorldRank,
 }
 
 impl BaseCommunicationPlugin {
-    pub fn new(size: usize, rank: Rank) -> Self {
+    #[cfg(any(feature = "mpi", test))]
+    pub fn new(size: usize, rank: super::Rank) -> Self {
         Self {
             num_ranks: WorldSize(size),
             world_rank: WorldRank(rank),
         }
     }
 }
-impl Plugin for BaseCommunicationPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(self.world_rank)
+
+impl RaxiomPlugin for BaseCommunicationPlugin {
+    fn build_once_everywhere(&self, sim: &mut Simulation) {
+        sim.insert_resource(self.world_rank)
             .insert_resource(self.num_ranks);
     }
 }
 
+#[derive(Named)]
 pub struct CommunicationPlugin<T> {
     _marker: PhantomData<T>,
     pub(super) type_: CommunicationType,
+}
+
+impl<T> Default for CommunicationPlugin<T> {
+    fn default() -> Self {
+        Self {
+            _marker: PhantomData::default(),
+            type_: CommunicationType::AllGather,
+        }
+    }
 }
 
 impl<T> CommunicationPlugin<T> {
@@ -58,49 +69,58 @@ impl<T> CommunicationPlugin<T> {
             type_,
         }
     }
+
+    pub fn sync() -> Self {
+        Self::new(CommunicationType::Sync)
+    }
+
+    pub fn exchange() -> Self {
+        Self::new(CommunicationType::Exchange)
+    }
 }
 
-pub(super) fn get_next_tag(app: &mut App) -> Tag {
-    let mut tag = app
-        .world
+pub(super) fn get_next_tag(sim: &mut Simulation) -> Tag {
+    let mut tag = sim
         .get_resource_mut::<CurrentTag>()
         .map(|x| x.0)
         .unwrap_or(INITIAL_TAG);
     tag += 1;
-    app.world.insert_resource(CurrentTag(tag));
+    sim.insert_resource(CurrentTag(tag));
     tag
 }
 
 #[cfg(feature = "mpi")]
-impl<T: Equivalence + Sync + Send + 'static> bevy::prelude::Plugin for CommunicationPlugin<T>
+impl<T: Equivalence + Sync + Send + 'static> RaxiomPlugin for CommunicationPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,
 {
-    fn build(&self, app: &mut App) {
-        let tag = get_next_tag(app);
-        add_communicator(self.type_, app, Communicator::<T>::new(tag));
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let tag = get_next_tag(sim);
+        super::verify_tag_type_mapping::verify_tag_type_mapping::<T>(tag);
+        add_communicator(self.type_, sim, Communicator::<T>::new(tag));
+    }
+
+    fn allow_adding_twice(&self) -> bool {
+        true
     }
 }
 
 pub(super) fn add_communicator<T: Equivalence + 'static + Sync + Send>(
     type_: CommunicationType,
-    app: &mut App,
+    sim: &mut Simulation,
     communicator: Communicator<T>,
 ) where
     <T as Equivalence>::Out: MatchesRaw,
 {
     match type_ {
         CommunicationType::Exchange => {
-            app.insert_non_send_resource(ExchangeCommunicator::from_communicator(communicator));
+            sim.insert_non_send_resource(ExchangeCommunicator::from(communicator));
         }
         CommunicationType::Sync => {
-            app.insert_non_send_resource(SyncCommunicator::from_communicator(communicator.into()));
-        }
-        CommunicationType::Sum => {
-            app.insert_non_send_resource(communicator);
+            sim.insert_non_send_resource(SyncCommunicator::from(communicator));
         }
         CommunicationType::AllGather => {
-            app.insert_non_send_resource(communicator);
+            sim.insert_non_send_resource(communicator);
         }
     }
 }

@@ -7,7 +7,6 @@ use std::sync::Mutex;
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use lazy_static::lazy_static;
-use mpi::collective::SystemOperation;
 use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
@@ -24,9 +23,6 @@ use mpi::Count;
 use mpi::Tag;
 use mpi::Threading;
 
-use super::collective_communicator::SumCommunicator;
-use super::world_communicator::WorldCommunicator;
-use super::CollectiveCommunicator;
 use super::DataByRank;
 use super::Identified;
 use super::SizedCommunicator;
@@ -51,7 +47,9 @@ impl StaticUniverse {
 lazy_static! {
     pub static ref MPI_UNIVERSE: StaticUniverse = {
         let threading = Threading::Multiple;
-        let (universe, threading_initialized) = mpi::initialize_with_threading(threading).unwrap();
+        let (mut universe, threading_initialized) =
+            mpi::initialize_with_threading(threading).unwrap();
+        universe.set_buffer_size(1024 * 16);
         assert_eq!(
             threading, threading_initialized,
             "Could not initialize MPI with Multithreading"
@@ -76,17 +74,29 @@ impl<T> MpiWorld<T> {
             _marker: PhantomData::default(),
         }
     }
+}
 
-    pub fn world(&self) -> &SystemCommunicator {
-        &self.world
+impl<T> MpiWorld<T>
+where
+    T: Equivalence,
+{
+    /// Should be called before any collective operation.  Checks that
+    /// the tag being communicated is the same across all ranks. This
+    /// is an additional check to prevent any kind of mixing of the
+    /// type involved in collective operations. This is done
+    /// explicitly here since collective MPI operations do not support
+    /// tags.
+    fn verify_tag(&mut self) {
+        let tag = self.tag;
+        assert!(self.all_ranks_have_same_value(&tag), "Initializing allgather operation but different ranks have different tags. Tag on rank {}: {}!", self.world.rank(), self.tag)
     }
 }
 
-impl<S, T> WorldCommunicator<S> for MpiWorld<T>
+impl<S> MpiWorld<S>
 where
     S: Equivalence,
 {
-    fn blocking_send_vec(&mut self, rank: Rank, data: &[S]) {
+    pub fn blocking_send_vec(&mut self, rank: Rank, data: &[S]) {
         let num = data.len();
         let process = self.world.process_at_rank(rank);
         process.send_with_tag(&num, self.tag);
@@ -95,7 +105,7 @@ where
         }
     }
 
-    fn receive_vec(&mut self, rank: Rank) -> Vec<S> {
+    pub fn receive_vec(&mut self, rank: Rank) -> Vec<S> {
         let process = self.world.process_at_rank(rank);
         let (num_received, _): (usize, Status) = process.receive_with_tag(self.tag);
         if num_received > 0 {
@@ -106,7 +116,7 @@ where
     }
 
     #[must_use]
-    fn immediate_send_vec<'a, Sc: Scope<'a>>(
+    pub fn immediate_send_vec<'a, Sc: Scope<'a>>(
         &mut self,
         scope: Sc,
         rank: Rank,
@@ -122,6 +132,47 @@ where
         } else {
             None
         }
+    }
+}
+
+impl<S> MpiWorld<S>
+where
+    S: Equivalence + Clone,
+{
+    pub fn all_gather(&mut self, send: &S) -> Vec<S> {
+        self.verify_tag();
+        unchecked_all_gather(self.world, send)
+    }
+
+    pub fn all_gather_vec(&mut self, send: &[S]) -> DataByRank<Vec<S>> {
+        self.verify_tag();
+        let world_size = self.world.size() as usize;
+        let num_elements = send.len();
+        let mut result_buffer = unsafe { get_buffer::<S>(world_size * num_elements) };
+        self.world.all_gather_into(send, &mut result_buffer[..]);
+        let mut data = DataByRank::empty();
+        for i in 0..world_size {
+            data.insert(i as Rank, result_buffer.drain(0..num_elements).collect())
+        }
+        data
+    }
+
+    #[allow(dead_code)] // Will most likely be used eventually
+    pub fn all_gather_varcount(&mut self, send: &[S], counts: &[Count]) -> Vec<S> {
+        self.verify_tag();
+        let mut result_buffer: Vec<S> =
+            unsafe { get_buffer(counts.iter().map(|x| *x as usize).sum()) };
+        let displacements: Vec<Count> = counts
+            .iter()
+            .scan(0, |acc, &x| {
+                let tmp = *acc;
+                *acc += x;
+                Some(tmp)
+            })
+            .collect();
+        let mut partition = PartitionMut::new(&mut result_buffer, counts, &displacements[..]);
+        self.world.all_gather_varcount_into(send, &mut partition);
+        result_buffer
     }
 }
 
@@ -143,50 +194,22 @@ unsafe fn get_buffer<T>(num_elements: usize) -> Vec<T> {
     }
 }
 
-impl<T: Equivalence> CollectiveCommunicator<T> for MpiWorld<T> {
-    fn all_gather(&mut self, send: &T) -> Vec<T> {
-        let world_size = self.world.size() as usize;
-        let mut result_buffer = unsafe { get_buffer(world_size) };
-        self.world.all_gather_into(send, &mut result_buffer[..]);
-        result_buffer
-    }
-
-    fn all_gather_vec(&mut self, send: &[T]) -> DataByRank<Vec<T>> {
-        let world_size = self.world.size() as usize;
-        let num_elements = send.len();
-        let mut result_buffer = unsafe { get_buffer::<T>(world_size * num_elements) };
-        self.world.all_gather_into(send, &mut result_buffer[..]);
-        let mut data = DataByRank::empty();
-        for i in 0..world_size {
-            data.insert(i as Rank, result_buffer.drain(0..num_elements).collect())
+impl<S> MpiWorld<S> {
+    pub fn all_ranks_have_same_value<T: Equivalence + PartialEq>(&mut self, value: &T) -> bool {
+        let values = unchecked_all_gather(self.world, value);
+        for other_value in values {
+            if *value != other_value {
+                return false;
+            }
         }
-        data
-    }
-
-    fn all_gather_varcount(&mut self, send: &[T], counts: &[Count]) -> Vec<T> {
-        let mut result_buffer: Vec<T> =
-            unsafe { get_buffer(counts.iter().map(|x| *x as usize).sum()) };
-        let displacements: Vec<Count> = counts
-            .iter()
-            .scan(0, |acc, &x| {
-                let tmp = *acc;
-                *acc += x;
-                Some(tmp)
-            })
-            .collect();
-        let mut partition = PartitionMut::new(&mut result_buffer, counts, &displacements[..]);
-        self.world.all_gather_varcount_into(send, &mut partition);
-        result_buffer
+        true
     }
 }
 
-impl<T: Equivalence + Clone> SumCommunicator<T> for MpiWorld<T> {
-    fn collective_sum(&mut self, send: &T) -> T {
-        let mut result = send.clone();
-        self.world
-            .all_reduce_into(send, &mut result, SystemOperation::sum());
-        result
-    }
+fn unchecked_all_gather<T: Equivalence>(world: SystemCommunicator, send: &T) -> Vec<T> {
+    let mut result_buffer = unsafe { get_buffer(world.size() as usize) };
+    world.all_gather_into(send, &mut result_buffer[..]);
+    result_buffer
 }
 
 impl<T> From<MpiWorld<T>> for MpiWorld<Identified<T>> {
@@ -215,7 +238,6 @@ mod tests {
     use mpi::Tag;
 
     use super::MpiWorld;
-    use crate::communication::WorldCommunicator;
 
     #[test]
     fn immediate_send_receive() {

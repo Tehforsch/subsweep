@@ -1,19 +1,36 @@
+#[cfg(test)]
+mod tests;
+
 use std::marker::PhantomData;
 use std::path::PathBuf;
 
 use bevy::prelude::*;
+use hdf5::Dataset;
 use hdf5::File;
 use serde::Deserialize;
 
-use super::output::dataset_plugin::SCALE_FACTOR_IDENTIFIER;
 use super::to_dataset::ToDataset;
+use super::to_dataset::LENGTH_IDENTIFIER;
+use super::to_dataset::MASS_IDENTIFIER;
+use super::to_dataset::TEMPERATURE_IDENTIFIER;
+use super::to_dataset::TIME_IDENTIFIER;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
-use crate::initial_conditions;
+use crate::io::to_dataset::SCALE_FACTOR_IDENTIFIER;
 use crate::named::Named;
-use crate::physics::LocalParticle;
-use crate::plugin_utils::get_parameters;
-use crate::plugin_utils::run_once;
+use crate::prelude::LocalParticle;
+use crate::simulation::RaxiomPlugin;
+use crate::simulation::Simulation;
+use crate::units::Dimension;
+
+/// Determines how a component is input into the simulation.
+pub enum ComponentInput {
+    /// The component needs to be present when the initial conditions are read.
+    Required,
+    /// The component does not need to be present and will be inserted
+    /// by a startup system.
+    Derived,
+}
 
 #[derive(Default, Deref, DerefMut)]
 struct InputFiles(Vec<File>);
@@ -21,22 +38,21 @@ struct InputFiles(Vec<File>);
 #[derive(AmbiguitySetLabel)]
 struct InputSystemsAmbiguitySet;
 
-struct InputMarker;
-
-impl Named for InputMarker {
-    fn name() -> &'static str {
-        "input"
-    }
-}
-
-#[derive(Clone, Default, Deserialize)]
-pub struct Parameters {
+/// Parameters describing how the initial conditions
+/// should be read. Only required if should_read_initial_conditions
+/// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
+#[derive(Clone, Default, Deserialize, Named)]
+#[name = "input"]
+#[serde(deny_unknown_fields)]
+pub struct InputParameters {
+    /// The files containing the initial conditions
     pub paths: Vec<PathBuf>,
 }
 
 #[derive(Default, Deref, DerefMut)]
 struct SpawnedEntities(Vec<Entity>);
 
+#[derive(Named)]
 pub struct DatasetInputPlugin<T> {
     _marker: PhantomData<T>,
 }
@@ -52,22 +68,19 @@ impl<T> Default for DatasetInputPlugin<T> {
 #[derive(Default, Deref, DerefMut)]
 pub struct RegisteredDatasets(Vec<&'static str>);
 
-impl<T: ToDataset + Component + Sync + Send + 'static> Plugin for DatasetInputPlugin<T> {
-    fn build(&self, app: &mut App) {
-        let should_run = app
-            .world
-            .get_resource::<initial_conditions::Parameters>()
-            .map(|parameters| parameters.should_read_initial_conditions())
-            .unwrap_or(false);
-        if !should_run {
-            return;
-        }
-        run_once::<InputMarker>(app, |app| {
-            app.insert_resource(
-                get_parameters::<initial_conditions::Parameters>(app)
-                    .unwrap_read()
-                    .clone(),
-            )
+impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetInputPlugin<T> {
+    fn allow_adding_twice(&self) -> bool {
+        true
+    }
+
+    fn should_build(&self, sim: &Simulation) -> bool {
+        sim.get_resource::<ShouldReadInitialConditions>()
+            .map(|x| x.0)
+            .unwrap_or(false)
+    }
+
+    fn build_once_everywhere(&self, sim: &mut Simulation) {
+        sim.add_parameter_type::<InputParameters>()
             .insert_resource(InputFiles::default())
             .insert_resource(SpawnedEntities::default())
             .add_startup_system(open_file_system)
@@ -77,12 +90,12 @@ impl<T: ToDataset + Component + Sync + Send + 'static> Plugin for DatasetInputPl
                     .before(close_file_system),
             )
             .add_startup_system(close_file_system.after(spawn_entities_system));
-        });
-        let mut registered_datasets = app
-            .world
-            .get_resource_or_insert_with(RegisteredDatasets::default);
+    }
+
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        let mut registered_datasets = sim.get_resource_or_insert_with(RegisteredDatasets::default);
         registered_datasets.push(T::name());
-        app.add_startup_system(
+        sim.add_startup_system(
             read_dataset_system::<T>
                 .after(open_file_system)
                 .after(spawn_entities_system)
@@ -94,7 +107,7 @@ impl<T: ToDataset + Component + Sync + Send + 'static> Plugin for DatasetInputPl
 
 fn open_file_system(
     mut files: ResMut<InputFiles>,
-    parameters: Res<Parameters>,
+    parameters: Res<InputParameters>,
     rank: Res<WorldRank>,
     size: Res<WorldSize>,
 ) {
@@ -165,15 +178,21 @@ fn read_dataset_system<T: ToDataset + Component>(
     let data = files.iter().map(|file| {
         let set = file
             .dataset(name)
-            .unwrap_or_else(|_| panic!("Failed to open dataset: {}", name));
+            .unwrap_or_else(|e| panic!("Failed to open dataset: {}, {:?}", name, e));
         let data = set
             .read_1d::<T>()
-            .unwrap_or_else(|_| panic!("Failed to read dataset: {}", name));
+            .unwrap_or_else(|e| panic!("Failed to read dataset: {}, {:?}", name, e));
         let conversion_factor: f64 = set
             .attr(SCALE_FACTOR_IDENTIFIER)
             .expect("No scale factor in dataset")
             .read_scalar()
             .unwrap();
+        assert_eq!(
+            read_dimension(&set),
+            T::dimension(),
+            "Mismatch in dimension while reading dataset {}.",
+            name
+        );
         (data, conversion_factor)
     });
     for ((item, factor_written), entity) in data
@@ -186,3 +205,34 @@ fn read_dataset_system<T: ToDataset + Component>(
             .insert(item.convert_base_units(factor_written / factor_read));
     }
 }
+
+fn read_dimension(dataset: &Dataset) -> Dimension {
+    let length: i32 = dataset
+        .attr(LENGTH_IDENTIFIER)
+        .expect("No length scale factor in dataset")
+        .read_scalar()
+        .unwrap();
+    let mass: i32 = dataset
+        .attr(MASS_IDENTIFIER)
+        .expect("No mass scale factor in dataset")
+        .read_scalar()
+        .unwrap();
+    let time: i32 = dataset
+        .attr(TIME_IDENTIFIER)
+        .expect("No time scale factor in dataset")
+        .read_scalar()
+        .unwrap();
+    let temperature: i32 = dataset
+        .attr(TEMPERATURE_IDENTIFIER)
+        .expect("No temperature scale factor in dataset")
+        .read_scalar()
+        .unwrap();
+    Dimension {
+        length,
+        mass,
+        time,
+        temperature,
+    }
+}
+
+pub struct ShouldReadInitialConditions(pub bool);

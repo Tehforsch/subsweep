@@ -9,13 +9,11 @@
 
 use mpi::traits::Communicator;
 use mpi::Tag;
-use tenet::communication::from_communicator::FromCommunicator;
-use tenet::communication::DataByRank;
-use tenet::communication::ExchangeCommunicator;
-use tenet::communication::MpiWorld;
-use tenet::communication::SizedCommunicator;
-use tenet::communication::WorldCommunicator;
-use tenet::communication::MPI_UNIVERSE;
+use raxiom::communication::exchange_communicator::ExchangeCommunicator;
+use raxiom::communication::DataByRank;
+use raxiom::communication::MpiWorld;
+use raxiom::communication::SizedCommunicator;
+use raxiom::communication::MPI_UNIVERSE;
 
 pub fn main() {
     let fns: &[(&str, fn())] = &[
@@ -38,15 +36,9 @@ fn send_receive() {
     let x1: Vec<i32> = vec![3, 2, 1];
     if rank == 0 {
         world.blocking_send_vec(1, &x0);
-        assert_eq!(
-            <MpiWorld<i32> as WorldCommunicator<i32>>::receive_vec(&mut world, 1),
-            x1
-        );
+        assert_eq!(MpiWorld::<i32>::receive_vec(&mut world, 1), x1);
     } else if rank == 1 {
-        assert_eq!(
-            <MpiWorld<i32> as WorldCommunicator<i32>>::receive_vec(&mut world, 0),
-            x0
-        );
+        assert_eq!(MpiWorld::<i32>::receive_vec(&mut world, 0), x0);
         world.blocking_send_vec(0, &x1);
     }
 }
@@ -54,7 +46,7 @@ fn send_receive() {
 fn exchange_all() {
     let world = MpiWorld::<i32>::new(Tag::default());
     let rank = world.rank();
-    let mut exchange_comm = ExchangeCommunicator::from_communicator(world);
+    let mut exchange_comm = ExchangeCommunicator::from(world);
     for _ in 0..100 {
         let x0: Vec<i32> = (0..100).collect();
         let x1: Vec<i32> = (0..100).rev().collect();

@@ -2,20 +2,26 @@ use bevy::ecs::schedule::StageLabelId;
 use bevy::prelude::*;
 
 use crate::domain::DomainDecompositionStages;
+use crate::hydrodynamics::HydrodynamicsStages;
 use crate::io::output::OutputStages;
-use crate::physics::PhysicsStages;
+use crate::named::Named;
+use crate::simulation::RaxiomPlugin;
+use crate::simulation::Simulation;
+use crate::simulation_plugin::SimulationStages;
 use crate::visualization::VisualizationStage;
 
+#[derive(Named)]
 pub struct SimulationStagesPlugin;
 
-impl Plugin for SimulationStagesPlugin {
-    fn build(&self, app: &mut App) {
+impl RaxiomPlugin for SimulationStagesPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),
             DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
             DomainDecompositionStages::Decomposition.as_label(),
             DomainDecompositionStages::Exchange.as_label(),
-            PhysicsStages::Physics.as_label(),
+            HydrodynamicsStages::Hydrodynamics.as_label(),
+            SimulationStages::Physics.as_label(),
             VisualizationStage::Synchronize.as_label(),
             VisualizationStage::AddVisualization.as_label(),
             VisualizationStage::AddDrawComponents.as_label(),
@@ -24,7 +30,7 @@ impl Plugin for SimulationStagesPlugin {
             OutputStages::Output.as_label(),
         ];
         for window in stages.windows(2) {
-            app.add_stage_after(
+            sim.add_stage_after(
                 window[0].as_label(),
                 window[1].as_label(),
                 SystemStage::parallel(),

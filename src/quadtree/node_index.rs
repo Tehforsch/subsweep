@@ -1,4 +1,4 @@
-use super::NUM_SUBDIVISIONS;
+use crate::config::TWO_TO_NUM_DIMENSIONS;
 
 #[derive(Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub(super) enum NodeIndex {
@@ -18,7 +18,7 @@ impl ToString for NodeIndex {
 
 impl From<u8> for NodeIndex {
     fn from(val: u8) -> Self {
-        if val == NUM_SUBDIVISIONS as u8 {
+        if val == TWO_TO_NUM_DIMENSIONS as u8 {
             Self::ThisNode
         } else {
             Self::Child(val)
@@ -29,7 +29,7 @@ impl From<u8> for NodeIndex {
 impl From<NodeIndex> for u8 {
     fn from(val: NodeIndex) -> Self {
         match val {
-            NodeIndex::ThisNode => NUM_SUBDIVISIONS as u8,
+            NodeIndex::ThisNode => TWO_TO_NUM_DIMENSIONS as u8,
             NodeIndex::Child(num) => num,
         }
     }
@@ -38,7 +38,7 @@ impl From<NodeIndex> for u8 {
 #[cfg(test)]
 mod tests {
     use super::NodeIndex;
-    use crate::quadtree::NUM_SUBDIVISIONS;
+    use crate::config::TWO_TO_NUM_DIMENSIONS;
 
     #[test]
     fn node_index_from_into() {
@@ -49,7 +49,7 @@ mod tests {
             assert_eq!(n, converted);
         };
         check(ThisNode);
-        for i in 0..NUM_SUBDIVISIONS {
+        for i in 0..TWO_TO_NUM_DIMENSIONS {
             check(Child(i as u8));
         }
     }

@@ -1,4 +1,3 @@
-use std::iter::Sum;
 use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
@@ -11,15 +10,12 @@ use mpi::request::WaitGuard;
 use mpi::Count;
 use mpi::Tag;
 
-use super::collective_communicator::SumCommunicator;
-use super::sized_communicator::SizedCommunicator;
-use super::world_communicator::WorldCommunicator;
-use super::CollectiveCommunicator;
-use super::DataByRank;
-use super::Identified;
-use super::Rank;
+use crate::communication::sized_communicator::SizedCommunicator;
+use crate::communication::DataByRank;
+use crate::communication::Identified;
+use crate::communication::Rank;
 
-pub(super) struct Payload {
+pub struct Payload {
     bytes: Vec<u8>,
 }
 
@@ -55,8 +51,8 @@ impl<T> LocalCommunicator<T> {
     }
 }
 
-impl<T: Sync + Send> WorldCommunicator<T> for LocalCommunicator<T> {
-    fn receive_vec(&mut self, rank: Rank) -> Vec<T> {
+impl<T> LocalCommunicator<T> {
+    pub fn receive_vec(&mut self, rank: Rank) -> Vec<T> {
         let bytes = &self.receivers[rank].recv().unwrap().bytes;
         let size = mem::size_of::<T>();
         debug_assert_eq!(bytes.len().rem_euclid(size), 0);
@@ -66,7 +62,7 @@ impl<T: Sync + Send> WorldCommunicator<T> for LocalCommunicator<T> {
             .collect()
     }
 
-    fn blocking_send_vec(&mut self, rank: Rank, data: &[T]) {
+    pub fn blocking_send_vec(&mut self, rank: Rank, data: &[T]) {
         let bytes = unsafe {
             slice::from_raw_parts(
                 (data as *const [T]) as *const u8,
@@ -79,7 +75,7 @@ impl<T: Sync + Send> WorldCommunicator<T> for LocalCommunicator<T> {
         self.senders[rank].send(payload).unwrap();
     }
 
-    fn immediate_send_vec<'a, Sc: Scope<'a>>(
+    pub fn immediate_send_vec<'a, Sc: Scope<'a>>(
         &mut self,
         _scope: Sc,
         rank: Rank,
@@ -101,15 +97,15 @@ impl<T> SizedCommunicator for LocalCommunicator<T> {
     }
 }
 
-impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> {
-    fn all_gather(&mut self, data: &T) -> Vec<T> {
+impl<T: Clone + Sync + Send> LocalCommunicator<T> {
+    pub fn all_gather(&mut self, data: &T) -> Vec<T> {
         self.all_gather_vec(&[data.clone()])
             .drain_all()
             .flat_map(|(_, data)| data)
             .collect()
     }
 
-    fn all_gather_vec(&mut self, data: &[T]) -> DataByRank<Vec<T>> {
+    pub fn all_gather_vec(&mut self, data: &[T]) -> DataByRank<Vec<T>> {
         for rank in self.other_ranks() {
             self.blocking_send_vec(rank, data);
         }
@@ -125,7 +121,8 @@ impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> 
         result
     }
 
-    fn all_gather_varcount(&mut self, data: &[T], _counts: &[Count]) -> Vec<T> {
+    #[allow(dead_code)]
+    pub fn all_gather_varcount(&mut self, data: &[T], _counts: &[Count]) -> Vec<T> {
         for rank in self.other_ranks() {
             self.blocking_send_vec(rank, data);
         }
@@ -139,14 +136,6 @@ impl<T: Clone + Sync + Send> CollectiveCommunicator<T> for LocalCommunicator<T> 
             }
         }
         result
-    }
-}
-
-impl<T: Sum + Clone + Sync + Send> SumCommunicator<T> for LocalCommunicator<T> {
-    fn collective_sum(&mut self, send: &T) -> T {
-        // We don't care about efficiency in the local communicator
-        let result = self.all_gather(send);
-        result.into_iter().sum()
     }
 }
 
@@ -169,8 +158,6 @@ mod tests {
 
     use crate::communication::plugin::INITIAL_TAG;
     use crate::communication::sync_communicator::tests::get_communicators;
-    use crate::communication::CollectiveCommunicator;
-    use crate::communication::WorldCommunicator;
 
     #[derive(Clone, Debug, PartialEq)]
     struct ComplexStruct {
