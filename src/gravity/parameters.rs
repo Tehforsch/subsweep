@@ -5,7 +5,7 @@ use crate::units::Dimensionless;
 use crate::units::Length;
 
 /// Parameters for gravity. Only needed if the
-/// [GravityPlugin](crate::physics::gravity::GravityPlugin) is added
+/// [GravityPlugin](crate::prelude::GravityPlugin) is added
 /// to the simulation.
 #[derive(Clone, Deserialize, Named)]
 #[name = "gravity"]

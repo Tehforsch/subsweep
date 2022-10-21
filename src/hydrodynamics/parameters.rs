@@ -8,7 +8,7 @@ use crate::units::Length;
 use crate::units::Temperature;
 
 /// Parameters for hydrodynamics. Only needed if the
-/// [HydrodynamicsPlugin](crate::physics::hydrodynamics::HydrodynamicsPlugin)
+/// [HydrodynamicsPlugin](crate::prelude::HydrodynamicsPlugin)
 /// is added to the simulation
 #[derive(Deserialize, Named)]
 #[name = "hydrodynamics"]
