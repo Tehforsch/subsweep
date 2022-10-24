@@ -28,9 +28,6 @@ use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
 #[derive(Default)]
-struct ExchangePluginExists;
-
-#[derive(Default)]
 struct ExchangeOrder(Vec<SystemLabelId>);
 
 #[derive(Default, Deref, DerefMut)]
