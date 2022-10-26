@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use self::hydro_components::InternalEnergy;
 use self::hydro_components::SmoothingLength;
+use self::quadtree::bounding_boxes_overlap;
 use self::quadtree::construct_quad_tree_system;
 use self::quadtree::get_particles_in_radius;
 use self::quadtree::QuadTree;
@@ -12,11 +13,15 @@ use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Timestep;
 use crate::components::Velocity;
+use crate::domain;
 use crate::domain::extent::Extent;
+use crate::domain::TopLevelIndices;
 use crate::named::Named;
 use crate::performance_parameters::PerformanceParameters;
 use crate::prelude::LocalParticle;
+use crate::prelude::MVec;
 use crate::prelude::Particles;
+use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::helpers::VecQuantity;
@@ -30,6 +35,7 @@ use crate::units::VecLength;
 use crate::units::BOLTZMANN_CONSTANT;
 use crate::units::NONE;
 use crate::units::PROTON_MASS;
+use crate::visualization::DrawCircle;
 
 pub(crate) mod hydro_components;
 mod parameters;
@@ -115,7 +121,11 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
-                set_smoothing_lengths_system.before(construct_quad_tree_system),
+                set_smoothing_lengths_system.before(identify_halo_particles_to_send_system),
+            )
+            .add_system_to_stage(
+                HydrodynamicsStages::Hydrodynamics,
+                identify_halo_particles_to_send_system.before(construct_quad_tree_system),
             )
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
@@ -148,6 +158,39 @@ fn set_smoothing_lengths_system(
 ) {
     for mut p in query.iter_mut() {
         **p = parameters.min_smoothing_length;
+    }
+}
+
+fn identify_halo_particles_to_send_system(
+    mut particles: Particles<(Entity, &mut DrawCircle, &Position, &SmoothingLength)>,
+    indices: Res<TopLevelIndices>,
+    tree: Res<domain::QuadTree>,
+    world_rank: Res<WorldRank>,
+) {
+    for (entity, mut circle, pos, smoothing_length) in particles.iter_mut() {
+        let mut should_be_sent = false;
+        for (rank, index) in indices
+            .iter()
+            .flat_map(|(rank, indices)| indices.iter().map(|index| (*rank, index)))
+        {
+            if rank == **world_rank {
+                continue;
+            }
+            let tree = &tree[index];
+            if bounding_boxes_overlap(
+                pos,
+                &(MVec::ONE * **smoothing_length),
+                &tree.extent.center,
+                &tree.extent.side_lengths(),
+            ) {
+                should_be_sent = true;
+            }
+        }
+        circle.color = if should_be_sent {
+            Color::RED
+        } else {
+            Color::BLUE
+        };
     }
 }
 

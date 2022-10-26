@@ -38,7 +38,10 @@ impl NodeDataType<LeafData> for NodeData {
     }
 }
 
-fn bounding_boxes_overlap(
+/// Returns whether the two bounding boxes given by
+/// the center coordinates pos1 and pos2 and the side lengths
+/// size1 and size2 overlap
+pub(super) fn bounding_boxes_overlap(
     pos1: &VecLength,
     size1: &VecLength,
     pos2: &VecLength,
