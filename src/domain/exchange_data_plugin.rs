@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use bevy::ecs::schedule::SystemLabelId;
 use bevy::ecs::system::AsSystemLabel;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
@@ -27,8 +26,8 @@ use crate::prelude::Particles;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
-#[derive(Default)]
-struct ExchangeOrder(Vec<SystemLabelId>);
+#[derive(Named)]
+struct ExchangeDataOrder;
 
 #[derive(Default, Deref, DerefMut)]
 pub(super) struct OutgoingEntities(DataByRank<Vec<Entity>>);
@@ -81,7 +80,6 @@ where
         let size = **sim.unwrap_resource::<WorldSize>();
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
-            .insert_resource(ExchangeOrder::default())
             .add_plugin(CommunicationPlugin::<NumEntities>::exchange())
             .add_system_to_stage(
                 DomainDecompositionStages::Exchange,
@@ -106,20 +104,17 @@ where
     fn build_everywhere(&self, sim: &mut Simulation) {
         let rank = **sim.unwrap_resource::<WorldRank>();
         let size = **sim.unwrap_resource::<WorldSize>();
-        let labels = sim.get_resource_mut::<ExchangeOrder>();
-        let mut exchange_buffers_system = Self::exchange_buffers_system
-            .after(Self::fill_buffers_system)
-            .after(spawn_incoming_entities_system)
-            .before(reset_outgoing_entities_system);
-        for label in labels.as_ref().unwrap().0.iter() {
-            exchange_buffers_system = exchange_buffers_system.after(*label);
-        }
-        let label = Self::exchange_buffers_system.as_system_label();
-        labels.unwrap().0.push(label);
         sim.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
             size, rank,
         )))
-        .add_system_to_stage(DomainDecompositionStages::Exchange, exchange_buffers_system)
+        .add_well_ordered_system_to_stage::<_, ExchangeDataOrder>(
+            DomainDecompositionStages::Exchange,
+            Self::exchange_buffers_system
+                .after(Self::fill_buffers_system)
+                .after(spawn_incoming_entities_system)
+                .before(reset_outgoing_entities_system),
+            Self::exchange_buffers_system.as_system_label(),
+        )
         .add_plugin(CommunicationPlugin::<T>::exchange())
         .add_system_to_stage(
             DomainDecompositionStages::Exchange,

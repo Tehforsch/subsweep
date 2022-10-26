@@ -17,3 +17,4 @@ pub use crate::units::helpers::MVec;
 pub use crate::visualization::CameraTransform;
 pub use crate::visualization::DrawCircle;
 pub use crate::visualization::DrawRect;
+pub use crate::visualization::RColor;

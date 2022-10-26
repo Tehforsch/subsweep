@@ -155,8 +155,8 @@ fn spawn_particle(
         DrawCircle::from_position_and_color(
             pos,
             match type_ {
-                ParticleType::Red => Color::RED,
-                ParticleType::Blue => Color::BLUE,
+                ParticleType::Red => RColor::RED,
+                ParticleType::Blue => RColor::BLUE,
             },
         ),
     ));

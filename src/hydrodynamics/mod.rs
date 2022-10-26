@@ -35,6 +35,7 @@ use crate::units::VecLength;
 use crate::units::BOLTZMANN_CONSTANT;
 use crate::units::NONE;
 use crate::units::PROTON_MASS;
+use crate::visualization::color::RColor;
 use crate::visualization::DrawCircle;
 
 pub(crate) mod hydro_components;
@@ -167,7 +168,7 @@ fn identify_halo_particles_to_send_system(
     tree: Res<domain::QuadTree>,
     world_rank: Res<WorldRank>,
 ) {
-    for (entity, mut circle, pos, smoothing_length) in particles.iter_mut() {
+    for (_entity, mut circle, pos, smoothing_length) in particles.iter_mut() {
         let mut should_be_sent = false;
         for (rank, index) in indices
             .iter()
@@ -187,9 +188,9 @@ fn identify_halo_particles_to_send_system(
             }
         }
         circle.color = if should_be_sent {
-            Color::RED
+            RColor::RED
         } else {
-            Color::BLUE
+            RColor::BLUE
         };
     }
 }
