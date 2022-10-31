@@ -64,11 +64,20 @@ where
     }
 }
 
-impl<T> DataByRank<Vec<T>> {
-    pub fn drain_all(&mut self) -> impl Iterator<Item = (Rank, Vec<T>)> + '_ {
-        self.0.iter_mut().map(|(k, v)| (*k, v.drain(..).collect()))
+impl<T> DataByRank<T>
+where
+    T: Default,
+{
+    pub fn drain_all(&mut self) -> impl Iterator<Item = (Rank, T)> + '_ {
+        self.0.iter_mut().map(|(k, v)| {
+            let mut swapped = T::default();
+            std::mem::swap(&mut swapped, v);
+            (*k, swapped)
+        })
     }
+}
 
+impl<T> DataByRank<Vec<T>> {
     pub fn push(&mut self, rank: Rank, item: T) {
         self[rank].push(item);
     }

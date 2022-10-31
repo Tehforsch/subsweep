@@ -24,7 +24,7 @@ pub(super) fn send_items_to_main_thread_system<T: Clone + Component + Equivalenc
     for (entity, item) in particles.iter() {
         communicator.send_sync(WorldRank::main(), entity, item.clone());
     }
-    communicator.receive_sync(|_, _| panic!("No items expected"));
+    let _ = communicator.receive_sync(|_, _| panic!("No items expected"));
 }
 
 pub(super) fn receive_items_on_main_thread_system<T: Clone + Component + Equivalence + DrawItem>(
@@ -44,11 +44,7 @@ pub(super) fn receive_items_on_main_thread_system<T: Clone + Component + Equival
             .id()
     };
     let mut sync = communicator.receive_sync(spawn_particle);
-    for (_, entities) in sync.deleted.drain_all() {
-        for entity in entities.into_iter() {
-            commands.entity(entity).despawn();
-        }
-    }
+    sync.despawn_deleted(&mut commands);
     for (_, data) in sync.updated.drain_all() {
         for (entity, new_data) in data.into_iter() {
             *particles.get_mut(entity).unwrap() = new_data;

@@ -1,13 +1,18 @@
 use std::f64::consts::PI;
 
 use bevy::prelude::*;
+use mpi::traits::Equivalence;
 
 use self::hydro_components::InternalEnergy;
+use self::hydro_components::Pressure;
 use self::hydro_components::SmoothingLength;
 use self::quadtree::bounding_boxes_overlap;
 use self::quadtree::construct_quad_tree_system;
 use self::quadtree::get_particles_in_radius;
 use self::quadtree::QuadTree;
+use crate::communication::CommunicationPlugin;
+use crate::communication::Rank;
+use crate::communication::SyncCommunicator;
 use crate::components;
 use crate::components::Mass;
 use crate::components::Position;
@@ -18,7 +23,6 @@ use crate::domain::extent::Extent;
 use crate::domain::TopLevelIndices;
 use crate::named::Named;
 use crate::performance_parameters::PerformanceParameters;
-use crate::prelude::LocalParticle;
 use crate::prelude::MVec;
 use crate::prelude::Particles;
 use crate::prelude::WorldRank;
@@ -35,8 +39,11 @@ use crate::units::VecLength;
 use crate::units::BOLTZMANN_CONSTANT;
 use crate::units::NONE;
 use crate::units::PROTON_MASS;
-use crate::visualization::color::RColor;
 use crate::visualization::DrawCircle;
+use crate::visualization::DrawItem;
+use crate::visualization::Pixels;
+use crate::visualization::RColor;
+use crate::visualization::VisualizationStage;
 
 pub(crate) mod hydro_components;
 mod parameters;
@@ -46,6 +53,27 @@ pub use self::parameters::HydrodynamicsParameters;
 pub use self::parameters::InitialGasEnergy;
 
 const GAMMA: f64 = 5.0 / 3.0;
+
+// Could eventually become a more dynamic approach (similar to ExchangeDataPlugin)
+// but for now this is probably fine
+#[derive(Equivalence, Bundle)]
+struct RemoteParticleData {
+    pub position: Position,
+    pub smoothing_length: SmoothingLength,
+    pub density: components::Density,
+    pub pressure: Pressure,
+    pub mass: Mass,
+    pub internal_energy: InternalEnergy,
+}
+
+#[derive(Component)]
+pub struct HaloParticle {
+    pub rank: Rank,
+}
+
+/// A convenience type to query for halo particles.
+pub type HaloParticles<'world, 'state, T, F = ()> =
+    Query<'world, 'state, T, (With<HaloParticle>, F)>;
 
 fn kernel_function(r: Length, h: Length) -> f64 {
     // Spline Kernel, Monaghan & Lattanzio 1985
@@ -119,6 +147,7 @@ pub struct HydrodynamicsPlugin;
 impl RaxiomPlugin for HydrodynamicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<HydrodynamicsParameters>()
+            .add_plugin(CommunicationPlugin::<RemoteParticleData>::sync())
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
@@ -148,7 +177,13 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
                 StartupStage::PostStartup,
                 insert_pressure_and_density_system,
             )
+            .add_system_to_stage(
+                VisualizationStage::AddVisualization,
+                show_halo_particles_system,
+            )
             .add_derived_component::<components::Pressure>()
+            .add_derived_component::<components::SmoothingLength>()
+            .add_derived_component::<components::InternalEnergy>()
             .add_derived_component::<components::Density>();
     }
 }
@@ -163,13 +198,35 @@ fn set_smoothing_lengths_system(
 }
 
 fn identify_halo_particles_to_send_system(
-    mut particles: Particles<(Entity, &mut DrawCircle, &Position, &SmoothingLength)>,
+    mut commands: Commands,
+    particles: Particles<
+        (
+            Entity,
+            &Position,
+            &SmoothingLength,
+            &components::Density,
+            &Pressure,
+            &Mass,
+            &InternalEnergy,
+        ),
+        Without<HaloParticle>,
+    >,
+    mut halo_particles: HaloParticles<(
+        &mut Position,
+        &mut SmoothingLength,
+        &mut components::Density,
+        &mut Pressure,
+        &mut Mass,
+        &mut InternalEnergy,
+    )>,
+    mut communicator: SyncCommunicator<RemoteParticleData>,
     indices: Res<TopLevelIndices>,
     tree: Res<domain::QuadTree>,
     world_rank: Res<WorldRank>,
 ) {
-    for (_entity, mut circle, pos, smoothing_length) in particles.iter_mut() {
-        let mut should_be_sent = false;
+    for (entity, pos, smoothing_length, density, pressure, mass, internal_energy) in
+        particles.iter()
+    {
         for (rank, index) in indices
             .iter()
             .flat_map(|(rank, indices)| indices.iter().map(|index| (*rank, index)))
@@ -184,14 +241,57 @@ fn identify_halo_particles_to_send_system(
                 &tree.extent.center,
                 &tree.extent.side_lengths(),
             ) {
-                should_be_sent = true;
+                communicator.send_sync(
+                    rank,
+                    entity,
+                    RemoteParticleData {
+                        position: pos.clone(),
+                        smoothing_length: smoothing_length.clone(),
+                        density: density.clone(),
+                        pressure: pressure.clone(),
+                        mass: mass.clone(),
+                        internal_energy: internal_energy.clone(),
+                    },
+                );
             }
         }
-        circle.color = if should_be_sent {
-            RColor::RED
-        } else {
-            RColor::BLUE
-        };
+    }
+    let spawn_particle = |rank: Rank, data: RemoteParticleData| {
+        commands
+            .spawn()
+            .insert_bundle(data)
+            .insert(HaloParticle { rank })
+            .id()
+    };
+    let mut sync = communicator.receive_sync(spawn_particle);
+    sync.despawn_deleted(&mut commands);
+    for (_, data) in sync.updated.drain_all() {
+        for (entity, new_data) in data.into_iter() {
+            let mut particle = halo_particles.get_mut(entity).unwrap();
+            *particle.0 = new_data.position;
+            *particle.1 = new_data.smoothing_length;
+            *particle.2 = new_data.density;
+            *particle.3 = new_data.pressure;
+            *particle.4 = new_data.mass;
+            *particle.5 = new_data.internal_energy;
+        }
+    }
+}
+
+fn show_halo_particles_system(
+    mut commands: Commands,
+    undrawn_halo_particles: HaloParticles<(Entity, &Position), Without<DrawCircle>>,
+    mut drawn_halo_particles: HaloParticles<(&Position, &mut DrawCircle), With<DrawCircle>>,
+) {
+    for (entity, pos) in undrawn_halo_particles.iter() {
+        commands.entity(entity).insert(DrawCircle {
+            position: **pos,
+            radius: Pixels(10.0),
+            color: RColor::RED,
+        });
+    }
+    for (pos, mut circle) in drawn_halo_particles.iter_mut() {
+        circle.set_translation(pos);
     }
 }
 
@@ -233,7 +333,7 @@ fn compute_pressure_and_density_system(
         &Position,
         &Mass,
     )>,
-    masses: Query<&Mass, With<LocalParticle>>,
+    masses: Particles<&Mass>,
     tree: Res<QuadTree>,
     performance_parameters: Res<PerformanceParameters>,
 ) {

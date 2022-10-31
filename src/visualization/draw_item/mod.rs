@@ -20,7 +20,7 @@ use crate::simulation::Simulation;
 use crate::units::VecLength;
 
 #[derive(Equivalence, Deref, DerefMut, Clone, Debug)]
-pub struct Pixels(f64);
+pub struct Pixels(pub f64);
 
 #[derive(Named)]
 pub struct DrawItemSyncOrdering;
@@ -28,7 +28,7 @@ pub struct DrawItemSyncOrdering;
 #[derive(AmbiguitySetLabel)]
 pub struct DrawAmbiguitySet;
 
-pub(super) trait DrawItem {
+pub trait DrawItem {
     type Output: Bundle;
     fn get_bundle(&self, camera_transform: &CameraTransform) -> Self::Output;
     fn translation(&self) -> &VecLength;

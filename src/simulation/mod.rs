@@ -344,11 +344,8 @@ impl Simulation {
         T: Equivalence + ToDataset + Component,
         <T as Equivalence>::Out: MatchesRaw,
     {
-        if self.has_world_rank() {
-            self.add_plugin(ExchangeDataPlugin::<T>::default());
-        }
-        self.add_plugin(OutputPlugin::<T>::default())
-            .add_plugin(ComponentMemoryUsagePlugin::<T>::default());
+        self.add_component_no_io::<T>();
+        self.add_plugin(OutputPlugin::<T>::default());
         match input {
             ComponentInput::Required => {
                 self.add_plugin(DatasetInputPlugin::<T>::default());
@@ -372,6 +369,18 @@ impl Simulation {
         <T as Equivalence>::Out: MatchesRaw,
     {
         self.add_component::<T>(ComponentInput::Derived)
+    }
+
+    pub fn add_component_no_io<T>(&mut self) -> &mut Self
+    where
+        T: Clone + Named + Equivalence + Component,
+        <T as Equivalence>::Out: MatchesRaw,
+    {
+        if self.has_world_rank() {
+            self.add_plugin(ExchangeDataPlugin::<T>::default());
+        }
+        self.add_plugin(ComponentMemoryUsagePlugin::<T>::default());
+        self
     }
 
     fn validate(&self) {

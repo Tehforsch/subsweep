@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use bevy::prelude::Commands;
 use bevy::prelude::Entity;
 use mpi::traits::Equivalence;
 
@@ -24,12 +25,20 @@ impl<T> SyncResult<T> {
             deleted: DataByRank::from_communicator(communicator),
         }
     }
+
+    pub fn despawn_deleted(&mut self, commands: &mut Commands) {
+        for (_, entities) in self.deleted.drain_all() {
+            for entity in entities.into_iter() {
+                commands.entity(entity).despawn();
+            }
+        }
+    }
 }
 
 pub struct SyncCommunicator<T> {
     communicator: ExchangeCommunicator<Identified<T>>,
     known: DataByRank<HashMap<EntityKey, Entity>>,
-    to_sync: DataByRank<Vec<Identified<T>>>,
+    to_sync: DataByRank<HashMap<Entity, T>>,
 }
 
 impl<T> From<Communicator<T>> for SyncCommunicator<T> {
@@ -50,14 +59,24 @@ where
     T: Equivalence,
 {
     pub fn send_sync(&mut self, rank: Rank, entity: Entity, data: T) {
-        self.to_sync[rank].push(Identified::new(entity, data));
+        self.to_sync[rank].insert(entity, data);
     }
 
+    #[must_use]
     pub fn receive_sync(&mut self, mut f: impl FnMut(Rank, T) -> Entity) -> SyncResult<T> {
-        for (rank, data) in self.to_sync.drain_all() {
-            self.communicator.blocking_send_vec(rank, data);
-        }
-        let data = self.communicator.receive_vec();
+        let all_data: DataByRank<Vec<Identified<T>>> = self
+            .to_sync
+            .drain_all()
+            .map(|(rank, data)| {
+                (
+                    rank,
+                    data.into_iter()
+                        .map(|(entity, data)| Identified::new(entity, data))
+                        .collect(),
+                )
+            })
+            .collect();
+        let data = self.communicator.exchange_all(all_data);
         let mut result = SyncResult::from_communicator(&self.communicator);
         for (rank, data) in data.into_iter() {
             let updated = &mut result.updated[rank];
@@ -130,6 +149,13 @@ pub mod tests {
             // This makes no sense, and is just for test purposes
             Entity::from_raw(data)
         };
+        let assert_contains = |updated: &Vec<(Entity, u32)>, entity_id: u32, value: u32| {
+            dbg!(updated);
+            dbg!(entity_id, value);
+            assert!(updated
+                .iter()
+                .any(|item| item.0 == Entity::from_raw(entity_id) && item.1 == value))
+        };
         let thread = thread::spawn(move || {
             // Initialize some entities
             communicator1.send_sync(0, Entity::from_raw(0), 100);
@@ -144,15 +170,15 @@ pub mod tests {
             communicator1.send_sync(0, Entity::from_raw(1), 111);
             let result = communicator1.receive_sync(entity_translation);
             // Make sure the updated information comes in
-            assert_eq!(result.updated[0][0].1, 201);
-            assert_eq!(result.updated[0][1].1, 211);
+            assert_contains(&result.updated[0], 200, 201);
+            assert_contains(&result.updated[0], 210, 211);
             assert!(result.deleted[0].is_empty());
 
             // Leave out one entity on this core
             communicator1.send_sync(0, Entity::from_raw(0), 102);
             let result = communicator1.receive_sync(entity_translation);
-            assert_eq!(result.updated[0][0].1, 202);
-            assert_eq!(result.updated[0][1].1, 212);
+            assert_contains(&result.updated[0], 200, 202);
+            assert_contains(&result.updated[0], 210, 212);
             assert!(result.deleted[0].is_empty());
         });
 
@@ -165,15 +191,15 @@ pub mod tests {
         communicator0.send_sync(1, Entity::from_raw(0), 201);
         communicator0.send_sync(1, Entity::from_raw(1), 211);
         let result = communicator0.receive_sync(entity_translation);
-        assert_eq!(result.updated[1][0].1, 101);
-        assert_eq!(result.updated[1][1].1, 111);
+        assert_contains(&result.updated[1], 100, 101);
+        assert_contains(&result.updated[1], 110, 111);
         assert!(result.deleted[1].is_empty());
 
         communicator0.send_sync(1, Entity::from_raw(0), 202);
         communicator0.send_sync(1, Entity::from_raw(1), 212);
         let result = communicator0.receive_sync(entity_translation);
         // Rank 1 left out one entity in the sync - make sure it is marked as deleted
-        assert_eq!(result.updated[1][0].1, 102);
+        assert_contains(&result.updated[1], 100, 102);
         assert_eq!(result.updated[1].get(1), None);
         assert_eq!(result.deleted[1][0], Entity::from_raw(110));
 

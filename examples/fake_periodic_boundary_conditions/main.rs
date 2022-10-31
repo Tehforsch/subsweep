@@ -4,6 +4,8 @@
 use std::ops::Div;
 
 use bevy::prelude::*;
+use hdf5::H5Type;
+use mpi::traits::Equivalence;
 use rand::Rng;
 use raxiom::components;
 use raxiom::components::Position;
@@ -18,10 +20,14 @@ use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
 use serde::Deserialize;
 
-#[derive(Debug, Copy, Clone, Component)]
-enum ParticleType {
-    Red,
-    Blue,
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut)]
+#[repr(transparent)]
+struct ParticleType(usize);
+
+impl Named for ParticleType {
+    fn name() -> &'static str {
+        "particle_type"
+    }
 }
 
 #[derive(Default, Deserialize, Clone)]
@@ -51,6 +57,7 @@ fn main() {
         .headless(false)
         .update_from_command_line_options()
         .build()
+        .add_component_no_io::<ParticleType>()
         .add_parameter_type::<Parameters>()
         .add_plugin(HydrodynamicsPlugin)
         .add_startup_system(spawn_particles_system)
@@ -60,10 +67,11 @@ fn main() {
         .run();
 }
 
-fn get_y_offset_of_particle_type(parameters: &Parameters, type_: &ParticleType) -> Length {
+fn get_y_offset_of_particle_type(parameters: &Parameters, type_: usize) -> Length {
     match type_ {
-        ParticleType::Red => parameters.y_offset,
-        ParticleType::Blue => -parameters.y_offset,
+        0 => parameters.y_offset,
+        1 => -parameters.y_offset,
+        _ => unreachable!(),
     }
 }
 
@@ -78,11 +86,12 @@ fn external_force_system(
     parameters: Res<Parameters>,
 ) {
     for (pos, mass, mut vel, type_, timestep) in particles.iter_mut() {
-        let center = VecLength::new_y(get_y_offset_of_particle_type(&parameters, type_));
+        let center = VecLength::new_y(get_y_offset_of_particle_type(&parameters, type_.0));
         let mut acceleration = (center - **pos) * parameters.y_force_factor;
-        acceleration.set_x(match type_ {
-            ParticleType::Red => parameters.x_force,
-            ParticleType::Blue => -parameters.x_force,
+        acceleration.set_x(match type_.0 {
+            0 => parameters.x_force,
+            1 => -parameters.x_force,
+            _ => unreachable!(),
         });
         **vel += acceleration / **mass * **timestep;
     }
@@ -123,9 +132,9 @@ fn spawn_particles_system(
     }
     let num_particles_per_type = parameters.num_particles / 2;
     let mut rng = rand::thread_rng();
-    for type_ in [ParticleType::Red, ParticleType::Blue] {
+    for type_ in [0, 1] {
         for _ in 0..num_particles_per_type {
-            let offset = get_y_offset_of_particle_type(&parameters, &type_);
+            let offset = get_y_offset_of_particle_type(&parameters, type_);
             let x = rng.gen_range(-parameters.box_size.x()..parameters.box_size.x());
             let y = rng.gen_range(-parameters.box_size.y()..parameters.box_size.y()) + offset;
             spawn_particle(
@@ -133,7 +142,7 @@ fn spawn_particles_system(
                 VecLength::new(x, y),
                 VecVelocity::zero(),
                 parameters.particle_mass,
-                type_,
+                ParticleType(type_),
             )
         }
     }
@@ -152,12 +161,5 @@ fn spawn_particle(
         Velocity(vel),
         components::Mass(mass),
         type_,
-        DrawCircle::from_position_and_color(
-            pos,
-            match type_ {
-                ParticleType::Red => RColor::RED,
-                ParticleType::Blue => RColor::BLUE,
-            },
-        ),
     ));
 }
