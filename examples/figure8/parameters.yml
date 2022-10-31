@@ -3,10 +3,6 @@ timestep:
 gravity:
   softening_length: 1e-10 m
   opening_angle: 0.5
-tree:
-  max_depth: 20
-  min_depth: 4
-  max_num_particles_per_leaf: 1
 input:
   paths:
     - examples/figure8/ics.hdf5

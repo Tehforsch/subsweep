@@ -6,7 +6,7 @@ use criterion::criterion_main;
 use criterion::Criterion;
 use raxiom::components;
 use raxiom::components::Position;
-use raxiom::parameters::DomainTreeParameters;
+use raxiom::parameters::DomainParameters;
 use raxiom::parameters::HydrodynamicsParameters;
 use raxiom::parameters::InitialGasEnergy;
 use raxiom::parameters::PerformanceParameters;
@@ -27,7 +27,7 @@ fn run_hydro() {
     let mut builder = SimulationBuilder::new();
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(PerformanceParameters::default())
-        .add_parameters_explicitly(DomainTreeParameters::default())
+        .add_parameters_explicitly(DomainParameters::default())
         .add_parameters_explicitly(HydrodynamicsParameters {
             min_smoothing_length: Length::meters(1.0),
             initial_gas_energy: InitialGasEnergy::TemperatureAndMolecularWeight {
