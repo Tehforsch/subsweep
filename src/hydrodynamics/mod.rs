@@ -144,6 +144,7 @@ fn symmetric_kernel_derivative(
 
 #[derive(StageLabel)]
 pub enum HydrodynamicsStages {
+    Initial,
     Hydrodynamics,
 }
 
@@ -152,17 +153,17 @@ pub struct HydrodynamicsPlugin;
 
 impl RaxiomPlugin for HydrodynamicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
+        let initial_halo_exchange = halo_exchange_system.label("initial_halo_exchange");
+        let density_pressure_halo_exchange =
+            halo_exchange_system.label("density_pressure_halo_exchange");
         sim.add_parameter_type::<HydrodynamicsParameters>()
             .add_plugin(CommunicationPlugin::<RemoteParticleData>::sync())
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
-                HydrodynamicsStages::Hydrodynamics,
-                set_smoothing_lengths_system.before(identify_halo_particles_to_send_system),
+                HydrodynamicsStages::Initial,
+                set_smoothing_lengths_system.before("initial_halo_exchange"),
             )
-            .add_system_to_stage(
-                HydrodynamicsStages::Hydrodynamics,
-                identify_halo_particles_to_send_system.before(construct_quad_tree_system),
-            )
+            .add_system_to_stage(HydrodynamicsStages::Initial, initial_halo_exchange)
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
                 construct_quad_tree_system,
@@ -173,11 +174,19 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
             )
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
-                compute_energy_change_system.after(compute_pressure_and_density_system),
+                density_pressure_halo_exchange.after(compute_pressure_and_density_system),
             )
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
-                compute_forces_system.after(compute_energy_change_system),
+                compute_energy_change_system
+                    .after(compute_pressure_and_density_system)
+                    .after("density_pressure_halo_exchange"),
+            )
+            .add_system_to_stage(
+                HydrodynamicsStages::Hydrodynamics,
+                compute_forces_system
+                    .after(compute_energy_change_system)
+                    .after("density_pressure_halo_exchange"),
             )
             .add_startup_system_to_stage(
                 StartupStage::PostStartup,
@@ -203,7 +212,7 @@ fn set_smoothing_lengths_system(
     }
 }
 
-fn identify_halo_particles_to_send_system(
+fn halo_exchange_system(
     mut commands: Commands,
     particles: Particles<
         (
@@ -464,6 +473,9 @@ fn compute_forces_system(
                     * **mass2
                     * ((**pressure1 / density1.squared()) + (**pressure2 / density2.squared()))
                     * kernel_derivative;
+                if density2.value_unchecked() == 0.0 && pressure2.value_unchecked() == 0.0 {
+                    panic!()
+                }
             }
             **velocity1 += d_vel * **timestep;
         },

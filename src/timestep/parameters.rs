@@ -13,5 +13,5 @@ pub struct TimestepParameters {
 }
 
 fn default_num_levels() -> usize {
-    10
+    1
 }
