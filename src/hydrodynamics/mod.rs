@@ -23,6 +23,7 @@ use crate::domain::extent::Extent;
 use crate::domain::TopLevelIndices;
 use crate::named::Named;
 use crate::performance_parameters::PerformanceParameters;
+use crate::prelude::LocalParticle;
 use crate::prelude::MVec;
 use crate::prelude::Particles;
 use crate::prelude::WorldRank;
@@ -63,6 +64,7 @@ struct RemoteParticleData {
     pub density: components::Density,
     pub pressure: Pressure,
     pub mass: Mass,
+    pub velocity: components::Velocity,
     pub internal_energy: InternalEnergy,
 }
 
@@ -74,6 +76,10 @@ pub struct HaloParticle {
 /// A convenience type to query for halo particles.
 pub type HaloParticles<'world, 'state, T, F = ()> =
     Query<'world, 'state, T, (With<HaloParticle>, F)>;
+
+/// A convenience type to query for local and halo particles.
+pub type HydroParticles<'world, 'state, T, F = ()> =
+    Query<'world, 'state, T, (Or<(With<HaloParticle>, With<LocalParticle>)>, F)>;
 
 fn kernel_function(r: Length, h: Length) -> f64 {
     // Spline Kernel, Monaghan & Lattanzio 1985
@@ -208,6 +214,7 @@ fn identify_halo_particles_to_send_system(
             &Pressure,
             &Mass,
             &InternalEnergy,
+            &components::Velocity,
         ),
         Without<HaloParticle>,
     >,
@@ -218,13 +225,14 @@ fn identify_halo_particles_to_send_system(
         &mut Pressure,
         &mut Mass,
         &mut InternalEnergy,
+        &mut components::Velocity,
     )>,
     mut communicator: SyncCommunicator<RemoteParticleData>,
     indices: Res<TopLevelIndices>,
     tree: Res<domain::QuadTree>,
     world_rank: Res<WorldRank>,
 ) {
-    for (entity, pos, smoothing_length, density, pressure, mass, internal_energy) in
+    for (entity, pos, smoothing_length, density, pressure, mass, internal_energy, velocity) in
         particles.iter()
     {
         for (rank, index) in indices
@@ -251,6 +259,7 @@ fn identify_halo_particles_to_send_system(
                         pressure: pressure.clone(),
                         mass: mass.clone(),
                         internal_energy: internal_energy.clone(),
+                        velocity: velocity.clone(),
                     },
                 );
             }
@@ -274,6 +283,7 @@ fn identify_halo_particles_to_send_system(
             *particle.3 = new_data.pressure;
             *particle.4 = new_data.mass;
             *particle.5 = new_data.internal_energy;
+            *particle.6 = new_data.velocity;
         }
     }
 }
@@ -333,7 +343,7 @@ fn compute_pressure_and_density_system(
         &Position,
         &Mass,
     )>,
-    masses: Particles<&Mass>,
+    masses: HydroParticles<&Mass>,
     tree: Res<QuadTree>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
@@ -364,7 +374,7 @@ fn compute_energy_change_system(
         &components::Density,
         &Timestep,
     )>,
-    particles2: Particles<(
+    particles2: HydroParticles<(
         &Position,
         &components::Velocity,
         &components::Pressure,
@@ -423,7 +433,7 @@ fn compute_forces_system(
         &components::Density,
         &Timestep,
     )>,
-    particles2: Particles<(
+    particles2: HydroParticles<(
         &Position,
         &components::Pressure,
         &components::Density,

@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
 use super::parameters::HydrodynamicsParameters;
+use super::HydroParticles;
 use crate::components::Position;
 use crate::components::SmoothingLength;
 use crate::domain::GlobalExtent;
 use crate::prelude::MVec;
-use crate::prelude::Particles;
 use crate::quadtree::LeafDataType;
 use crate::quadtree::NodeDataType;
 use crate::quadtree::{self};
@@ -101,7 +101,7 @@ pub(super) fn get_particles_in_radius<'a>(
 
 pub(super) fn construct_quad_tree_system(
     parameters: Res<HydrodynamicsParameters>,
-    particles: Particles<(Entity, &Position, &SmoothingLength)>,
+    particles: HydroParticles<(Entity, &Position, &SmoothingLength)>,
     extent: Res<GlobalExtent>,
     mut quadtree: ResMut<QuadTree>,
 ) {
