@@ -112,7 +112,7 @@ macro_rules! barrierdbg {
     };
     ($($val:expr),+ $(,)?) => {
         $crate::mpi_log::start_barrier();
-        ($(mpidbg!($val)),+,)
+        ($($crate::mpidbg!($val)),+,);
         $crate::mpi_log::end_barrier();
     };
 }
