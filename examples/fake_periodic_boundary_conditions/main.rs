@@ -6,7 +6,9 @@ use std::ops::Div;
 use bevy::prelude::*;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
+use rand::rngs::StdRng;
 use rand::Rng;
+use rand::SeedableRng;
 use raxiom::components;
 use raxiom::components::Position;
 use raxiom::components::Timestep;
@@ -131,7 +133,7 @@ fn spawn_particles_system(
         return;
     }
     let num_particles_per_type = parameters.num_particles / 2;
-    let mut rng = rand::thread_rng();
+    let mut rng = StdRng::seed_from_u64(0);
     for type_ in [0, 1] {
         for _ in 0..num_particles_per_type {
             let offset = get_y_offset_of_particle_type(&parameters, type_);
