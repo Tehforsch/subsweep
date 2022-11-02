@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::prelude::Entity;
 use criterion::criterion_group;
 use criterion::criterion_main;
@@ -43,10 +41,8 @@ fn get_quadtree(min_depth: usize) -> QuadTree {
 
 pub fn quadtree_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("quadtree");
-    group
-        .sample_size(500)
-        .measurement_time(Duration::from_secs(5));
-    for depth in 1..6 {
+    group.noise_threshold(0.05);
+    for depth in 1..7 {
         group.bench_with_input(
             BenchmarkId::from_parameter(depth),
             &get_quadtree(depth),

@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 use criterion::criterion_group;
 use criterion::criterion_main;
@@ -56,9 +54,7 @@ fn run_hydro() {
 
 pub fn hydrodynamics_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("hydrodynamics");
-    group
-        .sample_size(10)
-        .measurement_time(Duration::from_secs(5));
+    group.noise_threshold(0.05);
     group.bench_function("hydrodynamics", |b| b.iter(run_hydro));
     Simulation::finalize();
     group.finish();
