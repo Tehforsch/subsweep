@@ -3,19 +3,21 @@
 
 use bevy::prelude::*;
 use raxiom::components;
+use raxiom::ics::ConstantDensity;
+use raxiom::ics::ResolutionSpecification;
+use raxiom::ics::Sampler;
 use raxiom::prelude::*;
+use raxiom::units::Density;
 use raxiom::units::InverseTime;
-use raxiom::units::Mass;
 use raxiom::units::VecLength;
-use raxiom::units::VecVelocity;
 use serde::Deserialize;
 
 #[derive(Default, Deserialize, Clone)]
 struct Parameters {
     num_particles: usize,
     box_size: VecLength,
-    particle_mass: Mass,
     angular_velocity_factor: InverseTime,
+    density: Density,
 }
 
 // Implementing named myself here because of
@@ -35,12 +37,12 @@ fn main() {
         .update_from_command_line_options()
         .build()
         .add_parameter_type::<Parameters>()
-        .add_startup_system(spawn_particles_system)
+        .add_startup_system(initial_conditions_system)
         .add_plugin(GravityPlugin)
         .run();
 }
 
-fn spawn_particles_system(
+fn initial_conditions_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
     parameters: Res<Parameters>,
@@ -48,19 +50,14 @@ fn spawn_particles_system(
     if !rank.is_main() {
         return;
     }
-    let box_size = parameters.box_size;
-    for _ in 0..parameters.num_particles {
-        let pos = gen_range(-box_size, box_size);
+    Sampler::new(
+        ConstantDensity(parameters.density),
+        Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
+        ResolutionSpecification::NumParticles(parameters.num_particles),
+    )
+    .sample()
+    .spawn_with(&mut commands, |entity_commands, pos: VecLength, _mass| {
         let vel = VecLength::from_xy(-pos.y(), pos.x()) * parameters.angular_velocity_factor;
-        spawn_particle(&mut commands, pos, vel, parameters.particle_mass)
-    }
-}
-
-fn spawn_particle(commands: &mut Commands, pos: VecLength, vel: VecVelocity, mass: Mass) {
-    commands.spawn_bundle((
-        LocalParticle,
-        components::Position(pos),
-        components::Velocity(vel),
-        components::Mass(mass),
-    ));
+        entity_commands.insert(components::Velocity(vel));
+    });
 }

@@ -19,6 +19,7 @@ pub(crate) mod config;
 pub(crate) mod domain;
 pub(crate) mod gravity;
 pub mod hydrodynamics;
+pub mod ics;
 pub(crate) mod io;
 pub(crate) mod memory;
 pub(crate) mod named;

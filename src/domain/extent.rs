@@ -3,6 +3,7 @@ use mpi::traits::Equivalence;
 use crate::config::TWO_TO_NUM_DIMENSIONS;
 use crate::units::Length;
 use crate::units::VecLength;
+use crate::units::Volume;
 
 #[derive(Default, Clone, Equivalence, PartialEq)]
 pub struct Extent {
@@ -111,6 +112,14 @@ impl Extent {
             && pos.x() <= self.max.x()
             && self.min.y() <= pos.y()
             && pos.y() <= self.max.y()
+    }
+
+    pub fn volume(&self) -> Volume {
+        let side_lengths = self.side_lengths();
+        #[cfg(feature = "2d")]
+        return side_lengths.x() * side_lengths.y();
+        #[cfg(not(feature = "2d"))]
+        return side_lengths.x() * side_lengths.y() * side_lengths.z();
     }
 
     #[cfg(feature = "2d")]

@@ -17,6 +17,6 @@ example:
   x_force: 5000 N
   y_force_factor: 5000 N m^-1
   y_offset: 2 m
-  particle_mass: 1.0 kg
+  density: 0.05 kg m^-2
 visualization:
-  show_particles: true
+  show_particles: True

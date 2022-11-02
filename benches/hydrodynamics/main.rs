@@ -7,8 +7,9 @@ use criterion::BatchSize;
 use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::Throughput;
-use raxiom::components;
-use raxiom::components::Position;
+use raxiom::ics::ConstantDensity;
+use raxiom::ics::ResolutionSpecification;
+use raxiom::ics::Sampler;
 use raxiom::parameters::DomainParameters;
 use raxiom::parameters::HydrodynamicsParameters;
 use raxiom::parameters::InitialGasEnergy;
@@ -16,9 +17,8 @@ use raxiom::parameters::PerformanceParameters;
 use raxiom::parameters::QuadTreeConfig;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::TimestepParameters;
-use raxiom::prelude::gen_range;
+use raxiom::prelude::Extent;
 use raxiom::prelude::HydrodynamicsPlugin;
-use raxiom::prelude::LocalParticle;
 use raxiom::prelude::MVec;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationBuilder;
@@ -80,33 +80,22 @@ fn setup_hydro_sim(num_particles: usize) -> Simulation {
         .log(false)
         .build_with_sim(&mut sim)
         .add_startup_system(move |commands: Commands, rank: Res<WorldRank>| {
-            spawn_particles_system(commands, rank, num_particles)
+            initial_conditions_system(commands, rank, num_particles)
         })
         .add_plugin(HydrodynamicsPlugin);
     sim
 }
 
-fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>, num_particles: usize) {
+fn initial_conditions_system(mut commands: Commands, rank: Res<WorldRank>, num_particles: usize) {
     if !rank.is_main() {
         return;
     }
     let box_size = Length::meters(100.0) * MVec::ONE;
-    for _ in 0..num_particles {
-        let pos = gen_range(-box_size, box_size);
-        spawn_particle(
-            &mut commands,
-            pos,
-            VecVelocity::zero(),
-            Mass::kilograms(1.0),
-        )
-    }
-}
-
-fn spawn_particle(commands: &mut Commands, pos: VecLength, vel: VecVelocity, mass: Mass) {
-    commands.spawn_bundle((
-        LocalParticle,
-        Position(pos),
-        components::Velocity(vel),
-        components::Mass(mass),
-    ));
+    Sampler::new(
+        ConstantDensity(Density::kilogram_per_cubic_meter(1.0)),
+        Extent::new(-box_size / 2.0, box_size / 2.0),
+        ResolutionSpecification::NumParticles(num_particles),
+    )
+    .sample()
+    .spawn_with_zero_velocity(&mut commands);
 }

@@ -6,17 +6,17 @@ use std::ops::Div;
 use bevy::prelude::*;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
-use rand::rngs::StdRng;
-use rand::Rng;
-use rand::SeedableRng;
 use raxiom::components;
 use raxiom::components::Position;
 use raxiom::components::Timestep;
 use raxiom::components::Velocity;
+use raxiom::ics::ConstantDensity;
+use raxiom::ics::ResolutionSpecification;
+use raxiom::ics::Sampler;
 use raxiom::prelude::*;
+use raxiom::units::Density;
 use raxiom::units::Force;
 use raxiom::units::Length;
-use raxiom::units::Mass;
 use raxiom::units::Time;
 use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
@@ -40,7 +40,7 @@ struct Parameters {
     x_force: Force,
     y_force_factor: <Force as Div<Length>>::Output,
     y_offset: Length,
-    particle_mass: Mass,
+    density: Density,
 }
 
 // Implementing named myself here because of
@@ -133,35 +133,17 @@ fn spawn_particles_system(
         return;
     }
     let num_particles_per_type = parameters.num_particles / 2;
-    let mut rng = StdRng::seed_from_u64(0);
     for type_ in [0, 1] {
         for _ in 0..num_particles_per_type {
-            let offset = get_y_offset_of_particle_type(&parameters, type_);
-            let x = rng.gen_range(-parameters.box_size.x()..parameters.box_size.x());
-            let y = rng.gen_range(-parameters.box_size.y()..parameters.box_size.y()) + offset;
-            spawn_particle(
-                &mut commands,
-                VecLength::new(x, y),
-                VecVelocity::zero(),
-                parameters.particle_mass,
-                ParticleType(type_),
+            Sampler::new(
+                ConstantDensity(parameters.density),
+                Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
+                ResolutionSpecification::NumParticles(parameters.num_particles),
             )
+            .sample()
+            .spawn_with(&mut commands, |entity_commands, _, _| {
+                entity_commands.insert_bundle((Velocity(VecVelocity::zero()), ParticleType(type_)));
+            });
         }
     }
-}
-
-fn spawn_particle(
-    commands: &mut Commands,
-    pos: VecLength,
-    vel: VecVelocity,
-    mass: Mass,
-    type_: ParticleType,
-) {
-    commands.spawn_bundle((
-        LocalParticle,
-        Position(pos),
-        Velocity(vel),
-        components::Mass(mass),
-        type_,
-    ));
 }

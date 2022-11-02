@@ -5,6 +5,8 @@ gravity:
   opening_angle: 0.5
 example:
   num_particles: 1000
+  density: 1e-6 Msol au^-3
   box_size: (1000 1000 1000) au
-  particle_mass: 1.0 Msol
   angular_velocity_factor: 5e-10 s^-1
+visualization:
+  show_particles: True
