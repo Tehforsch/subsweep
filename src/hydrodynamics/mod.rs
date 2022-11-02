@@ -8,8 +8,6 @@ use self::hydro_components::Pressure;
 use self::hydro_components::SmoothingLength;
 use self::quadtree::bounding_boxes_overlap;
 use self::quadtree::construct_quad_tree_system;
-use self::quadtree::get_particles_in_radius;
-use self::quadtree::QuadTree;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Rank;
 use crate::communication::SyncCommunicator;
@@ -48,10 +46,11 @@ use crate::visualization::VisualizationStage;
 
 pub(crate) mod hydro_components;
 mod parameters;
-mod quadtree;
+pub mod quadtree;
 
 pub use self::parameters::HydrodynamicsParameters;
 pub use self::parameters::InitialGasEnergy;
+pub use self::quadtree::QuadTree;
 
 const GAMMA: f64 = 5.0 / 3.0;
 
@@ -360,7 +359,7 @@ fn compute_pressure_and_density_system(
         performance_parameters.batch_size(),
         |(mut pressure, mut density, internal_energy, smoothing_length, pos, mass)| {
             **density = Density::zero();
-            for particle in get_particles_in_radius(&tree, pos, smoothing_length).iter() {
+            for particle in tree.get_particles_in_radius(pos, smoothing_length).iter() {
                 let mass2 = masses.get(particle.entity).unwrap();
                 let distance = particle.pos.distance(pos);
                 **density += **mass2 * kernel(distance, **smoothing_length);
@@ -409,7 +408,10 @@ fn compute_energy_change_system(
             let mut d_energy = Energy::zero()
                 / crate::units::Mass::one_unchecked()
                 / crate::units::Time::one_unchecked();
-            for particle in get_particles_in_radius(&tree, position1, smoothing_length1).iter() {
+            for particle in tree
+                .get_particles_in_radius(position1, smoothing_length1)
+                .iter()
+            {
                 let (position2, velocity2, pressure2, density2, mass2, smoothing_length2) =
                     particles2.get(particle.entity).unwrap();
                 if **position1 == **position2 {
@@ -456,7 +458,10 @@ fn compute_forces_system(
         performance_parameters.batch_size(),
         |(mut velocity1, position1, smoothing_length1, pressure1, density1, timestep)| {
             let mut d_vel = VecAcceleration::zero();
-            for particle in get_particles_in_radius(&tree, position1, smoothing_length1).iter() {
+            for particle in tree
+                .get_particles_in_radius(position1, smoothing_length1)
+                .iter()
+            {
                 let (position2, pressure2, density2, mass2, smoothing_length2) =
                     particles2.get(particle.entity).unwrap();
                 if **position1 == **position2 {

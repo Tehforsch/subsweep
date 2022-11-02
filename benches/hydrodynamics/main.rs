@@ -57,8 +57,8 @@ fn run_hydro() {
 pub fn hydrodynamics_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("hydrodynamics");
     group
-        .sample_size(50)
-        .measurement_time(Duration::from_secs(60));
+        .sample_size(10)
+        .measurement_time(Duration::from_secs(5));
     group.bench_function("hydrodynamics", |b| b.iter(run_hydro));
     Simulation::finalize();
     group.finish();
@@ -71,7 +71,7 @@ fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
     if !rank.is_main() {
         return;
     }
-    let num_particles = 10000;
+    let num_particles = 1000;
     let box_size = Length::meters(100.0) * MVec::ONE;
     for _ in 0..num_particles {
         let pos = gen_range(-box_size, box_size);

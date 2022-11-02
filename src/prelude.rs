@@ -9,6 +9,7 @@ pub use crate::hydrodynamics::HydrodynamicsPlugin;
 pub use crate::named::*;
 pub use crate::particle::LocalParticle;
 pub use crate::particle::Particles;
+pub use crate::quadtree::QuadTree;
 pub use crate::rand::gen_range;
 pub use crate::simulation::Simulation;
 pub use crate::simulation_builder::SimulationBuilder;
