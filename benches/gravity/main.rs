@@ -10,14 +10,12 @@ use criterion::Throughput;
 use raxiom::components;
 use raxiom::components::Position;
 use raxiom::parameters::DomainParameters;
-use raxiom::parameters::HydrodynamicsParameters;
-use raxiom::parameters::InitialGasEnergy;
+use raxiom::parameters::GravityParameters;
 use raxiom::parameters::PerformanceParameters;
-use raxiom::parameters::QuadTreeConfig;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::TimestepParameters;
 use raxiom::prelude::gen_range;
-use raxiom::prelude::HydrodynamicsPlugin;
+use raxiom::prelude::GravityPlugin;
 use raxiom::prelude::LocalParticle;
 use raxiom::prelude::MVec;
 use raxiom::prelude::Simulation;
@@ -26,8 +24,8 @@ use raxiom::prelude::WorldRank;
 use raxiom::units::Time;
 use raxiom::units::*;
 
-pub fn hydrodynamics_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("hydrodynamics");
+pub fn gravity_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("gravity");
     group
         .noise_threshold(0.05)
         .measurement_time(Duration::from_secs(20))
@@ -36,8 +34,8 @@ pub fn hydrodynamics_benchmark(c: &mut Criterion) {
         group.throughput(Throughput::Elements(num_particles as u64));
         group.bench_function(BenchmarkId::from_parameter(num_particles), |b| {
             b.iter_batched(
-                || setup_hydro_sim(num_particles),
-                run_hydro,
+                || setup_gravity_sim(num_particles, Dimensionless::dimensionless(0.5)),
+                run_gravity,
                 BatchSize::LargeInput,
             )
         });
@@ -46,25 +44,21 @@ pub fn hydrodynamics_benchmark(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, hydrodynamics_benchmark);
+criterion_group!(benches, gravity_benchmark);
 criterion_main!(benches);
 
-fn run_hydro(mut sim: Simulation) {
+fn run_gravity(mut sim: Simulation) {
     sim.run_without_finalize();
 }
 
-fn setup_hydro_sim(num_particles: usize) -> Simulation {
+fn setup_gravity_sim(num_particles: usize, opening_angle: Dimensionless) -> Simulation {
     let mut builder = SimulationBuilder::new();
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(PerformanceParameters::default())
         .add_parameters_explicitly(DomainParameters::default())
-        .add_parameters_explicitly(HydrodynamicsParameters {
-            min_smoothing_length: Length::meters(1.0),
-            initial_gas_energy: InitialGasEnergy::TemperatureAndMolecularWeight {
-                temperature: Temperature::kelvins(1e5),
-                molecular_weight: Dimensionless::dimensionless(1.0),
-            },
-            tree: QuadTreeConfig::default(),
+        .add_parameters_explicitly(GravityParameters {
+            softening_length: Length::zero(),
+            opening_angle,
         })
         .add_parameters_explicitly(SimulationParameters {
             final_time: Some(Time::seconds(10e-3)),
@@ -82,7 +76,7 @@ fn setup_hydro_sim(num_particles: usize) -> Simulation {
         .add_startup_system(move |commands: Commands, rank: Res<WorldRank>| {
             spawn_particles_system(commands, rank, num_particles)
         })
-        .add_plugin(HydrodynamicsPlugin);
+        .add_plugin(GravityPlugin);
     sim
 }
 
