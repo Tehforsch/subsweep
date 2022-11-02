@@ -62,7 +62,7 @@ fn main() {
         .add_component_no_io::<ParticleType>()
         .add_parameter_type::<Parameters>()
         .add_plugin(HydrodynamicsPlugin)
-        .add_startup_system(spawn_particles_system)
+        .add_startup_system(initial_conditions_system)
         .add_system(external_force_system)
         .add_system(fake_periodic_boundaries_system.after(external_force_system))
         .add_system(fake_viscosity_system.after(external_force_system))
@@ -124,7 +124,7 @@ fn fake_periodic_boundaries_system(
     }
 }
 
-fn spawn_particles_system(
+fn initial_conditions_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
     parameters: Res<Parameters>,
@@ -134,16 +134,14 @@ fn spawn_particles_system(
     }
     let num_particles_per_type = parameters.num_particles / 2;
     for type_ in [0, 1] {
-        for _ in 0..num_particles_per_type {
-            Sampler::new(
-                ConstantDensity(parameters.density),
-                Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
-                Resolution::NumParticles(parameters.num_particles),
-            )
-            .sample()
-            .spawn_with(&mut commands, |entity_commands, _, _| {
-                entity_commands.insert_bundle((Velocity(VecVelocity::zero()), ParticleType(type_)));
-            });
-        }
+        Sampler::new(
+            ConstantDensity(parameters.density),
+            Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
+            Resolution::NumParticles(num_particles_per_type),
+        )
+        .sample()
+        .spawn_with(&mut commands, |entity_commands, _, _| {
+            entity_commands.insert_bundle((Velocity(VecVelocity::zero()), ParticleType(type_)));
+        });
     }
 }
