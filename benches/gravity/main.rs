@@ -8,7 +8,7 @@ use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::Throughput;
 use raxiom::ics::ConstantDensity;
-use raxiom::ics::ResolutionSpecification;
+use raxiom::ics::Resolution;
 use raxiom::ics::Sampler;
 use raxiom::parameters::DomainParameters;
 use raxiom::parameters::GravityParameters;
@@ -88,7 +88,7 @@ fn initial_conditions_system(mut commands: Commands, rank: Res<WorldRank>, num_p
     Sampler::new(
         ConstantDensity(Density::kilogram_per_cubic_meter(1.0)),
         Extent::new(-box_size / 2.0, box_size / 2.0),
-        ResolutionSpecification::NumParticles(num_particles),
+        Resolution::NumParticles(num_particles),
     )
     .sample()
     .spawn_with_zero_velocity(&mut commands);

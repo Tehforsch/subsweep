@@ -19,12 +19,12 @@ use crate::units::Volume;
 
 pub const DEFAULT_SEED: u64 = 123;
 
-pub enum ResolutionSpecification {
+pub enum Resolution {
     NumberDensity(NumberDensity),
     NumParticles(usize),
 }
 
-impl ResolutionSpecification {
+impl Resolution {
     fn as_number_density(&self, volume: Volume) -> NumberDensity {
         match self {
             Self::NumberDensity(density) => *density,
@@ -81,12 +81,12 @@ pub struct Sampler<P: DensityProfile> {
     profile: P,
     extent: Extent,
     num_samples: usize,
-    resolution_spec: ResolutionSpecification,
+    resolution_spec: Resolution,
     rng: StdRng,
 }
 
 impl<P: DensityProfile> Sampler<P> {
-    pub fn new(profile: P, extent: Extent, resolution_spec: ResolutionSpecification) -> Self {
+    pub fn new(profile: P, extent: Extent, resolution_spec: Resolution) -> Self {
         Self {
             profile,
             extent,

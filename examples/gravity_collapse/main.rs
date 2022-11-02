@@ -4,7 +4,7 @@
 use bevy::prelude::*;
 use raxiom::components;
 use raxiom::ics::ConstantDensity;
-use raxiom::ics::ResolutionSpecification;
+use raxiom::ics::Resolution;
 use raxiom::ics::Sampler;
 use raxiom::prelude::*;
 use raxiom::units::Density;
@@ -53,7 +53,7 @@ fn initial_conditions_system(
     Sampler::new(
         ConstantDensity(parameters.density),
         Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
-        ResolutionSpecification::NumParticles(parameters.num_particles),
+        Resolution::NumParticles(parameters.num_particles),
     )
     .sample()
     .spawn_with(&mut commands, |entity_commands, pos: VecLength, _mass| {
