@@ -1,7 +1,11 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use criterion::criterion_group;
 use criterion::criterion_main;
+use criterion::BenchmarkId;
 use criterion::Criterion;
+use criterion::Throughput;
 use raxiom::components;
 use raxiom::components::Position;
 use raxiom::parameters::DomainParameters;
@@ -21,7 +25,30 @@ use raxiom::prelude::WorldRank;
 use raxiom::units::Time;
 use raxiom::units::*;
 
-fn run_hydro() {
+pub fn hydrodynamics_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("hydrodynamics");
+    group
+        .noise_threshold(0.05)
+        .measurement_time(Duration::from_secs(20))
+        .sample_size(10);
+    for num_particles in [100, 1000, 10000] {
+        group.throughput(Throughput::Elements(num_particles as u64));
+        group.bench_function(BenchmarkId::from_parameter(num_particles), |b| {
+            b.iter(|| run_hydro(setup_hydro_sim(num_particles)))
+        });
+    }
+    Simulation::finalize();
+    group.finish();
+}
+
+criterion_group!(benches, hydrodynamics_benchmark);
+criterion_main!(benches);
+
+fn run_hydro(mut sim: Simulation) {
+    sim.run_without_finalize();
+}
+
+fn setup_hydro_sim(num_particles: usize) -> Simulation {
     let mut builder = SimulationBuilder::new();
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(PerformanceParameters::default())
@@ -47,27 +74,17 @@ fn run_hydro() {
         .headless(true)
         .log(false)
         .build_with_sim(&mut sim)
-        .add_startup_system(spawn_particles_system)
-        .add_plugin(HydrodynamicsPlugin)
-        .run_without_finalize();
+        .add_startup_system(move |commands: Commands, rank: Res<WorldRank>| {
+            spawn_particles_system(commands, rank, num_particles)
+        })
+        .add_plugin(HydrodynamicsPlugin);
+    sim
 }
 
-pub fn hydrodynamics_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("hydrodynamics");
-    group.noise_threshold(0.05);
-    group.bench_function("hydrodynamics", |b| b.iter(run_hydro));
-    Simulation::finalize();
-    group.finish();
-}
-
-criterion_group!(benches, hydrodynamics_benchmark);
-criterion_main!(benches);
-
-fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
+fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>, num_particles: usize) {
     if !rank.is_main() {
         return;
     }
-    let num_particles = 1000;
     let box_size = Length::meters(100.0) * MVec::ONE;
     for _ in 0..num_particles {
         let pos = gen_range(-box_size, box_size);
