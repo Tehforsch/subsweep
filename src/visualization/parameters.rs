@@ -13,4 +13,6 @@ pub struct VisualizationParameters {
     pub show_quadtree: bool,
     #[serde(default)]
     pub show_particles: bool,
+    #[serde(default)]
+    pub show_halo_particles: bool,
 }

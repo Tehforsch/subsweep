@@ -38,11 +38,6 @@ use crate::units::VecLength;
 use crate::units::BOLTZMANN_CONSTANT;
 use crate::units::NONE;
 use crate::units::PROTON_MASS;
-use crate::visualization::DrawCircle;
-use crate::visualization::DrawItem;
-use crate::visualization::Pixels;
-use crate::visualization::RColor;
-use crate::visualization::VisualizationStage;
 
 pub(crate) mod hydro_components;
 mod parameters;
@@ -191,10 +186,6 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
                 StartupStage::PostStartup,
                 insert_pressure_and_density_system,
             )
-            .add_system_to_stage(
-                VisualizationStage::AddVisualization,
-                show_halo_particles_system,
-            )
             .add_derived_component::<components::Pressure>()
             .add_derived_component::<components::SmoothingLength>()
             .add_derived_component::<components::InternalEnergy>()
@@ -293,23 +284,6 @@ fn halo_exchange_system(
             *particle.5 = new_data.internal_energy;
             *particle.6 = new_data.velocity;
         }
-    }
-}
-
-fn show_halo_particles_system(
-    mut commands: Commands,
-    undrawn_halo_particles: HaloParticles<(Entity, &Position), Without<DrawCircle>>,
-    mut drawn_halo_particles: HaloParticles<(&Position, &mut DrawCircle), With<DrawCircle>>,
-) {
-    for (entity, pos) in undrawn_halo_particles.iter() {
-        commands.entity(entity).insert(DrawCircle {
-            position: **pos,
-            radius: Pixels(10.0),
-            color: RColor::RED,
-        });
-    }
-    for (pos, mut circle) in drawn_halo_particles.iter_mut() {
-        circle.set_translation(pos);
     }
 }
 

@@ -4,6 +4,7 @@ pub(super) mod color;
 mod draw_item;
 pub mod parameters;
 pub mod remote;
+mod show_halo_particles;
 mod show_particles;
 
 use bevy::prelude::*;
@@ -20,6 +21,7 @@ pub use self::draw_item::DrawItem;
 use self::draw_item::DrawItemPlugin;
 pub use self::draw_item::Pixels;
 pub use self::parameters::VisualizationParameters;
+use self::show_halo_particles::ShowHaloParticlesPlugin;
 pub use self::show_particles::ShowParticlesPlugin;
 use crate::domain::determine_global_extent_system;
 use crate::gravity;
@@ -49,7 +51,8 @@ impl RaxiomPlugin for VisualizationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_plugin(DrawItemPlugin::<DrawRect>::default())
             .add_plugin(DrawItemPlugin::<DrawCircle>::default())
-            .add_plugin(ShowParticlesPlugin);
+            .add_plugin(ShowParticlesPlugin)
+            .add_plugin(ShowHaloParticlesPlugin);
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
