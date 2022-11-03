@@ -11,6 +11,7 @@ use raxiom::components::Position;
 use raxiom::components::Timestep;
 use raxiom::components::Velocity;
 use raxiom::ics::ConstantDensity;
+use raxiom::ics::DensityProfile;
 use raxiom::ics::Resolution;
 use raxiom::ics::Sampler;
 use raxiom::prelude::*;
@@ -124,6 +125,17 @@ fn fake_periodic_boundaries_system(
     }
 }
 
+pub struct MyDensity(pub Density);
+
+impl DensityProfile for MyDensity {
+    fn density(&self, pos: VecLength) -> Density {
+        self.0 * (-pos.length() / Length::meters(1.0)).sin().abs()
+    }
+    fn max_value(&self) -> Density {
+        self.0
+    }
+}
+
 fn initial_conditions_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
@@ -135,7 +147,7 @@ fn initial_conditions_system(
     let num_particles_per_type = parameters.num_particles / 2;
     for type_ in [0, 1] {
         Sampler::new(
-            ConstantDensity(parameters.density),
+            MyDensity(parameters.density * 1e5),
             Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
             Resolution::NumParticles(num_particles_per_type),
         )

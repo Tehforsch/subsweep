@@ -2,14 +2,15 @@
 #![feature(generic_const_exprs)]
 
 use bevy::prelude::*;
-use raxiom::components;
 use raxiom::ics::ConstantDensity;
 use raxiom::ics::Resolution;
 use raxiom::ics::Sampler;
+use raxiom::ics::VelocityProfile;
 use raxiom::prelude::*;
 use raxiom::units::Density;
 use raxiom::units::InverseTime;
 use raxiom::units::VecLength;
+use raxiom::units::VecVelocity;
 use serde::Deserialize;
 
 #[derive(Default, Deserialize, Clone)]
@@ -52,12 +53,17 @@ fn initial_conditions_system(
     }
     Sampler::new(
         ConstantDensity(parameters.density),
+        RotationalVelocityProfile(parameters.angular_velocity_factor),
         Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
         Resolution::NumParticles(parameters.num_particles),
     )
-    .sample()
-    .spawn_with(&mut commands, |entity_commands, pos: VecLength, _mass| {
-        let vel = VecLength::from_xy(-pos.y(), pos.x()) * parameters.angular_velocity_factor;
-        entity_commands.insert(components::Velocity(vel));
-    });
+    .spawn(&mut commands);
+}
+
+struct RotationalVelocityProfile(InverseTime);
+
+impl VelocityProfile for RotationalVelocityProfile {
+    fn velocity(&self, pos: VecLength) -> VecVelocity {
+        VecLength::from_xy(-pos.y(), pos.x()) * self.0
+    }
 }

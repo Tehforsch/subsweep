@@ -1,11 +1,20 @@
+mod density_profile;
+mod velocity_profile;
+
 use bevy::ecs::system::EntityCommands;
 use bevy::prelude::Commands;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 
+pub use self::density_profile::ConstantDensity;
+pub use self::density_profile::DensityProfile;
+pub use self::velocity_profile::ConstantVelocity;
+pub use self::velocity_profile::VelocityProfile;
+pub use self::velocity_profile::ZeroVelocity;
 use crate::components;
 use crate::components::Position;
+use crate::components::Velocity;
 use crate::domain::Extent;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
@@ -14,7 +23,6 @@ use crate::units::Density;
 use crate::units::Mass;
 use crate::units::NumberDensity;
 use crate::units::VecLength;
-use crate::units::VecVelocity;
 use crate::units::Volume;
 
 pub const DEFAULT_SEED: u64 = 123;
@@ -33,62 +41,30 @@ impl Resolution {
     }
 }
 
-pub trait DensityProfile {
-    fn density(&self, pos: VecLength) -> Density;
-    fn max_value(&self) -> Density;
-}
-
-pub struct ConstantDensity(pub Density);
-
-impl DensityProfile for ConstantDensity {
-    fn density(&self, _pos: VecLength) -> Density {
-        self.0
-    }
-    fn max_value(&self) -> Density {
-        self.0
-    }
-}
-
 pub struct Sample {
     positions: Vec<VecLength>,
     mass_per_particle: Mass,
 }
 
-impl Sample {
-    pub fn spawn_with(
-        self,
-        commands: &mut Commands,
-        spawn_additional_components: impl Fn(&mut EntityCommands, VecLength, Mass),
-    ) {
-        for pos in self.positions.into_iter() {
-            let mut entity_commands = commands.spawn_bundle((
-                LocalParticle,
-                Position(pos),
-                components::Mass(self.mass_per_particle),
-            ));
-            spawn_additional_components(&mut entity_commands, pos, self.mass_per_particle);
-        }
-    }
-
-    pub fn spawn_with_zero_velocity(self, commands: &mut Commands) {
-        self.spawn_with(commands, |entity_commands, _, _| {
-            entity_commands.insert(components::Velocity(VecVelocity::zero()));
-        });
-    }
-}
-
-pub struct Sampler<P: DensityProfile> {
-    profile: P,
+pub struct Sampler {
+    density_profile: Box<dyn DensityProfile>,
+    velocity_profile: Box<dyn VelocityProfile>,
     extent: Extent,
     num_samples: usize,
     resolution_spec: Resolution,
     rng: StdRng,
 }
 
-impl<P: DensityProfile> Sampler<P> {
-    pub fn new(profile: P, extent: Extent, resolution_spec: Resolution) -> Self {
+impl Sampler {
+    pub fn new(
+        profile: impl DensityProfile + 'static,
+        velocity_profile: impl VelocityProfile + 'static,
+        extent: Extent,
+        resolution_spec: Resolution,
+    ) -> Self {
         Self {
-            profile,
+            density_profile: Box::new(profile),
+            velocity_profile: Box::new(velocity_profile),
             extent,
             resolution_spec,
             num_samples: 100000,
@@ -96,7 +72,29 @@ impl<P: DensityProfile> Sampler<P> {
         }
     }
 
-    pub fn sample(mut self) -> Sample {
+    pub fn spawn(self, commands: &mut Commands) {
+        self.spawn_with(commands, |_, _, _| {})
+    }
+
+    pub fn spawn_with(
+        mut self,
+        commands: &mut Commands,
+        spawn_additional_components: impl Fn(&mut EntityCommands, VecLength, Mass),
+    ) {
+        let sample = self.sample();
+        for pos in sample.positions.into_iter() {
+            let velocity = self.velocity_profile.velocity(pos);
+            let mut entity_commands = commands.spawn_bundle((
+                LocalParticle,
+                Position(pos),
+                components::Mass(sample.mass_per_particle),
+                Velocity(velocity),
+            ));
+            spawn_additional_components(&mut entity_commands, pos, sample.mass_per_particle);
+        }
+    }
+
+    fn sample(&mut self) -> Sample {
         let total_mass_profile = self.integrate();
         let volume = self.extent.volume();
         let num_particles_specified =
@@ -108,8 +106,8 @@ impl<P: DensityProfile> Sampler<P> {
             let pos = gen_range(&mut self.rng, self.extent.min, self.extent.max);
             let random_density = self
                 .rng
-                .gen_range(Density::zero()..self.profile.max_value());
-            if random_density < self.profile.density(pos) {
+                .gen_range(Density::zero()..self.density_profile.max_value());
+            if random_density < self.density_profile.density(pos) {
                 positions.push(pos);
             }
         }
@@ -124,7 +122,7 @@ impl<P: DensityProfile> Sampler<P> {
         let mut mass = Mass::zero();
         for _ in 0..self.num_samples {
             let pos = gen_range(&mut self.rng, self.extent.min, self.extent.max);
-            mass += self.profile.density(pos) * volume_per_sample;
+            mass += self.density_profile.density(pos) * volume_per_sample;
         }
         mass
     }
