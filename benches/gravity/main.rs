@@ -10,7 +10,6 @@ use criterion::Throughput;
 use raxiom::ics::ConstantDensity;
 use raxiom::ics::Resolution;
 use raxiom::ics::Sampler;
-use raxiom::ics::ZeroVelocity;
 use raxiom::parameters::DomainParameters;
 use raxiom::parameters::GravityParameters;
 use raxiom::parameters::PerformanceParameters;
@@ -88,7 +87,6 @@ fn initial_conditions_system(mut commands: Commands, rank: Res<WorldRank>, num_p
     let box_size = Length::meters(100.0) * MVec::ONE;
     Sampler::new(
         ConstantDensity(Density::kilogram_per_cubic_meter(1.0)),
-        ZeroVelocity,
         Extent::new(-box_size / 2.0, box_size / 2.0),
         Resolution::NumParticles(num_particles),
     )

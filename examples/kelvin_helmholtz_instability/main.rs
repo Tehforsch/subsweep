@@ -83,10 +83,10 @@ fn initial_conditions_system(
     for (extent, fluid) in extents.into_iter().zip(fluids) {
         Sampler::new(
             fluid,
-            fluid,
             extent,
             Resolution::NumParticles(num_particles_per_fluid),
         )
+        .velocity_profile(fluid)
         .spawn(&mut commands)
     }
 }

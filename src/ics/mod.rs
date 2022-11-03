@@ -1,4 +1,5 @@
 mod density_profile;
+mod resolution;
 mod velocity_profile;
 
 use bevy::ecs::system::EntityCommands;
@@ -9,6 +10,7 @@ use rand::SeedableRng;
 
 pub use self::density_profile::ConstantDensity;
 pub use self::density_profile::DensityProfile;
+pub use self::resolution::Resolution;
 pub use self::velocity_profile::ConstantVelocity;
 pub use self::velocity_profile::VelocityProfile;
 pub use self::velocity_profile::ZeroVelocity;
@@ -21,25 +23,9 @@ use crate::prelude::LocalParticle;
 use crate::rand::gen_range;
 use crate::units::Density;
 use crate::units::Mass;
-use crate::units::NumberDensity;
 use crate::units::VecLength;
-use crate::units::Volume;
 
 pub const DEFAULT_SEED: u64 = 123;
-
-pub enum Resolution {
-    NumberDensity(NumberDensity),
-    NumParticles(usize),
-}
-
-impl Resolution {
-    fn as_number_density(&self, volume: Volume) -> NumberDensity {
-        match self {
-            Self::NumberDensity(density) => *density,
-            Self::NumParticles(num) => *num as Float / volume,
-        }
-    }
-}
 
 pub struct Sample {
     positions: Vec<VecLength>,
@@ -51,24 +37,30 @@ pub struct Sampler {
     velocity_profile: Box<dyn VelocityProfile>,
     extent: Extent,
     num_samples: usize,
-    resolution_spec: Resolution,
+    resolution: Resolution,
     rng: StdRng,
 }
 
 impl Sampler {
     pub fn new(
-        profile: impl DensityProfile + 'static,
-        velocity_profile: impl VelocityProfile + 'static,
+        density_profile: impl DensityProfile + 'static,
         extent: Extent,
-        resolution_spec: Resolution,
+        resolution: Resolution,
     ) -> Self {
         Self {
-            density_profile: Box::new(profile),
-            velocity_profile: Box::new(velocity_profile),
+            density_profile: Box::new(density_profile),
+            velocity_profile: Box::new(ZeroVelocity),
             extent,
-            resolution_spec,
+            resolution,
             num_samples: 100000,
             rng: StdRng::seed_from_u64(DEFAULT_SEED),
+        }
+    }
+
+    pub fn velocity_profile(self, velocity_profile: impl VelocityProfile + 'static) -> Self {
+        Self {
+            velocity_profile: Box::new(velocity_profile),
+            ..self
         }
     }
 
@@ -98,7 +90,7 @@ impl Sampler {
         let total_mass_profile = self.integrate();
         let volume = self.extent.volume();
         let num_particles_specified =
-            (self.resolution_spec.as_number_density(volume) * volume).value() as usize;
+            (self.resolution.as_number_density(volume) * volume).value() as usize;
         let mass_per_particle = total_mass_profile / num_particles_specified as Float;
         let mut positions = vec![];
         // A simple implementation of rejection sampling

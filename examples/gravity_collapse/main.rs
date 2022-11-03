@@ -53,10 +53,12 @@ fn initial_conditions_system(
     }
     Sampler::new(
         ConstantDensity(parameters.density),
-        RotationalVelocityProfile(parameters.angular_velocity_factor),
         Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
         Resolution::NumParticles(parameters.num_particles),
     )
+    .velocity_profile(RotationalVelocityProfile(
+        parameters.angular_velocity_factor,
+    ))
     .spawn(&mut commands);
 }
 
