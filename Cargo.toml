@@ -47,7 +47,7 @@ name = "figure8"
 required-features = ["mpi", "2d"]
 
 [[example]]
-name = "fake_periodic_boundary_conditions"
+name = "kelvin_helmholtz_instability"
 required-features = ["mpi", "2d"]
 
 [[example]]
