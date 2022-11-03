@@ -52,7 +52,6 @@ fn run_gravity(mut sim: Simulation) {
 }
 
 fn setup_gravity_sim(num_particles: usize, opening_angle: Dimensionless) -> Simulation {
-    let mut builder = SimulationBuilder::new();
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(PerformanceParameters::default())
         .add_parameters_explicitly(DomainParameters::default())
@@ -67,11 +66,7 @@ fn setup_gravity_sim(num_particles: usize, opening_angle: Dimensionless) -> Simu
             max_timestep: Time::seconds(1e-3),
             num_levels: 1,
         });
-    builder
-        .read_initial_conditions(false)
-        .write_output(false)
-        .headless(true)
-        .log(false)
+    SimulationBuilder::bench()
         .build_with_sim(&mut sim)
         .add_startup_system(move |commands: Commands, rank: Res<WorldRank>| {
             initial_conditions_system(commands, rank, num_particles)

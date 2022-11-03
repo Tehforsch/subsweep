@@ -70,6 +70,16 @@ impl SimulationBuilder {
         }
     }
 
+    pub fn bench() -> Self {
+        let mut builder = Self::new();
+        builder
+            .read_initial_conditions(false)
+            .write_output(false)
+            .headless(true)
+            .log(false);
+        builder
+    }
+
     pub fn update_from_command_line_options(&mut self) -> &mut Self {
         self.with_command_line_options(&CommandLineOptions::parse())
     }
