@@ -2,6 +2,7 @@ use bevy::prelude::Color;
 use mpi::traits::Equivalence;
 
 use crate::communication::Rank;
+use crate::prelude::Float;
 
 #[derive(Equivalence, Clone, Copy, Debug)]
 pub struct RColor {
@@ -19,6 +20,10 @@ impl RColor {
 
     pub const fn rgb(r: f32, g: f32, b: f32) -> Self {
         Self { r, g, b, a: 1.0 }
+    }
+
+    pub fn reds(v: Float) -> Self {
+        Self::rgb(v.clamp(0.0, 1.0) as f32, 0.0, 0.0)
     }
 }
 

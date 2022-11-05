@@ -6,12 +6,15 @@ pub(super) mod rect;
 use bevy::ecs::system::AsSystemLabel;
 use bevy::prelude::*;
 use bevy::sprite::Mesh2dHandle;
+use bevy_prototype_lyon::prelude::DrawMode;
+use bevy_prototype_lyon::prelude::FillMode;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 
 use super::camera_transform::CameraTransform;
 use super::remote::receive_items_on_main_thread_system;
 use super::remote::send_items_to_main_thread_system;
+use super::RColor;
 use super::VisualizationStage;
 use crate::communication::CommunicationPlugin;
 use crate::named::Named;
@@ -31,6 +34,7 @@ pub struct DrawAmbiguitySet;
 pub trait DrawItem {
     type Output: Bundle;
     fn get_bundle(&self, camera_transform: &CameraTransform) -> Self::Output;
+    fn get_color(&self) -> RColor;
     fn translation(&self) -> &VecLength;
     fn set_translation(&mut self, pos: &VecLength);
 }
@@ -72,8 +76,8 @@ where
             insert_meshes_system::<T>,
         )
         .add_system_to_stage(
-            VisualizationStage::AddDrawComponents,
-            insert_meshes_system::<T>,
+            VisualizationStage::Draw,
+            change_colors_system::<T>.in_ambiguity_set(DrawAmbiguitySet),
         )
         .add_system_to_stage(
             VisualizationStage::Draw,
@@ -90,7 +94,7 @@ where
     }
 }
 
-fn insert_meshes_system<T: Component + DrawItem>(
+pub(super) fn insert_meshes_system<T: Component + DrawItem>(
     mut commands: Commands,
     query: Query<(Entity, &T), Without<Mesh2dHandle>>,
     transform: Res<CameraTransform>,
@@ -99,6 +103,12 @@ fn insert_meshes_system<T: Component + DrawItem>(
         commands
             .entity(entity)
             .insert_bundle(item.get_bundle(&transform));
+    }
+}
+
+pub(super) fn change_colors_system<T: Component + DrawItem>(mut query: Query<(&mut DrawMode, &T)>) {
+    for (mut draw_mode, item) in query.iter_mut() {
+        *draw_mode = DrawMode::Fill(FillMode::color(item.get_color().into()));
     }
 }
 

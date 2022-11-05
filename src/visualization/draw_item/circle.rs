@@ -50,4 +50,8 @@ impl DrawItem for DrawCircle {
     fn set_translation(&mut self, pos: &VecLength) {
         self.position = *pos;
     }
+
+    fn get_color(&self) -> RColor {
+        self.color
+    }
 }

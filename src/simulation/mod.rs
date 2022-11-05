@@ -20,6 +20,7 @@ use bevy::prelude::Plugin;
 use bevy::prelude::PluginGroup;
 use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
+use bevy::prelude::SystemSet;
 use bevy::prelude::World;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
@@ -160,6 +161,15 @@ impl Simulation {
         system: impl IntoSystemDescriptor<Params>,
     ) -> &mut Self {
         self.app.add_system_to_stage(stage_label, system);
+        self
+    }
+
+    pub fn add_system_set_to_stage(
+        &mut self,
+        stage_label: impl StageLabel,
+        system_set: SystemSet,
+    ) -> &mut Self {
+        self.app.add_system_set_to_stage(stage_label, system_set);
         self
     }
 

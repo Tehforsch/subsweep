@@ -37,4 +37,8 @@ impl DrawItem for DrawRect {
     fn set_translation(&mut self, pos: &VecLength) {
         self.lower_left = *pos;
     }
+
+    fn get_color(&self) -> RColor {
+        self.color
+    }
 }

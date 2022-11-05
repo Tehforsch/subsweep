@@ -35,9 +35,8 @@ use crate::units::Length;
 use crate::units::NumberDensity;
 use crate::units::VecAcceleration;
 use crate::units::VecLength;
-use crate::units::BOLTZMANN_CONSTANT;
+use crate::units::GAMMA;
 use crate::units::NONE;
-use crate::units::PROTON_MASS;
 
 pub(crate) mod hydro_components;
 mod parameters;
@@ -46,8 +45,6 @@ pub mod quadtree;
 pub use self::parameters::HydrodynamicsParameters;
 pub use self::parameters::InitialGasEnergy;
 pub use self::quadtree::QuadTree;
-
-const GAMMA: f64 = 5.0 / 3.0;
 
 // Could eventually become a more dynamic approach (similar to ExchangeDataPlugin)
 // but for now this is probably fine
@@ -300,11 +297,7 @@ fn insert_pressure_and_density_system(
             InitialGasEnergy::TemperatureAndMolecularWeight {
                 temperature,
                 molecular_weight,
-            } => {
-                temperature * (BOLTZMANN_CONSTANT / PROTON_MASS) * (1.0 / (GAMMA - 1.0))
-                    / molecular_weight
-                    * **mass
-            }
+            } => temperature.to_internal_energy(molecular_weight) * **mass,
             InitialGasEnergy::Energy(energy) => energy * **mass,
         };
         commands.entity(entity).insert_bundle((

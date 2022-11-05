@@ -3,7 +3,7 @@ timestep:
 hydrodynamics:
   min_smoothing_length: 0.5 m
   initial_gas_energy:
-    temperature: 100 K
+    temperature: 5 K
     molecular_weight: 4 dimensionless
 domain:
   tree:
@@ -19,8 +19,9 @@ example:
   bottom_fluid:
     density: 0.15 kg m^-2
     initial_velocity: -100 m s^-1
-box_size:
-  min: (0 0) m
-  max: (45 8) m
+box_size: (45 8) m
 visualization:
   show_particles: True
+  color_map:
+    type: Pressure
+    scale: 1e4 N m^-1

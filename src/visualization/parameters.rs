@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 
+use super::show_particles::ColorMap;
 use crate::named::Named;
 
 /// Parameters controlling the visualization. Only required if
@@ -14,6 +15,8 @@ pub struct VisualizationParameters {
     pub show_quadtree: bool,
     #[serde(default)]
     pub show_particles: bool,
+    #[serde(default)]
+    pub color_map: ColorMap,
     #[serde(default)]
     pub show_halo_particles: bool,
 }
