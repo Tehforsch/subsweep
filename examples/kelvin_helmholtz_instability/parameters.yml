@@ -22,3 +22,5 @@ example:
 box_size:
   min: (0 0) m
   max: (45 8) m
+visualization:
+  show_particles: True

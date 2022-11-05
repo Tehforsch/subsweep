@@ -391,6 +391,12 @@ impl Simulation {
                 unused.push(param.to_owned());
             }
         }
+        // This will eventually be replaced by a allow_unused method on
+        // the parameters trait, but that will probably require a proper
+        // derive macro for the parameters trait.
+        if unused.len() == 1 && unused[0] == "visualization" {
+            return;
+        }
         if !unused.is_empty() {
             panic!(
                 "Unused parameter sections: {}. Used parameter sections: {}",

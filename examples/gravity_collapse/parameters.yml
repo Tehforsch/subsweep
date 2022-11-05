@@ -9,3 +9,5 @@ example:
   box_size: (1000 1000 1000) au
   angular_velocity_factor: 5e-10 s^-1
 box_size: 1000 au
+visualization:
+  show_particles: True

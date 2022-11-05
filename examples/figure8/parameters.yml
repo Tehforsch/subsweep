@@ -7,3 +7,5 @@ input:
   paths:
     - examples/figure8/ics.hdf5
 box_size: 5.0 m
+visualization:
+  show_particles: True
