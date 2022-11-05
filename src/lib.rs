@@ -36,6 +36,8 @@ pub(crate) mod timestep;
 pub(crate) mod visualization;
 
 #[cfg(test)]
+pub(crate) mod test_examples;
+#[cfg(test)]
 pub(crate) mod test_utils;
 
 /// Debug printing utilities for MPI simulations

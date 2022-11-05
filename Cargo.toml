@@ -33,6 +33,7 @@ num-traits = "0.2.15"
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"] }
+cargo_toml = "0.13.0"
 
 # Optimize dependencies even in a debug build
 [profile.dev.package."*"]
