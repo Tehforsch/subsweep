@@ -192,7 +192,7 @@ This is why Raxiom is unit-safe from the beginning to the end.
 
 5. As the final step, the creatively named [`pyxiom`](https://github.com/tehforsch/pyxiom) contains python bindings to read Raxiom's output files and translates any datasets that the user wants to read directly into [`astropy`](https://github.com/astropy/astropy) units.
 
-With all these steps, Raxiom ensures that both user and programmer never have to interact with units themselves.
+With all these steps, Raxiom ensures that in the entirety of this process, both user and programmer never have to wonder which unit a quantity is in or do manual unit conversions.
 
 
 ### Performance and parallelism
