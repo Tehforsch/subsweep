@@ -19,6 +19,7 @@ use super::visualization::VisualizationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::io::input::ShouldReadInitialConditions;
 use crate::io::output::ShouldWriteOutput;
+use crate::parameter_plugin::parameter_file_contents::Override;
 use crate::performance_parameters::PerformanceParameters;
 use crate::simulation::Simulation;
 use crate::stages::SimulationStagesPlugin;
@@ -31,6 +32,7 @@ pub struct SimulationBuilder {
     pub read_initial_conditions: bool,
     pub write_output: bool,
     pub log: bool,
+    pub parameter_overrides: Vec<Override>,
     base_communication: Option<BaseCommunicationPlugin>,
 }
 
@@ -45,6 +47,7 @@ impl Default for SimulationBuilder {
             write_output: true,
             log: true,
             base_communication: None,
+            parameter_overrides: vec![],
         }
     }
 }
@@ -68,6 +71,16 @@ impl SimulationBuilder {
         Self {
             ..Default::default()
         }
+    }
+
+    pub fn bench() -> Self {
+        let mut builder = Self::new();
+        builder
+            .read_initial_conditions(false)
+            .write_output(false)
+            .headless(true)
+            .log(false);
+        builder
     }
 
     pub fn update_from_command_line_options(&mut self) -> &mut Self {
@@ -98,6 +111,7 @@ impl SimulationBuilder {
             self.parameter_file_path(path);
         }
         self.verbosity(opts.verbosity);
+        self.parameter_overrides = opts.parameter_overrides.clone();
         self
     }
 
@@ -142,6 +156,7 @@ impl SimulationBuilder {
         } else {
             sim.add_parameter_file_contents("".into());
         }
+        sim.with_parameter_overrides(self.parameter_overrides.clone());
         sim.add_parameter_type::<PerformanceParameters>()
             .insert_resource(self.task_pool_opts())
             .insert_resource(self.log_setup())

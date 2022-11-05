@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
 use super::parameters::HydrodynamicsParameters;
+use super::HydroParticles;
 use crate::components::Position;
 use crate::components::SmoothingLength;
 use crate::domain::GlobalExtent;
 use crate::prelude::MVec;
-use crate::prelude::Particles;
 use crate::quadtree::LeafDataType;
 use crate::quadtree::NodeDataType;
 use crate::quadtree::{self};
@@ -38,7 +38,10 @@ impl NodeDataType<LeafData> for NodeData {
     }
 }
 
-fn bounding_boxes_overlap(
+/// Returns whether the two bounding boxes given by
+/// the center coordinates pos1 and pos2 and the side lengths
+/// size1 and size2 overlap
+pub(super) fn bounding_boxes_overlap(
     pos1: &VecLength,
     size1: &VecLength,
     pos2: &VecLength,
@@ -85,20 +88,22 @@ fn get_particles_in_box<'a>(
     particles
 }
 
-pub(super) fn get_particles_in_radius<'a>(
-    tree: &'a QuadTree,
-    pos: &VecLength,
-    radius: &Length,
-) -> Vec<&'a LeafData> {
-    get_particles_in_box(tree, pos, radius)
-        .into_iter()
-        .filter(|particle| particle.pos().distance(pos) < radius.max(particle.smoothing_length))
-        .collect()
+impl QuadTree {
+    pub fn get_particles_in_radius<'a>(
+        &'a self,
+        pos: &VecLength,
+        radius: &Length,
+    ) -> Vec<&'a LeafData> {
+        get_particles_in_box(self, pos, radius)
+            .into_iter()
+            .filter(|particle| particle.pos().distance(pos) < radius.max(particle.smoothing_length))
+            .collect()
+    }
 }
 
 pub(super) fn construct_quad_tree_system(
     parameters: Res<HydrodynamicsParameters>,
-    particles: Particles<(Entity, &Position, &SmoothingLength)>,
+    particles: HydroParticles<(Entity, &Position, &SmoothingLength)>,
     extent: Res<GlobalExtent>,
     mut quadtree: ResMut<QuadTree>,
 ) {
@@ -117,7 +122,6 @@ pub(super) fn construct_quad_tree_system(
 mod tests {
     use std::collections::HashSet;
 
-    use super::get_particles_in_radius;
     use super::LeafData;
     use super::QuadTree;
     use crate::domain::extent::Extent;
@@ -154,7 +158,7 @@ mod tests {
         let extent = Extent::from_positions(particles.iter().map(|leaf| &leaf.pos)).unwrap();
         let tree = QuadTree::new(&QuadTreeConfig::default(), particles.clone(), &extent);
         for particle in particles.iter() {
-            let tree_neighbours = get_particles_in_radius(&tree, &particle.pos, &radius);
+            let tree_neighbours = tree.get_particles_in_radius(&particle.pos, &radius);
             let direct_neighbours = direct_neighbour_search(&particles, &particle.pos, &radius);
             let tree_entities: HashSet<_> = tree_neighbours
                 .into_iter()

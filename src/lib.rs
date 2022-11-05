@@ -18,14 +18,15 @@ pub mod components;
 pub(crate) mod config;
 pub(crate) mod domain;
 pub(crate) mod gravity;
-pub(crate) mod hydrodynamics;
+pub mod hydrodynamics;
+pub mod ics;
 pub(crate) mod io;
 pub(crate) mod memory;
 pub(crate) mod named;
 pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
 pub(crate) mod performance_parameters;
-pub(crate) mod quadtree;
+pub mod quadtree;
 pub(crate) mod rand;
 pub(crate) mod simulation;
 pub(crate) mod simulation_builder;
@@ -34,6 +35,8 @@ pub(crate) mod stages;
 pub(crate) mod timestep;
 pub(crate) mod visualization;
 
+#[cfg(test)]
+pub(crate) mod test_examples;
 #[cfg(test)]
 pub(crate) mod test_utils;
 

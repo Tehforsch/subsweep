@@ -1,13 +1,14 @@
 use std::path::PathBuf;
 
 use serde::Deserialize;
+use serde::Serialize;
 
 use crate::named::Named;
 use crate::simulation::Simulation;
 use crate::units::Time;
 
 /// How to handle the case of an already existing output directory.
-#[derive(Default, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub enum HandleExistingOutput {
     /// Halt program execution.
     #[default]
@@ -24,7 +25,7 @@ pub enum HandleExistingOutput {
 /// Parameters for the output of the simulation.
 /// Only required if write_output
 /// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
-#[derive(Deserialize, Named)]
+#[derive(Serialize, Deserialize, Named)]
 #[name = "output"]
 #[serde(deny_unknown_fields)]
 pub struct OutputParameters {

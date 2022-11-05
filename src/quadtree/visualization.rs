@@ -9,7 +9,7 @@ use crate::domain::TopLevelIndices;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::visualization::get_color;
+use crate::visualization::color::color_map;
 use crate::visualization::parameters::VisualizationParameters;
 use crate::visualization::DrawRect;
 use crate::visualization::VisualizationStage;
@@ -66,7 +66,7 @@ fn show_quadtree_system<
                 commands.spawn().insert(Outline).insert(DrawRect {
                     lower_left: extent.min,
                     upper_right: extent.max,
-                    color: get_color(*rank),
+                    color: color_map(*rank),
                 });
             });
         }

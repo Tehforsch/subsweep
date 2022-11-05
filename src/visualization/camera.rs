@@ -18,7 +18,7 @@ pub(super) fn camera_translation_system(
     camera_transform: Res<CameraTransform>,
 ) {
     let mut camera = camera.single_mut();
-    let pos = camera_transform.position_to_pixels(extent.center);
+    let pos = camera_transform.position_to_pixels(extent.center());
     camera.translation.x = pos.x;
     camera.translation.y = pos.y;
 }

@@ -1,75 +1,53 @@
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
-use super::get_color;
-use super::GetColor;
+use super::draw_item::DrawItem;
 use crate::communication::Rank;
 use crate::communication::SyncCommunicator;
 use crate::communication::WorldRank;
-use crate::components::Position;
-use crate::prelude::Particles;
 
 #[derive(Component)]
-pub struct RemoteParticleVisualization(Rank);
-
-impl GetColor for RemoteParticleVisualization {
-    fn get_color(&self) -> Color {
-        get_color(self.0)
-    }
-}
+pub struct RemoteDrawItem;
 
 #[derive(Bundle)]
-struct RemoteParticleVisualizationBundle {
-    pos: Position,
-    vis: RemoteParticleVisualization,
+pub struct RemoteItemBundle<T: Component + Sync + Send + 'static> {
+    data: T,
+    marker: RemoteDrawItem,
 }
 
-#[derive(Debug, Equivalence)]
-pub(super) struct ParticleVisualizationExchangeData {
-    pos: Position,
-}
-
-pub(super) fn send_particles_to_main_thread_system(
+pub(super) fn send_items_to_main_thread_system<T: Clone + Component + Equivalence + DrawItem>(
     rank: Res<WorldRank>,
-    mut communicator: SyncCommunicator<ParticleVisualizationExchangeData>,
-    particles: Particles<(Entity, &Position)>,
+    mut communicator: SyncCommunicator<T>,
+    particles: Query<(Entity, &T)>,
 ) {
     debug_assert!(!rank.is_main());
-    for (entity, pos) in particles.iter() {
-        communicator.send_sync(
-            WorldRank::main(),
-            entity,
-            ParticleVisualizationExchangeData { pos: pos.clone() },
-        );
+    for (entity, item) in particles.iter() {
+        communicator.send_sync(WorldRank::main(), entity, item.clone());
     }
-    communicator.receive_sync(|_, _| panic!("No items expected"));
+    let _ = communicator.receive_sync(|_, _| panic!("No items expected"));
 }
 
-pub(super) fn receive_particles_on_main_thread_system(
+pub(super) fn receive_items_on_main_thread_system<T: Clone + Component + Equivalence + DrawItem>(
     mut commands: Commands,
     rank: Res<WorldRank>,
-    mut communicator: SyncCommunicator<ParticleVisualizationExchangeData>,
-    mut particles: Query<&mut Position, With<RemoteParticleVisualization>>,
+    mut communicator: SyncCommunicator<T>,
+    mut particles: Query<&mut T, With<RemoteDrawItem>>,
 ) {
     debug_assert!(rank.is_main());
-    let spawn_particle = |rank: Rank, data: ParticleVisualizationExchangeData| {
+    let spawn_particle = |_: Rank, data: T| {
         commands
             .spawn()
-            .insert_bundle(RemoteParticleVisualizationBundle {
-                pos: data.pos,
-                vis: RemoteParticleVisualization(rank),
+            .insert_bundle(RemoteItemBundle::<T> {
+                data,
+                marker: RemoteDrawItem,
             })
             .id()
     };
     let mut sync = communicator.receive_sync(spawn_particle);
-    for (_, entities) in sync.deleted.drain_all() {
-        for entity in entities.into_iter() {
-            commands.entity(entity).despawn();
-        }
-    }
+    sync.despawn_deleted(&mut commands);
     for (_, data) in sync.updated.drain_all() {
-        for (entity, new_pos) in data.into_iter() {
-            *particles.get_mut(entity).unwrap() = new_pos.pos;
+        for (entity, new_data) in data.into_iter() {
+            *particles.get_mut(entity).unwrap() = new_data;
         }
     }
 }

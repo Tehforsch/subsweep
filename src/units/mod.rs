@@ -64,8 +64,13 @@ unit_system!(
     {
         joules_per_kilogram, 1.0, "J/kg"
     },
-    VOLUME, Volume, mass: 0, length: 3, time: 0,
+    VOLUME2D, Volume2D, length: 2,
     {
+        square_meters, 1.0, "m^2"
+    },
+    VOLUME3D, Volume3D, length: 3,
+    {
+        cubic_meters, 1.0, "m^3"
     },
     TEMPERATURE, Temperature, temperature: 1, 
     {
@@ -112,6 +117,7 @@ mod reexport {
     pub type Density = super::Density2D;
     pub type NumberDensity = super::NumberDensity2D;
     pub type Pressure = super::Pressure2D;
+    pub type Volume = super::Volume2D;
 }
 
 #[cfg(not(feature = "2d"))]
@@ -119,6 +125,7 @@ mod reexport {
     pub type Density = super::Density3D;
     pub type NumberDensity = super::NumberDensity3D;
     pub type Pressure = super::Pressure3D;
+    pub type Volume = super::Volume3D;
 }
 
 pub use reexport::*;

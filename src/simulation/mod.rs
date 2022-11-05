@@ -1,17 +1,21 @@
 mod raxiom_plugin;
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use bevy::app::PluginGroupBuilder;
 use bevy::ecs::event::Event;
 use bevy::ecs::schedule::IntoSystemDescriptor;
+use bevy::ecs::schedule::ParallelSystemDescriptor;
 use bevy::ecs::schedule::StateData;
+use bevy::ecs::schedule::SystemLabelId;
 use bevy::ecs::system::Resource;
 use bevy::prelude::debug;
 use bevy::prelude::warn;
 use bevy::prelude::App;
 use bevy::prelude::Component;
 use bevy::prelude::Mut;
+use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Plugin;
 use bevy::prelude::PluginGroup;
 use bevy::prelude::Stage;
@@ -39,6 +43,7 @@ pub struct Simulation {
     pub app: App,
     labels: HashSet<&'static str>,
     parameter_sections: HashSet<String>,
+    ordering_labels: HashMap<&'static str, Vec<SystemLabelId>>,
 }
 
 impl Simulation {
@@ -156,6 +161,39 @@ impl Simulation {
     ) -> &mut Self {
         self.app.add_system_to_stage(stage_label, system);
         self
+    }
+
+    /// Adds a system to a stage and makes sure that this system and
+    /// all other systems with the same Marker type are executed by
+    /// the scheduler in the exact order that they were added in, with
+    /// the first system to be added being executed first.
+    pub fn add_well_ordered_system_to_stage<Params, Marker: Named>(
+        &mut self,
+        stage_label: impl StageLabel,
+        system: impl IntoSystemDescriptor<Params> + ParallelSystemDescriptorCoercion<Params>,
+        label: SystemLabelId,
+    ) -> &mut Self {
+        let marker = Marker::name();
+        if !self.ordering_labels.contains_key(marker) {
+            self.ordering_labels.insert(marker, vec![]);
+        }
+        let labels = self.ordering_labels.get_mut(marker).unwrap();
+        // The following is a bit overly complicated because I am
+        // confused about ParallelSystemDescriptors - how do I get one
+        // without calling .after() or .label() or .before()?
+        if labels.is_empty() {
+            self.app.add_system_to_stage(stage_label, system);
+            labels.push(label);
+            self
+        } else {
+            let mut system: ParallelSystemDescriptor = system.after(labels[0]);
+            for label in labels.iter() {
+                system = system.after(*label);
+            }
+            labels.push(label);
+            self.app.add_system_to_stage(stage_label, system);
+            self
+        }
     }
 
     pub fn add_startup_system_to_stage<Params>(
@@ -306,11 +344,8 @@ impl Simulation {
         T: Equivalence + ToDataset + Component,
         <T as Equivalence>::Out: MatchesRaw,
     {
-        if self.has_world_rank() {
-            self.add_plugin(ExchangeDataPlugin::<T>::default());
-        }
-        self.add_plugin(OutputPlugin::<T>::default())
-            .add_plugin(ComponentMemoryUsagePlugin::<T>::default());
+        self.add_component_no_io::<T>();
+        self.add_plugin(OutputPlugin::<T>::default());
         match input {
             ComponentInput::Required => {
                 self.add_plugin(DatasetInputPlugin::<T>::default());
@@ -336,12 +371,24 @@ impl Simulation {
         self.add_component::<T>(ComponentInput::Derived)
     }
 
+    pub fn add_component_no_io<T>(&mut self) -> &mut Self
+    where
+        T: Clone + Named + Equivalence + Component,
+        <T as Equivalence>::Out: MatchesRaw,
+    {
+        if self.has_world_rank() {
+            self.add_plugin(ExchangeDataPlugin::<T>::default());
+        }
+        self.add_plugin(ComponentMemoryUsagePlugin::<T>::default());
+        self
+    }
+
     fn validate(&self) {
         let contents = self.unwrap_resource::<ParameterFileContents>();
         let mut unused = vec![];
         for param in contents.get_section_names() {
-            if !self.parameter_sections.contains(&param) {
-                unused.push(param);
+            if !self.parameter_sections.contains(param) {
+                unused.push(param.to_owned());
             }
         }
         if !unused.is_empty() {
@@ -361,7 +408,6 @@ impl Simulation {
 #[cfg(test)]
 mod tests {
     use crate::named::Named;
-    use crate::parameter_plugin::ParameterFileContents;
     use crate::simulation::RaxiomPlugin;
     use crate::simulation::Simulation;
 
@@ -386,7 +432,7 @@ parameters1:
   x:
     3.0
 ";
-        sim.insert_resource(ParameterFileContents(contents.into()));
+        sim.add_parameter_file_contents(contents.into());
         sim.run();
     }
 }

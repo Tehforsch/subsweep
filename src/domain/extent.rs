@@ -1,13 +1,19 @@
 use mpi::traits::Equivalence;
+use serde::Deserialize;
+use serde::Deserializer;
+use serde::Serialize;
 
 use crate::config::TWO_TO_NUM_DIMENSIONS;
+use crate::prelude::MVec;
 use crate::units::Length;
 use crate::units::VecLength;
+use crate::units::Volume;
 
-#[derive(Default, Clone, Equivalence, PartialEq)]
+#[derive(Default, Clone, Serialize, Equivalence, PartialEq)]
 pub struct Extent {
     pub min: VecLength,
     pub max: VecLength,
+    #[serde(skip_serializing)]
     pub center: VecLength,
 }
 
@@ -22,6 +28,12 @@ impl Extent {
             max,
             center: (min + max) * 0.5,
         }
+    }
+
+    pub fn cube_from_side_length(side_length: Length) -> Self {
+        let min = VecLength::zero();
+        let max = MVec::ONE * side_length;
+        Self::new(min, max)
     }
 
     pub fn get_all_encompassing<'a>(extent: impl Iterator<Item = &'a Extent>) -> Option<Self> {
@@ -113,6 +125,14 @@ impl Extent {
             && pos.y() <= self.max.y()
     }
 
+    pub fn volume(&self) -> Volume {
+        let side_lengths = self.side_lengths();
+        #[cfg(feature = "2d")]
+        return side_lengths.x() * side_lengths.y();
+        #[cfg(not(feature = "2d"))]
+        return side_lengths.x() * side_lengths.y() * side_lengths.z();
+    }
+
     #[cfg(feature = "2d")]
     pub fn get_quadrants(&self) -> [Self; TWO_TO_NUM_DIMENSIONS] {
         let min_00 = VecLength::new(self.min.x(), self.min.y());
@@ -159,6 +179,34 @@ impl Extent {
             Self::new(min_011, max_011),
             Self::new(min_111, max_111),
         ]
+    }
+}
+
+/// A helper struct to enable deserialization of extents.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ExtentSpecification {
+    MinMax { min: VecLength, max: VecLength },
+    SideLength(Length),
+}
+
+impl From<ExtentSpecification> for Extent {
+    fn from(value: ExtentSpecification) -> Self {
+        match value {
+            ExtentSpecification::MinMax { min, max } => Self::new(min, max),
+            ExtentSpecification::SideLength(side_length) => {
+                Extent::cube_from_side_length(side_length)
+            }
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Extent {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(ExtentSpecification::deserialize(deserializer)?.into())
     }
 }
 
@@ -237,6 +285,7 @@ mod tests {
         use super::super::Extent;
         use super::assert_is_close;
         use crate::prelude::MVec;
+        use crate::units::Length;
         use crate::units::VecLength;
 
         #[test]
@@ -298,6 +347,30 @@ mod tests {
             for (i, quadrant) in root_extent.get_quadrants().iter().enumerate() {
                 assert_eq!(i, root_extent.get_quadrant_index(&quadrant.center));
             }
+        }
+
+        fn extent_equality(e1: &Extent, e2: &Extent) -> bool {
+            (e1.min - e2.min).length() == Length::zero()
+                && (e1.max - e2.max).length() == Length::zero()
+        }
+
+        #[test]
+        fn deserialize() {
+            let extent_from_side_length = serde_yaml::from_str::<Extent>("5 m").unwrap();
+            assert!(extent_equality(
+                &extent_from_side_length,
+                &Extent::cube_from_side_length(Length::meters(5.0))
+            ));
+            let extent_from_min_max = serde_yaml::from_str::<Extent>(
+                "
+min: (0.0 0.0 0.0) m
+max: (5.0 5.0 5.0) m",
+            )
+            .unwrap();
+            assert!(extent_equality(
+                &extent_from_min_max,
+                &Extent::cube_from_side_length(Length::meters(5.0))
+            ));
         }
     }
 }

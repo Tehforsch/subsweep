@@ -3,12 +3,9 @@ timestep:
 gravity:
   softening_length: 0.3 au
   opening_angle: 0.5
-tree:
-  max_depth: 20
-  min_depth: 4
-  max_num_particles_per_leaf: 1
 example:
   num_particles: 1000
+  density: 1e-6 Msol au^-3
   box_size: (1000 1000 1000) au
-  particle_mass: 1.0 Msol
   angular_velocity_factor: 5e-10 s^-1
+box_size: 1000 au

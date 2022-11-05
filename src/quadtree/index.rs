@@ -139,7 +139,7 @@ mod tests {
         let config = QuadTreeConfig::default();
         let mut particles = vec![];
         tree.depth_first_map_leaf(&mut |extent: &Extent, _| {
-            particles.push(extent.center);
+            particles.push(extent.center());
         });
         for pos in particles.into_iter() {
             let data = LeafData {

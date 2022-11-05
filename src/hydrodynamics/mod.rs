@@ -1,22 +1,30 @@
 use std::f64::consts::PI;
 
 use bevy::prelude::*;
+use mpi::traits::Equivalence;
 
 use self::hydro_components::InternalEnergy;
+use self::hydro_components::Pressure;
 use self::hydro_components::SmoothingLength;
+use self::quadtree::bounding_boxes_overlap;
 use self::quadtree::construct_quad_tree_system;
-use self::quadtree::get_particles_in_radius;
-use self::quadtree::QuadTree;
+use crate::communication::CommunicationPlugin;
+use crate::communication::Rank;
+use crate::communication::SyncCommunicator;
 use crate::components;
 use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Timestep;
 use crate::components::Velocity;
+use crate::domain;
 use crate::domain::extent::Extent;
+use crate::domain::TopLevelIndices;
 use crate::named::Named;
 use crate::performance_parameters::PerformanceParameters;
 use crate::prelude::LocalParticle;
+use crate::prelude::MVec;
 use crate::prelude::Particles;
+use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::helpers::VecQuantity;
@@ -33,12 +41,39 @@ use crate::units::PROTON_MASS;
 
 pub(crate) mod hydro_components;
 mod parameters;
-mod quadtree;
+pub mod quadtree;
 
 pub use self::parameters::HydrodynamicsParameters;
 pub use self::parameters::InitialGasEnergy;
+pub use self::quadtree::QuadTree;
 
 const GAMMA: f64 = 5.0 / 3.0;
+
+// Could eventually become a more dynamic approach (similar to ExchangeDataPlugin)
+// but for now this is probably fine
+#[derive(Equivalence, Bundle)]
+struct RemoteParticleData {
+    pub position: Position,
+    pub smoothing_length: SmoothingLength,
+    pub density: components::Density,
+    pub pressure: Pressure,
+    pub mass: Mass,
+    pub velocity: components::Velocity,
+    pub internal_energy: InternalEnergy,
+}
+
+#[derive(Component)]
+pub struct HaloParticle {
+    pub rank: Rank,
+}
+
+/// A convenience type to query for halo particles.
+pub type HaloParticles<'world, 'state, T, F = ()> =
+    Query<'world, 'state, T, (With<HaloParticle>, F)>;
+
+/// A convenience type to query for local and halo particles.
+pub type HydroParticles<'world, 'state, T, F = ()> =
+    Query<'world, 'state, T, (Or<(With<HaloParticle>, With<LocalParticle>)>, F)>;
 
 fn kernel_function(r: Length, h: Length) -> f64 {
     // Spline Kernel, Monaghan & Lattanzio 1985
@@ -103,6 +138,7 @@ fn symmetric_kernel_derivative(
 
 #[derive(StageLabel)]
 pub enum HydrodynamicsStages {
+    Initial,
     Hydrodynamics,
 }
 
@@ -111,12 +147,17 @@ pub struct HydrodynamicsPlugin;
 
 impl RaxiomPlugin for HydrodynamicsPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
+        let initial_halo_exchange = halo_exchange_system.label("initial_halo_exchange");
+        let density_pressure_halo_exchange =
+            halo_exchange_system.label("density_pressure_halo_exchange");
         sim.add_parameter_type::<HydrodynamicsParameters>()
+            .add_plugin(CommunicationPlugin::<RemoteParticleData>::sync())
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
-                HydrodynamicsStages::Hydrodynamics,
-                set_smoothing_lengths_system.before(construct_quad_tree_system),
+                HydrodynamicsStages::Initial,
+                set_smoothing_lengths_system.before("initial_halo_exchange"),
             )
+            .add_system_to_stage(HydrodynamicsStages::Initial, initial_halo_exchange)
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
                 construct_quad_tree_system,
@@ -127,17 +168,27 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
             )
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
-                compute_energy_change_system.after(compute_pressure_and_density_system),
+                density_pressure_halo_exchange.after(compute_pressure_and_density_system),
             )
             .add_system_to_stage(
                 HydrodynamicsStages::Hydrodynamics,
-                compute_forces_system.after(compute_energy_change_system),
+                compute_energy_change_system
+                    .after(compute_pressure_and_density_system)
+                    .after("density_pressure_halo_exchange"),
+            )
+            .add_system_to_stage(
+                HydrodynamicsStages::Hydrodynamics,
+                compute_forces_system
+                    .after(compute_energy_change_system)
+                    .after("density_pressure_halo_exchange"),
             )
             .add_startup_system_to_stage(
                 StartupStage::PostStartup,
                 insert_pressure_and_density_system,
             )
             .add_derived_component::<components::Pressure>()
+            .add_derived_component::<components::SmoothingLength>()
+            .add_derived_component::<components::InternalEnergy>()
             .add_derived_component::<components::Density>();
     }
 }
@@ -148,6 +199,91 @@ fn set_smoothing_lengths_system(
 ) {
     for mut p in query.iter_mut() {
         **p = parameters.min_smoothing_length;
+    }
+}
+
+fn halo_exchange_system(
+    mut commands: Commands,
+    particles: Particles<
+        (
+            Entity,
+            &Position,
+            &SmoothingLength,
+            &components::Density,
+            &Pressure,
+            &Mass,
+            &InternalEnergy,
+            &components::Velocity,
+        ),
+        Without<HaloParticle>,
+    >,
+    mut halo_particles: HaloParticles<(
+        &mut Position,
+        &mut SmoothingLength,
+        &mut components::Density,
+        &mut Pressure,
+        &mut Mass,
+        &mut InternalEnergy,
+        &mut components::Velocity,
+    )>,
+    mut communicator: SyncCommunicator<RemoteParticleData>,
+    indices: Res<TopLevelIndices>,
+    tree: Res<domain::QuadTree>,
+    world_rank: Res<WorldRank>,
+) {
+    for (entity, pos, smoothing_length, density, pressure, mass, internal_energy, velocity) in
+        particles.iter()
+    {
+        for (rank, index) in indices
+            .iter()
+            .flat_map(|(rank, indices)| indices.iter().map(|index| (*rank, index)))
+        {
+            if rank == **world_rank {
+                continue;
+            }
+            let tree = &tree[index];
+            if bounding_boxes_overlap(
+                pos,
+                &(MVec::ONE * **smoothing_length),
+                &tree.extent.center(),
+                &tree.extent.side_lengths(),
+            ) {
+                communicator.send_sync(
+                    rank,
+                    entity,
+                    RemoteParticleData {
+                        position: pos.clone(),
+                        smoothing_length: smoothing_length.clone(),
+                        density: density.clone(),
+                        pressure: pressure.clone(),
+                        mass: mass.clone(),
+                        internal_energy: internal_energy.clone(),
+                        velocity: velocity.clone(),
+                    },
+                );
+            }
+        }
+    }
+    let spawn_particle = |rank: Rank, data: RemoteParticleData| {
+        commands
+            .spawn()
+            .insert_bundle(data)
+            .insert(HaloParticle { rank })
+            .id()
+    };
+    let mut sync = communicator.receive_sync(spawn_particle);
+    sync.despawn_deleted(&mut commands);
+    for (_, data) in sync.updated.drain_all() {
+        for (entity, new_data) in data.into_iter() {
+            let mut particle = halo_particles.get_mut(entity).unwrap();
+            *particle.0 = new_data.position;
+            *particle.1 = new_data.smoothing_length;
+            *particle.2 = new_data.density;
+            *particle.3 = new_data.pressure;
+            *particle.4 = new_data.mass;
+            *particle.5 = new_data.internal_energy;
+            *particle.6 = new_data.velocity;
+        }
     }
 }
 
@@ -189,7 +325,7 @@ fn compute_pressure_and_density_system(
         &Position,
         &Mass,
     )>,
-    masses: Query<&Mass, With<LocalParticle>>,
+    masses: HydroParticles<&Mass>,
     tree: Res<QuadTree>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
@@ -197,7 +333,7 @@ fn compute_pressure_and_density_system(
         performance_parameters.batch_size(),
         |(mut pressure, mut density, internal_energy, smoothing_length, pos, mass)| {
             **density = Density::zero();
-            for particle in get_particles_in_radius(&tree, pos, smoothing_length).iter() {
+            for particle in tree.get_particles_in_radius(pos, smoothing_length).iter() {
                 let mass2 = masses.get(particle.entity).unwrap();
                 let distance = particle.pos.distance(pos);
                 **density += **mass2 * kernel(distance, **smoothing_length);
@@ -220,7 +356,7 @@ fn compute_energy_change_system(
         &components::Density,
         &Timestep,
     )>,
-    particles2: Particles<(
+    particles2: HydroParticles<(
         &Position,
         &components::Velocity,
         &components::Pressure,
@@ -246,7 +382,10 @@ fn compute_energy_change_system(
             let mut d_energy = Energy::zero()
                 / crate::units::Mass::one_unchecked()
                 / crate::units::Time::one_unchecked();
-            for particle in get_particles_in_radius(&tree, position1, smoothing_length1).iter() {
+            for particle in tree
+                .get_particles_in_radius(position1, smoothing_length1)
+                .iter()
+            {
                 let (position2, velocity2, pressure2, density2, mass2, smoothing_length2) =
                     particles2.get(particle.entity).unwrap();
                 if **position1 == **position2 {
@@ -279,7 +418,7 @@ fn compute_forces_system(
         &components::Density,
         &Timestep,
     )>,
-    particles2: Particles<(
+    particles2: HydroParticles<(
         &Position,
         &components::Pressure,
         &components::Density,
@@ -293,7 +432,10 @@ fn compute_forces_system(
         performance_parameters.batch_size(),
         |(mut velocity1, position1, smoothing_length1, pressure1, density1, timestep)| {
             let mut d_vel = VecAcceleration::zero();
-            for particle in get_particles_in_radius(&tree, position1, smoothing_length1).iter() {
+            for particle in tree
+                .get_particles_in_radius(position1, smoothing_length1)
+                .iter()
+            {
                 let (position2, pressure2, density2, mass2, smoothing_length2) =
                     particles2.get(particle.entity).unwrap();
                 if **position1 == **position2 {
@@ -310,6 +452,9 @@ fn compute_forces_system(
                     * **mass2
                     * ((**pressure1 / density1.squared()) + (**pressure2 / density2.squared()))
                     * kernel_derivative;
+                if density2.value_unchecked() == 0.0 && pressure2.value_unchecked() == 0.0 {
+                    panic!()
+                }
             }
             **velocity1 += d_vel * **timestep;
         },
