@@ -408,7 +408,6 @@ impl Simulation {
 #[cfg(test)]
 mod tests {
     use crate::named::Named;
-    use crate::parameter_plugin::ParameterFileContents;
     use crate::simulation::RaxiomPlugin;
     use crate::simulation::Simulation;
 
@@ -433,7 +432,7 @@ parameters1:
   x:
     3.0
 ";
-        sim.insert_resource(ParameterFileContents(contents.into()));
+        sim.add_parameter_file_contents(contents.into());
         sim.run();
     }
 }

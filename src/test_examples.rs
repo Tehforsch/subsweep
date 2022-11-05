@@ -4,10 +4,6 @@ use std::process::Command;
 
 use cargo_toml::Manifest;
 
-struct Example {
-    command: String,
-}
-
 #[test]
 fn run_all_examples() {
     let manifest_path = Path::new(&env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("Cargo.toml");
@@ -30,6 +26,9 @@ fn run_all_examples() {
             &name,
             "--features",
             &required_features,
+            "--",
+            "--headless",
+            "true",
         ]);
         println!("Running example {}", &name);
         let output = run_command

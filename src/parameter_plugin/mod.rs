@@ -1,14 +1,14 @@
+pub mod parameter_file_contents;
+
 use std::fs;
 use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
 use serde::Deserialize;
-use serde_yaml::Mapping;
-use serde_yaml::Value;
 
+use self::parameter_file_contents::Override;
+pub use self::parameter_file_contents::ParameterFileContents;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -18,28 +18,6 @@ pub trait Parameters: Named + for<'de> Deserialize<'de> + Sync + Send + 'static 
 impl<T> Parameters for T where T: Named + for<'de> Deserialize<'de> + Sync + Send + 'static {}
 
 pub struct ReadParametersError(String);
-
-#[derive(Deref, DerefMut)]
-pub(super) struct ParameterFileContents(pub String);
-
-impl ParameterFileContents {
-    pub fn get_section_names(&self) -> Vec<String> {
-        self.value()
-            .as_mapping()
-            .unwrap_or(&Mapping::default())
-            .keys()
-            .map(|key| {
-                key.as_str()
-                    .expect("Non-string parameter section")
-                    .to_owned()
-            })
-            .collect()
-    }
-
-    fn value(&self) -> Value {
-        serde_yaml::from_str::<Value>(&self.0).unwrap_or(Value::Null)
-    }
-}
 
 impl Simulation {
     pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {
@@ -53,7 +31,14 @@ impl Simulation {
     }
 
     pub fn add_parameter_file_contents(&mut self, contents: String) -> &mut Self {
-        self.insert_resource(ParameterFileContents(contents));
+        self.insert_resource(ParameterFileContents::new(contents));
+        self
+    }
+
+    pub fn with_parameter_overrides(&mut self, overrides: Vec<Override>) -> &mut Self {
+        self.get_resource_mut::<ParameterFileContents>()
+            .unwrap()
+            .with_overrides(overrides);
         self
     }
 }
@@ -69,18 +54,6 @@ impl<T> Default for ParameterPlugin<T> {
             _marker: PhantomData::default(),
         }
     }
-}
-
-fn from_empty<T>() -> Result<T, ReadParametersError>
-where
-    T: Parameters,
-{
-    serde_yaml::from_str::<T>("").map_err(|_| {
-        ReadParametersError(format!(
-            "No section {} in parameter file. This section cannot be left out",
-            T::name()
-        ))
-    })
 }
 
 impl<T> RaxiomPlugin for ParameterPlugin<T>
@@ -105,47 +78,9 @@ where
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let parameter_file_contents = &sim.get_resource::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameters_from_file?", T::name()));
-        let parameters = Self::get_parameter_struct_from_parameter_file_contents(
-            T::name(),
-            parameter_file_contents,
-        );
+        let mut parameter_file_contents = sim.get_resource_mut::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameters_from_file?", T::name()));
+        let parameters: T = parameter_file_contents.extract_parameter_struct();
         sim.insert_resource(parameters);
-    }
-}
-
-impl<T: Parameters> ParameterPlugin<T> {
-    fn get_parameter_struct_from_parameter_file_contents(
-        name: &str,
-        parameter_file_contents: &ParameterFileContents,
-    ) -> T {
-        parameter_file_contents
-            .value()
-            .get(name)
-            .map(|plugin_parameters| {
-                // The following is a workaround for deserializing a serde_yaml::Value,
-                // which fails when visiting dimensionless quantities (which will be interpreted as floats)
-                serde_yaml::from_str(&serde_yaml::to_string(plugin_parameters).unwrap())
-                    .unwrap_or_else(|err| {
-                        panic!(
-                            "Failed to read parameter file section \"{}\": \n{}",
-                            T::name(),
-                            err
-                        )
-                    })
-            })
-            .unwrap_or_else(|| match from_empty() {
-                Ok(params) => {
-                    debug!(
-                        "Parameter section missing for '{}', assuming defaults",
-                        name
-                    );
-                    params
-                }
-                Err(msg) => {
-                    panic!("Failed to read parameters: {}", &msg.0)
-                }
-            })
     }
 }
 
@@ -175,7 +110,7 @@ mod tests {
     #[test]
     fn parameter_plugin() {
         let mut sim = Simulation::default();
-        sim.insert_resource(ParameterFileContents(
+        sim.insert_resource(ParameterFileContents::new(
             "
 parameters1:
   i:
@@ -204,7 +139,7 @@ parameters2:
         }
 
         let mut sim = Simulation::default();
-        sim.insert_resource(ParameterFileContents("".into()));
+        sim.add_parameter_file_contents("".into());
         sim.add_plugin(ParameterPlugin::<Parameters1>::default());
     }
 
@@ -227,7 +162,7 @@ parameters2:
             12.0
         }
         let mut sim = Simulation::default();
-        sim.insert_resource(ParameterFileContents("".into()));
+        sim.add_parameter_file_contents("".into());
         let params = sim.add_parameter_type_and_get_result::<Parameters1>();
         assert_eq!(params.i, 15);
         assert_eq!(params.x, 12.0);
@@ -248,7 +183,7 @@ parameters2:
 parameters1:
   x:
     2.0";
-        sim.insert_resource(ParameterFileContents(contents.into()));
+        sim.add_parameter_file_contents(contents.into());
         let params = sim.add_parameter_type_and_get_result::<Parameters1>();
         assert_eq!(params.x, 2.0);
         assert_eq!(params.i, 0);

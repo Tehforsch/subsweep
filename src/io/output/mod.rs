@@ -45,12 +45,13 @@ fn write_used_parameters_system(
         &parameters
             .output_dir
             .join(&parameters.used_parameters_filename),
-        &**parameter_file_contents,
+        &parameter_file_contents.contents(),
     )
     .unwrap_or_else(|e| {
         panic!(
             "Failed to write used parameters to file: {}: {}",
-            **parameter_file_contents, e
+            &parameter_file_contents.contents(),
+            e
         )
     });
 }
