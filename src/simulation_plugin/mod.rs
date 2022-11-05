@@ -5,6 +5,7 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
+pub use self::parameters::BoxSize;
 pub use self::parameters::SimulationParameters;
 pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
@@ -42,6 +43,7 @@ pub(super) struct ShouldExit(bool);
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<SimulationParameters>()
+            .add_parameter_type::<BoxSize>()
             .add_required_component::<Position>()
             .add_required_component::<Mass>()
             .add_required_component::<Velocity>()

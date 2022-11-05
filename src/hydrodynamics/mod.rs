@@ -245,7 +245,7 @@ fn halo_exchange_system(
             if bounding_boxes_overlap(
                 pos,
                 &(MVec::ONE * **smoothing_length),
-                &tree.extent.center,
+                &tree.extent.center(),
                 &tree.extent.side_lengths(),
             ) {
                 communicator.send_sync(

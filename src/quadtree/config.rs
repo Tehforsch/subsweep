@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 /// Parameters controlling the construction of a tree.
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct QuadTreeConfig {
     pub min_depth: usize,
