@@ -152,7 +152,6 @@ This is why Raxiom is unit-safe from the beginning to the end.
 1. Simulation parameters are written and read with explicit units. For example, here is how an example parameter file looks:
     ```yaml
     simulation:
-      minimum_timestep: 1 kyr
       final_time: 1 Myr
     output:
       time_between_snapshots: 10 kyr
