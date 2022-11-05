@@ -16,6 +16,33 @@ impl<const D: Dimension> Quantity<Float, D> {
     }
 }
 
+fn periodic_wrap_component(v: Float, min: Float, max: Float) -> Float {
+    (v - min).rem_euclid(max - min)
+}
+
+impl VecLength {
+    pub fn periodic_wrap(&mut self, box_size: &BoxSize) {
+        self.0.x = periodic_wrap_component(
+            self.0.x,
+            box_size.min.x().value_unchecked(),
+            box_size.max.x().value_unchecked(),
+        );
+        self.0.y = periodic_wrap_component(
+            self.0.y,
+            box_size.min.y().value_unchecked(),
+            box_size.max.y().value_unchecked(),
+        );
+        #[cfg(not(feature = "2d"))]
+        {
+            self.0.z = periodic_wrap_component(
+                self.0.z,
+                box_size.min.z().value_unchecked(),
+                box_size.max.z().value_unchecked(),
+            );
+        }
+    }
+}
+
 #[rustfmt::skip]
 unit_system!(
     Dimension,
@@ -131,3 +158,4 @@ mod reexport {
 pub use reexport::*;
 
 use self::helpers::Float;
+use crate::parameters::BoxSize;

@@ -17,7 +17,7 @@ pub use self::velocity_profile::ZeroVelocity;
 use crate::components;
 use crate::components::Position;
 use crate::components::Velocity;
-use crate::domain::Extent;
+use crate::parameters::BoxSize;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::rand::gen_range;
@@ -35,7 +35,7 @@ pub struct Sample {
 pub struct Sampler {
     density_profile: Box<dyn DensityProfile>,
     velocity_profile: Box<dyn VelocityProfile>,
-    extent: Extent,
+    box_size: BoxSize,
     num_samples: usize,
     resolution: Resolution,
     rng: StdRng,
@@ -44,13 +44,13 @@ pub struct Sampler {
 impl Sampler {
     pub fn new(
         density_profile: impl DensityProfile + 'static,
-        extent: Extent,
+        box_size: &BoxSize,
         resolution: Resolution,
     ) -> Self {
         Self {
             density_profile: Box::new(density_profile),
             velocity_profile: Box::new(ZeroVelocity),
-            extent,
+            box_size: box_size.clone(),
             resolution,
             num_samples: 100000,
             rng: StdRng::seed_from_u64(DEFAULT_SEED),
@@ -88,14 +88,14 @@ impl Sampler {
 
     fn sample(&mut self) -> Sample {
         let total_mass_profile = self.integrate();
-        let volume = self.extent.volume();
+        let volume = self.box_size.volume();
         let num_particles_specified =
             (self.resolution.as_number_density(volume) * volume).value() as usize;
         let mass_per_particle = total_mass_profile / num_particles_specified as Float;
         let mut positions = vec![];
         // A simple implementation of rejection sampling
         while positions.len() < num_particles_specified {
-            let pos = gen_range(&mut self.rng, self.extent.min, self.extent.max);
+            let pos = gen_range(&mut self.rng, self.box_size.min, self.box_size.max);
             let random_density = self
                 .rng
                 .gen_range(Density::zero()..self.density_profile.max_value());
@@ -110,10 +110,10 @@ impl Sampler {
     }
 
     fn integrate(&mut self) -> Mass {
-        let volume_per_sample = self.extent.volume() / (self.num_samples as Float);
+        let volume_per_sample = self.box_size.volume() / (self.num_samples as Float);
         let mut mass = Mass::zero();
         for _ in 0..self.num_samples {
-            let pos = gen_range(&mut self.rng, self.extent.min, self.extent.max);
+            let pos = gen_range(&mut self.rng, self.box_size.min, self.box_size.max);
             mass += self.density_profile.density(pos) * volume_per_sample;
         }
         mass

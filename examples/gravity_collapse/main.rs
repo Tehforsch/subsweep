@@ -6,6 +6,7 @@ use raxiom::ics::ConstantDensity;
 use raxiom::ics::Resolution;
 use raxiom::ics::Sampler;
 use raxiom::ics::VelocityProfile;
+use raxiom::parameters::BoxSize;
 use raxiom::prelude::*;
 use raxiom::units::Density;
 use raxiom::units::InverseTime;
@@ -17,7 +18,6 @@ use serde::Serialize;
 #[derive(Default, Serialize, Deserialize, Clone)]
 struct Parameters {
     num_particles: usize,
-    box_size: VecLength,
     angular_velocity_factor: InverseTime,
     density: Density,
 }
@@ -48,13 +48,14 @@ fn initial_conditions_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
     parameters: Res<Parameters>,
+    box_size: Res<BoxSize>,
 ) {
     if !rank.is_main() {
         return;
     }
     Sampler::new(
         ConstantDensity(parameters.density),
-        Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
+        &box_size,
         Resolution::NumParticles(parameters.num_particles),
     )
     .velocity_profile(RotationalVelocityProfile(

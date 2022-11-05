@@ -6,7 +6,6 @@ gravity:
 example:
   num_particles: 1000
   density: 1e-6 Msol au^-3
-  box_size: (1000 1000 1000) au
   angular_velocity_factor: 5e-10 s^-1
 box_size: 1000 au
 visualization:

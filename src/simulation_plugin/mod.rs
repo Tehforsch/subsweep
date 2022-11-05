@@ -106,9 +106,13 @@ fn handle_app_exit_system(
     }
 }
 
-fn integrate_motion_system(mut query: Particles<(&mut Position, &Velocity, &Timestep)>) {
+fn integrate_motion_system(
+    mut query: Particles<(&mut Position, &Velocity, &Timestep)>,
+    box_size: Res<BoxSize>,
+) {
     for (mut pos, velocity, timestep) in query.iter_mut() {
         **pos += **velocity * **timestep;
+        pos.periodic_wrap(&box_size)
     }
 }
 

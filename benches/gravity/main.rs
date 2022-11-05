@@ -68,14 +68,21 @@ fn setup_gravity_sim(num_particles: usize, opening_angle: Dimensionless) -> Simu
         });
     SimulationBuilder::bench()
         .build_with_sim(&mut sim)
-        .add_startup_system(move |commands: Commands, rank: Res<WorldRank>, box_size: Res<BoxSize>| {
-            initial_conditions_system(commands, rank, box_size, num_particles)
-        })
+        .add_startup_system(
+            move |commands: Commands, rank: Res<WorldRank>, box_size: Res<BoxSize>| {
+                initial_conditions_system(commands, rank, box_size, num_particles)
+            },
+        )
         .add_plugin(GravityPlugin);
     sim
 }
 
-fn initial_conditions_system(mut commands: Commands, rank: Res<WorldRank>, box_size: Res<BoxSize>, num_particles: usize) {
+fn initial_conditions_system(
+    mut commands: Commands,
+    rank: Res<WorldRank>,
+    box_size: Res<BoxSize>,
+    num_particles: usize,
+) {
     if !rank.is_main() {
         return;
     }
