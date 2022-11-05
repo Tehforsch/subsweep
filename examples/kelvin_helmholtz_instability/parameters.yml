@@ -19,5 +19,6 @@ example:
   bottom_fluid:
     density: 0.15 kg m^-2
     initial_velocity: -100 m s^-1
-visualization:
-  show_particles: True
+box_size:
+  min: (0 0) m
+  max: (45 8) m

@@ -5,6 +5,7 @@ use std::process::Command;
 use cargo_toml::Manifest;
 
 #[test]
+#[ignore]
 fn run_all_examples() {
     let manifest_path = Path::new(&env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("Cargo.toml");
     let manifest = Manifest::from_path(&manifest_path).unwrap_or_else(|e| {
@@ -15,6 +16,9 @@ fn run_all_examples() {
     });
     for example in manifest.example {
         let name = example.name.unwrap();
+        if name == "mpi_test" {
+            continue;
+        }
         let required_features = example.required_features.join(",");
         let mut run_command = Command::new("cargo");
         run_command.args([
@@ -27,6 +31,7 @@ fn run_all_examples() {
             "--features",
             &required_features,
             "--",
+            "simulation/final_time: 0.0 s",
             "--headless",
             "true",
         ]);
@@ -47,5 +52,4 @@ fn run_all_examples() {
             );
         }
     }
-    assert!(false);
 }

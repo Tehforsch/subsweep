@@ -29,7 +29,7 @@ impl Named for Parameters {
     }
 }
 
-#[derive(Default, Deserialize, Clone, Copy)]
+#[derive(Default, Serialize, Deserialize, Clone, Copy)]
 struct FluidSpecification {
     density: Density,
     initial_velocity: units::Velocity,
