@@ -387,8 +387,8 @@ impl Simulation {
         let contents = self.unwrap_resource::<ParameterFileContents>();
         let mut unused = vec![];
         for param in contents.get_section_names() {
-            if !self.parameter_sections.contains(&param) {
-                unused.push(param);
+            if !self.parameter_sections.contains(param) {
+                unused.push(param.to_owned());
             }
         }
         if !unused.is_empty() {

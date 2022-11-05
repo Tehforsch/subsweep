@@ -1,9 +1,10 @@
 use serde::Deserialize;
+use serde::Serialize;
 
 use crate::named::Named;
 
 /// Settings that have an impact on the simulation performance.
-#[derive(Deserialize, Named)]
+#[derive(Serialize, Deserialize, Named)]
 #[name = "performance"]
 pub struct PerformanceParameters {
     /// The batch size for parallel iterations. Low batch sizes

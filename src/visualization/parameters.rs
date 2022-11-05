@@ -1,11 +1,12 @@
 use serde::Deserialize;
+use serde::Serialize;
 
 use crate::named::Named;
 
 /// Parameters controlling the visualization. Only required if
 /// headless is set to false
 /// in the [SimulationBuilder](crate::prelude::SimulationBuilder).
-#[derive(Clone, Deserialize, Default, Named)]
+#[derive(Clone, Serialize, Deserialize, Default, Named)]
 #[name = "visualization"]
 #[serde(deny_unknown_fields)]
 pub struct VisualizationParameters {

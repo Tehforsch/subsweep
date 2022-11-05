@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use serde::Serialize;
 
 use crate::named::Named;
 use crate::quadtree::QuadTreeConfig;
@@ -10,7 +11,7 @@ use crate::units::Temperature;
 /// Parameters for hydrodynamics. Only needed if the
 /// [HydrodynamicsPlugin](crate::prelude::HydrodynamicsPlugin)
 /// is added to the simulation
-#[derive(Deserialize, Named)]
+#[derive(Serialize, Deserialize, Named)]
 #[name = "hydrodynamics"]
 #[serde(deny_unknown_fields)]
 pub struct HydrodynamicsParameters {
@@ -25,7 +26,7 @@ pub struct HydrodynamicsParameters {
     pub tree: QuadTreeConfig,
 }
 
-#[derive(Deserialize, Named)]
+#[derive(Serialize, Deserialize, Named)]
 #[serde(untagged)]
 pub enum InitialGasEnergy {
     /// Set the initial thermal energy u of the gas via two parameters:

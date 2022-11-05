@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use serde::Serialize;
 
 use crate::named::Named;
 use crate::units::Dimensionless;
@@ -7,7 +8,7 @@ use crate::units::Length;
 /// Parameters for gravity. Only needed if the
 /// [GravityPlugin](crate::prelude::GravityPlugin) is added
 /// to the simulation.
-#[derive(Clone, Deserialize, Named)]
+#[derive(Clone, Serialize, Deserialize, Named)]
 #[name = "gravity"]
 #[serde(deny_unknown_fields)]
 pub struct GravityParameters {

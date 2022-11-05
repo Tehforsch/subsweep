@@ -11,8 +11,9 @@ use raxiom::units::Density;
 use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
 use serde::Deserialize;
+use serde::Serialize;
 
-#[derive(Default, Deserialize, Clone)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 struct Parameters {
     num_particles: usize,
     box_size: VecLength,

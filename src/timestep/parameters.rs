@@ -1,9 +1,10 @@
 use serde::Deserialize;
+use serde::Serialize;
 
 use crate::named::Named;
 use crate::units::Time;
 
-#[derive(Clone, Deserialize, Named)]
+#[derive(Clone, Serialize, Deserialize, Named)]
 #[name = "timestep"]
 #[serde(deny_unknown_fields)]
 pub struct TimestepParameters {

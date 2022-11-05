@@ -1,6 +1,7 @@
 use mpi::traits::Equivalence;
 use serde::Deserialize;
 use serde::Deserializer;
+use serde::Serialize;
 
 use crate::config::TWO_TO_NUM_DIMENSIONS;
 use crate::prelude::MVec;
@@ -8,10 +9,11 @@ use crate::units::Length;
 use crate::units::VecLength;
 use crate::units::Volume;
 
-#[derive(Default, Clone, Equivalence, PartialEq)]
+#[derive(Default, Clone, Serialize, Equivalence, PartialEq)]
 pub struct Extent {
     pub min: VecLength,
     pub max: VecLength,
+    #[serde(skip_serializing)]
     pub center: VecLength,
 }
 

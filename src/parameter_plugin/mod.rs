@@ -6,6 +6,7 @@ use std::path::Path;
 
 use bevy::prelude::debug;
 use serde::Deserialize;
+use serde::Serialize;
 
 use self::parameter_file_contents::Override;
 pub use self::parameter_file_contents::ParameterFileContents;
@@ -13,11 +14,15 @@ use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
-pub trait Parameters: Named + for<'de> Deserialize<'de> + Sync + Send + 'static {}
+pub trait Parameters:
+    Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static
+{
+}
 
-impl<T> Parameters for T where T: Named + for<'de> Deserialize<'de> + Sync + Send + 'static {}
-
-pub struct ReadParametersError(String);
+impl<T> Parameters for T where
+    T: Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static
+{
+}
 
 impl Simulation {
     pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {
@@ -87,19 +92,20 @@ where
 #[cfg(test)]
 mod tests {
     use serde::Deserialize;
+    use serde::Serialize;
 
     use super::ParameterFileContents;
     use super::ParameterPlugin;
     use crate::named::Named;
     use crate::simulation::Simulation;
 
-    #[derive(Clone, Deserialize, Default, Named)]
+    #[derive(Clone, Serialize, Deserialize, Default, Named)]
     #[name = "parameters1"]
     struct Parameters1 {
         i: i32,
     }
 
-    #[derive(Deserialize, Default, Named)]
+    #[derive(Serialize, Deserialize, Default, Named)]
     #[name = "parameters2"]
     struct Parameters2 {
         s: String,
@@ -132,7 +138,7 @@ parameters2:
     #[test]
     #[should_panic]
     fn do_not_accept_missing_required_parameter_section() {
-        #[derive(Deserialize, Named)]
+        #[derive(Serialize, Deserialize, Named)]
         #[name = "parameters1"]
         struct Parameters1 {
             _i: i32,
@@ -145,7 +151,7 @@ parameters2:
 
     #[test]
     fn allow_leaving_out_struct_with_complete_set_of_defaults() {
-        #[derive(Deserialize, Named)]
+        #[derive(Serialize, Deserialize, Named)]
         #[name = "parameters1"]
         struct Parameters1 {
             #[serde(default = "get_default_i")]
@@ -170,7 +176,7 @@ parameters2:
 
     #[test]
     fn allow_defaults_from_type_default() {
-        #[derive(Deserialize, Named)]
+        #[derive(Serialize, Deserialize, Named)]
         #[name = "parameters1"]
         struct Parameters1 {
             #[serde(default)]
