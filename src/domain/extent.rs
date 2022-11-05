@@ -187,6 +187,7 @@ impl Extent {
 #[serde(untagged)]
 enum ExtentSpecification {
     MinMax { min: VecLength, max: VecLength },
+    Size(VecLength),
     SideLength(Length),
 }
 
@@ -194,6 +195,7 @@ impl From<ExtentSpecification> for Extent {
     fn from(value: ExtentSpecification) -> Self {
         match value {
             ExtentSpecification::MinMax { min, max } => Self::new(min, max),
+            ExtentSpecification::Size(size) => Self::new(VecLength::zero(), size),
             ExtentSpecification::SideLength(side_length) => {
                 Extent::cube_from_side_length(side_length)
             }
