@@ -1290,6 +1290,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_custom"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1299,15 +1308,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustc_version",
- "syn",
-]
-
-[[package]]
-name = "derive_named"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
  "syn",
 ]
 
@@ -2494,8 +2494,8 @@ dependencies = [
  "cargo_toml",
  "clap",
  "criterion",
+ "derive_custom",
  "derive_more",
- "derive_named",
  "diman",
  "glam",
  "hdf5",

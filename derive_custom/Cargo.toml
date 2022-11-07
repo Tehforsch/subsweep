@@ -1,5 +1,5 @@
 [package]
-name = "derive_named"
+name = "derive_custom"
 version = "0.1.0"
 edition = "2021"
 authors = [

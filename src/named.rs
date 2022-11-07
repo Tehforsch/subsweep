@@ -2,7 +2,7 @@ pub trait Named {
     fn name() -> &'static str;
 }
 
-pub use derive_named::Named;
+pub use derive_custom::Named;
 
 #[cfg(test)]
 mod tests {
