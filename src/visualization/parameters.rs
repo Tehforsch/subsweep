@@ -2,13 +2,13 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use super::show_particles::ColorMap;
-use crate::named::Named;
+use crate::parameter_plugin::RaxiomParameters;
 
 /// Parameters controlling the visualization. Only required if
 /// headless is set to false
 /// in the [SimulationBuilder](crate::prelude::SimulationBuilder).
-#[derive(Clone, Serialize, Deserialize, Default, Named)]
-#[name = "visualization"]
+#[derive(Clone, Serialize, Deserialize, Default, RaxiomParameters)]
+#[section_name = "visualization"]
 #[serde(deny_unknown_fields)]
 pub struct VisualizationParameters {
     #[serde(default)]

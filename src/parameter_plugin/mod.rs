@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
+pub use derive_custom::RaxiomParameters;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -14,7 +15,7 @@ use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
-pub trait Parameters: Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static {
+pub trait RaxiomParameters: Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static {
     fn section_name() -> Option<&'static str>;
 
     fn unwrap_section_name() -> &'static str {
@@ -23,7 +24,7 @@ pub trait Parameters: Serialize + for<'de> Deserialize<'de> + Sync + Send + 'sta
     }
 }
 
-impl<T> Parameters for T
+impl<T> RaxiomParameters for T
 where
     T: Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static,
 {
@@ -71,7 +72,7 @@ impl<T> Default for ParameterPlugin<T> {
 
 impl<T> RaxiomPlugin for ParameterPlugin<T>
 where
-    T: Parameters,
+    T: RaxiomParameters,
 {
     fn allow_adding_twice(&self) -> bool {
         true

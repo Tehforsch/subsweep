@@ -4,7 +4,7 @@ use bevy::prelude::debug;
 use serde_yaml::Mapping;
 use serde_yaml::Value;
 
-use super::Parameters;
+use super::RaxiomParameters;
 
 #[derive(Debug, Clone)]
 pub struct Override {
@@ -34,7 +34,7 @@ fn insert_sublevel_override(value: &mut Value, o: &Override) {
     set_sublevel_value_by_keys(value, &o.keys, o.value.clone());
 }
 
-fn extract_from_default<T: Parameters>(overrides: &[Override]) -> T {
+fn extract_from_default<T: RaxiomParameters>(overrides: &[Override]) -> T {
     let section_name = T::unwrap_section_name();
     debug!(
         "Parameter section missing for '{}', assuming defaults",
@@ -68,7 +68,10 @@ fn extract_from_default<T: Parameters>(overrides: &[Override]) -> T {
     }
 }
 
-fn extract_from_section<T: Parameters>(overrides: &[Override], section_value: &mut Value) -> T {
+fn extract_from_section<T: RaxiomParameters>(
+    overrides: &[Override],
+    section_value: &mut Value,
+) -> T {
     // The following is a workaround for deserializing a serde_yaml::Value,
     // which fails when visiting dimensionless quantities (which will be interpreted as floats)
     insert_overrides(section_value, overrides);
@@ -160,7 +163,7 @@ impl ParameterFileContents {
         serde_yaml::to_string(&map).unwrap()
     }
 
-    pub(super) fn extract_parameter_struct<T: Parameters>(&mut self) -> T {
+    pub(super) fn extract_parameter_struct<T: RaxiomParameters>(&mut self) -> T {
         let section_name = T::unwrap_section_name();
         let overrides_this_section = self
             .get_overrides_for_section(section_name.to_owned())
