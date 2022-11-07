@@ -1314,6 +1314,7 @@ dependencies = [
 [[package]]
 name = "diman"
 version = "0.1.0"
+source = "git+https://github.com/tehforsch/diman#f044667cada13a44ba9df87e3cb1c81f51da0964"
 dependencies = [
  "glam",
  "hdf5",
