@@ -63,11 +63,14 @@ fn show_quadtree_system<
     for (rank, indices) in indices.iter() {
         for index in indices {
             quadtree[index].depth_first_map_leaf(&mut |extent, _| {
-                commands.spawn().insert(Outline).insert(DrawRect {
-                    lower_left: extent.min,
-                    upper_right: extent.max,
-                    color: color_map(*rank),
-                });
+                commands
+                    .spawn()
+                    .insert(Outline)
+                    .insert(DrawRect::from_min_max(
+                        extent.min,
+                        extent.max,
+                        color_map(*rank),
+                    ));
             });
         }
     }

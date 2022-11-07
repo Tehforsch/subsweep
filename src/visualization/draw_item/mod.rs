@@ -35,6 +35,7 @@ pub trait DrawItem {
     fn translation(&self) -> &VecLength;
     fn set_translation(&mut self, pos: &VecLength);
     fn get_mesh() -> Mesh;
+    fn get_scale(&self, camera_transform: &super::CameraTransform) -> Vec2;
 }
 
 #[derive(Named)]
@@ -75,7 +76,6 @@ impl MaterialsCache {
         } else {
             let handle = materials.add(material);
             self.map.insert(color, handle.clone());
-            dbg!(self.map.len());
             handle
         }
     }
@@ -99,7 +99,7 @@ where
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
-        sim.add_startup_system(setup_meshes_system::<T>)
+        sim.add_startup_system(setup_meshes_system::<T>.in_ambiguity_set(DrawAmbiguitySet))
             .add_well_ordered_system_to_stage::<_, DrawItemSyncOrdering>(
                 VisualizationStage::Synchronize,
                 receive_items_on_main_thread_system::<T>,
@@ -107,7 +107,7 @@ where
             )
             .add_system_to_stage(
                 VisualizationStage::AddDrawComponents,
-                insert_meshes_system::<T>,
+                insert_meshes_system::<T>.in_ambiguity_set(DrawAmbiguitySet),
             )
             .add_system_to_stage(
                 VisualizationStage::Draw,
@@ -173,5 +173,8 @@ pub(super) fn draw_translation_system<T: Component + DrawItem>(
         let pixel_pos = camera_transform.position_to_pixels(*item.translation());
         transform.translation.x = pixel_pos.x;
         transform.translation.y = pixel_pos.y;
+        let scale = item.get_scale(&camera_transform);
+        transform.scale.x = scale.x;
+        transform.scale.y = scale.y;
     }
 }

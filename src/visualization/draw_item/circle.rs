@@ -41,4 +41,8 @@ impl DrawItem for DrawCircle {
     fn get_mesh() -> Mesh {
         shape::Circle::new(CIRCLE_RADIUS as f32).into()
     }
+
+    fn get_scale(&self, _: &super::CameraTransform) -> Vec2 {
+        Vec2::splat((self.radius.0 / CIRCLE_RADIUS) as f32)
+    }
 }
