@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote};
 use syn::*;
 
 // Adapted from https://github.com/randomPoison/type-uuid
@@ -50,6 +50,25 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
     gen.into()
 }
 
+#[proc_macro_attribute]
+pub fn parameter_section(args: TokenStream, input: TokenStream) -> TokenStream {
+    section_derive(args, input)
+}
+
+pub(crate) fn section_derive(args: TokenStream, input: TokenStream) -> proc_macro::TokenStream {
+    let args: proc_macro2::TokenStream = args.into();
+    let name: String = args.into_iter().next().unwrap_or_else(|| panic!("Section name not specified, try #[section_name(\"...\")]")).to_string();
+    
+    let input: proc_macro2::TokenStream = input.into();
+    let output = quote! {
+        #[derive(Clone, crate::parameter_plugin::RaxiomParameters, Serialize, Deserialize)]
+        #[serde(deny_unknown_fields)]
+        #[section_name = #name]
+        #input
+    };
+    output.into()
+}
+
 #[proc_macro_derive(RaxiomParameters, attributes(section_name))]
 pub fn derive_parameters(input: TokenStream) -> TokenStream {
     parameters_derive(input)
@@ -57,12 +76,9 @@ pub fn derive_parameters(input: TokenStream) -> TokenStream {
 
 pub(crate) fn parameters_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
-
     let type_name = &ast.ident;
-
     let (impl_generics, type_generics, where_clause) = &ast.generics.split_for_impl();
-
-    let name = ast
+    let name: Option<String> = ast
         .attrs
         .iter()
         .filter_map(|attr| attr.parse_meta().ok())
@@ -81,15 +97,25 @@ pub(crate) fn parameters_derive(input: proc_macro::TokenStream) -> proc_macro::T
             }
             None
         })
-        .next()
-        .unwrap_or_else(|| {
-            panic!("No section_name specified. Add #[section_name = \"...\"] attribute.")
-        });
+        .next();
 
-    let gen = quote! {
-        impl #impl_generics RaxiomParameters for #type_name #type_generics #where_clause {
-            fn section_name() -> Option<&'static str> {
-                Some(#name)
+    let gen = match name {
+        Some(name) => {
+            quote! {
+                impl #impl_generics crate::parameter_plugin::RaxiomParameters for #type_name #type_generics #where_clause {
+                    fn section_name() -> Option<&'static str> {
+                        Some(#name)
+                    }
+                }
+            }
+        },
+        None => {
+            quote! {
+                impl #impl_generics crate::parameter_plugin::RaxiomParameters for #type_name #type_generics #where_clause {
+                    fn section_name() -> Option<&'static str> {
+                        None
+                    }
+                }
             }
         }
     };

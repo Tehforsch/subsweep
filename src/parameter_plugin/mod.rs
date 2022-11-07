@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
+pub use derive_custom::parameter_section;
 pub use derive_custom::RaxiomParameters;
 use serde::Deserialize;
 use serde::Serialize;
