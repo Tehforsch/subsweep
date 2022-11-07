@@ -1,3 +1,5 @@
+pub use derive_custom::parameter_section;
+
 pub use crate::communication::WorldRank;
 pub use crate::communication::WorldSize;
 pub use crate::domain::Extent;
