@@ -14,19 +14,12 @@ use raxiom::units::VecVelocity;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Serialize, Deserialize, Clone, Named)]
+#[name = "example"]
 struct Parameters {
     num_particles: usize,
     top_fluid: FluidSpecification,
     bottom_fluid: FluidSpecification,
-}
-
-// Implementing named myself here because of
-// https://github.com/rust-lang/rust/issues/54363
-impl Named for Parameters {
-    fn name() -> &'static str {
-        "example"
-    }
 }
 
 #[derive(Default, Serialize, Deserialize, Clone, Copy)]

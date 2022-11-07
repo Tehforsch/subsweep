@@ -2,8 +2,6 @@ pub trait Named {
     fn name() -> &'static str;
 }
 
-pub use derive_custom::Named;
-
 #[cfg(test)]
 mod tests {
     use crate::named::Named;

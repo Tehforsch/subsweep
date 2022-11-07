@@ -1,4 +1,4 @@
-use quote::quote;
+use quote::{quote};
 use syn::*;
 use proc_macro::TokenStream;
 
@@ -41,7 +41,7 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
     let name = name.unwrap_or(ast.ident.to_string());
 
     let gen = quote! {
-        impl #impl_generics crate::named::Named for #type_name #type_generics #where_clause {
+        impl #impl_generics named::Named for #type_name #type_generics #where_clause {
             fn name() -> &'static str {
                 #name
             }

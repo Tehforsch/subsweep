@@ -1,5 +1,3 @@
-// Adapted and modified from bevy_macro_utils
-
 use std::{path::Path, env};
 
 use cargo_toml::{Manifest, Product};
