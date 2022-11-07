@@ -1,0 +1,10 @@
+[package]
+name = "macro_utils"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Toni Peter <mail@tonipeter.de>",
+]
+
+[dependencies]
+cargo_toml = "0.13.0"

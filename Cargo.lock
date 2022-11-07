@@ -1293,6 +1293,7 @@ dependencies = [
 name = "derive_custom"
 version = "0.1.0"
 dependencies = [
+ "macro_utils",
  "proc-macro2",
  "quote",
  "syn",
@@ -1908,6 +1909,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "macro_utils"
+version = "0.1.0"
+dependencies = [
+ "cargo_toml",
+]
+
+[[package]]
 name = "malloc_buf"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2491,7 +2499,6 @@ name = "raxiom"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "cargo_toml",
  "clap",
  "criterion",
  "derive_custom",
@@ -2500,6 +2507,7 @@ dependencies = [
  "glam",
  "hdf5",
  "lazy_static",
+ "macro_utils",
  "mpi",
  "num-traits",
  "once_cell",
