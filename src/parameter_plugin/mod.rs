@@ -14,14 +14,22 @@ use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
-pub trait Parameters:
-    Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static
-{
+pub trait Parameters: Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static {
+    fn section_name() -> Option<&'static str>;
+
+    fn unwrap_section_name() -> &'static str {
+        Self::section_name()
+            .unwrap_or_else(|| panic!("Called unwrap_section_name on unnamed parameter struct."))
+    }
 }
 
-impl<T> Parameters for T where
-    T: Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static
+impl<T> Parameters for T
+where
+    T: Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static,
 {
+    fn section_name() -> Option<&'static str> {
+        Some(<T as Named>::name())
+    }
 }
 
 impl Simulation {
@@ -75,7 +83,7 @@ where
         // file which is why we only add the plugin if the parameter
         // struct isn't already present
         if sim.contains_resource::<T>() {
-            debug!("Parameters for {} already present", T::name());
+            debug!("Parameters for {:?} already present", T::section_name());
             false
         } else {
             true
@@ -83,7 +91,7 @@ where
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let mut parameter_file_contents = sim.get_resource_mut::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameters_from_file?", T::name()));
+        let mut parameter_file_contents = sim.get_resource_mut::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {:?} - failed to call add_parameters_from_file?", T::section_name()));
         let parameters: T = parameter_file_contents.extract_parameter_struct();
         sim.insert_resource(parameters);
     }

@@ -327,7 +327,8 @@ impl Simulation {
     where
         T: Parameters,
     {
-        self.parameter_sections.insert(T::name().into());
+        self.parameter_sections
+            .insert(T::unwrap_section_name().into());
         self.add_plugin(ParameterPlugin::<T>::default());
         self
     }

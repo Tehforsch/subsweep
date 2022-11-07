@@ -35,7 +35,7 @@ fn insert_sublevel_override(value: &mut Value, o: &Override) {
 }
 
 fn extract_from_default<T: Parameters>(overrides: &[Override]) -> T {
-    let section_name = T::name();
+    let section_name = T::unwrap_section_name();
     debug!(
         "Parameter section missing for '{}', assuming defaults",
         section_name
@@ -74,8 +74,8 @@ fn extract_from_section<T: Parameters>(overrides: &[Override], section_value: &m
     insert_overrides(section_value, overrides);
     serde_yaml::from_str(&serde_yaml::to_string(section_value).unwrap()).unwrap_or_else(|err| {
         panic!(
-            "Failed to read parameter file section \"{}\": \n{}",
-            T::name(),
+            "Failed to read parameter file section \"{:?}\": \n{}",
+            T::section_name(),
             err
         )
     })
@@ -161,7 +161,7 @@ impl ParameterFileContents {
     }
 
     pub(super) fn extract_parameter_struct<T: Parameters>(&mut self) -> T {
-        let section_name = T::name();
+        let section_name = T::unwrap_section_name();
         let overrides_this_section = self
             .get_overrides_for_section(section_name.to_owned())
             .collect::<Vec<_>>();
