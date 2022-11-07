@@ -1,9 +1,6 @@
 use bevy::prelude::*;
-use bevy_prototype_lyon::entity::ShapeBundle;
-use bevy_prototype_lyon::prelude::*;
 use mpi::traits::Equivalence;
 
-use super::super::camera_transform::CameraTransform;
 use super::DrawItem;
 use super::Pixels;
 use crate::units::VecLength;
@@ -29,20 +26,6 @@ impl DrawCircle {
 }
 
 impl DrawItem for DrawCircle {
-    type Output = ShapeBundle;
-    fn get_bundle(&self, _: &CameraTransform) -> Self::Output {
-        let shape = shapes::Circle {
-            radius: self.radius.0 as f32,
-            center: Vec2::new(0.0, 0.0),
-        };
-
-        GeometryBuilder::build_as(
-            &shape,
-            DrawMode::Fill(FillMode::color(self.color.into())),
-            Transform::default(),
-        )
-    }
-
     fn translation(&self) -> &VecLength {
         &self.position
     }
@@ -53,5 +36,9 @@ impl DrawItem for DrawCircle {
 
     fn get_color(&self) -> RColor {
         self.color
+    }
+
+    fn get_mesh() -> Mesh {
+        shape::Circle::new(CIRCLE_RADIUS as f32).into()
     }
 }

@@ -8,7 +8,6 @@ mod show_halo_particles;
 mod show_particles;
 
 use bevy::prelude::*;
-use bevy_prototype_lyon::prelude::ShapePlugin;
 pub use camera_transform::CameraTransform;
 pub use draw_item::circle::DrawCircle;
 pub use draw_item::rect::DrawRect;
@@ -57,7 +56,6 @@ impl RaxiomPlugin for VisualizationPlugin {
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
         sim.insert_resource(CameraTransform::default())
-            .add_bevy_plugin(ShapePlugin)
             .add_startup_system(setup_camera_system)
             .add_startup_system_to_stage(
                 StartupStage::PostStartup,

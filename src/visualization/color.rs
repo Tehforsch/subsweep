@@ -4,12 +4,12 @@ use mpi::traits::Equivalence;
 use crate::communication::Rank;
 use crate::prelude::Float;
 
-#[derive(Equivalence, Clone, Copy, Debug)]
+#[derive(Equivalence, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct RColor {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
 }
 
 impl RColor {
@@ -19,7 +19,12 @@ impl RColor {
     pub const YELLOW: RColor = RColor::rgb(1.0, 1.0, 0.0);
 
     pub const fn rgb(r: f32, g: f32, b: f32) -> Self {
-        Self { r, g, b, a: 1.0 }
+        Self {
+            r: (r * 255.0) as u8,
+            g: (g * 255.0) as u8,
+            b: (b * 255.0) as u8,
+            a: 255,
+        }
     }
 
     pub fn reds(v: Float) -> Self {
@@ -29,17 +34,22 @@ impl RColor {
 
 impl From<RColor> for Color {
     fn from(color: RColor) -> Color {
-        Color::rgba(color.r, color.g, color.b, color.a)
+        Color::rgba(
+            color.r as f32 / 255.0,
+            color.g as f32 / 255.0,
+            color.b as f32 / 255.0,
+            color.a as f32 / 255.0,
+        )
     }
 }
 
 impl From<Color> for RColor {
     fn from(color: Color) -> RColor {
         Self {
-            r: color.r(),
-            g: color.g(),
-            b: color.b(),
-            a: color.a(),
+            r: (color.r() * 255.0) as u8,
+            g: (color.g() * 255.0) as u8,
+            b: (color.b() * 255.0) as u8,
+            a: (color.a() * 255.0) as u8,
         }
     }
 }
