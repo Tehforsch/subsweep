@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use bevy::prelude::debug;
+use derive_traits::RaxiomParameters;
 use serde_yaml::Mapping;
 use serde_yaml::Value;
-
-use super::Parameters;
 
 #[derive(Debug, Clone)]
 pub struct Override {
@@ -34,8 +33,8 @@ fn insert_sublevel_override(value: &mut Value, o: &Override) {
     set_sublevel_value_by_keys(value, &o.keys, o.value.clone());
 }
 
-fn extract_from_default<T: Parameters>(overrides: &[Override]) -> T {
-    let section_name = T::name();
+fn extract_from_default<T: RaxiomParameters>(overrides: &[Override]) -> T {
+    let section_name = T::unwrap_section_name();
     debug!(
         "Parameter section missing for '{}', assuming defaults",
         section_name
@@ -68,14 +67,17 @@ fn extract_from_default<T: Parameters>(overrides: &[Override]) -> T {
     }
 }
 
-fn extract_from_section<T: Parameters>(overrides: &[Override], section_value: &mut Value) -> T {
+fn extract_from_section<T: RaxiomParameters>(
+    overrides: &[Override],
+    section_value: &mut Value,
+) -> T {
     // The following is a workaround for deserializing a serde_yaml::Value,
     // which fails when visiting dimensionless quantities (which will be interpreted as floats)
     insert_overrides(section_value, overrides);
     serde_yaml::from_str(&serde_yaml::to_string(section_value).unwrap()).unwrap_or_else(|err| {
         panic!(
-            "Failed to read parameter file section \"{}\": \n{}",
-            T::name(),
+            "Failed to read parameter file section \"{:?}\": \n{}",
+            T::section_name(),
             err
         )
     })
@@ -160,8 +162,8 @@ impl ParameterFileContents {
         serde_yaml::to_string(&map).unwrap()
     }
 
-    pub(super) fn extract_parameter_struct<T: Parameters>(&mut self) -> T {
-        let section_name = T::name();
+    pub(super) fn extract_parameter_struct<T: RaxiomParameters>(&mut self) -> T {
+        let section_name = T::unwrap_section_name();
         let overrides_this_section = self
             .get_overrides_for_section(section_name.to_owned())
             .collect::<Vec<_>>();
@@ -181,15 +183,12 @@ impl ParameterFileContents {
 
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
-    use serde::Serialize;
+    use derive_custom::raxiom_parameters;
 
     use super::Override;
     use super::ParameterFileContents;
-    use crate::named::Named;
 
-    #[derive(Serialize, Deserialize, Named, Default)]
-    #[name = "x"]
+    #[raxiom_parameters("x")]
     struct X {
         a: usize,
         b: usize,
@@ -230,8 +229,7 @@ mod tests {
 
     #[test]
     fn r#override_omitted_section() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "s"]
+        #[raxiom_parameters("s")]
         struct Section(i32);
 
         let mut contents = ParameterFileContents::new("".into());
@@ -246,8 +244,7 @@ mod tests {
 
     #[test]
     fn r#override_omitted_field() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "y"]
+        #[raxiom_parameters("y")]
         struct Y {
             #[serde(default)]
             a: usize,

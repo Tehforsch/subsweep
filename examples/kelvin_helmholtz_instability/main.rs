@@ -11,25 +11,16 @@ use raxiom::prelude::*;
 use raxiom::units::Density;
 use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
-use serde::Deserialize;
-use serde::Serialize;
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[raxiom_parameters("example")]
 struct Parameters {
     num_particles: usize,
     top_fluid: FluidSpecification,
     bottom_fluid: FluidSpecification,
 }
 
-// Implementing named myself here because of
-// https://github.com/rust-lang/rust/issues/54363
-impl Named for Parameters {
-    fn name() -> &'static str {
-        "example"
-    }
-}
-
-#[derive(Default, Serialize, Deserialize, Clone, Copy)]
+#[raxiom_parameters]
+#[derive(Copy)]
 struct FluidSpecification {
     density: Density,
     initial_velocity: units::Velocity,

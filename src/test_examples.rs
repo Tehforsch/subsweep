@@ -1,20 +1,12 @@
-use std::env;
-use std::path::Path;
 use std::process::Command;
 
-use cargo_toml::Manifest;
+use macro_utils::RaxiomManifest;
 
 #[test]
 #[ignore]
 fn run_all_examples() {
-    let manifest_path = Path::new(&env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("Cargo.toml");
-    let manifest = Manifest::from_path(&manifest_path).unwrap_or_else(|e| {
-        panic!(
-            "Failed to parse manifest file at {:?}: {}",
-            &manifest_path, e
-        )
-    });
-    for example in manifest.example {
+    let manifest = RaxiomManifest::default();
+    for example in manifest.examples() {
         let name = example.name.unwrap();
         if name == "mpi_test" {
             continue;

@@ -2,9 +2,8 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use bevy::prelude::*;
+use derive_custom::raxiom_parameters;
 use mpi::traits::Equivalence;
-use serde::Deserialize;
-use serde::Serialize;
 
 use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
@@ -13,9 +12,8 @@ use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 
-#[derive(Serialize, Deserialize, Named)]
-#[name = "memory_usage"]
-struct MemoryUsageParameters {
+#[raxiom_parameters("memory_usage")]
+pub struct MemoryUsageParameters {
     /// Whether to compute and display memory usage.
     #[serde(default)]
     show: bool,

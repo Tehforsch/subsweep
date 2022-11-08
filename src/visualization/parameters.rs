@@ -1,15 +1,12 @@
-use serde::Deserialize;
-use serde::Serialize;
+use derive_custom::raxiom_parameters;
 
 use super::show_particles::ColorMap;
-use crate::named::Named;
 
 /// Parameters controlling the visualization. Only required if
 /// headless is set to false
 /// in the [SimulationBuilder](crate::prelude::SimulationBuilder).
-#[derive(Clone, Serialize, Deserialize, Default, Named)]
-#[name = "visualization"]
-#[serde(deny_unknown_fields)]
+#[raxiom_parameters("visualization")]
+#[derive(Default)]
 pub struct VisualizationParameters {
     #[serde(default)]
     pub show_quadtree: bool,

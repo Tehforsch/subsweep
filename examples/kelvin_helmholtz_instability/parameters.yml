@@ -12,7 +12,6 @@ domain:
     max_num_particles_per_leaf: 1
 example:
   num_particles: 3000
-  box_size: (45 8) m
   top_fluid:
     density: 0.05 kg m^-2
     initial_velocity: 100 m s^-1

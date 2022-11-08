@@ -22,6 +22,7 @@ use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
 use bevy::prelude::SystemSet;
 use bevy::prelude::World;
+use derive_traits::RaxiomParameters;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 pub use raxiom_plugin::RaxiomPlugin;
@@ -36,7 +37,6 @@ use crate::memory::ComponentMemoryUsagePlugin;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
-use crate::parameter_plugin::Parameters;
 use crate::timestep::TimestepState;
 
 #[derive(Default)]
@@ -325,27 +325,28 @@ impl Simulation {
 
     pub fn add_parameter_type<T>(&mut self) -> &mut Self
     where
-        T: Parameters,
+        T: RaxiomParameters,
     {
-        self.parameter_sections.insert(T::name().into());
+        self.parameter_sections
+            .insert(T::unwrap_section_name().into());
         self.add_plugin(ParameterPlugin::<T>::default());
         self
     }
 
     pub fn add_parameter_type_and_get_result<T>(&mut self) -> &T
     where
-        T: Parameters,
+        T: RaxiomParameters,
     {
         self.add_parameter_type::<T>();
         self.unwrap_resource::<T>()
     }
 
-    pub fn add_parameters_explicitly<T: Parameters>(&mut self, parameters: T) -> &mut Self {
+    pub fn add_parameters_explicitly<T: RaxiomParameters>(&mut self, parameters: T) -> &mut Self {
         self.insert_resource(parameters);
         self
     }
 
-    pub fn get_parameters<T: Parameters>(&self) -> &T {
+    pub fn get_parameters<T: RaxiomParameters>(&self) -> &T {
         self.get_resource::<T>().unwrap()
     }
 

@@ -5,10 +5,9 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 
 use bevy::prelude::*;
+use derive_custom::raxiom_parameters;
 use hdf5::Dataset;
 use hdf5::File;
-use serde::Deserialize;
-use serde::Serialize;
 
 use super::to_dataset::ToDataset;
 use super::to_dataset::LENGTH_IDENTIFIER;
@@ -42,9 +41,8 @@ struct InputSystemsAmbiguitySet;
 /// Parameters describing how the initial conditions
 /// should be read. Only required if should_read_initial_conditions
 /// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
-#[derive(Clone, Default, Serialize, Deserialize, Named)]
-#[name = "input"]
-#[serde(deny_unknown_fields)]
+#[derive(Default)]
+#[raxiom_parameters("input")]
 pub struct InputParameters {
     /// The files containing the initial conditions
     pub paths: Vec<PathBuf>,

@@ -1,8 +1,13 @@
+//! This library exists mainly because I found it impossible/annoyingly hard
+//! to create procedural macros that derive traits from the main crate.
+//! This works fine for the main crate itself, but fails when
+//! building examples. The problem is path/name resolution of the derived trait.
+//! I found some info on this here: https://github.com/rust-lang/rust/issues/54363
+use serde::{Serialize, Deserialize};
+
 pub trait Named {
     fn name() -> &'static str;
 }
-
-pub use derive_named::Named;
 
 #[cfg(test)]
 mod tests {
@@ -50,5 +55,14 @@ mod tests {
         }
 
         assert_eq!(Foo::name(), "Foo");
+    }
+}
+
+pub trait RaxiomParameters: Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static {
+    fn section_name() -> Option<&'static str>;
+
+    fn unwrap_section_name() -> &'static str {
+        Self::section_name()
+            .unwrap_or_else(|| panic!("Called unwrap_section_name on unnamed parameter struct."))
     }
 }

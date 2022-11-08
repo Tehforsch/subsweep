@@ -5,24 +5,13 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
-use serde::Deserialize;
-use serde::Serialize;
+use derive_traits::RaxiomParameters;
 
 use self::parameter_file_contents::Override;
 pub use self::parameter_file_contents::ParameterFileContents;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-
-pub trait Parameters:
-    Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static
-{
-}
-
-impl<T> Parameters for T where
-    T: Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static
-{
-}
 
 impl Simulation {
     pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {
@@ -63,7 +52,7 @@ impl<T> Default for ParameterPlugin<T> {
 
 impl<T> RaxiomPlugin for ParameterPlugin<T>
 where
-    T: Parameters,
+    T: RaxiomParameters,
 {
     fn allow_adding_twice(&self) -> bool {
         true
@@ -75,7 +64,7 @@ where
         // file which is why we only add the plugin if the parameter
         // struct isn't already present
         if sim.contains_resource::<T>() {
-            debug!("Parameters for {} already present", T::name());
+            debug!("Parameters for {:?} already present", T::section_name());
             false
         } else {
             true
@@ -83,7 +72,7 @@ where
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let mut parameter_file_contents = sim.get_resource_mut::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {} - failed to call add_parameters_from_file?", T::name()));
+        let mut parameter_file_contents = sim.get_resource_mut::<ParameterFileContents>().unwrap_or_else(|| panic!("No parameter file contents resource available while reading parameters for {:?} - failed to call add_parameters_from_file?", T::section_name()));
         let parameters: T = parameter_file_contents.extract_parameter_struct();
         sim.insert_resource(parameters);
     }
@@ -91,22 +80,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
-    use serde::Serialize;
+    use derive_custom::raxiom_parameters;
 
     use super::ParameterFileContents;
     use super::ParameterPlugin;
-    use crate::named::Named;
     use crate::simulation::Simulation;
 
-    #[derive(Clone, Serialize, Deserialize, Default, Named)]
-    #[name = "parameters1"]
+    #[derive(Default)]
+    #[raxiom_parameters("parameters1")]
     struct Parameters1 {
         i: i32,
     }
 
-    #[derive(Serialize, Deserialize, Default, Named)]
-    #[name = "parameters2"]
+    #[derive(Default)]
+    #[raxiom_parameters("parameters2")]
     struct Parameters2 {
         s: String,
         #[serde(default)]
@@ -138,8 +125,7 @@ parameters2:
     #[test]
     #[should_panic]
     fn do_not_accept_missing_required_parameter_section() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "parameters1"]
+        #[raxiom_parameters("parameters1")]
         struct Parameters1 {
             _i: i32,
         }
@@ -151,8 +137,7 @@ parameters2:
 
     #[test]
     fn allow_leaving_out_struct_with_complete_set_of_defaults() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "parameters1"]
+        #[raxiom_parameters("parameters1")]
         struct Parameters1 {
             #[serde(default = "get_default_i")]
             i: i32,
@@ -176,8 +161,7 @@ parameters2:
 
     #[test]
     fn allow_defaults_from_type_default() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "parameters1"]
+        #[raxiom_parameters("parameters1")]
         struct Parameters1 {
             #[serde(default)]
             i: i32,

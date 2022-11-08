@@ -1,9 +1,7 @@
-use serde::Deserialize;
-use serde::Serialize;
+use derive_custom::raxiom_parameters;
 
 /// Parameters controlling the construction of a tree.
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(deny_unknown_fields)]
+#[raxiom_parameters]
 pub struct QuadTreeConfig {
     pub min_depth: usize,
     /// The maximum depth of the tree. Should be high enough to ensure
