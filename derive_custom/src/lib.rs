@@ -1,10 +1,10 @@
-use proc_macro::TokenStream;
+use proc_macro2::Literal;
 use quote::{quote};
 use syn::*;
 
 // Adapted from https://github.com/randomPoison/type-uuid
 #[proc_macro_derive(Named, attributes(name))]
-pub fn derive_type_name(input: TokenStream) -> TokenStream {
+pub fn derive_type_name(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     type_name_derive(input)
 }
 
@@ -41,7 +41,7 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
     let name = name.unwrap_or(ast.ident.to_string());
 
     let gen = quote! {
-        impl #impl_generics named::Named for #type_name #type_generics #where_clause {
+        impl #impl_generics raxiom_derive_traits::Named for #type_name #type_generics #where_clause {
             fn name() -> &'static str {
                 #name
             }
@@ -51,13 +51,16 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
 }
 
 #[proc_macro_attribute]
-pub fn parameter_section(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn parameter_section(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     section_derive(args, input)
 }
 
-pub(crate) fn section_derive(args: TokenStream, input: TokenStream) -> proc_macro::TokenStream {
+pub(crate) fn section_derive(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let args: proc_macro2::TokenStream = args.into();
-    let name: Option<String> = args.into_iter().next().map(|x| x.to_string());
+    let name: Option<Literal> = args.into_iter().next().map(|x| match x {
+        proc_macro2::TokenTree::Literal(s) => s,
+        _ => panic!("Unexpected token in parameter_section macro"),
+    });
     
     let trait_impl: proc_macro2::TokenStream  = parameters_derive(input.clone(), name).into();
     let input: proc_macro2::TokenStream = input.into();
@@ -71,28 +74,15 @@ pub(crate) fn section_derive(args: TokenStream, input: TokenStream) -> proc_macr
     output.into()
 }
 
-pub(crate) fn parameters_derive(input: proc_macro::TokenStream, section_name: Option<String>) -> proc_macro::TokenStream {
+pub(crate) fn parameters_derive(input: proc_macro::TokenStream, section_name: Option<Literal>) -> proc_macro::TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let type_name = &ast.ident;
     let (impl_generics, type_generics, where_clause) = &ast.generics.split_for_impl();
 
-    let gen = match section_name {
-        Some(section_name) => {
-            quote! {
-                impl #impl_generics crate::parameter_plugin::RaxiomParameters for #type_name #type_generics #where_clause {
-                    fn section_name() -> Option<&'static str> {
-                        Some(#section_name)
-                    }
-                }
-            }
-        },
-        None => {
-            quote! {
-                impl #impl_generics crate::parameter_plugin::RaxiomParameters for #type_name #type_generics #where_clause {
-                    fn section_name() -> Option<&'static str> {
-                        None
-                    }
-                }
+    let gen = quote! {
+        impl #impl_generics ::raxiom_derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
+            fn section_name() -> Option<&'static str> {
+                Some(#section_name)
             }
         }
     };

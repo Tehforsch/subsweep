@@ -14,8 +14,7 @@ use raxiom::units::VecVelocity;
 use serde::Deserialize;
 use serde::Serialize;
 
-#[derive(Default, Serialize, Deserialize, Clone, Named)]
-#[name = "example"]
+#[parameter_section("example")]
 struct Parameters {
     num_particles: usize,
     top_fluid: FluidSpecification,

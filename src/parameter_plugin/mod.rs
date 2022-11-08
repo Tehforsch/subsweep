@@ -6,32 +6,13 @@ use std::path::Path;
 
 use bevy::prelude::debug;
 pub use derive_custom::parameter_section;
-use serde::Deserialize;
-use serde::Serialize;
+use raxiom_derive_traits::RaxiomParameters;
 
 use self::parameter_file_contents::Override;
 pub use self::parameter_file_contents::ParameterFileContents;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-
-pub trait RaxiomParameters: Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static {
-    fn section_name() -> Option<&'static str>;
-
-    fn unwrap_section_name() -> &'static str {
-        Self::section_name()
-            .unwrap_or_else(|| panic!("Called unwrap_section_name on unnamed parameter struct."))
-    }
-}
-
-impl<T> RaxiomParameters for T
-where
-    T: Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static,
-{
-    fn section_name() -> Option<&'static str> {
-        Some(<T as Named>::name())
-    }
-}
 
 impl Simulation {
     pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {

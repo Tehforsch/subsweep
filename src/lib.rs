@@ -36,7 +36,7 @@ pub(crate) mod visualization;
 
 pub mod named {
     pub use derive_custom::Named;
-    pub use named::Named;
+    pub use raxiom_derive_traits::Named;
 }
 
 #[cfg(test)]

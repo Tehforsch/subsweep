@@ -24,6 +24,7 @@ use bevy::prelude::SystemSet;
 use bevy::prelude::World;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
+use raxiom_derive_traits::RaxiomParameters;
 pub use raxiom_plugin::RaxiomPlugin;
 
 use crate::communication::WorldRank;
@@ -36,7 +37,6 @@ use crate::memory::ComponentMemoryUsagePlugin;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
-use crate::parameter_plugin::RaxiomParameters;
 use crate::timestep::TimestepState;
 
 #[derive(Default)]

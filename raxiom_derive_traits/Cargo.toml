@@ -1,0 +1,7 @@
+[package]
+name = "raxiom_derive_traits"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = {version = "1.0.143", features = ["derive"] }

@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use bevy::prelude::debug;
+use raxiom_derive_traits::RaxiomParameters;
 use serde_yaml::Mapping;
 use serde_yaml::Value;
-
-use super::RaxiomParameters;
 
 #[derive(Debug, Clone)]
 pub struct Override {
