@@ -22,9 +22,9 @@ use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
 use bevy::prelude::SystemSet;
 use bevy::prelude::World;
+use derive_traits::RaxiomParameters;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
-use raxiom_derive_traits::RaxiomParameters;
 pub use raxiom_plugin::RaxiomPlugin;
 
 use crate::communication::WorldRank;

@@ -1293,9 +1293,9 @@ dependencies = [
 name = "derive_custom"
 version = "0.1.0"
 dependencies = [
+ "derive_traits",
  "proc-macro2",
  "quote",
- "raxiom_derive_traits",
  "syn",
 ]
 
@@ -1310,6 +1310,13 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn",
+]
+
+[[package]]
+name = "derive_traits"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -2503,6 +2510,7 @@ dependencies = [
  "criterion",
  "derive_custom",
  "derive_more",
+ "derive_traits",
  "diman",
  "glam",
  "hdf5",
@@ -2513,16 +2521,8 @@ dependencies = [
  "once_cell",
  "paste",
  "rand",
- "raxiom_derive_traits",
  "serde",
  "serde_yaml",
-]
-
-[[package]]
-name = "raxiom_derive_traits"
-version = "0.1.0"
-dependencies = [
- "serde",
 ]
 
 [[package]]

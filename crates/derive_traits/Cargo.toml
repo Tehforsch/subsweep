@@ -1,5 +1,5 @@
 [package]
-name = "raxiom_derive_traits"
+name = "derive_traits"
 version = "0.1.0"
 edition = "2021"
 

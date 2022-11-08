@@ -41,7 +41,7 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
     let name = name.unwrap_or(ast.ident.to_string());
 
     let gen = quote! {
-        impl #impl_generics raxiom_derive_traits::Named for #type_name #type_generics #where_clause {
+        impl #impl_generics derive_traits::Named for #type_name #type_generics #where_clause {
             fn name() -> &'static str {
                 #name
             }
@@ -81,7 +81,7 @@ pub(crate) fn parameters_trait_impl(input: proc_macro::TokenStream, section_name
 
     let gen = match section_name {
         Some(section_name) => quote! {
-            impl #impl_generics ::raxiom_derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
+            impl #impl_generics ::derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
                 fn section_name() -> Option<&'static str> {
                     Some(#section_name)
                 }
@@ -89,7 +89,7 @@ pub(crate) fn parameters_trait_impl(input: proc_macro::TokenStream, section_name
         },
         None => {
             quote! {
-                impl #impl_generics ::raxiom_derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
+                impl #impl_generics ::derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
                     fn section_name() -> Option<&'static str> {
                         None
                     }

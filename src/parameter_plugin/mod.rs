@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
-use raxiom_derive_traits::RaxiomParameters;
+use derive_traits::RaxiomParameters;
 
 use self::parameter_file_contents::Override;
 pub use self::parameter_file_contents::ParameterFileContents;

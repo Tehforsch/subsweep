@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::debug;
-use raxiom_derive_traits::RaxiomParameters;
+use derive_traits::RaxiomParameters;
 use serde_yaml::Mapping;
 use serde_yaml::Value;
 
