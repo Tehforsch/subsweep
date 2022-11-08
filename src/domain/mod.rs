@@ -1,7 +1,6 @@
 use bevy::prelude::*;
+use derive_custom::raxiom_parameters;
 use mpi::traits::Equivalence;
-use serde::Deserialize;
-use serde::Serialize;
 
 mod exchange_data_plugin;
 pub mod extent;
@@ -31,9 +30,8 @@ use crate::simulation::Simulation;
 pub type QuadTree = gravity::QuadTree;
 
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
-#[derive(Serialize, Deserialize, Deref, DerefMut, Named)]
-#[name = "domain"]
-#[serde(deny_unknown_fields)]
+#[raxiom_parameters("domain")]
+#[derive(Deref, DerefMut)]
 pub struct DomainParameters {
     #[serde(default)]
     tree: QuadTreeConfig,

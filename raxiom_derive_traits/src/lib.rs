@@ -66,12 +66,3 @@ pub trait RaxiomParameters: Serialize + for<'de> Deserialize<'de> + Sync + Send 
             .unwrap_or_else(|| panic!("Called unwrap_section_name on unnamed parameter struct."))
     }
 }
-
-impl<T> RaxiomParameters for T
-where
-    T: Named + Serialize + for<'de> Deserialize<'de> + Sync + Send + 'static,
-{
-    fn section_name() -> Option<&'static str> {
-        Some(<T as Named>::name())
-    }
-}

@@ -5,7 +5,6 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use bevy::prelude::debug;
-pub use derive_custom::parameters;
 use raxiom_derive_traits::RaxiomParameters;
 
 use self::parameter_file_contents::Override;
@@ -81,22 +80,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
-    use serde::Serialize;
+    use derive_custom::raxiom_parameters;
 
     use super::ParameterFileContents;
     use super::ParameterPlugin;
-    use crate::named::Named;
     use crate::simulation::Simulation;
 
-    #[derive(Clone, Serialize, Deserialize, Default, Named)]
-    #[name = "parameters1"]
+    #[derive(Default)]
+    #[raxiom_parameters("parameters1")]
     struct Parameters1 {
         i: i32,
     }
 
-    #[derive(Serialize, Deserialize, Default, Named)]
-    #[name = "parameters2"]
+    #[derive(Default)]
+    #[raxiom_parameters("parameters2")]
     struct Parameters2 {
         s: String,
         #[serde(default)]
@@ -128,8 +125,7 @@ parameters2:
     #[test]
     #[should_panic]
     fn do_not_accept_missing_required_parameter_section() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "parameters1"]
+        #[raxiom_parameters("parameters1")]
         struct Parameters1 {
             _i: i32,
         }
@@ -141,8 +137,7 @@ parameters2:
 
     #[test]
     fn allow_leaving_out_struct_with_complete_set_of_defaults() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "parameters1"]
+        #[raxiom_parameters("parameters1")]
         struct Parameters1 {
             #[serde(default = "get_default_i")]
             i: i32,
@@ -166,8 +161,7 @@ parameters2:
 
     #[test]
     fn allow_defaults_from_type_default() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "parameters1"]
+        #[raxiom_parameters("parameters1")]
         struct Parameters1 {
             #[serde(default)]
             i: i32,

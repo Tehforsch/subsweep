@@ -51,7 +51,7 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
 }
 
 #[proc_macro_attribute]
-pub fn parameters(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn raxiom_parameters(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     parameter_attr_derive(args, input)
 }
 
@@ -65,7 +65,7 @@ pub(crate) fn parameter_attr_derive(args: proc_macro::TokenStream, input: proc_m
     let trait_impl: proc_macro2::TokenStream  = parameters_trait_impl(input.clone(), name).into();
     let input: proc_macro2::TokenStream = input.into();
     let output = quote! {
-        #[derive(Clone, Serialize, Deserialize)]
+        #[derive(Clone, serde::Serialize, serde::Deserialize)]
         #[serde(deny_unknown_fields)]
         #input
 

@@ -161,8 +161,7 @@ This is why Raxiom is unit-safe from the beginning to the end.
     ```
     These parameters are parsed and then internally translated to code units. For example, the `output` section of this parameter file is given by
     ```rust ignore
-    #[derive(Clone, Deserialize, Named)]
-    #[name = "output"]
+    #[raxiom_parameters = "output"]
     pub struct OutputParameters {
         pub time_between_snapshots: Time,
         pub time_first_snapshot: Option<Time>,

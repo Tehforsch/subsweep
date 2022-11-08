@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use serde::Deserialize;
-use serde::Serialize;
+use derive_custom::raxiom_parameters;
 
 use super::color::color_map;
 use super::draw_item::change_colors_system;
@@ -30,7 +29,8 @@ use crate::units::Temperature;
 const MOLECULAR_WEIGHT: Float = 4.0;
 
 /// Which quantity is shown via the particle color.
-#[derive(Clone, Serialize, Deserialize, Default, Named)]
+#[derive(Default)]
+#[raxiom_parameters]
 #[serde(tag = "type")]
 pub enum ColorMap {
     /// Show the rank to which the particle belongs (default).

@@ -11,17 +11,16 @@ use raxiom::prelude::*;
 use raxiom::units::Density;
 use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
-use serde::Deserialize;
-use serde::Serialize;
 
-#[parameter_section("example")]
+#[raxiom_parameters("example")]
 struct Parameters {
     num_particles: usize,
     top_fluid: FluidSpecification,
     bottom_fluid: FluidSpecification,
 }
 
-#[derive(Default, Serialize, Deserialize, Clone, Copy)]
+#[raxiom_parameters]
+#[derive(Copy)]
 struct FluidSpecification {
     density: Density,
     initial_velocity: units::Velocity,

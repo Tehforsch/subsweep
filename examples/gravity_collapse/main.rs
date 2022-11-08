@@ -12,22 +12,12 @@ use raxiom::units::Density;
 use raxiom::units::InverseTime;
 use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
-use serde::Deserialize;
-use serde::Serialize;
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[raxiom_parameters("example")]
 struct Parameters {
     num_particles: usize,
     angular_velocity_factor: InverseTime,
     density: Density,
-}
-
-// Implementing named myself here because of
-// https://github.com/rust-lang/rust/issues/54363
-impl Named for Parameters {
-    fn name() -> &'static str {
-        "example"
-    }
 }
 
 fn main() {

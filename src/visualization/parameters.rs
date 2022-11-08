@@ -1,13 +1,11 @@
-use serde::Deserialize;
-use serde::Serialize;
+use derive_custom::raxiom_parameters;
 
 use super::show_particles::ColorMap;
-use crate::parameter_plugin::parameters;
 
 /// Parameters controlling the visualization. Only required if
 /// headless is set to false
 /// in the [SimulationBuilder](crate::prelude::SimulationBuilder).
-#[parameters("visualization")]
+#[raxiom_parameters("visualization")]
 #[derive(Default)]
 pub struct VisualizationParameters {
     #[serde(default)]

@@ -183,15 +183,12 @@ impl ParameterFileContents {
 
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
-    use serde::Serialize;
+    use derive_custom::raxiom_parameters;
 
     use super::Override;
     use super::ParameterFileContents;
-    use crate::named::Named;
 
-    #[derive(Serialize, Deserialize, Named, Default)]
-    #[name = "x"]
+    #[raxiom_parameters("x")]
     struct X {
         a: usize,
         b: usize,
@@ -232,8 +229,7 @@ mod tests {
 
     #[test]
     fn r#override_omitted_section() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "s"]
+        #[raxiom_parameters("s")]
         struct Section(i32);
 
         let mut contents = ParameterFileContents::new("".into());
@@ -248,8 +244,7 @@ mod tests {
 
     #[test]
     fn r#override_omitted_field() {
-        #[derive(Serialize, Deserialize, Named)]
-        #[name = "y"]
+        #[raxiom_parameters("y")]
         struct Y {
             #[serde(default)]
             a: usize,
