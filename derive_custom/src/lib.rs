@@ -51,18 +51,18 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
 }
 
 #[proc_macro_attribute]
-pub fn parameter_section(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    section_derive(args, input)
+pub fn parameters(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    parameter_attr_derive(args, input)
 }
 
-pub(crate) fn section_derive(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub(crate) fn parameter_attr_derive(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let args: proc_macro2::TokenStream = args.into();
     let name: Option<Literal> = args.into_iter().next().map(|x| match x {
         proc_macro2::TokenTree::Literal(s) => s,
         _ => panic!("Unexpected token in parameter_section macro"),
     });
     
-    let trait_impl: proc_macro2::TokenStream  = parameters_derive(input.clone(), name).into();
+    let trait_impl: proc_macro2::TokenStream  = parameters_trait_impl(input.clone(), name).into();
     let input: proc_macro2::TokenStream = input.into();
     let output = quote! {
         #[derive(Clone, Serialize, Deserialize)]
@@ -74,15 +74,26 @@ pub(crate) fn section_derive(args: proc_macro::TokenStream, input: proc_macro::T
     output.into()
 }
 
-pub(crate) fn parameters_derive(input: proc_macro::TokenStream, section_name: Option<Literal>) -> proc_macro::TokenStream {
+pub(crate) fn parameters_trait_impl(input: proc_macro::TokenStream, section_name: Option<Literal>) -> proc_macro::TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
     let type_name = &ast.ident;
     let (impl_generics, type_generics, where_clause) = &ast.generics.split_for_impl();
 
-    let gen = quote! {
-        impl #impl_generics ::raxiom_derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
-            fn section_name() -> Option<&'static str> {
-                Some(#section_name)
+    let gen = match section_name {
+        Some(section_name) => quote! {
+            impl #impl_generics ::raxiom_derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
+                fn section_name() -> Option<&'static str> {
+                    Some(#section_name)
+                }
+            }
+        },
+        None => {
+            quote! {
+                impl #impl_generics ::raxiom_derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
+                    fn section_name() -> Option<&'static str> {
+                        None
+                    }
+                }
             }
         }
     };

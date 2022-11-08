@@ -1,4 +1,4 @@
-pub use derive_custom::parameter_section;
+pub use derive_custom::parameters;
 
 pub use crate::communication::WorldRank;
 pub use crate::communication::WorldSize;
