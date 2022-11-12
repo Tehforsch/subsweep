@@ -14,7 +14,9 @@ use crate::components::InternalEnergy;
 use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Pressure;
+use crate::components::SmoothingLength;
 use crate::named::Named;
+use crate::parameters::BoxSize;
 use crate::prelude::Float;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
@@ -47,6 +49,9 @@ pub enum ColorMap {
     Mass {
         scale: units::Mass,
     },
+    NumParticles {
+        scale: usize,
+    },
 }
 
 #[derive(Named)]
@@ -72,6 +77,8 @@ impl RaxiomPlugin for ShowParticlesPlugin {
                     .with_system(color_particles_by_mass_system)
                     .in_ambiguity_set(ColorMapAmbiguitySet)
                     .with_system(color_particles_by_pressure_system)
+                    .in_ambiguity_set(ColorMapAmbiguitySet)
+                    .with_system(color_particles_by_num_particles_system)
                     .in_ambiguity_set(ColorMapAmbiguitySet)
                     .after(insert_meshes_system::<DrawCircle>),
             );
@@ -105,6 +112,20 @@ fn color_particles_by_pressure_system(
     if let ColorMap::Pressure { scale } = visualization_parameters.color_map {
         for (mut circle, pressure) in particles.iter_mut() {
             circle.color = RColor::reds((**pressure / scale).value());
+        }
+    }
+}
+
+fn color_particles_by_num_particles_system(
+    visualization_parameters: Res<VisualizationParameters>,
+    mut particles: Particles<(&mut DrawCircle, &Position, &SmoothingLength)>,
+    tree: Res<crate::hydrodynamics::QuadTree>,
+    box_size: Res<BoxSize>,
+) {
+    if let ColorMap::NumParticles { scale } = visualization_parameters.color_map {
+        for (mut circle, pos, l) in particles.iter_mut() {
+            let num_neighbours = tree.get_particles_in_radius(&box_size, pos, l).len();
+            circle.color = RColor::reds(num_neighbours as f64 / scale as f64);
         }
     }
 }
