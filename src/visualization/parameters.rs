@@ -16,4 +16,6 @@ pub struct VisualizationParameters {
     pub color_map: ColorMap,
     #[serde(default)]
     pub show_halo_particles: bool,
+    #[serde(default)]
+    pub show_box_size: bool,
 }

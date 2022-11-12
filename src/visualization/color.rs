@@ -17,6 +17,7 @@ impl RColor {
     pub const RED: RColor = RColor::rgb(1.0, 0.0, 0.0);
     pub const GREEN: RColor = RColor::rgb(0.0, 1.0, 0.0);
     pub const YELLOW: RColor = RColor::rgb(1.0, 1.0, 0.0);
+    pub const BLACK: RColor = RColor::rgb(0.0, 0.0, 0.0);
 
     pub const fn rgb(r: f32, g: f32, b: f32) -> Self {
         Self {

@@ -4,6 +4,7 @@ pub(super) mod color;
 mod draw_item;
 pub mod parameters;
 pub mod remote;
+mod show_box_size;
 mod show_halo_particles;
 mod show_particles;
 
@@ -20,6 +21,7 @@ pub use self::draw_item::DrawItem;
 use self::draw_item::DrawItemPlugin;
 pub use self::draw_item::Pixels;
 pub use self::parameters::VisualizationParameters;
+use self::show_box_size::ShowBoxSizePlugin;
 use self::show_halo_particles::ShowHaloParticlesPlugin;
 pub use self::show_particles::ShowParticlesPlugin;
 use crate::domain::determine_global_extent_system;
@@ -51,7 +53,8 @@ impl RaxiomPlugin for VisualizationPlugin {
         sim.add_plugin(DrawItemPlugin::<DrawRect>::default())
             .add_plugin(DrawItemPlugin::<DrawCircle>::default())
             .add_plugin(ShowParticlesPlugin)
-            .add_plugin(ShowHaloParticlesPlugin);
+            .add_plugin(ShowHaloParticlesPlugin)
+            .add_plugin(ShowBoxSizePlugin);
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
