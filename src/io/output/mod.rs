@@ -42,10 +42,10 @@ fn write_used_parameters_system(
     parameters: Res<OutputParameters>,
 ) {
     fs::write(
-        &parameters
+        parameters
             .output_dir
             .join(&parameters.used_parameters_filename),
-        &parameter_file_contents.contents(),
+        parameter_file_contents.contents(),
     )
     .unwrap_or_else(|e| {
         panic!(
@@ -72,7 +72,7 @@ fn make_output_dirs_system(parameters: Res<OutputParameters>) {
     }
     fs::create_dir_all(&parameters.output_dir)
         .unwrap_or_else(|_| panic!("Failed to create output dir: {:?}", parameters.output_dir));
-    fs::create_dir_all(&parameters.snapshot_dir()).unwrap_or_else(|_| {
+    fs::create_dir_all(parameters.snapshot_dir()).unwrap_or_else(|_| {
         panic!(
             "Failed to create snapshots dir: {:?}",
             parameters.snapshot_dir()
