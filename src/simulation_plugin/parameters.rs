@@ -20,9 +20,9 @@ pub struct SimulationParameters {
 
 /// The box size of the simulation. Periodic boundary conditions apply
 /// beyond this box, meaning that the positions of particles outside
-/// of this bax are wrapped back into it.
+/// of this box are wrapped back into it.
 #[raxiom_parameters("box_size")]
-#[derive(From, Into, Deref, DerefMut)]
+#[derive(From, Into, Deref, DerefMut, Debug)]
 pub struct BoxSize(Extent);
 
 impl BoxSize {

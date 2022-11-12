@@ -6,7 +6,7 @@ use mpi::traits::Equivalence;
 use self::hydro_components::InternalEnergy;
 use self::hydro_components::Pressure;
 use self::hydro_components::SmoothingLength;
-use self::quadtree::bounding_boxes_overlap;
+use self::quadtree::bounding_boxes_overlap_periodic;
 use self::quadtree::construct_quad_tree_system;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Rank;
@@ -20,6 +20,7 @@ use crate::domain;
 use crate::domain::extent::Extent;
 use crate::domain::TopLevelIndices;
 use crate::named::Named;
+use crate::parameters::BoxSize;
 use crate::performance_parameters::PerformanceParameters;
 use crate::prelude::LocalParticle;
 use crate::prelude::MVec;
@@ -226,6 +227,7 @@ fn halo_exchange_system(
     mut communicator: SyncCommunicator<RemoteParticleData>,
     indices: Res<TopLevelIndices>,
     tree: Res<domain::QuadTree>,
+    box_size: Res<BoxSize>,
     world_rank: Res<WorldRank>,
 ) {
     for (entity, pos, smoothing_length, density, pressure, mass, internal_energy, velocity) in
@@ -239,7 +241,8 @@ fn halo_exchange_system(
                 continue;
             }
             let tree = &tree[index];
-            if bounding_boxes_overlap(
+            if bounding_boxes_overlap_periodic(
+                &box_size,
                 pos,
                 &(MVec::ONE * **smoothing_length),
                 &tree.extent.center(),
@@ -320,13 +323,16 @@ fn compute_pressure_and_density_system(
     )>,
     masses: HydroParticles<&Mass>,
     tree: Res<QuadTree>,
+    box_size: Res<BoxSize>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     pressures.par_for_each_mut(
         performance_parameters.batch_size(),
         |(mut pressure, mut density, internal_energy, smoothing_length, pos, mass)| {
             **density = Density::zero();
-            for particle in tree.get_particles_in_radius(pos, smoothing_length).iter() {
+            let particles = tree.get_particles_in_radius(&box_size, pos, smoothing_length);
+            debug_assert!(!particles.is_empty());
+            for particle in particles.iter() {
                 let mass2 = masses.get(particle.entity).unwrap();
                 let distance = particle.pos.distance(pos);
                 **density += **mass2 * kernel(distance, **smoothing_length);
@@ -358,6 +364,7 @@ fn compute_energy_change_system(
         &SmoothingLength,
     )>,
     tree: Res<QuadTree>,
+    box_size: Res<BoxSize>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     particles1.par_for_each_mut(
@@ -376,7 +383,7 @@ fn compute_energy_change_system(
                 / crate::units::Mass::one_unchecked()
                 / crate::units::Time::one_unchecked();
             for particle in tree
-                .get_particles_in_radius(position1, smoothing_length1)
+                .get_particles_in_radius(&box_size, position1, smoothing_length1)
                 .iter()
             {
                 let (position2, velocity2, pressure2, density2, mass2, smoothing_length2) =
@@ -419,6 +426,7 @@ fn compute_forces_system(
         &SmoothingLength,
     )>,
     tree: Res<QuadTree>,
+    box_size: Res<BoxSize>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     particles1.par_for_each_mut(
@@ -426,7 +434,7 @@ fn compute_forces_system(
         |(mut velocity1, position1, smoothing_length1, pressure1, density1, timestep)| {
             let mut d_vel = VecAcceleration::zero();
             for particle in tree
-                .get_particles_in_radius(position1, smoothing_length1)
+                .get_particles_in_radius(&box_size, position1, smoothing_length1)
                 .iter()
             {
                 let (position2, pressure2, density2, mass2, smoothing_length2) =
@@ -445,9 +453,6 @@ fn compute_forces_system(
                     * **mass2
                     * ((**pressure1 / density1.squared()) + (**pressure2 / density2.squared()))
                     * kernel_derivative;
-                if density2.value_unchecked() == 0.0 && pressure2.value_unchecked() == 0.0 {
-                    panic!()
-                }
             }
             **velocity1 += d_vel * **timestep;
         },

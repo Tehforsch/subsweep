@@ -150,8 +150,6 @@ pub mod tests {
             Entity::from_raw(data)
         };
         let assert_contains = |updated: &Vec<(Entity, u32)>, entity_id: u32, value: u32| {
-            dbg!(updated);
-            dbg!(entity_id, value);
             assert!(updated
                 .iter()
                 .any(|item| item.0 == Entity::from_raw(entity_id) && item.1 == value))

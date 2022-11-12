@@ -32,3 +32,16 @@ pub fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64,
         y.value_unchecked()
     )
 }
+
+#[cfg(not(feature = "2d"))]
+pub fn assert_vec_is_close<const U: Dimension>(
+    x: Quantity<crate::prelude::MVec, U>,
+    y: Quantity<crate::prelude::MVec, U>,
+) {
+    assert!(
+        (x - y).length().value_unchecked() < f64::EPSILON,
+        "{} {}",
+        x.value_unchecked(),
+        y.value_unchecked()
+    )
+}

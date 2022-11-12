@@ -112,7 +112,7 @@ fn integrate_motion_system(
 ) {
     for (mut pos, velocity, timestep) in query.iter_mut() {
         **pos += **velocity * **timestep;
-        pos.periodic_wrap(&box_size)
+        **pos = pos.periodic_wrap(&box_size);
     }
 }
 
