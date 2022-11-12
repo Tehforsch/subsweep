@@ -30,7 +30,7 @@ fn minimize_component(v: Float, length: Float) -> Float {
     } else if v.abs() < (v - length).abs() {
         v
     } else {
-        length - v
+        v - length
     }
 }
 
@@ -91,6 +91,7 @@ impl SimulationBox {
 #[cfg(not(feature = "2d"))]
 mod tests {
     use crate::domain::Extent;
+    use crate::gravity::tests::get_particles;
     use crate::parameters::SimulationBox;
     use crate::test_utils::assert_is_close;
     use crate::test_utils::assert_vec_is_close;
@@ -156,5 +157,23 @@ mod tests {
         check_dist(&box_, (1.1, 0.0, 0.0), (0.9, 0.0, 0.0), 0.2);
         check_dist(&box_, (0.0, 2.1, 0.0), (0.0, 1.9, 0.0), 0.2);
         check_dist(&box_, (0.0, 0.0, 3.1), (0.0, 0.0, 2.9), 0.2);
+    }
+
+    #[test]
+    fn periodic_distance_is_symmetric() {
+        let particles = get_particles(5, 5);
+        let box_: SimulationBox = Extent::new(
+            VecLength::meters(-1.0, -1.0, -1.0),
+            VecLength::meters(1.0, 2.0, 3.0),
+        )
+        .into();
+        for p1 in particles.iter() {
+            for p2 in particles.iter() {
+                let d1 = box_.periodic_distance_vec(&p1.pos, &p2.pos);
+                let d2 = box_.periodic_distance_vec(&p2.pos, &p1.pos);
+                dbg!(&p1.pos, &p2.pos, d1, d2);
+                assert_vec_is_close(d1, -d2);
+            }
+        }
     }
 }
