@@ -10,12 +10,12 @@ use criterion::Throughput;
 use raxiom::ics::ConstantDensity;
 use raxiom::ics::Resolution;
 use raxiom::ics::Sampler;
-use raxiom::parameters::BoxSize;
 use raxiom::parameters::DomainParameters;
 use raxiom::parameters::HydrodynamicsParameters;
 use raxiom::parameters::InitialGasEnergy;
 use raxiom::parameters::PerformanceParameters;
 use raxiom::parameters::QuadTreeConfig;
+use raxiom::parameters::SimulationBox;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::TimestepParameters;
 use raxiom::prelude::HydrodynamicsPlugin;
@@ -56,7 +56,7 @@ fn setup_hydro_sim(num_particles: usize) -> Simulation {
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(PerformanceParameters::default())
         .add_parameters_explicitly(DomainParameters::default())
-        .add_parameters_explicitly(BoxSize::cube_from_side_length(Length::meters(100.0)))
+        .add_parameters_explicitly(SimulationBox::cube_from_side_length(Length::meters(100.0)))
         .add_parameters_explicitly(HydrodynamicsParameters {
             min_smoothing_length: Length::meters(1.0),
             initial_gas_energy: InitialGasEnergy::TemperatureAndMolecularWeight {
@@ -75,7 +75,7 @@ fn setup_hydro_sim(num_particles: usize) -> Simulation {
     SimulationBuilder::bench()
         .build_with_sim(&mut sim)
         .add_startup_system(
-            move |commands: Commands, rank: Res<WorldRank>, box_size: Res<BoxSize>| {
+            move |commands: Commands, rank: Res<WorldRank>, box_size: Res<SimulationBox>| {
                 initial_conditions_system(commands, rank, box_size, num_particles)
             },
         )
@@ -86,7 +86,7 @@ fn setup_hydro_sim(num_particles: usize) -> Simulation {
 fn initial_conditions_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
-    box_size: Res<BoxSize>,
+    box_size: Res<SimulationBox>,
     num_particles: usize,
 ) {
     if !rank.is_main() {

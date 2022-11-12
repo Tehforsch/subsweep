@@ -17,9 +17,9 @@ pub use self::velocity_profile::ZeroVelocity;
 use crate::components;
 use crate::components::Position;
 use crate::components::Velocity;
-use crate::parameters::BoxSize;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
+use crate::prelude::SimulationBox;
 use crate::rand::gen_range;
 use crate::units::Density;
 use crate::units::Mass;
@@ -35,7 +35,7 @@ pub struct Sample {
 pub struct Sampler {
     density_profile: Box<dyn DensityProfile>,
     velocity_profile: Box<dyn VelocityProfile>,
-    box_size: BoxSize,
+    box_size: SimulationBox,
     num_samples: usize,
     resolution: Resolution,
     rng: StdRng,
@@ -44,7 +44,7 @@ pub struct Sampler {
 impl Sampler {
     pub fn new(
         density_profile: impl DensityProfile + 'static,
-        box_size: &BoxSize,
+        box_size: &SimulationBox,
         resolution: Resolution,
     ) -> Self {
         Self {

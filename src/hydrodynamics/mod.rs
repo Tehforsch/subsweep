@@ -20,11 +20,11 @@ use crate::domain;
 use crate::domain::extent::Extent;
 use crate::domain::TopLevelIndices;
 use crate::named::Named;
-use crate::parameters::BoxSize;
 use crate::performance_parameters::PerformanceParameters;
 use crate::prelude::LocalParticle;
 use crate::prelude::MVec;
 use crate::prelude::Particles;
+use crate::prelude::SimulationBox;
 use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -108,13 +108,13 @@ fn kernel(r: Length, h: Length) -> NumberDensity {
 
 #[cfg(feature = "2d")]
 fn symmetric_kernel_derivative(
-    box_size: &BoxSize,
+    box_: &SimulationBox,
     r1: VecLength,
     r2: VecLength,
     h1: Length,
     h2: Length,
 ) -> VecQuantity<{ Dimension { length: -3, ..NONE } }> {
-    let dist = r1.periodic_distance_vec(&r2, box_size);
+    let dist = box_.periodic_distance_vec(&r1, &r2);
     let length = dist.length();
     dist / length
         * (48.0 / (7.0 * PI * h1.powi::<3>()) * kernel_derivative_function(length, h1)
@@ -123,13 +123,13 @@ fn symmetric_kernel_derivative(
 
 #[cfg(not(feature = "2d"))]
 fn symmetric_kernel_derivative(
-    box_size: &BoxSize,
+    box_: &SimulationBox,
     r1: VecLength,
     r2: VecLength,
     h1: Length,
     h2: Length,
 ) -> VecQuantity<{ Dimension { length: -4, ..NONE } }> {
-    let dist = r1.periodic_distance_vec(&r2, box_size);
+    let dist = box_.periodic_distance_vec(&r1, &r2);
     let length = dist.length();
     dist / length
         * (48.0 / (PI * h1.powi::<4>()) * kernel_derivative_function(length, h1)
@@ -229,7 +229,7 @@ fn halo_exchange_system(
     mut communicator: SyncCommunicator<RemoteParticleData>,
     indices: Res<TopLevelIndices>,
     tree: Res<domain::QuadTree>,
-    box_size: Res<BoxSize>,
+    box_: Res<SimulationBox>,
     world_rank: Res<WorldRank>,
 ) {
     for (entity, pos, smoothing_length, density, pressure, mass, internal_energy, velocity) in
@@ -244,7 +244,7 @@ fn halo_exchange_system(
             }
             let tree = &tree[index];
             if bounding_boxes_overlap_periodic(
-                &box_size,
+                &box_,
                 pos,
                 &(MVec::ONE * **smoothing_length),
                 &tree.extent.center(),
@@ -325,18 +325,18 @@ fn compute_pressure_and_density_system(
     )>,
     masses: HydroParticles<&Mass>,
     tree: Res<QuadTree>,
-    box_size: Res<BoxSize>,
+    box_: Res<SimulationBox>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     pressures.par_for_each_mut(
         performance_parameters.batch_size(),
         |(mut pressure, mut density, internal_energy, smoothing_length, pos, mass)| {
             **density = Density::zero();
-            let particles = tree.get_particles_in_radius(&box_size, pos, smoothing_length);
+            let particles = tree.get_particles_in_radius(&box_, pos, smoothing_length);
             debug_assert!(!particles.is_empty());
             for particle in particles.iter() {
                 let mass2 = masses.get(particle.entity).unwrap();
-                let distance = particle.pos.periodic_distance(pos, &box_size);
+                let distance = box_.periodic_distance(&particle.pos, pos);
                 **density += **mass2 * kernel(distance, **smoothing_length);
             }
             // P = (gamma - 1) * rho * u
@@ -366,7 +366,7 @@ fn compute_energy_change_system(
         &SmoothingLength,
     )>,
     tree: Res<QuadTree>,
-    box_size: Res<BoxSize>,
+    box_: Res<SimulationBox>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     particles1.par_for_each_mut(
@@ -385,7 +385,7 @@ fn compute_energy_change_system(
                 / crate::units::Mass::one_unchecked()
                 / crate::units::Time::one_unchecked();
             for particle in tree
-                .get_particles_in_radius(&box_size, position1, smoothing_length1)
+                .get_particles_in_radius(&box_, position1, smoothing_length1)
                 .iter()
             {
                 let (position2, velocity2, pressure2, density2, mass2, smoothing_length2) =
@@ -395,7 +395,7 @@ fn compute_energy_change_system(
                 }
                 let relative_velocity = **velocity1 - **velocity2;
                 let kernel_derivative = symmetric_kernel_derivative(
-                    &box_size,
+                    &box_,
                     **position1,
                     **position2,
                     **smoothing_length1,
@@ -429,7 +429,7 @@ fn compute_forces_system(
         &SmoothingLength,
     )>,
     tree: Res<QuadTree>,
-    box_size: Res<BoxSize>,
+    box_: Res<SimulationBox>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     particles1.par_for_each_mut(
@@ -437,7 +437,7 @@ fn compute_forces_system(
         |(mut velocity1, position1, smoothing_length1, pressure1, density1, timestep)| {
             let mut d_vel = VecAcceleration::zero();
             for particle in tree
-                .get_particles_in_radius(&box_size, position1, smoothing_length1)
+                .get_particles_in_radius(&box_, position1, smoothing_length1)
                 .iter()
             {
                 let (position2, pressure2, density2, mass2, smoothing_length2) =
@@ -446,7 +446,7 @@ fn compute_forces_system(
                     continue;
                 }
                 let kernel_derivative = symmetric_kernel_derivative(
-                    &box_size,
+                    &box_,
                     **position1,
                     **position2,
                     **smoothing_length1,

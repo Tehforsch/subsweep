@@ -5,13 +5,13 @@ use criterion::BenchmarkId;
 use criterion::Criterion;
 use raxiom::hydrodynamics::quadtree::LeafData;
 use raxiom::hydrodynamics::QuadTree;
-use raxiom::parameters::BoxSize;
 use raxiom::prelude::Extent;
+use raxiom::prelude::SimulationBox;
 use raxiom::quadtree::QuadTreeConfig;
 use raxiom::units::Length;
 use raxiom::units::VecLength;
 
-fn quadtree_radius_search(quadtree: &QuadTree, box_size: &BoxSize) {
+fn quadtree_radius_search(quadtree: &QuadTree, box_size: &SimulationBox) {
     quadtree.get_particles_in_radius(
         box_size,
         &VecLength::meters(0.5, 0.5, 0.5),
@@ -19,7 +19,7 @@ fn quadtree_radius_search(quadtree: &QuadTree, box_size: &BoxSize) {
     );
 }
 
-fn get_quadtree_and_box_size(min_depth: usize) -> (QuadTree, BoxSize) {
+fn get_quadtree_and_box_size(min_depth: usize) -> (QuadTree, SimulationBox) {
     let min = VecLength::meters(0.0, 0.0, 0.0);
     let max = VecLength::meters(1.0, 1.0, 1.0);
     let extent = Extent::new(min, max);

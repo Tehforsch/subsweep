@@ -6,9 +6,9 @@ use super::DrawRect;
 use super::RColor;
 use super::VisualizationParameters;
 use crate::named::Named;
-use crate::parameters::BoxSize;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
+use crate::simulation_box::SimulationBox;
 
 #[derive(Named)]
 pub(super) struct ShowBoxSizePlugin;
@@ -27,7 +27,7 @@ impl RaxiomPlugin for ShowBoxSizePlugin {
 #[derive(Component)]
 struct BoxSizeOutline;
 
-fn show_box_size_system(mut commands: Commands, box_size: Res<BoxSize>) {
+fn show_box_size_system(mut commands: Commands, box_size: Res<SimulationBox>) {
     commands
         .spawn()
         .insert(BoxSizeOutline)

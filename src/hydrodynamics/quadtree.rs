@@ -5,7 +5,7 @@ use super::HydroParticles;
 use crate::components::Position;
 use crate::components::SmoothingLength;
 use crate::domain::GlobalExtent;
-use crate::parameters::BoxSize;
+use crate::parameters::SimulationBox;
 use crate::prelude::MVec;
 use crate::quadtree::LeafDataType;
 use crate::quadtree::NodeDataType;
@@ -47,13 +47,13 @@ fn relative_bounding_box_overlap(dist: VecLength, total_size: VecLength) -> bool
 /// the center coordinates pos1 and pos2 and the side lengths
 /// size1 and size2 overlap in a periodic box of size box_size
 pub(super) fn bounding_boxes_overlap_periodic(
-    box_size: &BoxSize,
+    box_: &SimulationBox,
     pos1: &VecLength,
     size1: &VecLength,
     pos2: &VecLength,
     size2: &VecLength,
 ) -> bool {
-    let dist = pos1.periodic_distance_vec(pos2, box_size);
+    let dist = box_.periodic_distance_vec(pos1, pos2);
     let total_size = *size1 + *size2;
     relative_bounding_box_overlap(dist, total_size)
 }
@@ -76,7 +76,7 @@ pub fn bounding_boxes_overlap_non_periodic(
 fn add_particles_in_box<'a>(
     particles: &mut Vec<&'a LeafData>,
     tree: &'a QuadTree,
-    box_size: &BoxSize,
+    box_size: &SimulationBox,
     pos: &VecLength,
     side_length: &Length,
 ) {
@@ -104,7 +104,7 @@ fn add_particles_in_box<'a>(
 
 fn get_particles_in_box<'a>(
     tree: &'a QuadTree,
-    box_size: &BoxSize,
+    box_size: &SimulationBox,
     pos: &VecLength,
     side_length: &Length,
 ) -> Vec<&'a LeafData> {
@@ -114,19 +114,19 @@ fn get_particles_in_box<'a>(
 }
 
 fn particles_should_interact(
-    box_size: &BoxSize,
+    box_: &SimulationBox,
     pos1: &VecLength,
     pos2: &VecLength,
     radius1: &Length,
     radius2: &Length,
 ) -> bool {
-    pos1.periodic_distance(pos2, box_size) < radius1.max(*radius2)
+    box_.periodic_distance(pos1, pos2) < radius1.max(*radius2)
 }
 
 impl QuadTree {
     pub fn get_particles_in_radius<'a>(
         &'a self,
-        box_size: &BoxSize,
+        box_size: &SimulationBox,
         pos: &VecLength,
         radius: &Length,
     ) -> Vec<&'a LeafData> {
@@ -171,14 +171,14 @@ mod tests {
     use super::QuadTree;
     use crate::domain::extent::Extent;
     use crate::gravity::tests::get_particles;
-    use crate::parameters::BoxSize;
+    use crate::parameters::SimulationBox;
     use crate::quadtree::QuadTreeConfig;
     use crate::units::Length;
     use crate::units::VecLength;
 
     pub(super) fn direct_neighbour_search<'a>(
         particles: &'a [LeafData],
-        box_size: &BoxSize,
+        box_size: &SimulationBox,
         pos: &VecLength,
         radius: &Length,
     ) -> Vec<&'a LeafData> {
@@ -246,7 +246,7 @@ mod tests {
                 v
             );
         };
-        let box_size = BoxSize::cube_from_side_length(Length::meters(1.0));
+        let box_size = SimulationBox::cube_from_side_length(Length::meters(1.0));
         test(&box_size, (0.1, 0.1, 0.1), (0.05, 0.05, 0.05), (0.2, 0.2, 0.2), (0.0, 0.0, 0.0), false);
         test(&box_size, (0.1, 0.1, 0.1), (0.15, 0.15, 0.15), (0.2, 0.2, 0.2), (0.0, 0.0, 0.0), true);
         test(&box_size, (0.1, 0.1, 0.1), (0.1, 0.1, 0.1), (0.9, 0.9, 0.9), (0.2, 0.2, 0.2), true);

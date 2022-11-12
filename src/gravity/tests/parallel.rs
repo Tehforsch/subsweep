@@ -81,7 +81,7 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
     use crate::domain::Extent;
     use crate::io::output::ShouldWriteOutput;
-    use crate::simulation_plugin::BoxSize;
+    use crate::simulation_box::SimulationBox;
     use crate::stages::SimulationStagesPlugin;
     use crate::timestep::TimestepParameters;
     use crate::units::Dimensionless;
@@ -93,7 +93,7 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
             max_timestep: Time::seconds(1.0),
             num_levels: 1,
         })
-        .add_parameters_explicitly::<BoxSize>(
+        .add_parameters_explicitly::<SimulationBox>(
             Extent::cube_from_side_length(Length::meters(100.0)).into(),
         )
         .add_parameters_explicitly(GravityParameters {

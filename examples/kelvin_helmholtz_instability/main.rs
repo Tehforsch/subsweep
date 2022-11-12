@@ -6,7 +6,6 @@ use raxiom::ics::DensityProfile;
 use raxiom::ics::Resolution;
 use raxiom::ics::Sampler;
 use raxiom::ics::VelocityProfile;
-use raxiom::parameters::BoxSize;
 use raxiom::prelude::*;
 use raxiom::units::Density;
 use raxiom::units::VecLength;
@@ -60,7 +59,7 @@ fn initial_conditions_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
     parameters: Res<Parameters>,
-    box_size: Res<BoxSize>,
+    box_size: Res<SimulationBox>,
 ) {
     if !rank.is_main() {
         return;

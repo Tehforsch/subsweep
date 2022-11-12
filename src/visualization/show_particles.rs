@@ -16,12 +16,12 @@ use crate::components::Position;
 use crate::components::Pressure;
 use crate::components::SmoothingLength;
 use crate::named::Named;
-use crate::parameters::BoxSize;
 use crate::prelude::Float;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
+use crate::simulation_box::SimulationBox;
 use crate::units;
 use crate::units::Dimensionless;
 use crate::units::EnergyPerMass;
@@ -120,7 +120,7 @@ fn color_particles_by_num_particles_system(
     visualization_parameters: Res<VisualizationParameters>,
     mut particles: Particles<(&mut DrawCircle, &Position, &SmoothingLength)>,
     tree: Res<crate::hydrodynamics::QuadTree>,
-    box_size: Res<BoxSize>,
+    box_size: Res<SimulationBox>,
 ) {
     if let ColorMap::NumParticles { scale } = visualization_parameters.color_map {
         for (mut circle, pos, l) in particles.iter_mut() {
