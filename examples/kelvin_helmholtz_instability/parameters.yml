@@ -1,5 +1,5 @@
 timestep:
-  max_timestep: 1e-4 s
+  max_timestep: 2e-5 s
 hydrodynamics:
   min_smoothing_length: 0.5 m
   initial_gas_energy:
@@ -11,16 +11,15 @@ domain:
     min_depth: 4
     max_num_particles_per_leaf: 1
 example:
-  num_particles: 3000
+  num_particles: 10000
   top_fluid:
     density: 0.05 kg m^-2
-    initial_velocity: 0 m s^-1
+    initial_velocity: 150 m s^-1
   bottom_fluid:
     density: 0.05 kg m^-2
-    initial_velocity: 0 m s^-1
+    initial_velocity: -150 m s^-1
 box_size: (8 8) m
 visualization:
   show_particles: True
   color_map:
-    type: Pressure
-    scale: 1e5 N m^-1
+    type: Unchanged

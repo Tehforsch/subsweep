@@ -1,12 +1,14 @@
 mod density_profile;
+mod regular;
 mod resolution;
 mod velocity_profile;
 
-use bevy::ecs::system::EntityCommands;
 use bevy::prelude::Commands;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
+pub use regular::IntegerTuple;
+pub use regular::RegularSampler;
 
 pub use self::density_profile::ConstantDensity;
 pub use self::density_profile::DensityProfile;
@@ -41,6 +43,20 @@ pub struct Sampler {
     rng: StdRng,
 }
 
+impl Sample {
+    fn spawn(self, commands: &mut Commands, velocity_profile: &dyn VelocityProfile) {
+        for pos in self.positions.into_iter() {
+            let velocity = velocity_profile.velocity(pos);
+            commands.spawn_bundle((
+                LocalParticle,
+                Position(pos),
+                components::Mass(self.mass_per_particle),
+                Velocity(velocity),
+            ));
+        }
+    }
+}
+
 impl Sampler {
     pub fn new(
         density_profile: impl DensityProfile + 'static,
@@ -64,26 +80,8 @@ impl Sampler {
         }
     }
 
-    pub fn spawn(self, commands: &mut Commands) {
-        self.spawn_with(commands, |_, _, _| {})
-    }
-
-    pub fn spawn_with(
-        mut self,
-        commands: &mut Commands,
-        spawn_additional_components: impl Fn(&mut EntityCommands, VecLength, Mass),
-    ) {
-        let sample = self.sample();
-        for pos in sample.positions.into_iter() {
-            let velocity = self.velocity_profile.velocity(pos);
-            let mut entity_commands = commands.spawn_bundle((
-                LocalParticle,
-                Position(pos),
-                components::Mass(sample.mass_per_particle),
-                Velocity(velocity),
-            ));
-            spawn_additional_components(&mut entity_commands, pos, sample.mass_per_particle);
-        }
+    pub fn spawn(mut self, commands: &mut Commands) {
+        self.sample().spawn(commands, &*self.velocity_profile)
     }
 
     fn sample(&mut self) -> Sample {

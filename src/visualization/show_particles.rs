@@ -34,6 +34,7 @@ const MOLECULAR_WEIGHT: Float = 4.0;
 #[derive(Default)]
 #[raxiom_parameters]
 #[serde(tag = "type")]
+#[serde(rename_all = "lowercase")]
 pub enum ColorMap {
     /// Show the rank to which the particle belongs (default).
     #[default]

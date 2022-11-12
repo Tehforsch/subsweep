@@ -52,6 +52,10 @@ name = "kelvin_helmholtz_instability"
 required-features = ["mpi", "2d"]
 
 [[example]]
+name = "1d_wave"
+required-features = ["mpi", "2d"] # This is slightly ironic, but this test is only effectively 1d
+
+[[example]]
 name = "gravity_collapse"
 required-features = ["mpi"]
 

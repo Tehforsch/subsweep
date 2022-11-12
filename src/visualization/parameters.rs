@@ -16,6 +16,10 @@ pub struct VisualizationParameters {
     pub color_map: ColorMap,
     #[serde(default)]
     pub show_halo_particles: bool,
-    #[serde(default)]
+    #[serde(default = "default_show_box_size")]
     pub show_box_size: bool,
+}
+
+fn default_show_box_size() -> bool {
+    true
 }
