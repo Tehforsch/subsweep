@@ -108,12 +108,13 @@ fn kernel(r: Length, h: Length) -> NumberDensity {
 
 #[cfg(feature = "2d")]
 fn symmetric_kernel_derivative(
+    box_size: &BoxSize,
     r1: VecLength,
     r2: VecLength,
     h1: Length,
     h2: Length,
 ) -> VecQuantity<{ Dimension { length: -3, ..NONE } }> {
-    let dist = r1 - r2;
+    let dist = r1.periodic_distance_vec(&r2, box_size);
     let length = dist.length();
     dist / length
         * (48.0 / (7.0 * PI * h1.powi::<3>()) * kernel_derivative_function(length, h1)
@@ -122,12 +123,13 @@ fn symmetric_kernel_derivative(
 
 #[cfg(not(feature = "2d"))]
 fn symmetric_kernel_derivative(
+    box_size: &BoxSize,
     r1: VecLength,
     r2: VecLength,
     h1: Length,
     h2: Length,
 ) -> VecQuantity<{ Dimension { length: -4, ..NONE } }> {
-    let dist = r1 - r2;
+    let dist = r1.periodic_distance_vec(&r2, box_size);
     let length = dist.length();
     dist / length
         * (48.0 / (PI * h1.powi::<4>()) * kernel_derivative_function(length, h1)
@@ -334,7 +336,7 @@ fn compute_pressure_and_density_system(
             debug_assert!(!particles.is_empty());
             for particle in particles.iter() {
                 let mass2 = masses.get(particle.entity).unwrap();
-                let distance = particle.pos.distance(pos);
+                let distance = particle.pos.periodic_distance(pos, &box_size);
                 **density += **mass2 * kernel(distance, **smoothing_length);
             }
             // P = (gamma - 1) * rho * u
@@ -393,6 +395,7 @@ fn compute_energy_change_system(
                 }
                 let relative_velocity = **velocity1 - **velocity2;
                 let kernel_derivative = symmetric_kernel_derivative(
+                    &box_size,
                     **position1,
                     **position2,
                     **smoothing_length1,
@@ -443,6 +446,7 @@ fn compute_forces_system(
                     continue;
                 }
                 let kernel_derivative = symmetric_kernel_derivative(
+                    &box_size,
                     **position1,
                     **position2,
                     **smoothing_length1,
