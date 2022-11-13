@@ -11,6 +11,20 @@ pub struct IntegerTuple {
     pub z: usize,
 }
 
+#[cfg(feature = "2d")]
+impl From<(usize, usize)> for IntegerTuple {
+    fn from((x, y): (usize, usize)) -> Self {
+        Self { x, y }
+    }
+}
+
+#[cfg(not(feature = "2d"))]
+impl From<(usize, usize, usize)> for IntegerTuple {
+    fn from((x, y, z): (usize, usize, usize)) -> Self {
+        Self { x, y, z }
+    }
+}
+
 impl IntegerTuple {
     #[cfg(feature = "2d")]
     pub fn new(x: usize, y: usize) -> Self {
@@ -53,9 +67,9 @@ impl Sampler for RegularSampler {
 }
 
 impl RegularSampler {
-    pub fn new(num_particles_per_dimension: IntegerTuple) -> Self {
+    pub fn new(num_particles_per_dimension: impl Into<IntegerTuple>) -> Self {
         Self {
-            num_particles_per_dimension,
+            num_particles_per_dimension: num_particles_per_dimension.into(),
         }
     }
 
