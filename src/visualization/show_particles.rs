@@ -14,14 +14,12 @@ use crate::components::InternalEnergy;
 use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Pressure;
-use crate::components::SmoothingLength;
 use crate::named::Named;
 use crate::prelude::Float;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
-use crate::simulation_box::SimulationBox;
 use crate::units;
 use crate::units::Dimensionless;
 use crate::units::EnergyPerMass;
@@ -49,9 +47,6 @@ pub enum ColorMap {
     },
     Mass {
         scale: units::Mass,
-    },
-    NumParticles {
-        scale: usize,
     },
 }
 
@@ -88,11 +83,6 @@ impl RaxiomPlugin for ShowParticlesPlugin {
                             .label(ColorParticlesLabel)
                             .ambiguous_with(ColorParticlesLabel),
                     )
-                    .with_system(
-                        color_particles_by_num_particles_system
-                            .label(ColorParticlesLabel)
-                            .ambiguous_with(ColorParticlesLabel),
-                    )
                     .after(insert_meshes_system::<DrawCircle>),
             );
     }
@@ -125,20 +115,6 @@ fn color_particles_by_pressure_system(
     if let ColorMap::Pressure { scale } = visualization_parameters.color_map {
         for (mut circle, pressure) in particles.iter_mut() {
             circle.color = RColor::reds((**pressure / scale).value());
-        }
-    }
-}
-
-fn color_particles_by_num_particles_system(
-    visualization_parameters: Res<VisualizationParameters>,
-    mut particles: Particles<(&mut DrawCircle, &Position, &SmoothingLength)>,
-    tree: Res<crate::hydrodynamics::QuadTree>,
-    box_size: Res<SimulationBox>,
-) {
-    if let ColorMap::NumParticles { scale } = visualization_parameters.color_map {
-        for (mut circle, pos, l) in particles.iter_mut() {
-            let num_neighbours = tree.get_particles_in_radius(&box_size, pos, l).len();
-            circle.color = RColor::reds(num_neighbours as f64 / scale as f64);
         }
     }
 }
