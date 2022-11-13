@@ -77,7 +77,7 @@ impl Simulation {
         !self.labels.insert(P::name())
     }
 
-    pub fn add_plugin<T: Sync + Send + 'static + RaxiomPlugin>(&mut self, plugin: T) -> &mut Self {
+    pub fn add_plugin<T: RaxiomPlugin>(&mut self, plugin: T) -> &mut Self {
         let already_added = self.already_added::<T>();
         if !already_added {
             plugin.build_always_once(self);

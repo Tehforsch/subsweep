@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::BatchSize;
@@ -8,8 +7,8 @@ use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::Throughput;
 use raxiom::ics::ConstantDensity;
-use raxiom::ics::Resolution;
-use raxiom::ics::Sampler;
+use raxiom::ics::InitialConditionsPlugin;
+use raxiom::ics::MonteCarloSampler;
 use raxiom::parameters::DomainParameters;
 use raxiom::parameters::GravityParameters;
 use raxiom::parameters::PerformanceParameters;
@@ -19,7 +18,6 @@ use raxiom::prelude::GravityPlugin;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationBox;
 use raxiom::prelude::SimulationBuilder;
-use raxiom::prelude::WorldRank;
 use raxiom::units::Time;
 use raxiom::units::*;
 
@@ -68,28 +66,11 @@ fn setup_gravity_sim(num_particles: usize, opening_angle: Dimensionless) -> Simu
         });
     SimulationBuilder::bench()
         .build_with_sim(&mut sim)
-        .add_startup_system(
-            move |commands: Commands, rank: Res<WorldRank>, box_size: Res<SimulationBox>| {
-                initial_conditions_system(commands, rank, box_size, num_particles)
-            },
+        .add_plugin(
+            InitialConditionsPlugin::default()
+                .density_profile(ConstantDensity(Density::kilogram_per_cubic_meter(1.0)))
+                .sampler(MonteCarloSampler::num_particles(num_particles)),
         )
         .add_plugin(GravityPlugin);
     sim
-}
-
-fn initial_conditions_system(
-    mut commands: Commands,
-    rank: Res<WorldRank>,
-    box_size: Res<SimulationBox>,
-    num_particles: usize,
-) {
-    if !rank.is_main() {
-        return;
-    }
-    Sampler::new(
-        ConstantDensity(Density::kilogram_per_cubic_meter(1.0)),
-        &box_size,
-        Resolution::NumParticles(num_particles),
-    )
-    .spawn(&mut commands);
 }

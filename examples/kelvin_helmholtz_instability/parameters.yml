@@ -12,14 +12,13 @@ domain:
     max_num_particles_per_leaf: 1
 example:
   num_particles: 10000
-  top_fluid:
-    density: 0.05 kg m^-2
-    initial_velocity: 150 m s^-1
-  bottom_fluid:
-    density: 0.05 kg m^-2
-    initial_velocity: -150 m s^-1
+  top_fluid_density: 0.05 kg m^-2
+  bottom_fluid_density: 0.05 kg m^-2
+  velocity_difference: 150 m s^-1
 box_size: (8 8) m
 visualization:
   show_particles: True
   color_map:
-    type: Unchanged
+    type: pressure
+    scale: 1 N m^-1
+  show_quadtree: True

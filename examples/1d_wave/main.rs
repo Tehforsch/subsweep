@@ -4,6 +4,8 @@
 use std::f64::consts::PI;
 
 use bevy::prelude::*;
+use raxiom::ics::ConstantDensity;
+use raxiom::ics::InitialConditionsPlugin;
 use raxiom::ics::IntegerTuple;
 use raxiom::ics::RegularSampler;
 use raxiom::ics::VelocityProfile;
@@ -36,6 +38,15 @@ impl VelocityProfile for Wave {
 
 fn main() {
     let mut sim = SimulationBuilder::new();
+    let initial_conditions = InitialConditionsPlugin::default()
+        .density_profile(ConstantDensity(Density::kilogram_per_square_meter(1.0)))
+        .velocity_profile(Wave {
+            max_velocity: Velocity::meters_per_second(1.0),
+            wave_length: Length::meters(1.0),
+        })
+        .sampler(RegularSampler {
+            num_particles_per_dimension: IntegerTuple { x: 100, y: 1 },
+        });
     sim.parameters_from_relative_path(file!(), "parameters.yml")
         .read_initial_conditions(false)
         .write_output(false)
@@ -44,24 +55,6 @@ fn main() {
         .build()
         .add_parameter_type::<Parameters>()
         .add_plugin(HydrodynamicsPlugin)
-        .add_startup_system(initial_conditions_system)
+        .add_plugin(initial_conditions)
         .run();
-}
-
-fn initial_conditions_system(
-    mut commands: Commands,
-    rank: Res<WorldRank>,
-    parameters: Res<Parameters>,
-    box_size: Res<SimulationBox>,
-) {
-    if !rank.is_main() {
-        return;
-    }
-    RegularSampler::new(
-        parameters.density,
-        box_size.clone(),
-        IntegerTuple::new(parameters.num_particles, 1),
-    )
-    .velocity_profile(parameters.wave.clone())
-    .spawn(&mut commands);
 }

@@ -2,6 +2,7 @@ use crate::prelude::Float;
 use crate::units::NumberDensity;
 use crate::units::Volume;
 
+#[derive(Clone)]
 pub enum Resolution {
     NumberDensity(NumberDensity),
     NumParticles(usize),

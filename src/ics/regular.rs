@@ -1,18 +1,14 @@
-use bevy::prelude::Commands;
-
-use super::Sample;
-use super::VelocityProfile;
-use super::ZeroVelocity;
+use super::PreSample;
+use super::Sampler;
+use super::SamplingData;
 use crate::prelude::Float;
-use crate::prelude::SimulationBox;
-use crate::units::Density;
 use crate::units::VecLength;
 
 pub struct IntegerTuple {
-    x: usize,
-    y: usize,
+    pub x: usize,
+    pub y: usize,
     #[cfg(not(feature = "2d"))]
-    z: usize,
+    pub z: usize,
 }
 
 impl IntegerTuple {
@@ -39,57 +35,41 @@ impl IntegerTuple {
 }
 
 pub struct RegularSampler {
-    density: Density,
-    box_size: SimulationBox,
-    num_particles_per_dimension: IntegerTuple,
-    velocity_profile: Box<dyn VelocityProfile>,
+    pub num_particles_per_dimension: IntegerTuple,
+}
+
+impl Sampler for RegularSampler {
+    fn sample(&self, data: &SamplingData) -> PreSample {
+        let volume = data.box_.volume();
+        let num_particles_specified = self.num_particles_per_dimension.product();
+        let positions: Vec<_> = self.get_coordinates(data).collect();
+        let volume_per_particle = volume / num_particles_specified as Float;
+        let masses = positions
+            .iter()
+            .map(|pos| data.density_profile.density(*pos) * volume_per_particle)
+            .collect();
+        PreSample { positions, masses }
+    }
 }
 
 impl RegularSampler {
-    pub fn new(
-        density: Density,
-        box_size: SimulationBox,
-        num_particles_per_dimension: IntegerTuple,
-    ) -> Self {
+    pub fn new(num_particles_per_dimension: IntegerTuple) -> Self {
         Self {
-            density,
-            box_size,
             num_particles_per_dimension,
-            velocity_profile: Box::new(ZeroVelocity),
         }
-    }
-
-    pub fn velocity_profile(self, velocity_profile: impl VelocityProfile + 'static) -> Self {
-        Self {
-            velocity_profile: Box::new(velocity_profile),
-            ..self
-        }
-    }
-
-    pub fn sample(&mut self) -> Sample {
-        let volume = self.box_size.volume();
-        let total_mass = self.density * volume;
-        let num_particles_specified = self.num_particles_per_dimension.product();
-        let mass_per_particle = total_mass / num_particles_specified as Float;
-        let positions = self.get_coordinates().collect();
-        Sample {
-            positions,
-            mass_per_particle,
-        }
-    }
-
-    pub fn spawn(mut self, commands: &mut Commands) {
-        self.sample().spawn(commands, &*self.velocity_profile)
     }
 
     #[cfg(feature = "2d")]
-    fn get_coordinates(&self) -> impl Iterator<Item = VecLength> + '_ {
+    fn get_coordinates<'a, 'b>(
+        &'a self,
+        data: &'a SamplingData,
+    ) -> impl Iterator<Item = VecLength> + 'a {
         let int_coordinates_to_coordinates = |i, j| {
-            let side_lengths = self.box_size.side_lengths();
+            let side_lengths = data.box_.side_lengths();
             VecLength::new(
                 (0.5 + i as Float) * side_lengths.x() / self.num_particles_per_dimension.x as Float,
                 (0.5 + j as Float) * side_lengths.y() / self.num_particles_per_dimension.y as Float,
-            ) + self.box_size.min
+            ) + data.box_.min
         };
         (0..self.num_particles_per_dimension.x)
             .flat_map(move |i| (0..self.num_particles_per_dimension.y).map(move |j| (i, j)))
@@ -97,14 +77,17 @@ impl RegularSampler {
     }
 
     #[cfg(not(feature = "2d"))]
-    fn get_coordinates(&self) -> impl Iterator<Item = VecLength> + '_ {
+    fn get_coordinates<'a>(
+        &'a self,
+        data: &'a SamplingData,
+    ) -> impl Iterator<Item = VecLength> + 'a {
         let int_coordinates_to_coordinates = |i, j, k| {
-            let side_lengths = self.box_size.side_lengths();
+            let side_lengths = data.box_.side_lengths();
             VecLength::new(
                 (0.5 + i as Float) * side_lengths.x() / self.num_particles_per_dimension.x as Float,
                 (0.5 + j as Float) * side_lengths.y() / self.num_particles_per_dimension.y as Float,
                 (0.5 + k as Float) * side_lengths.z() / self.num_particles_per_dimension.z as Float,
-            ) + self.box_size.min
+            ) + data.box_.min
         };
         (0..self.num_particles_per_dimension.x)
             .flat_map(move |i| {
