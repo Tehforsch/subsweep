@@ -1,6 +1,6 @@
 use bevy::prelude::Commands;
 use bevy::prelude::Entity;
-use bevy::prelude::ParallelSystemDescriptorCoercion;
+use bevy::prelude::IntoSystemDescriptor;
 use bevy::prelude::Without;
 
 use super::draw_item::draw_translation_system;

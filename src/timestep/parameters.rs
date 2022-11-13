@@ -1,12 +1,8 @@
-use serde::Deserialize;
-use serde::Serialize;
+use derive_custom::raxiom_parameters;
 
-use crate::named::Named;
 use crate::units::Time;
 
-#[derive(Clone, Serialize, Deserialize, Named)]
-#[name = "timestep"]
-#[serde(deny_unknown_fields)]
+#[raxiom_parameters("timestep")]
 pub struct TimestepParameters {
     #[serde(default = "default_num_levels")]
     pub num_levels: usize,

@@ -1,9 +1,9 @@
 timestep:
-  max_timestep: 1e-3 s
+  max_timestep: 2e-5 s
 hydrodynamics:
   min_smoothing_length: 0.5 m
   initial_gas_energy:
-    temperature: 100 K
+    temperature: 300 K
     molecular_weight: 4 dimensionless
 domain:
   tree:
@@ -11,16 +11,15 @@ domain:
     min_depth: 4
     max_num_particles_per_leaf: 1
 example:
-  num_particles: 3000
-  box_size: (45 8) m
+  num_particles: 10000
   top_fluid:
     density: 0.05 kg m^-2
-    initial_velocity: 100 m s^-1
+    initial_velocity: 150 m s^-1
   bottom_fluid:
-    density: 0.15 kg m^-2
-    initial_velocity: -100 m s^-1
-box_size:
-  min: (0 0) m
-  max: (45 8) m
+    density: 0.05 kg m^-2
+    initial_velocity: -150 m s^-1
+box_size: (8 8) m
 visualization:
   show_particles: True
+  color_map:
+    type: Unchanged

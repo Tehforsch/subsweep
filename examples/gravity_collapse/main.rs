@@ -11,23 +11,12 @@ use raxiom::units::Density;
 use raxiom::units::InverseTime;
 use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
-use serde::Deserialize;
-use serde::Serialize;
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[raxiom_parameters("example")]
 struct Parameters {
     num_particles: usize,
-    box_size: VecLength,
     angular_velocity_factor: InverseTime,
     density: Density,
-}
-
-// Implementing named myself here because of
-// https://github.com/rust-lang/rust/issues/54363
-impl Named for Parameters {
-    fn name() -> &'static str {
-        "example"
-    }
 }
 
 fn main() {
@@ -48,13 +37,14 @@ fn initial_conditions_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
     parameters: Res<Parameters>,
+    box_size: Res<SimulationBox>,
 ) {
     if !rank.is_main() {
         return;
     }
     Sampler::new(
         ConstantDensity(parameters.density),
-        Extent::new(-parameters.box_size / 2.0, parameters.box_size / 2.0),
+        &box_size,
         Resolution::NumParticles(parameters.num_particles),
     )
     .velocity_profile(RotationalVelocityProfile(

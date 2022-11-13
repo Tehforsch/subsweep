@@ -118,8 +118,8 @@ fn my_custom_behavior(
         if **mass > units::Mass::kilograms(9000.0) {
             // The mass is too high, we should refine this into two particles
             commands.entity(entity).despawn();
-            commands.spawn_bundle((position.clone(), Mass(**mass / 2.0)));
-            commands.spawn_bundle((position.clone(), Mass(**mass / 2.0)));
+            commands.spawn((position.clone(), Mass(**mass / 2.0)));
+            commands.spawn((position.clone(), Mass(**mass / 2.0)));
         }
     }
 }
@@ -161,8 +161,7 @@ This is why Raxiom is unit-safe from the beginning to the end.
     ```
     These parameters are parsed and then internally translated to code units. For example, the `output` section of this parameter file is given by
     ```rust ignore
-    #[derive(Clone, Deserialize, Named)]
-    #[name = "output"]
+    #[raxiom_parameters = "output"]
     pub struct OutputParameters {
         pub time_between_snapshots: Time,
         pub time_first_snapshot: Option<Time>,

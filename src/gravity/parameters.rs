@@ -1,16 +1,12 @@
-use serde::Deserialize;
-use serde::Serialize;
+use derive_custom::raxiom_parameters;
 
-use crate::named::Named;
 use crate::units::Dimensionless;
 use crate::units::Length;
 
 /// Parameters for gravity. Only needed if the
 /// [GravityPlugin](crate::prelude::GravityPlugin) is added
 /// to the simulation.
-#[derive(Clone, Serialize, Deserialize, Named)]
-#[name = "gravity"]
-#[serde(deny_unknown_fields)]
+#[raxiom_parameters("gravity")]
 pub struct GravityParameters {
     /// The minimum length in the gravity calculations. Should be
     /// large enough to prevent extremely high accelerations on

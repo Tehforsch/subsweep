@@ -3,6 +3,7 @@ mod index;
 mod node_index;
 mod visualization;
 
+use bevy::prelude::Resource;
 pub use config::QuadTreeConfig;
 pub use index::QuadTreeIndex;
 pub use visualization::QuadTreeVisualizationPlugin;
@@ -41,7 +42,7 @@ impl<N, L> Node<N, L> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct QuadTree<N, L> {
     pub node: Node<N, L>,
     pub data: N,

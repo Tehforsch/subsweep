@@ -1,7 +1,6 @@
 use bevy::prelude::*;
+use derive_custom::raxiom_parameters;
 use mpi::traits::Equivalence;
-use serde::Deserialize;
-use serde::Serialize;
 
 mod exchange_data_plugin;
 pub mod extent;
@@ -31,9 +30,8 @@ use crate::simulation::Simulation;
 pub type QuadTree = gravity::QuadTree;
 
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
-#[derive(Serialize, Deserialize, Deref, DerefMut, Named)]
-#[name = "domain"]
-#[serde(deny_unknown_fields)]
+#[raxiom_parameters("domain")]
+#[derive(Deref, DerefMut)]
 pub struct DomainParameters {
     #[serde(default)]
     tree: QuadTreeConfig,
@@ -96,7 +94,7 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
     }
 }
 
-#[derive(Debug, Deref, DerefMut)]
+#[derive(Debug, Deref, DerefMut, Resource)]
 pub struct GlobalExtent(Extent);
 
 pub(super) fn determine_global_extent_system(
@@ -184,7 +182,7 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     key_cutoffs_by_rank
 }
 
-#[derive(Default, Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut, Resource)]
 pub struct TopLevelIndices(DataByRank<Vec<QuadTreeIndex>>);
 
 impl TopLevelIndices {

@@ -50,7 +50,7 @@ fn panic_on_dimension_mismatch() {
 }
 
 fn read_dataset_from_file<T: ToDataset + Component>(world: &mut World, file: &Path) {
-    let entity = world.spawn().id();
+    let entity = world.spawn_empty().id();
     world.insert_resource(SpawnedEntities(vec![entity]));
     world.insert_resource(InputFiles(vec![]));
     world.insert_resource(WorldRank(0));

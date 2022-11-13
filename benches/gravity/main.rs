@@ -15,10 +15,9 @@ use raxiom::parameters::GravityParameters;
 use raxiom::parameters::PerformanceParameters;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::TimestepParameters;
-use raxiom::prelude::Extent;
 use raxiom::prelude::GravityPlugin;
-use raxiom::prelude::MVec;
 use raxiom::prelude::Simulation;
+use raxiom::prelude::SimulationBox;
 use raxiom::prelude::SimulationBuilder;
 use raxiom::prelude::WorldRank;
 use raxiom::units::Time;
@@ -55,6 +54,7 @@ fn setup_gravity_sim(num_particles: usize, opening_angle: Dimensionless) -> Simu
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(PerformanceParameters::default())
         .add_parameters_explicitly(DomainParameters::default())
+        .add_parameters_explicitly(SimulationBox::cube_from_side_length(Length::meters(100.0)))
         .add_parameters_explicitly(GravityParameters {
             softening_length: Length::zero(),
             opening_angle,
@@ -68,21 +68,27 @@ fn setup_gravity_sim(num_particles: usize, opening_angle: Dimensionless) -> Simu
         });
     SimulationBuilder::bench()
         .build_with_sim(&mut sim)
-        .add_startup_system(move |commands: Commands, rank: Res<WorldRank>| {
-            initial_conditions_system(commands, rank, num_particles)
-        })
+        .add_startup_system(
+            move |commands: Commands, rank: Res<WorldRank>, box_size: Res<SimulationBox>| {
+                initial_conditions_system(commands, rank, box_size, num_particles)
+            },
+        )
         .add_plugin(GravityPlugin);
     sim
 }
 
-fn initial_conditions_system(mut commands: Commands, rank: Res<WorldRank>, num_particles: usize) {
+fn initial_conditions_system(
+    mut commands: Commands,
+    rank: Res<WorldRank>,
+    box_size: Res<SimulationBox>,
+    num_particles: usize,
+) {
     if !rank.is_main() {
         return;
     }
-    let box_size = Length::meters(100.0) * MVec::ONE;
     Sampler::new(
         ConstantDensity(Density::kilogram_per_cubic_meter(1.0)),
-        Extent::new(-box_size / 2.0, box_size / 2.0),
+        &box_size,
         Resolution::NumParticles(num_particles),
     )
     .spawn(&mut commands);

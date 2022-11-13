@@ -10,33 +10,39 @@ EOF
     exit 1
 fi
 
-if ! cargo test --features bevy/dynamic
+if ! cargo test --tests
 then
     echo "There are some test issues."
     exit 1
 fi
 
-if ! cargo test --features bevy/dynamic --no-default-features --tests -- --ignored
+if ! cargo test --no-default-features --tests -- --ignored
 then
     echo "There are some test issues."
     exit 1
 fi
 
-if ! cargo test --no-default-features --features bevy/dynamic,mpi,2d --tests -- --ignored
+if ! cargo test --no-default-features --features mpi,2d --tests -- --ignored
 then
     echo "There are some 2d test issues."
     exit 1
 fi
 
-# if ! cargo mpirun --np 2 --example mpi_test --features bevy/dynamic,mpi_test
-# then
-#     echo "There are some mpi test issues."
-#     exit 1
-# fi
+if ! cargo bench --no-run
+then
+    echo "Benchmarks did not build succesfully"
+    exit 1
+fi
 
 if ! cargo clippy --all-targets -- -D warnings
 then
     echo "There are some clippy issues."
+    exit 1
+fi
+
+if ! cargo test --doc
+then
+    echo "There are some doctest issues."
     exit 1
 fi
 

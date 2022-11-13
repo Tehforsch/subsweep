@@ -6,7 +6,7 @@ use mpi::traits::Equivalence;
 use self::hydro_components::InternalEnergy;
 use self::hydro_components::Pressure;
 use self::hydro_components::SmoothingLength;
-use self::quadtree::bounding_boxes_overlap;
+use self::quadtree::bounding_boxes_overlap_periodic;
 use self::quadtree::construct_quad_tree_system;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Rank;
@@ -24,6 +24,7 @@ use crate::performance_parameters::PerformanceParameters;
 use crate::prelude::LocalParticle;
 use crate::prelude::MVec;
 use crate::prelude::Particles;
+use crate::prelude::SimulationBox;
 use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -35,9 +36,8 @@ use crate::units::Length;
 use crate::units::NumberDensity;
 use crate::units::VecAcceleration;
 use crate::units::VecLength;
-use crate::units::BOLTZMANN_CONSTANT;
+use crate::units::GAMMA;
 use crate::units::NONE;
-use crate::units::PROTON_MASS;
 
 pub(crate) mod hydro_components;
 mod parameters;
@@ -46,8 +46,6 @@ pub mod quadtree;
 pub use self::parameters::HydrodynamicsParameters;
 pub use self::parameters::InitialGasEnergy;
 pub use self::quadtree::QuadTree;
-
-const GAMMA: f64 = 5.0 / 3.0;
 
 // Could eventually become a more dynamic approach (similar to ExchangeDataPlugin)
 // but for now this is probably fine
@@ -110,12 +108,13 @@ fn kernel(r: Length, h: Length) -> NumberDensity {
 
 #[cfg(feature = "2d")]
 fn symmetric_kernel_derivative(
+    box_: &SimulationBox,
     r1: VecLength,
     r2: VecLength,
     h1: Length,
     h2: Length,
 ) -> VecQuantity<{ Dimension { length: -3, ..NONE } }> {
-    let dist = r1 - r2;
+    let dist = box_.periodic_distance_vec(&r1, &r2);
     let length = dist.length();
     dist / length
         * (48.0 / (7.0 * PI * h1.powi::<3>()) * kernel_derivative_function(length, h1)
@@ -124,12 +123,13 @@ fn symmetric_kernel_derivative(
 
 #[cfg(not(feature = "2d"))]
 fn symmetric_kernel_derivative(
+    box_: &SimulationBox,
     r1: VecLength,
     r2: VecLength,
     h1: Length,
     h2: Length,
 ) -> VecQuantity<{ Dimension { length: -4, ..NONE } }> {
-    let dist = r1 - r2;
+    let dist = box_.periodic_distance_vec(&r1, &r2);
     let length = dist.length();
     dist / length
         * (48.0 / (PI * h1.powi::<4>()) * kernel_derivative_function(length, h1)
@@ -229,6 +229,7 @@ fn halo_exchange_system(
     mut communicator: SyncCommunicator<RemoteParticleData>,
     indices: Res<TopLevelIndices>,
     tree: Res<domain::QuadTree>,
+    box_: Res<SimulationBox>,
     world_rank: Res<WorldRank>,
 ) {
     for (entity, pos, smoothing_length, density, pressure, mass, internal_energy, velocity) in
@@ -242,7 +243,8 @@ fn halo_exchange_system(
                 continue;
             }
             let tree = &tree[index];
-            if bounding_boxes_overlap(
+            if bounding_boxes_overlap_periodic(
+                &box_,
                 pos,
                 &(MVec::ONE * **smoothing_length),
                 &tree.extent.center(),
@@ -264,13 +266,8 @@ fn halo_exchange_system(
             }
         }
     }
-    let spawn_particle = |rank: Rank, data: RemoteParticleData| {
-        commands
-            .spawn()
-            .insert_bundle(data)
-            .insert(HaloParticle { rank })
-            .id()
-    };
+    let spawn_particle =
+        |rank: Rank, data: RemoteParticleData| commands.spawn((data, HaloParticle { rank })).id();
     let mut sync = communicator.receive_sync(spawn_particle);
     sync.despawn_deleted(&mut commands);
     for (_, data) in sync.updated.drain_all() {
@@ -300,14 +297,10 @@ fn insert_pressure_and_density_system(
             InitialGasEnergy::TemperatureAndMolecularWeight {
                 temperature,
                 molecular_weight,
-            } => {
-                temperature * (BOLTZMANN_CONSTANT / PROTON_MASS) * (1.0 / (GAMMA - 1.0))
-                    / molecular_weight
-                    * **mass
-            }
+            } => temperature.to_internal_energy(molecular_weight) * **mass,
             InitialGasEnergy::Energy(energy) => energy * **mass,
         };
-        commands.entity(entity).insert_bundle((
+        commands.entity(entity).insert((
             components::Pressure::default(),
             components::Density::default(),
             components::SmoothingLength::default(),
@@ -327,15 +320,18 @@ fn compute_pressure_and_density_system(
     )>,
     masses: HydroParticles<&Mass>,
     tree: Res<QuadTree>,
+    box_: Res<SimulationBox>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     pressures.par_for_each_mut(
         performance_parameters.batch_size(),
         |(mut pressure, mut density, internal_energy, smoothing_length, pos, mass)| {
             **density = Density::zero();
-            for particle in tree.get_particles_in_radius(pos, smoothing_length).iter() {
+            let particles = tree.get_particles_in_radius(&box_, pos, smoothing_length);
+            debug_assert!(!particles.is_empty());
+            for particle in particles.iter() {
                 let mass2 = masses.get(particle.entity).unwrap();
-                let distance = particle.pos.distance(pos);
+                let distance = box_.periodic_distance(&particle.pos, pos);
                 **density += **mass2 * kernel(distance, **smoothing_length);
             }
             // P = (gamma - 1) * rho * u
@@ -365,6 +361,7 @@ fn compute_energy_change_system(
         &SmoothingLength,
     )>,
     tree: Res<QuadTree>,
+    box_: Res<SimulationBox>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     particles1.par_for_each_mut(
@@ -383,7 +380,7 @@ fn compute_energy_change_system(
                 / crate::units::Mass::one_unchecked()
                 / crate::units::Time::one_unchecked();
             for particle in tree
-                .get_particles_in_radius(position1, smoothing_length1)
+                .get_particles_in_radius(&box_, position1, smoothing_length1)
                 .iter()
             {
                 let (position2, velocity2, pressure2, density2, mass2, smoothing_length2) =
@@ -393,6 +390,7 @@ fn compute_energy_change_system(
                 }
                 let relative_velocity = **velocity1 - **velocity2;
                 let kernel_derivative = symmetric_kernel_derivative(
+                    &box_,
                     **position1,
                     **position2,
                     **smoothing_length1,
@@ -426,6 +424,7 @@ fn compute_forces_system(
         &SmoothingLength,
     )>,
     tree: Res<QuadTree>,
+    box_: Res<SimulationBox>,
     performance_parameters: Res<PerformanceParameters>,
 ) {
     particles1.par_for_each_mut(
@@ -433,7 +432,7 @@ fn compute_forces_system(
         |(mut velocity1, position1, smoothing_length1, pressure1, density1, timestep)| {
             let mut d_vel = VecAcceleration::zero();
             for particle in tree
-                .get_particles_in_radius(position1, smoothing_length1)
+                .get_particles_in_radius(&box_, position1, smoothing_length1)
                 .iter()
             {
                 let (position2, pressure2, density2, mass2, smoothing_length2) =
@@ -442,6 +441,7 @@ fn compute_forces_system(
                     continue;
                 }
                 let kernel_derivative = symmetric_kernel_derivative(
+                    &box_,
                     **position1,
                     **position2,
                     **smoothing_length1,
@@ -452,9 +452,6 @@ fn compute_forces_system(
                     * **mass2
                     * ((**pressure1 / density1.squared()) + (**pressure2 / density2.squared()))
                     * kernel_derivative;
-                if density2.value_unchecked() == 0.0 && pressure2.value_unchecked() == 0.0 {
-                    panic!()
-                }
             }
             **velocity1 += d_vel * **timestep;
         },

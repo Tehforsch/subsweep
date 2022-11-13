@@ -1,13 +1,14 @@
 use bevy::prelude::Component;
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
+use bevy::prelude::Resource;
 use glam::Vec2;
 
 use crate::units::Length;
 use crate::units::Vec2Length;
 use crate::units::VecLength;
 
-#[derive(Debug, Deref, DerefMut, Default, Component)]
+#[derive(Debug, Deref, DerefMut, Default, Component, Resource)]
 pub struct CameraTransform {
     scale: Length,
 }

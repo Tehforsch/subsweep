@@ -5,7 +5,6 @@ use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
-pub use self::parameters::BoxSize;
 pub use self::parameters::SimulationParameters;
 pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
@@ -18,6 +17,7 @@ use crate::gravity::gravity_system;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::named::Named;
+use crate::parameters::SimulationBox;
 use crate::parameters::TimestepParameters;
 use crate::particle::ParticlePlugin;
 use crate::prelude::Particles;
@@ -43,7 +43,7 @@ pub(super) struct ShouldExit(bool);
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<SimulationParameters>()
-            .add_parameter_type::<BoxSize>()
+            .add_parameter_type::<SimulationBox>()
             .add_required_component::<Position>()
             .add_required_component::<Mass>()
             .add_required_component::<Velocity>()
@@ -106,9 +106,13 @@ fn handle_app_exit_system(
     }
 }
 
-fn integrate_motion_system(mut query: Particles<(&mut Position, &Velocity, &Timestep)>) {
+fn integrate_motion_system(
+    mut query: Particles<(&mut Position, &Velocity, &Timestep)>,
+    box_: Res<SimulationBox>,
+) {
     for (mut pos, velocity, timestep) in query.iter_mut() {
         **pos += **velocity * **timestep;
+        **pos = box_.periodic_wrap(**pos);
     }
 }
 

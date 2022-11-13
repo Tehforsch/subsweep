@@ -80,8 +80,7 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
     use crate::domain::Extent;
-    use crate::io::output::ShouldWriteOutput;
-    use crate::simulation_plugin::BoxSize;
+    use crate::simulation_box::SimulationBox;
     use crate::stages::SimulationStagesPlugin;
     use crate::timestep::TimestepParameters;
     use crate::units::Dimensionless;
@@ -93,14 +92,14 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
             max_timestep: Time::seconds(1.0),
             num_levels: 1,
         })
-        .add_parameters_explicitly::<BoxSize>(
+        .add_parameters_explicitly::<SimulationBox>(
             Extent::cube_from_side_length(Length::meters(100.0)).into(),
         )
         .add_parameters_explicitly(GravityParameters {
             opening_angle: Dimensionless::dimensionless(0.0),
             softening_length: Length::meters(1e-30),
         })
-        .insert_resource(ShouldWriteOutput(false))
+        .write_output(false)
         .add_startup_system(spawn_particles_system)
         .add_bevy_plugins(MinimalPlugins)
         .add_plugin(SimulationStagesPlugin)

@@ -17,9 +17,9 @@ use crate::units::VecAcceleration;
 use crate::units::VecLength;
 
 pub(crate) fn get_particles(n: i32, m: i32) -> Vec<LeafData> {
-    (1..n)
+    (1..n + 1)
         .flat_map(move |x| {
-            (1..m).map(move |y| LeafData {
+            (1..m + 1).map(move |y| LeafData {
                 entity: Entity::from_raw((x * n + y) as u32),
                 #[cfg(feature = "2d")]
                 pos: VecLength::meters(x as f64, y as f64),

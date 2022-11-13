@@ -1,7 +1,5 @@
-use serde::Deserialize;
-use serde::Serialize;
+use derive_custom::raxiom_parameters;
 
-use crate::named::Named;
 use crate::quadtree::QuadTreeConfig;
 use crate::units::Dimensionless;
 use crate::units::EnergyPerMass;
@@ -11,9 +9,7 @@ use crate::units::Temperature;
 /// Parameters for hydrodynamics. Only needed if the
 /// [HydrodynamicsPlugin](crate::prelude::HydrodynamicsPlugin)
 /// is added to the simulation
-#[derive(Serialize, Deserialize, Named)]
-#[name = "hydrodynamics"]
-#[serde(deny_unknown_fields)]
+#[raxiom_parameters("hydrodynamics")]
 pub struct HydrodynamicsParameters {
     /// The minimum allowed smoothing length.
     pub min_smoothing_length: Length,
@@ -26,7 +22,7 @@ pub struct HydrodynamicsParameters {
     pub tree: QuadTreeConfig,
 }
 
-#[derive(Serialize, Deserialize, Named)]
+#[raxiom_parameters]
 #[serde(untagged)]
 pub enum InitialGasEnergy {
     /// Set the initial thermal energy u of the gas via two parameters:

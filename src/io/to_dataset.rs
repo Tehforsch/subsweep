@@ -1,13 +1,12 @@
 use std::ops::Deref;
 
-use bevy::ecs::schedule::ParallelSystemDescriptor;
+use bevy::ecs::schedule::SystemDescriptor;
 use bevy::prelude::*;
 use hdf5::Dataset;
 use hdf5::H5Type;
 
 use super::output::plugin::IntoOutputSystem;
 use super::output::OutputFile;
-use super::output::OutputSystemsAmbiguitySet;
 use crate::named::Named;
 use crate::prelude::Particles;
 use crate::units::Dimension;
@@ -18,6 +17,9 @@ pub const LENGTH_IDENTIFIER: &str = "scaling_length";
 pub const TIME_IDENTIFIER: &str = "scaling_time";
 pub const MASS_IDENTIFIER: &str = "scaling_mass";
 pub const TEMPERATURE_IDENTIFIER: &str = "scaling_temperature";
+
+#[derive(SystemLabel)]
+struct DatasetSystemAmbiguityLabel;
 
 pub trait ToDataset: Clone + Component + H5Type + Named + Sync + Send + 'static {
     fn dimension() -> Dimension;
@@ -45,8 +47,11 @@ where
 }
 
 impl<T: ToDataset> IntoOutputSystem for T {
-    fn system() -> ParallelSystemDescriptor {
-        write_dataset::<T>.in_ambiguity_set(OutputSystemsAmbiguitySet)
+    fn system() -> SystemDescriptor {
+        write_dataset::<T>
+            .into_descriptor()
+            .label(DatasetSystemAmbiguityLabel)
+            .ambiguous_with(DatasetSystemAmbiguityLabel)
     }
 }
 

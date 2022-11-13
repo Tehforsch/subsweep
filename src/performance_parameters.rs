@@ -1,11 +1,7 @@
-use serde::Deserialize;
-use serde::Serialize;
-
-use crate::named::Named;
+use derive_custom::raxiom_parameters;
 
 /// Settings that have an impact on the simulation performance.
-#[derive(Serialize, Deserialize, Named)]
-#[name = "performance"]
+#[raxiom_parameters("performance")]
 pub struct PerformanceParameters {
     /// The batch size for parallel iterations. Low batch sizes
     /// increase parallelism at the cost of additional overhead needed

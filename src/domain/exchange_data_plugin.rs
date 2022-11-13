@@ -6,9 +6,10 @@ use bevy::prelude::Component;
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use bevy::prelude::Entity;
-use bevy::prelude::ParallelSystemDescriptorCoercion;
+use bevy::prelude::IntoSystemDescriptor;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
+use bevy::prelude::Resource;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 
@@ -29,7 +30,7 @@ use crate::simulation::Simulation;
 #[derive(Named)]
 struct ExchangeDataOrder;
 
-#[derive(Default, Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut, Resource)]
 pub(super) struct OutgoingEntities(DataByRank<Vec<Entity>>);
 
 impl OutgoingEntities {
@@ -38,10 +39,10 @@ impl OutgoingEntities {
     }
 }
 
-#[derive(Default, Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut, Resource)]
 struct SpawnedEntities(DataByRank<Vec<Entity>>);
 
-#[derive(Deref, DerefMut)]
+#[derive(Deref, DerefMut, Resource)]
 struct ExchangeBuffers<T>(DataByRank<Vec<T>>);
 
 impl<T> ExchangeBuffers<T> {
@@ -189,10 +190,7 @@ fn spawn_incoming_entities_system(
         spawned_entities.insert(
             rank,
             (0..*num_incoming)
-                .map(|_| {
-                    let id = commands.spawn().insert(LocalParticle).id();
-                    id
-                })
+                .map(|_| commands.spawn(LocalParticle).id())
                 .collect(),
         );
     }
@@ -248,20 +246,17 @@ mod tests {
         if is_main {
             entities.push(
                 sim.world()
-                    .spawn()
-                    .insert_bundle((A { x: 0, y: 5.0 }, B { x: 0, y: false }, LocalParticle))
+                    .spawn((A { x: 0, y: 5.0 }, B { x: 0, y: false }, LocalParticle))
                     .id(),
             );
             entities.push(
                 sim.world()
-                    .spawn()
-                    .insert_bundle((A { x: 1, y: 10.0 }, B { x: 1, y: true }, LocalParticle))
+                    .spawn((A { x: 1, y: 10.0 }, B { x: 1, y: true }, LocalParticle))
                     .id(),
             );
             entities.push(
                 sim.world()
-                    .spawn()
-                    .insert_bundle((A { x: 2, y: 20.0 }, B { x: 2, y: false }, LocalParticle))
+                    .spawn((A { x: 2, y: 20.0 }, B { x: 2, y: false }, LocalParticle))
                     .id(),
             );
         }

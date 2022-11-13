@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use bevy::ecs::schedule::ParallelSystemDescriptor;
+use bevy::ecs::schedule::SystemDescriptor;
 use bevy::prelude::*;
 
 use super::close_file_system;
@@ -11,15 +11,16 @@ use super::timer::Timer;
 use super::write_used_parameters_system;
 use super::OutputFile;
 use super::OutputStages;
-use super::OutputSystemsAmbiguitySet;
-use super::ShouldWriteOutput;
 use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 
 pub(crate) trait IntoOutputSystem {
-    fn system() -> ParallelSystemDescriptor;
+    fn system() -> SystemDescriptor;
 }
+
+#[derive(SystemLabel)]
+struct OutputSystemLabel;
 
 #[derive(Named)]
 pub struct OutputPlugin<T> {
@@ -43,9 +44,7 @@ where
     }
 
     fn should_build(&self, sim: &Simulation) -> bool {
-        sim.get_resource::<ShouldWriteOutput>()
-            .map(|x| x.0)
-            .unwrap_or(true)
+        sim.write_output
     }
 
     fn build_once_on_main_rank(&self, sim: &mut Simulation) {
@@ -82,8 +81,9 @@ where
                 T::system()
                     .after(open_file_system)
                     .before(close_file_system)
-                    .in_ambiguity_set(OutputSystemsAmbiguitySet)
-                    .with_run_criteria(Timer::run_criterion),
+                    .with_run_criteria(Timer::run_criterion)
+                    .label(OutputSystemLabel)
+                    .ambiguous_with(OutputSystemLabel),
             );
         }
     }

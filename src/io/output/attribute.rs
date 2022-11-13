@@ -1,17 +1,17 @@
 use std::marker::PhantomData;
 
-use bevy::ecs::schedule::ParallelSystemDescriptor;
-use bevy::prelude::ParallelSystemDescriptorCoercion;
+use bevy::ecs::schedule::SystemDescriptor;
+use bevy::prelude::IntoSystemDescriptor;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
+use bevy::prelude::Resource;
 use hdf5::H5Type;
 
 use super::plugin::IntoOutputSystem;
 use super::OutputFile;
-use super::OutputSystemsAmbiguitySet;
 use crate::named::Named;
 
-pub trait ToAttribute: Named + Sync + Send + 'static {
+pub trait ToAttribute: Named + Resource {
     type Output: H5Type;
     fn to_value(&self) -> Self::Output;
 }
@@ -27,8 +27,8 @@ impl<T: Named> Named for Attribute<T> {
 }
 
 impl<T: ToAttribute> IntoOutputSystem for Attribute<T> {
-    fn system() -> ParallelSystemDescriptor {
-        write_attribute::<T>.in_ambiguity_set(OutputSystemsAmbiguitySet)
+    fn system() -> SystemDescriptor {
+        write_attribute::<T>.into_descriptor()
     }
 }
 

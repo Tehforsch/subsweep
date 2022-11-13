@@ -10,26 +10,16 @@ use raxiom::prelude::*;
 use raxiom::units::Density;
 use raxiom::units::VecLength;
 use raxiom::units::VecVelocity;
-use serde::Deserialize;
-use serde::Serialize;
 
-#[derive(Default, Serialize, Deserialize, Clone)]
+#[raxiom_parameters("example")]
 struct Parameters {
     num_particles: usize,
-    box_size: VecLength,
     top_fluid: FluidSpecification,
     bottom_fluid: FluidSpecification,
 }
 
-// Implementing named myself here because of
-// https://github.com/rust-lang/rust/issues/54363
-impl Named for Parameters {
-    fn name() -> &'static str {
-        "example"
-    }
-}
-
-#[derive(Default, Serialize, Deserialize, Clone, Copy)]
+#[raxiom_parameters]
+#[derive(Copy)]
 struct FluidSpecification {
     density: Density,
     initial_velocity: units::Velocity,
@@ -69,22 +59,23 @@ fn initial_conditions_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
     parameters: Res<Parameters>,
+    box_size: Res<SimulationBox>,
 ) {
     if !rank.is_main() {
         return;
     }
     let num_particles_per_fluid = parameters.num_particles / 2;
-    let center_right = VecLength::new(parameters.box_size.x() / 2.0, units::Length::zero());
-    let center_left = VecLength::new(-parameters.box_size.x() / 2.0, units::Length::zero());
+    let center_left = VecLength::new(-box_size.min.x(), box_size.center.y());
+    let center_right = VecLength::new(box_size.max.x(), box_size.center.y());
     let extents = [
-        Extent::new(-parameters.box_size / 2.0, center_right),
-        Extent::new(center_left, parameters.box_size / 2.0),
+        Extent::new(-box_size.min, center_right),
+        Extent::new(center_left, box_size.max),
     ];
     let fluids = [parameters.bottom_fluid, parameters.top_fluid];
     for (extent, fluid) in extents.into_iter().zip(fluids) {
         Sampler::new(
             fluid,
-            extent,
+            &extent.into(),
             Resolution::NumParticles(num_particles_per_fluid),
         )
         .velocity_profile(fluid)

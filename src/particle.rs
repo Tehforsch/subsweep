@@ -52,7 +52,7 @@ fn count_types_system(archetypes: &Archetypes, components: &Components) {
     // Filter out empty archetype and resource archetype
     let relevant_archetypes: Vec<_> = archetypes
         .iter()
-        .filter(|archetype| !archetype.is_empty() && archetype.id() != archetypes.resource().id())
+        .filter(|archetype| !archetype.is_empty())
         .collect();
     debug!("Num archetypes on main rank: {}", relevant_archetypes.len());
     for archetype in relevant_archetypes.iter() {
@@ -61,18 +61,6 @@ fn count_types_system(archetypes: &Archetypes, components: &Components) {
             let info = components.get_info(component).unwrap();
             debug!("  {}", info.name());
         }
-    }
-    // Print resources
-    let mut resources: Vec<_> = archetypes
-        .resource()
-        .components()
-        .map(|id| components.get_info(id).unwrap())
-        .map(|info| info.name())
-        .collect();
-    resources.sort();
-    debug!("Resources on main rank:");
-    for res in resources {
-        debug!("  {}", res);
     }
 }
 
@@ -93,10 +81,10 @@ mod tests {
         #[derive(Component)]
         struct B;
         let mut world = World::default();
-        world.spawn().insert_bundle((A, B, LocalParticle));
-        world.spawn().insert_bundle((A, B, LocalParticle));
-        world.spawn().insert_bundle((A, LocalParticle));
-        world.spawn().insert_bundle((A,));
+        world.spawn((A, B, LocalParticle));
+        world.spawn((A, B, LocalParticle));
+        world.spawn((A, LocalParticle));
+        world.spawn((A,));
         fn system(particles: Particles<&A, With<B>>) {
             assert_eq!(particles.iter().count(), 2);
         }
@@ -112,10 +100,10 @@ mod tests {
         #[derive(Component)]
         struct C;
         let mut world = World::default();
-        world.spawn().insert_bundle((A, B, C, LocalParticle));
-        world.spawn().insert_bundle((A, B, LocalParticle));
-        world.spawn().insert_bundle((A, LocalParticle));
-        world.spawn().insert_bundle((A,));
+        world.spawn((A, B, C, LocalParticle));
+        world.spawn((A, B, LocalParticle));
+        world.spawn((A, LocalParticle));
+        world.spawn((A,));
         fn system(particles: Particles<&A, (With<B>, With<C>)>) {
             assert_eq!(particles.iter().count(), 1);
         }

@@ -156,8 +156,9 @@ impl<T> From<LocalCommunicator<T>> for LocalCommunicator<Identified<T>> {
 mod tests {
     use std::thread;
 
-    use crate::communication::plugin::INITIAL_TAG;
     use crate::communication::sync_communicator::tests::get_communicators;
+
+    pub const INITIAL_TAG: i32 = 0;
 
     #[derive(Clone, Debug, PartialEq)]
     struct ComplexStruct {

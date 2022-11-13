@@ -13,16 +13,12 @@ use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
-pub(super) const INITIAL_TAG: Tag = 0;
-
 #[derive(Clone, Copy)]
 pub enum CommunicationType {
     Exchange,
     Sync,
     AllGather,
 }
-
-pub(super) struct CurrentTag(pub(super) Tag);
 
 #[derive(Clone, Named)]
 pub struct BaseCommunicationPlugin {
@@ -80,13 +76,7 @@ impl<T> CommunicationPlugin<T> {
 }
 
 pub(super) fn get_next_tag(sim: &mut Simulation) -> Tag {
-    let mut tag = sim
-        .get_resource_mut::<CurrentTag>()
-        .map(|x| x.0)
-        .unwrap_or(INITIAL_TAG);
-    tag += 1;
-    sim.insert_resource(CurrentTag(tag));
-    tag
+    sim.get_next_tag()
 }
 
 #[cfg(feature = "mpi")]

@@ -22,18 +22,23 @@ pub mod hydrodynamics;
 pub mod ics;
 pub(crate) mod io;
 pub(crate) mod memory;
-pub(crate) mod named;
 pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
 pub(crate) mod performance_parameters;
 pub mod quadtree;
 pub(crate) mod rand;
 pub(crate) mod simulation;
+pub(crate) mod simulation_box;
 pub(crate) mod simulation_builder;
 pub(crate) mod simulation_plugin;
 pub(crate) mod stages;
 pub(crate) mod timestep;
 pub(crate) mod visualization;
+
+pub mod named {
+    pub use derive_custom::Named;
+    pub use derive_traits::Named;
+}
 
 #[cfg(test)]
 pub(crate) mod test_examples;

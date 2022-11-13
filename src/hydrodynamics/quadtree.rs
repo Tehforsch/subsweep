@@ -5,6 +5,7 @@ use super::HydroParticles;
 use crate::components::Position;
 use crate::components::SmoothingLength;
 use crate::domain::GlobalExtent;
+use crate::parameters::SimulationBox;
 use crate::prelude::MVec;
 use crate::quadtree::LeafDataType;
 use crate::quadtree::NodeDataType;
@@ -38,28 +39,51 @@ impl NodeDataType<LeafData> for NodeData {
     }
 }
 
+fn relative_bounding_box_overlap(dist: VecLength, total_size: VecLength) -> bool {
+    (dist.x()).abs() < total_size.x() && (dist.y()).abs() < total_size.y()
+}
+
 /// Returns whether the two bounding boxes given by
 /// the center coordinates pos1 and pos2 and the side lengths
-/// size1 and size2 overlap
-pub(super) fn bounding_boxes_overlap(
+/// size1 and size2 overlap in a periodic box of size box_size
+pub(super) fn bounding_boxes_overlap_periodic(
+    box_: &SimulationBox,
     pos1: &VecLength,
     size1: &VecLength,
     pos2: &VecLength,
     size2: &VecLength,
 ) -> bool {
-    (pos1.x() - pos2.x()).abs() < size1.x() + size2.x()
-        && (pos1.y() - pos2.y()).abs() < size1.y() + size2.y()
+    let dist = box_.periodic_distance_vec(pos1, pos2);
+    let total_size = *size1 + *size2;
+    relative_bounding_box_overlap(dist, total_size)
+}
+
+/// Returns whether the two bounding boxes given by
+/// the center coordinates pos1 and pos2 and the side lengths
+/// size1 and size2. This function does not respect periodic
+/// boundary conditions.
+pub fn bounding_boxes_overlap_non_periodic(
+    pos1: &VecLength,
+    size1: &VecLength,
+    pos2: &VecLength,
+    size2: &VecLength,
+) -> bool {
+    let dist = *pos1 - *pos2;
+    let total_size = *size1 + *size2;
+    relative_bounding_box_overlap(dist, total_size)
 }
 
 fn add_particles_in_box<'a>(
     particles: &mut Vec<&'a LeafData>,
     tree: &'a QuadTree,
+    box_size: &SimulationBox,
     pos: &VecLength,
     side_length: &Length,
 ) {
     let node_extent = tree.extent.side_lengths()
         + VecLength::from_vector_and_scale(MVec::ONE, tree.data.largest_smoothing_length);
-    if bounding_boxes_overlap(
+    if bounding_boxes_overlap_periodic(
+        box_size,
         &tree.extent.center(),
         &node_extent,
         pos,
@@ -68,7 +92,7 @@ fn add_particles_in_box<'a>(
         match &tree.node {
             quadtree::Node::Tree(tree) => {
                 for child in tree.iter() {
-                    add_particles_in_box(particles, child, pos, side_length);
+                    add_particles_in_box(particles, child, box_size, pos, side_length);
                 }
             }
             quadtree::Node::Leaf(leaf) => {
@@ -80,23 +104,43 @@ fn add_particles_in_box<'a>(
 
 fn get_particles_in_box<'a>(
     tree: &'a QuadTree,
+    box_size: &SimulationBox,
     pos: &VecLength,
     side_length: &Length,
 ) -> Vec<&'a LeafData> {
     let mut particles = vec![];
-    add_particles_in_box(&mut particles, tree, pos, side_length);
+    add_particles_in_box(&mut particles, tree, box_size, pos, side_length);
     particles
+}
+
+fn particles_should_interact(
+    box_: &SimulationBox,
+    pos1: &VecLength,
+    pos2: &VecLength,
+    radius1: &Length,
+    radius2: &Length,
+) -> bool {
+    box_.periodic_distance(pos1, pos2) < radius1.max(*radius2)
 }
 
 impl QuadTree {
     pub fn get_particles_in_radius<'a>(
         &'a self,
+        box_size: &SimulationBox,
         pos: &VecLength,
         radius: &Length,
     ) -> Vec<&'a LeafData> {
-        get_particles_in_box(self, pos, radius)
+        get_particles_in_box(self, box_size, pos, radius)
             .into_iter()
-            .filter(|particle| particle.pos().distance(pos) < radius.max(particle.smoothing_length))
+            .filter(|particle| {
+                particles_should_interact(
+                    box_size,
+                    pos,
+                    particle.pos(),
+                    radius,
+                    &particle.smoothing_length,
+                )
+            })
             .collect()
     }
 }
@@ -122,22 +166,33 @@ pub(super) fn construct_quad_tree_system(
 mod tests {
     use std::collections::HashSet;
 
+    use super::particles_should_interact;
     use super::LeafData;
     use super::QuadTree;
     use crate::domain::extent::Extent;
     use crate::gravity::tests::get_particles;
+    use crate::parameters::SimulationBox;
     use crate::quadtree::QuadTreeConfig;
     use crate::units::Length;
     use crate::units::VecLength;
 
     pub(super) fn direct_neighbour_search<'a>(
         particles: &'a [LeafData],
+        box_size: &SimulationBox,
         pos: &VecLength,
         radius: &Length,
     ) -> Vec<&'a LeafData> {
         particles
             .iter()
-            .filter(|particle| particle.pos.distance(pos) < radius.max(particle.smoothing_length))
+            .filter(|particle| {
+                particles_should_interact(
+                    box_size,
+                    pos,
+                    &particle.pos,
+                    radius,
+                    &particle.smoothing_length,
+                )
+            })
             .collect()
     }
 
@@ -156,19 +211,45 @@ mod tests {
             })
             .collect();
         let extent = Extent::from_positions(particles.iter().map(|leaf| &leaf.pos)).unwrap();
+        let box_size = extent.clone().into();
         let tree = QuadTree::new(&QuadTreeConfig::default(), particles.clone(), &extent);
+        let entities_as_hash_set = |leaf_data_vec: Vec<&LeafData>| {
+            leaf_data_vec
+                .into_iter()
+                .map(|particle| particle.entity)
+                .collect::<HashSet<_>>()
+        };
         for particle in particles.iter() {
-            let tree_neighbours = tree.get_particles_in_radius(&particle.pos, &radius);
-            let direct_neighbours = direct_neighbour_search(&particles, &particle.pos, &radius);
-            let tree_entities: HashSet<_> = tree_neighbours
-                .into_iter()
-                .map(|particle| particle.entity)
-                .collect();
-            let direct_entities: HashSet<_> = direct_neighbours
-                .into_iter()
-                .map(|particle| particle.entity)
-                .collect();
-            assert_eq!(tree_entities, direct_entities);
+            let tree_neighbours = tree.get_particles_in_radius(&box_size, &particle.pos, &radius);
+            let direct_neighbours =
+                direct_neighbour_search(&particles, &box_size, &particle.pos, &radius);
+            assert_eq!(
+                entities_as_hash_set(tree_neighbours),
+                entities_as_hash_set(direct_neighbours)
+            );
         }
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    #[cfg(not(feature = "2d"))]
+    fn bounding_boxes_overlap_periodic() {
+        let test = |box_size, (x1, y1, z1), (lx1, ly1, lz1), (x2, y2, z2), (lx2, ly2, lz2), v| {
+            assert_eq!(
+                super::bounding_boxes_overlap_periodic(
+                    box_size,
+                    &VecLength::meters(x1, y1, z1),
+                    &VecLength::meters(lx1, ly1, lz1),
+                    &VecLength::meters(x2, y2, z2),
+                    &VecLength::meters(lx2, ly2, lz2)
+                ),
+                v
+            );
+        };
+        let box_size = SimulationBox::cube_from_side_length(Length::meters(1.0));
+        test(&box_size, (0.1, 0.1, 0.1), (0.05, 0.05, 0.05), (0.2, 0.2, 0.2), (0.0, 0.0, 0.0), false);
+        test(&box_size, (0.1, 0.1, 0.1), (0.15, 0.15, 0.15), (0.2, 0.2, 0.2), (0.0, 0.0, 0.0), true);
+        test(&box_size, (0.1, 0.1, 0.1), (0.1, 0.1, 0.1), (0.9, 0.9, 0.9), (0.2, 0.2, 0.2), true);
+        test(&box_size, (-0.1, -0.1, -0.1), (0.001, 0.001, 0.001), (0.9, 0.9, 0.9), (0.0, 0.0, 0.0), true);
     }
 }
