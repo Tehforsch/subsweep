@@ -70,3 +70,7 @@ harness = false
 [[bench]]
 name = "quadtree"
 harness = false
+
+[[bench]]
+name = "periodic_wrap"
+harness = false
