@@ -46,6 +46,9 @@ impl<T> Default for ComponentMemoryUsagePlugin<T> {
     }
 }
 
+#[derive(SystemLabel)]
+struct ComponentMemoryUsageLabel;
+
 impl<T: Named + Component> RaxiomPlugin for ComponentMemoryUsagePlugin<T> {
     fn build_always_once(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<MemoryUsageParameters>();
@@ -61,11 +64,12 @@ impl<T: Named + Component> RaxiomPlugin for ComponentMemoryUsagePlugin<T> {
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        todo!("ambiguity");
         sim.add_system(
             calculate_memory_usage_system::<T>
                 .after(reset_memory_usage_system)
-                .before(communicate_memory_usage_system),
+                .before(communicate_memory_usage_system)
+                .label(ComponentMemoryUsageLabel)
+                .ambiguous_with(ComponentMemoryUsageLabel),
         );
     }
 

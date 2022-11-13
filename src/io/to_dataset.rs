@@ -18,6 +18,9 @@ pub const TIME_IDENTIFIER: &str = "scaling_time";
 pub const MASS_IDENTIFIER: &str = "scaling_mass";
 pub const TEMPERATURE_IDENTIFIER: &str = "scaling_temperature";
 
+#[derive(SystemLabel)]
+struct DatasetSystemAmbiguityLabel;
+
 pub trait ToDataset: Clone + Component + H5Type + Named + Sync + Send + 'static {
     fn dimension() -> Dimension;
     fn convert_base_units(self, factor: f64) -> Self;
@@ -45,8 +48,10 @@ where
 
 impl<T: ToDataset> IntoOutputSystem for T {
     fn system() -> SystemDescriptor {
-        todo!("ambiguity");
-        write_dataset::<T>.into_descriptor()
+        write_dataset::<T>
+            .into_descriptor()
+            .label(DatasetSystemAmbiguityLabel)
+            .ambiguous_with(DatasetSystemAmbiguityLabel)
     }
 }
 

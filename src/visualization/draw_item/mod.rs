@@ -79,6 +79,12 @@ impl MaterialsCache {
     }
 }
 
+#[derive(SystemLabel)]
+struct DrawTranslationLabel;
+
+#[derive(SystemLabel)]
+struct ChangeColorsLabel;
+
 impl<T: Equivalence + DrawItem + Component + Clone + Sync + Send + 'static> RaxiomPlugin
     for DrawItemPlugin<T>
 where
@@ -97,8 +103,7 @@ where
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
-        todo!("ambiguity setupmesh, insert_Mesh, change_color, draw_Translation");
-        sim.add_startup_system(setup_meshes_system::<T>)
+        sim.add_startup_system(setup_meshes_system::<T>.ignore_all_ambiguities())
             .add_well_ordered_system_to_stage::<_, DrawItemSyncOrdering>(
                 VisualizationStage::Synchronize,
                 receive_items_on_main_thread_system::<T>,
@@ -108,8 +113,18 @@ where
                 VisualizationStage::AddDrawComponents,
                 insert_meshes_system::<T>,
             )
-            .add_system_to_stage(VisualizationStage::Draw, change_colors_system::<T>)
-            .add_system_to_stage(VisualizationStage::Draw, draw_translation_system::<T>);
+            .add_system_to_stage(
+                VisualizationStage::Draw,
+                change_colors_system::<T>
+                    .label(ChangeColorsLabel)
+                    .ambiguous_with(ChangeColorsLabel),
+            )
+            .add_system_to_stage(
+                VisualizationStage::Draw,
+                draw_translation_system::<T>
+                    .label(DrawTranslationLabel)
+                    .ambiguous_with(DrawTranslationLabel),
+            );
     }
 
     fn build_on_other_ranks(&self, sim: &mut Simulation) {

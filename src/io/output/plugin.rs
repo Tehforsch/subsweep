@@ -19,6 +19,9 @@ pub(crate) trait IntoOutputSystem {
     fn system() -> SystemDescriptor;
 }
 
+#[derive(SystemLabel)]
+struct OutputSystemLabel;
+
 #[derive(Named)]
 pub struct OutputPlugin<T> {
     _marker: PhantomData<T>,
@@ -73,13 +76,14 @@ where
 
     fn build_everywhere(&self, sim: &mut Simulation) {
         if OutputParameters::is_desired_field::<T>(sim) {
-            todo!("ambiguity");
             sim.add_system_to_stage(
                 OutputStages::Output,
                 T::system()
                     .after(open_file_system)
                     .before(close_file_system)
-                    .with_run_criteria(Timer::run_criterion),
+                    .with_run_criteria(Timer::run_criterion)
+                    .label(OutputSystemLabel)
+                    .ambiguous_with(OutputSystemLabel),
             );
         }
     }

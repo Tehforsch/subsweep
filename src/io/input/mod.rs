@@ -61,6 +61,9 @@ impl<T> Default for DatasetInputPlugin<T> {
     }
 }
 
+#[derive(SystemLabel)]
+struct ReadDatasetLabel;
+
 #[derive(Default, Deref, DerefMut, Resource)]
 pub struct RegisteredDatasets(Vec<&'static str>);
 
@@ -89,12 +92,13 @@ impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetI
     fn build_everywhere(&self, sim: &mut Simulation) {
         let mut registered_datasets = sim.get_resource_or_insert_with(RegisteredDatasets::default);
         registered_datasets.push(T::name());
-        todo!("ambiguity read_Dataset");
         sim.add_startup_system(
             read_dataset_system::<T>
                 .after(open_file_system)
                 .after(spawn_entities_system)
-                .before(close_file_system),
+                .before(close_file_system)
+                .label(ReadDatasetLabel)
+                .ambiguous_with(ReadDatasetLabel),
         );
     }
 }
