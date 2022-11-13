@@ -166,12 +166,10 @@ impl SimulationBuilder {
         }
         sim.add_plugin(SimulationStagesPlugin)
             .add_plugin(SimulationPlugin)
-            .add_plugin(DomainDecompositionPlugin);
+            .add_plugin(DomainDecompositionPlugin)
+            .insert_resource(ReportExecutionOrderAmbiguities);
         self.add_default_bevy_plugins(sim);
-        if self.headless {
-            // Only show execution order ambiguities when running without render plugins
-            sim.insert_resource(ReportExecutionOrderAmbiguities);
-        } else {
+        if !self.headless {
             sim.add_plugin(VisualizationPlugin);
         }
         sim
