@@ -7,9 +7,9 @@ use std::fs;
 use std::path::Path;
 
 use bevy::prelude::info;
-use bevy::prelude::AmbiguitySetLabel;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
+use bevy::prelude::Resource;
 use bevy::prelude::StageLabel;
 use hdf5::File;
 
@@ -22,20 +22,15 @@ use crate::communication::WorldRank;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::prelude::WorldSize;
 
-#[derive(AmbiguitySetLabel)]
-pub(super) struct OutputSystemsAmbiguitySet;
-
 #[derive(StageLabel)]
 pub enum OutputStages {
     Output,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub(super) struct OutputFile {
     pub f: Option<File>,
 }
-
-pub struct ShouldWriteOutput(pub bool);
 
 fn write_used_parameters_system(
     parameter_file_contents: Res<ParameterFileContents>,

@@ -28,12 +28,8 @@ impl RaxiomPlugin for ShowBoxSizePlugin {
 struct BoxSizeOutline;
 
 fn show_box_size_system(mut commands: Commands, box_size: Res<SimulationBox>) {
-    commands
-        .spawn()
-        .insert(BoxSizeOutline)
-        .insert(DrawRect::from_min_max(
-            box_size.min,
-            box_size.max,
-            RColor::BLACK,
-        ));
+    commands.spawn((
+        BoxSizeOutline,
+        DrawRect::from_min_max(box_size.min, box_size.max, RColor::BLACK),
+    ));
 }

@@ -7,12 +7,14 @@ use std::marker::PhantomData;
 
 pub use active_particles::ActiveParticles;
 use bevy::ecs::query::QueryItem;
+use bevy::ecs::query::ReadOnlyWorldQuery;
 use bevy::ecs::query::WorldQuery;
 use bevy::prelude::Commands;
 use bevy::prelude::CoreStage;
 use bevy::prelude::Entity;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
+use bevy::prelude::Resource;
 use bevy::prelude::StartupStage;
 use bevy::prelude::Without;
 
@@ -27,7 +29,7 @@ use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 use crate::units::Time;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Resource)]
 pub struct TimestepState {
     /// The currently active timestep. Level 0
     /// is the highest possible timestep T_0 and level i
@@ -64,8 +66,8 @@ impl TimestepState {
 }
 
 pub trait TimestepCriterion: Sync + Send {
-    type Query: WorldQuery;
-    type Filter: WorldQuery;
+    type Query: ReadOnlyWorldQuery + WorldQuery;
+    type Filter: ReadOnlyWorldQuery + WorldQuery;
     fn timestep(parameters: &TimestepParameters, query_item: QueryItem<Self::Query>) -> Time;
 }
 
@@ -143,7 +145,7 @@ fn determine_timesteps_system<T: TimestepCriterion + 'static>(
 mod tests {
     use bevy::prelude::Commands;
     use bevy::prelude::Component;
-    use bevy::prelude::ParallelSystemDescriptorCoercion;
+    use bevy::prelude::IntoSystemDescriptor;
 
     use super::parameters::TimestepParameters;
     use super::TimestepCriterion;
@@ -188,11 +190,7 @@ mod tests {
                 // Add an epsilon to make sure we slip into the correct bin
                 let epsilon = Time::seconds(1e-5);
                 let timestep = BASE_TIMESTEP / (factor as Float) - epsilon;
-                commands.spawn_bundle((
-                    DesiredTimestep(timestep),
-                    Counter::default(),
-                    LocalParticle,
-                ));
+                commands.spawn((DesiredTimestep(timestep), Counter::default(), LocalParticle));
             };
             spawn(&mut commands, 1);
             spawn(&mut commands, 1);

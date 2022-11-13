@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use super::TimestepState;
 
+#[derive(Resource)]
 pub struct TimeBins<T> {
     bins: Vec<TimeBin<T>>,
 }

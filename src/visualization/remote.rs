@@ -36,8 +36,7 @@ pub(super) fn receive_items_on_main_thread_system<T: Clone + Component + Equival
     debug_assert!(rank.is_main());
     let spawn_particle = |_: Rank, data: T| {
         commands
-            .spawn()
-            .insert_bundle(RemoteItemBundle::<T> {
+            .spawn(RemoteItemBundle::<T> {
                 data,
                 marker: RemoteDrawItem,
             })

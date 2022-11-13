@@ -1,13 +1,14 @@
 use std::path::Path;
 use std::path::PathBuf;
 
-use bevy::core::DefaultTaskPoolOptions;
 use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
 use bevy::log::LogPlugin;
-use bevy::log::LogSettings;
+use bevy::prelude::CorePlugin;
 use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
+use bevy::prelude::PluginGroup;
+use bevy::prelude::TaskPoolOptions;
 use bevy::time::TimePlugin;
 use bevy::winit::WinitSettings;
 use clap::Parser;
@@ -17,8 +18,6 @@ use super::domain::DomainDecompositionPlugin;
 use super::simulation_plugin::SimulationPlugin;
 use super::visualization::VisualizationPlugin;
 use crate::communication::BaseCommunicationPlugin;
-use crate::io::input::ShouldReadInitialConditions;
-use crate::io::output::ShouldWriteOutput;
 use crate::parameter_plugin::parameter_file_contents::Override;
 use crate::performance_parameters::PerformanceParameters;
 use crate::simulation::Simulation;
@@ -158,14 +157,12 @@ impl SimulationBuilder {
         }
         sim.with_parameter_overrides(self.parameter_overrides.clone());
         sim.add_parameter_type::<PerformanceParameters>()
-            .insert_resource(self.task_pool_opts())
-            .insert_resource(self.log_setup())
             .insert_resource(self.winit_settings())
-            .insert_resource(ShouldReadInitialConditions(self.read_initial_conditions))
-            .insert_resource(ShouldWriteOutput(self.write_output))
+            .read_initial_conditions(self.read_initial_conditions)
+            .write_output(self.write_output)
             .maybe_add_plugin(self.base_communication.clone());
         if sim.on_main_rank() && self.log {
-            sim.add_bevy_plugin(LogPlugin);
+            sim.add_bevy_plugin(self.log_plugin());
         }
         sim.add_plugin(SimulationStagesPlugin)
             .add_plugin(SimulationPlugin)
@@ -188,17 +185,31 @@ impl SimulationBuilder {
 
     fn add_default_bevy_plugins(&self, sim: &mut Simulation) {
         if sim.on_main_rank() && !self.headless {
-            sim.add_bevy_plugins_with(DefaultPlugins, |group| group.disable::<LogPlugin>());
+            sim.add_bevy_plugins(
+                DefaultPlugins
+                    .build()
+                    .disable::<LogPlugin>()
+                    .set(CorePlugin {
+                        task_pool_options: self.task_pool_opts(),
+                    }),
+            );
         } else {
-            sim.add_bevy_plugins_with(MinimalPlugins, |group| group.disable::<TimePlugin>());
+            sim.add_bevy_plugins(
+                MinimalPlugins
+                    .build()
+                    .disable::<TimePlugin>()
+                    .set(CorePlugin {
+                        task_pool_options: self.task_pool_opts(),
+                    }),
+            );
         }
     }
 
-    fn task_pool_opts(&self) -> DefaultTaskPoolOptions {
+    fn task_pool_opts(&self) -> TaskPoolOptions {
         if let Some(num_worker_threads) = self.num_worker_threads {
-            DefaultTaskPoolOptions::with_num_threads(num_worker_threads)
+            TaskPoolOptions::with_num_threads(num_worker_threads)
         } else {
-            DefaultTaskPoolOptions::default()
+            TaskPoolOptions::default()
         }
     }
 
@@ -209,25 +220,25 @@ impl SimulationBuilder {
         }
     }
 
-    fn log_setup(&self) -> LogSettings {
+    fn log_plugin(&self) -> LogPlugin {
         match self.verbosity {
-            0 => LogSettings {
+            0 => LogPlugin {
                 level: Level::INFO,
                 filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
             },
-            1 => LogSettings {
+            1 => LogPlugin {
                 level: Level::DEBUG,
                 filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
             },
-            2 => LogSettings {
+            2 => LogPlugin {
                 level: Level::DEBUG,
                 filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
             },
-            3 => LogSettings {
+            3 => LogPlugin {
                 level: Level::DEBUG,
                 ..Default::default()
             },
-            4 => LogSettings {
+            4 => LogPlugin {
                 level: Level::TRACE,
                 ..Default::default()
             },

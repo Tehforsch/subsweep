@@ -1,8 +1,10 @@
 use bevy::ecs::query::QueryItem;
 use bevy::ecs::query::ROQueryItem;
+use bevy::ecs::query::ReadOnlyWorldQuery;
 use bevy::ecs::query::WorldQuery;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::Res;
+use bevy::prelude::Resource;
 use bevy::utils::HashSet;
 
 use super::time_bins::TimeBins;
@@ -10,11 +12,11 @@ use super::TimestepCriterion;
 use super::TimestepState;
 use crate::prelude::Particles;
 
-#[derive(SystemParam)]
+#[derive(SystemParam, Resource)]
 pub struct ActiveParticles<'w, 's, T, Q, F = ()>
 where
     Q: WorldQuery + 'static,
-    F: WorldQuery + 'static,
+    F: ReadOnlyWorldQuery + 'static,
     T: Sync + Send + 'static + TimestepCriterion,
 {
     query: Particles<'w, 's, Q, (F, T::Filter)>,
@@ -24,26 +26,23 @@ where
 
 impl<'w, 's, T, Q, F> ActiveParticles<'w, 's, T, Q, F>
 where
-    Q: WorldQuery + 'static,
-    F: WorldQuery + 'static,
+    Q: ReadOnlyWorldQuery + 'static,
+    F: ReadOnlyWorldQuery + 'static,
     T: Sync + Send + 'static + TimestepCriterion,
 {
-    pub fn iter(&'w self) -> impl Iterator<Item = ROQueryItem<Q>> + 'w
-    where
-        Q: WorldQuery,
-        F: WorldQuery,
-    {
+    pub fn iter(&'w self) -> impl Iterator<Item = ROQueryItem<Q>> + 'w {
         self.timebins
             .iter_active(&self.active_timestep)
             .flat_map(|bin| bin.iter())
             .map(move |x| self.query.get(*x).unwrap())
     }
+}
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = QueryItem<'_, Q>>
-    where
-        Q: WorldQuery,
-        F: WorldQuery,
-    {
+impl<'w, 's, T, Q: WorldQuery, F: ReadOnlyWorldQuery> ActiveParticles<'w, 's, T, Q, F>
+where
+    T: Sync + Send + 'static + TimestepCriterion,
+{
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = QueryItem<'_, Q>> {
         // Some notes on this pretty bad implementation:
         // From the outside, this is actually really simple, I want to write something like
         //

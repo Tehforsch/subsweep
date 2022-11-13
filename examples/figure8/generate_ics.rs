@@ -17,7 +17,7 @@ fn spawn(mut commands: Commands) {
 
 
 fn spawn_particle(commands: &mut Commands, pos: VecLength, vel: VecVelocity, mass: Mass) {
-    commands.spawn_bundle((
+    commands.spawn((
         LocalParticle,
         components::Position(pos),
         components::Velocity(vel),

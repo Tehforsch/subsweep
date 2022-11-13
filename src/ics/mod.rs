@@ -47,7 +47,7 @@ impl Sample {
     fn spawn(self, commands: &mut Commands, velocity_profile: &dyn VelocityProfile) {
         for pos in self.positions.into_iter() {
             let velocity = velocity_profile.velocity(pos);
-            commands.spawn_bundle((
+            commands.spawn((
                 LocalParticle,
                 Position(pos),
                 components::Mass(self.mass_per_particle),

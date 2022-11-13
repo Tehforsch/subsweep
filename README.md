@@ -118,8 +118,8 @@ fn my_custom_behavior(
         if **mass > units::Mass::kilograms(9000.0) {
             // The mass is too high, we should refine this into two particles
             commands.entity(entity).despawn();
-            commands.spawn_bundle((position.clone(), Mass(**mass / 2.0)));
-            commands.spawn_bundle((position.clone(), Mass(**mass / 2.0)));
+            commands.spawn((position.clone(), Mass(**mass / 2.0)));
+            commands.spawn((position.clone(), Mass(**mass / 2.0)));
         }
     }
 }

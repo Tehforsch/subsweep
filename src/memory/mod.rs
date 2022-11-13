@@ -22,7 +22,7 @@ pub struct MemoryUsageParameters {
 #[derive(Clone, Equivalence)]
 struct Memory(usize);
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct MemoryUsage {
     by_component: HashMap<&'static str, usize>,
 }
@@ -32,9 +32,6 @@ impl MemoryUsage {
         Memory(self.by_component.values().sum())
     }
 }
-
-#[derive(AmbiguitySetLabel)]
-struct MemoryUsageAmbiguitySet;
 
 #[derive(Named)]
 pub(super) struct ComponentMemoryUsagePlugin<T> {
@@ -64,11 +61,11 @@ impl<T: Named + Component> RaxiomPlugin for ComponentMemoryUsagePlugin<T> {
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
+        todo!("ambiguity");
         sim.add_system(
             calculate_memory_usage_system::<T>
                 .after(reset_memory_usage_system)
-                .before(communicate_memory_usage_system)
-                .in_ambiguity_set(MemoryUsageAmbiguitySet),
+                .before(communicate_memory_usage_system),
         );
     }
 

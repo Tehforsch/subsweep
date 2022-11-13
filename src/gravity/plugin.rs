@@ -1,4 +1,4 @@
-use bevy::prelude::ParallelSystemDescriptorCoercion;
+use bevy::prelude::IntoSystemDescriptor;
 
 use super::gravity_system;
 use super::parameters::GravityParameters;

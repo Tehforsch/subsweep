@@ -32,11 +32,8 @@ pub enum ComponentInput {
     Derived,
 }
 
-#[derive(Default, Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut, Resource)]
 struct InputFiles(Vec<File>);
-
-#[derive(AmbiguitySetLabel)]
-struct InputSystemsAmbiguitySet;
 
 /// Parameters describing how the initial conditions
 /// should be read. Only required if should_read_initial_conditions
@@ -48,7 +45,7 @@ pub struct InputParameters {
     pub paths: Vec<PathBuf>,
 }
 
-#[derive(Default, Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut, Resource)]
 struct SpawnedEntities(Vec<Entity>);
 
 #[derive(Named)]
@@ -64,7 +61,7 @@ impl<T> Default for DatasetInputPlugin<T> {
     }
 }
 
-#[derive(Default, Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut, Resource)]
 pub struct RegisteredDatasets(Vec<&'static str>);
 
 impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetInputPlugin<T> {
@@ -73,9 +70,7 @@ impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetI
     }
 
     fn should_build(&self, sim: &Simulation) -> bool {
-        sim.get_resource::<ShouldReadInitialConditions>()
-            .map(|x| x.0)
-            .unwrap_or(false)
+        sim.read_initial_conditions
     }
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
@@ -94,12 +89,12 @@ impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetI
     fn build_everywhere(&self, sim: &mut Simulation) {
         let mut registered_datasets = sim.get_resource_or_insert_with(RegisteredDatasets::default);
         registered_datasets.push(T::name());
+        todo!("ambiguity read_Dataset");
         sim.add_startup_system(
             read_dataset_system::<T>
                 .after(open_file_system)
                 .after(spawn_entities_system)
-                .before(close_file_system)
-                .in_ambiguity_set(InputSystemsAmbiguitySet),
+                .before(close_file_system),
         );
     }
 }
@@ -164,7 +159,7 @@ fn spawn_entities_system(
     }
     assert_eq!(spawned_entities.len(), 0);
     spawned_entities.0 = (0..num_entities)
-        .map(|_| commands.spawn_bundle((LocalParticle,)).id())
+        .map(|_| commands.spawn((LocalParticle,)).id())
         .collect();
 }
 
@@ -233,5 +228,3 @@ fn read_dimension(dataset: &Dataset) -> Dimension {
         temperature,
     }
 }
-
-pub struct ShouldReadInitialConditions(pub bool);

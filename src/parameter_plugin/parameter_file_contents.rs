@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::debug;
+use bevy::prelude::Resource;
 use derive_traits::RaxiomParameters;
 use serde_yaml::Mapping;
 use serde_yaml::Value;
@@ -12,6 +13,7 @@ pub struct Override {
     pub value: Value,
 }
 
+#[derive(Resource)]
 pub struct ParameterFileContents {
     sections: HashMap<String, Value>,
     overrides: Vec<Override>,

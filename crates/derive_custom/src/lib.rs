@@ -65,7 +65,7 @@ pub(crate) fn parameter_attr_derive(args: proc_macro::TokenStream, input: proc_m
     let trait_impl: proc_macro2::TokenStream  = parameters_trait_impl(input.clone(), name).into();
     let input: proc_macro2::TokenStream = input.into();
     let output = quote! {
-        #[derive(Clone, serde::Serialize, serde::Deserialize)]
+        #[derive(Clone, serde::Serialize, serde::Deserialize, bevy::prelude::Resource)]
         #[serde(deny_unknown_fields)]
         #input
 

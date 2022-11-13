@@ -58,11 +58,9 @@ pub enum ColorMap {
 #[derive(Named)]
 pub struct ShowParticlesPlugin;
 
-#[derive(AmbiguitySetLabel)]
-pub struct ColorMapAmbiguitySet;
-
 impl RaxiomPlugin for ShowParticlesPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
+        todo!("all of the lower systems are ambiguous");
         sim.add_system_to_stage(VisualizationStage::AddVisualization, show_particles_system)
             .add_system_to_stage(
                 VisualizationStage::Draw,
@@ -74,13 +72,9 @@ impl RaxiomPlugin for ShowParticlesPlugin {
                 VisualizationStage::AddDrawComponents,
                 SystemSet::new()
                     .with_system(color_particles_by_temperature_system)
-                    .in_ambiguity_set(ColorMapAmbiguitySet)
                     .with_system(color_particles_by_mass_system)
-                    .in_ambiguity_set(ColorMapAmbiguitySet)
                     .with_system(color_particles_by_pressure_system)
-                    .in_ambiguity_set(ColorMapAmbiguitySet)
                     .with_system(color_particles_by_num_particles_system)
-                    .in_ambiguity_set(ColorMapAmbiguitySet)
                     .after(insert_meshes_system::<DrawCircle>),
             );
     }

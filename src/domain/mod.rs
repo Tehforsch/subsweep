@@ -94,7 +94,7 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
     }
 }
 
-#[derive(Debug, Deref, DerefMut)]
+#[derive(Debug, Deref, DerefMut, Resource)]
 pub struct GlobalExtent(Extent);
 
 pub(super) fn determine_global_extent_system(
@@ -182,7 +182,7 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     key_cutoffs_by_rank
 }
 
-#[derive(Default, Deref, DerefMut)]
+#[derive(Default, Deref, DerefMut, Resource)]
 pub struct TopLevelIndices(DataByRank<Vec<QuadTreeIndex>>);
 
 impl TopLevelIndices {

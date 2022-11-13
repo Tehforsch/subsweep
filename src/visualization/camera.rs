@@ -8,7 +8,7 @@ pub(super) struct WorldCamera;
 
 pub(super) fn setup_camera_system(mut commands: Commands) {
     commands
-        .spawn_bundle(Camera2dBundle::default())
+        .spawn(Camera2dBundle::default())
         .insert(WorldCamera);
 }
 

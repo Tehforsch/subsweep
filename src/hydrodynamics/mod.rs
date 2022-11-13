@@ -266,13 +266,8 @@ fn halo_exchange_system(
             }
         }
     }
-    let spawn_particle = |rank: Rank, data: RemoteParticleData| {
-        commands
-            .spawn()
-            .insert_bundle(data)
-            .insert(HaloParticle { rank })
-            .id()
-    };
+    let spawn_particle =
+        |rank: Rank, data: RemoteParticleData| commands.spawn((data, HaloParticle { rank })).id();
     let mut sync = communicator.receive_sync(spawn_particle);
     sync.despawn_deleted(&mut commands);
     for (_, data) in sync.updated.drain_all() {
@@ -305,7 +300,7 @@ fn insert_pressure_and_density_system(
             } => temperature.to_internal_energy(molecular_weight) * **mass,
             InitialGasEnergy::Energy(energy) => energy * **mass,
         };
-        commands.entity(entity).insert_bundle((
+        commands.entity(entity).insert((
             components::Pressure::default(),
             components::Density::default(),
             components::SmoothingLength::default(),

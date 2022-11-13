@@ -1,13 +1,12 @@
 use std::ops::Deref;
 
-use bevy::ecs::schedule::ParallelSystemDescriptor;
+use bevy::ecs::schedule::SystemDescriptor;
 use bevy::prelude::*;
 use hdf5::Dataset;
 use hdf5::H5Type;
 
 use super::output::plugin::IntoOutputSystem;
 use super::output::OutputFile;
-use super::output::OutputSystemsAmbiguitySet;
 use crate::named::Named;
 use crate::prelude::Particles;
 use crate::units::Dimension;
@@ -45,8 +44,9 @@ where
 }
 
 impl<T: ToDataset> IntoOutputSystem for T {
-    fn system() -> ParallelSystemDescriptor {
-        write_dataset::<T>.in_ambiguity_set(OutputSystemsAmbiguitySet)
+    fn system() -> SystemDescriptor {
+        todo!("ambiguity");
+        write_dataset::<T>.into_descriptor()
     }
 }
 

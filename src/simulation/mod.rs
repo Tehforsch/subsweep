@@ -3,11 +3,10 @@ mod raxiom_plugin;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use bevy::app::PluginGroupBuilder;
 use bevy::ecs::event::Event;
 use bevy::ecs::schedule::IntoSystemDescriptor;
-use bevy::ecs::schedule::ParallelSystemDescriptor;
 use bevy::ecs::schedule::StateData;
+use bevy::ecs::schedule::SystemDescriptor;
 use bevy::ecs::schedule::SystemLabelId;
 use bevy::ecs::system::Resource;
 use bevy::prelude::debug;
@@ -15,7 +14,6 @@ use bevy::prelude::warn;
 use bevy::prelude::App;
 use bevy::prelude::Component;
 use bevy::prelude::Mut;
-use bevy::prelude::ParallelSystemDescriptorCoercion;
 use bevy::prelude::Plugin;
 use bevy::prelude::PluginGroup;
 use bevy::prelude::Stage;
@@ -45,6 +43,9 @@ pub struct Simulation {
     labels: HashSet<&'static str>,
     parameter_sections: HashSet<String>,
     ordering_labels: HashMap<&'static str, Vec<SystemLabelId>>,
+    current_communication_tag: i32,
+    pub read_initial_conditions: bool,
+    pub write_output: bool,
 }
 
 impl Simulation {
@@ -52,12 +53,24 @@ impl Simulation {
     pub fn test() -> Self {
         use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 
-        use crate::io::output::ShouldWriteOutput;
-
         let mut sim = Self::default();
-        sim.insert_resource(ReportExecutionOrderAmbiguities)
-            .insert_resource(ShouldWriteOutput(false));
+        sim.insert_resource(ReportExecutionOrderAmbiguities);
         sim
+    }
+
+    pub fn get_next_tag(&mut self) -> i32 {
+        self.current_communication_tag += 1;
+        self.current_communication_tag
+    }
+
+    pub fn read_initial_conditions(&mut self, read_initial_conditions: bool) -> &mut Self {
+        self.read_initial_conditions = read_initial_conditions;
+        self
+    }
+
+    pub fn write_output(&mut self, write_output: bool) -> &mut Self {
+        self.write_output = write_output;
+        self
     }
 
     pub fn already_added<P: Named>(&mut self) -> bool {
@@ -146,15 +159,6 @@ impl Simulation {
         self
     }
 
-    pub fn add_bevy_plugins_with<T, F>(&mut self, group: T, func: F) -> &mut Self
-    where
-        T: PluginGroup,
-        F: FnOnce(&mut PluginGroupBuilder) -> &mut PluginGroupBuilder,
-    {
-        self.app.add_plugins_with(group, func);
-        self
-    }
-
     pub fn add_system_to_stage<Params>(
         &mut self,
         stage_label: impl StageLabel,
@@ -180,7 +184,7 @@ impl Simulation {
     pub fn add_well_ordered_system_to_stage<Params, Marker: Named>(
         &mut self,
         stage_label: impl StageLabel,
-        system: impl IntoSystemDescriptor<Params> + ParallelSystemDescriptorCoercion<Params>,
+        system: impl IntoSystemDescriptor<Params>,
         label: SystemLabelId,
     ) -> &mut Self {
         let marker = Marker::name();
@@ -196,7 +200,7 @@ impl Simulation {
             labels.push(label);
             self
         } else {
-            let mut system: ParallelSystemDescriptor = system.after(labels[0]);
+            let mut system: SystemDescriptor = system.after(labels[0]);
             for label in labels.iter() {
                 system = system.after(*label);
             }
@@ -275,19 +279,19 @@ impl Simulation {
         }
     }
 
-    pub fn get_resource<T: Sync + Send + 'static>(&self) -> Option<&T> {
+    pub fn get_resource<T: Resource>(&self) -> Option<&T> {
         self.app.world.get_resource::<T>()
     }
 
-    pub fn get_resource_mut<T: Sync + Send + 'static>(&mut self) -> Option<Mut<T>> {
+    pub fn get_resource_mut<T: Resource>(&mut self) -> Option<Mut<T>> {
         self.app.world.get_resource_mut::<T>()
     }
 
-    pub fn unwrap_resource<T: Sync + Send + 'static>(&self) -> &T {
+    pub fn unwrap_resource<T: Resource>(&self) -> &T {
         self.app.world.get_resource::<T>().unwrap()
     }
 
-    pub fn unwrap_resource_mut<T: Sync + Send + 'static>(&mut self) -> Mut<T> {
+    pub fn unwrap_resource_mut<T: Resource>(&mut self) -> Mut<T> {
         self.app.world.get_resource_mut::<T>().unwrap()
     }
 
@@ -302,7 +306,7 @@ impl Simulation {
         self.app.world.get_resource_or_insert_with(func)
     }
 
-    pub fn contains_resource<T: Sync + Send + 'static>(&self) -> bool {
+    pub fn contains_resource<T: Resource>(&self) -> bool {
         self.get_resource::<T>().is_some()
     }
 

@@ -27,9 +27,6 @@ pub struct Pixels(pub f64);
 #[derive(Named)]
 pub struct DrawItemSyncOrdering;
 
-#[derive(AmbiguitySetLabel)]
-pub struct DrawAmbiguitySet;
-
 pub trait DrawItem {
     fn get_color(&self) -> RColor;
     fn translation(&self) -> &VecLength;
@@ -51,12 +48,13 @@ impl<T> Default for DrawItemPlugin<T> {
     }
 }
 
+#[derive(Resource)]
 pub(super) struct MeshHandle<T> {
     _marker: PhantomData<T>,
     handle: Handle<Mesh>,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub(super) struct MaterialsCache {
     map: HashMap<RColor, Handle<ColorMaterial>>,
 }
@@ -99,7 +97,8 @@ where
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
-        sim.add_startup_system(setup_meshes_system::<T>.in_ambiguity_set(DrawAmbiguitySet))
+        todo!("ambiguity setupmesh, insert_Mesh, change_color, draw_Translation");
+        sim.add_startup_system(setup_meshes_system::<T>)
             .add_well_ordered_system_to_stage::<_, DrawItemSyncOrdering>(
                 VisualizationStage::Synchronize,
                 receive_items_on_main_thread_system::<T>,
@@ -107,16 +106,10 @@ where
             )
             .add_system_to_stage(
                 VisualizationStage::AddDrawComponents,
-                insert_meshes_system::<T>.in_ambiguity_set(DrawAmbiguitySet),
+                insert_meshes_system::<T>,
             )
-            .add_system_to_stage(
-                VisualizationStage::Draw,
-                change_colors_system::<T>.in_ambiguity_set(DrawAmbiguitySet),
-            )
-            .add_system_to_stage(
-                VisualizationStage::Draw,
-                draw_translation_system::<T>.in_ambiguity_set(DrawAmbiguitySet),
-            );
+            .add_system_to_stage(VisualizationStage::Draw, change_colors_system::<T>)
+            .add_system_to_stage(VisualizationStage::Draw, draw_translation_system::<T>);
     }
 
     fn build_on_other_ranks(&self, sim: &mut Simulation) {
@@ -147,7 +140,7 @@ pub(super) fn insert_meshes_system<T: Component + DrawItem>(
     mesh_handle: Res<MeshHandle<T>>,
 ) {
     for (item, entity) in query.iter() {
-        commands.entity(entity).insert_bundle(ColorMesh2dBundle {
+        commands.entity(entity).insert(ColorMesh2dBundle {
             mesh: Mesh2dHandle(mesh_handle.handle.clone()),
             material: cache.get_material(item.get_color(), &mut materials),
             ..default()

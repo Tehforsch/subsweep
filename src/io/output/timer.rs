@@ -3,12 +3,14 @@ use bevy::prelude::Commands;
 use bevy::prelude::EventReader;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
+use bevy::prelude::Resource;
 
 use super::parameters::OutputParameters;
 use crate::simulation_plugin::StopSimulationEvent;
 use crate::simulation_plugin::Time;
 use crate::units;
 
+#[derive(Resource)]
 pub(super) struct Timer {
     next_output_time: units::Time,
     snapshot_num: usize,
