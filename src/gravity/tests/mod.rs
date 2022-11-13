@@ -72,6 +72,7 @@ fn compare_quadtree_gravity_to_direct_sum() {
     let solver = Solver {
         opening_angle: Dimensionless::zero(),
         softening_length: Length::zero(),
+        box_: tree.extent.clone().into(),
     };
     let acc1 = solver.traverse_tree(&tree, &pos);
     let acc2 = direct_sum(

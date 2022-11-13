@@ -9,6 +9,7 @@ use crate::components::Position;
 use crate::components::Timestep;
 use crate::components::Velocity;
 use crate::domain::TopLevelIndices;
+use crate::parameters::SimulationBox;
 use crate::prelude::Particles;
 use crate::quadtree::Node;
 use crate::quadtree::*;
@@ -36,13 +37,15 @@ pub use quadtree::QuadTree;
 struct Solver {
     softening_length: Length,
     opening_angle: Dimensionless,
+    box_: SimulationBox,
 }
 
 impl Solver {
-    pub fn from_parameters(parameters: &GravityParameters) -> Self {
+    pub fn new(parameters: &GravityParameters, box_: &SimulationBox) -> Self {
         Self {
             softening_length: parameters.softening_length,
             opening_angle: parameters.opening_angle,
+            box_: box_.clone(),
         }
     }
 }
@@ -54,7 +57,7 @@ impl Solver {
         pos2: &VecLength,
         mass2: units::Mass,
     ) -> VecAcceleration {
-        let distance_vector = *pos1 - *pos2;
+        let distance_vector = self.box_.periodic_distance_vec(pos1, pos2);
         let distance = distance_vector.length() + self.softening_length;
         -distance_vector * GRAVITY_CONSTANT * mass2 / distance.cubed()
     }
@@ -87,7 +90,7 @@ impl Solver {
     }
 
     fn should_be_opened(&self, child: &QuadTree, pos: &VecLength) -> bool {
-        let distance = pos.distance(&child.extent.center());
+        let distance = self.box_.periodic_distance(pos, &child.extent.center());
         let length = child.extent.max_side_length();
         length / distance > self.opening_angle
     }
@@ -112,8 +115,9 @@ pub(super) fn gravity_system(
     parameters: Res<GravityParameters>,
     mut request_comm: ExchangeCommunicator<Identified<GravityCalculationRequest>>,
     mut reply_comm: ExchangeCommunicator<Identified<GravityCalculationReply>>,
+    box_: Res<SimulationBox>,
 ) {
-    let gravity = Solver::from_parameters(&parameters);
+    let gravity = Solver::new(&parameters, &box_);
     let mut outgoing_requests = DataByRank::from_communicator(&*request_comm);
     let add_acceleration = |vel: &mut Velocity, acceleration, timestep: &Timestep| {
         **vel += acceleration * **timestep;

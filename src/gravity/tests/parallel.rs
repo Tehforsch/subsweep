@@ -20,6 +20,7 @@ use crate::gravity::LeafData;
 use crate::gravity::Solver;
 use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
+use crate::prelude::SimulationBox;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationPlugin;
 use crate::test_utils::run_system_on_sim;
@@ -30,8 +31,9 @@ pub const NUM_PARTICLES_ONE_DIMENSION: i32 = 20;
 fn check_system(
     parameters: Res<GravityParameters>,
     query: Particles<(&Velocity, &IndexIntoArray, &Timestep)>,
+    box_: Res<SimulationBox>,
 ) {
-    let solver = Solver::from_parameters(&parameters);
+    let solver = Solver::new(&parameters, &box_);
     for (vel, index, timestep) in query.iter() {
         let particles = get_particles(NUM_PARTICLES_ONE_DIMENSION, NUM_PARTICLES_ONE_DIMENSION);
         // We can't use the particle position from a query here,
@@ -80,7 +82,6 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
     use crate::domain::Extent;
-    use crate::simulation_box::SimulationBox;
     use crate::stages::SimulationStagesPlugin;
     use crate::timestep::TimestepParameters;
     use crate::units::Dimensionless;

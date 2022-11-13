@@ -3,7 +3,7 @@
 
 use raxiom::ics::ConstantDensity;
 use raxiom::ics::InitialConditionsPlugin;
-use raxiom::ics::MonteCarloSampler;
+use raxiom::ics::RegularSampler;
 use raxiom::ics::VelocityProfile;
 use raxiom::prelude::*;
 use raxiom::units::Density;
@@ -37,7 +37,7 @@ fn main() {
                 .velocity_profile(RotationalVelocityProfile(
                     parameters.angular_velocity_factor,
                 ))
-                .sampler(MonteCarloSampler::num_particles(parameters.num_particles)),
+                .sampler(RegularSampler::new((15, 15, 15))),
         )
         .run();
 }
