@@ -32,6 +32,14 @@ jobs:
       - name: Build
         run: cargo build --verbose --all-targets
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --tests
       - name: Run local communication tests
-        run: cargo test --verbose --no-default-features
+        run: cargo test --no-default-features --tests -- --ignored
+      - name: Run 2d tests
+        run: cargo test --no-default-features --features mpi,2d --tests -- --ignored
+      - name: Build benchmarks
+        run: cargo bench --no-run
+      - name: Run clippy on all targets
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Doctests
+        run: cargo test --doc
