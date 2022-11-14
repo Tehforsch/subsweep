@@ -18,6 +18,7 @@ use crate::gravity::plugin::GravityPlugin;
 use crate::gravity::GravityParameters;
 use crate::gravity::LeafData;
 use crate::gravity::Solver;
+use crate::prelude::Extent;
 use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
 use crate::prelude::SimulationBox;
@@ -58,30 +59,34 @@ fn check_system(
 #[derive(Component, Equivalence, Clone, Debug)]
 struct IndexIntoArray(usize);
 
+fn get_particles_this_test() -> Vec<LeafData> {
+    get_particles(NUM_PARTICLES_ONE_DIMENSION, NUM_PARTICLES_ONE_DIMENSION)
+}
+
+fn get_extent_this_test() -> Extent {
+    Extent::from_positions(get_particles_this_test().iter().map(|x| &x.pos)).unwrap()
+}
+
 fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
     if **rank == 0 {
-        commands.spawn_batch(
-            get_particles(NUM_PARTICLES_ONE_DIMENSION, NUM_PARTICLES_ONE_DIMENSION)
-                .into_iter()
-                .enumerate()
-                .map(|(i, LeafData { pos, mass, .. })| {
-                    let vel = Velocity(VecVelocity::zero());
-                    (
-                        Position(pos),
-                        components::Mass(mass),
-                        vel,
-                        LocalParticle,
-                        IndexIntoArray(i),
-                    )
-                }),
-        )
+        commands.spawn_batch(get_particles_this_test().into_iter().enumerate().map(
+            |(i, LeafData { pos, mass, .. })| {
+                let vel = Velocity(VecVelocity::zero());
+                (
+                    Position(pos),
+                    components::Mass(mass),
+                    vel,
+                    LocalParticle,
+                    IndexIntoArray(i),
+                )
+            },
+        ))
     }
 }
 
 #[cfg(not(feature = "mpi"))]
 fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
-    use crate::domain::Extent;
     use crate::stages::SimulationStagesPlugin;
     use crate::timestep::TimestepParameters;
     use crate::units::Dimensionless;
@@ -93,13 +98,11 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
             max_timestep: Time::seconds(1.0),
             num_levels: 1,
         })
-        .add_parameters_explicitly::<SimulationBox>(
-            Extent::cube_from_side_length(Length::meters(100.0)).into(),
-        )
         .add_parameters_explicitly(GravityParameters {
             opening_angle: Dimensionless::dimensionless(0.0),
             softening_length: Length::meters(1e-30),
         })
+        .add_parameters_explicitly(SimulationBox::from(get_extent_this_test()))
         .write_output(false)
         .add_startup_system(spawn_particles_system)
         .add_bevy_plugins(MinimalPlugins)

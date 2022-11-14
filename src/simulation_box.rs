@@ -17,21 +17,24 @@ use crate::units::VecLength;
 pub struct SimulationBox(Extent);
 
 fn periodic_wrap_component(v: Float, min: Float, max: Float) -> Float {
-    (v - min).rem_euclid(max - min) + min
+    min + (v - min).rem_euclid(max - min)
 }
 
 fn minimize_component(v: Float, length: Float) -> Float {
-    if v < 0.0 {
-        if v.abs() < (v + length).abs() {
-            v
-        } else {
-            v + length
-        }
-    } else if v.abs() < (v - length).abs() {
-        v
-    } else {
+    // The following only works if v is within [-3/2 L, 3/2 L].
+    // where L = (box_end - box_start)
+    // The debug assertion below will fail if the particle falls out of this range.
+    // Since periodic_wrap always takes all particles to [box_start, box_end],
+    // distances should always fulfill |v| <= 3/2 L = 3/2
+    let v = if v >= length / 2.0 {
         v - length
-    }
+    } else if v <= -length / 2.0 {
+        v + length
+    } else {
+        v
+    };
+    debug_assert!(v.abs() <= length / 2.0);
+    v
 }
 
 impl SimulationBox {
@@ -169,9 +172,11 @@ mod tests {
         .into();
         for p1 in particles.iter() {
             for p2 in particles.iter() {
-                let d1 = box_.periodic_distance_vec(&p1.pos, &p2.pos);
-                let d2 = box_.periodic_distance_vec(&p2.pos, &p1.pos);
-                dbg!(&p1.pos, &p2.pos, d1, d2);
+                // Wrap the positions to make sure that we do not exceed the [-3/2 L, 3/2 L] interval in which periodic_distance_vec is valid
+                let p1 = box_.periodic_wrap(p1.pos);
+                let p2 = box_.periodic_wrap(p2.pos);
+                let d1 = box_.periodic_distance_vec(&p1, &p2);
+                let d2 = box_.periodic_distance_vec(&p2, &p1);
                 assert_vec_is_close(d1, -d2);
             }
         }
