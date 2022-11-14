@@ -85,6 +85,9 @@ struct DrawTranslationLabel;
 #[derive(SystemLabel)]
 struct ChangeColorsLabel;
 
+#[derive(SystemLabel)]
+struct InsertMeshesLabel;
+
 impl<T: Equivalence + DrawItem + Component + Clone + Sync + Send + 'static> RaxiomPlugin
     for DrawItemPlugin<T>
 where
@@ -111,7 +114,9 @@ where
             )
             .add_system_to_stage(
                 VisualizationStage::AddDrawComponents,
-                insert_meshes_system::<T>,
+                insert_meshes_system::<T>
+                    .label(InsertMeshesLabel)
+                    .ambiguous_with(InsertMeshesLabel),
             )
             .add_system_to_stage(
                 VisualizationStage::Draw,

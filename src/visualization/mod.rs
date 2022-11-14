@@ -9,6 +9,7 @@ mod show_halo_particles;
 mod show_particles;
 
 use bevy::prelude::*;
+use bevy::transform::transform_propagate_system;
 pub use camera_transform::CameraTransform;
 pub use draw_item::circle::DrawCircle;
 pub use draw_item::rect::DrawRect;
@@ -67,6 +68,7 @@ impl RaxiomPlugin for VisualizationPlugin {
             .add_startup_system_to_stage(
                 StartupStage::PostStartup,
                 camera_translation_system
+                    .after(transform_propagate_system)
                     .after(determine_global_extent_system)
                     .after(camera_scale_system),
             )
