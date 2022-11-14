@@ -39,6 +39,10 @@ macro_utils = { path = "crates/macro_utils" }
 [profile.dev.package."*"]
 opt-level = 3
 
+[profile.release-lto]
+inherits = "release"
+lto = true
+
 [[example]]
 name = "mpi_test"
 required-features = ["mpi", "mpi_test"]
