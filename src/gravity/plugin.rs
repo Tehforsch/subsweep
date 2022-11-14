@@ -11,6 +11,7 @@ use crate::domain::construct_quad_tree_system;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation_plugin::integrate_motion_system;
 use crate::simulation_plugin::SimulationStages;
 
 #[derive(Named)]
@@ -26,7 +27,9 @@ impl RaxiomPlugin for GravityPlugin {
             )
             .add_system_to_stage(
                 SimulationStages::Physics,
-                gravity_system.after(communicate_mass_moments_system),
+                gravity_system
+                    .after(communicate_mass_moments_system)
+                    .before(integrate_motion_system),
             )
             .add_plugin(CommunicationPlugin::<Identified<GravityCalculationRequest>>::exchange())
             .add_plugin(CommunicationPlugin::<Identified<GravityCalculationReply>>::exchange());

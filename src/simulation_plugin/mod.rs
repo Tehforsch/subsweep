@@ -13,7 +13,6 @@ use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Timestep;
 use crate::components::Velocity;
-use crate::gravity::gravity_system;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::named::Named;
@@ -53,10 +52,7 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_event::<StopSimulationEvent>()
             .insert_resource(Time(units::Time::seconds(0.00)))
             .add_plugin(TimestepPlugin::<ConstantTimestep>::default())
-            .add_system_to_stage(
-                SimulationStages::Physics,
-                integrate_motion_system.after(gravity_system),
-            )
+            .add_system_to_stage(SimulationStages::Physics, integrate_motion_system)
             .add_system_to_stage(
                 SimulationStages::Physics,
                 show_time_system.before(time_system),
@@ -106,7 +102,7 @@ fn handle_app_exit_system(
     }
 }
 
-fn integrate_motion_system(
+pub fn integrate_motion_system(
     mut query: Particles<(&mut Position, &Velocity, &Timestep)>,
     box_: Res<SimulationBox>,
 ) {
