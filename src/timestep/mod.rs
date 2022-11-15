@@ -47,7 +47,7 @@ impl TimestepState {
     }
 
     fn next(self) -> Self {
-        let max_count = 2usize.pow(self.max_num_bins as u32);
+        let max_count = 2usize.pow(self.max_num_bins as u32 - 1);
         Self {
             count: (self.count + 1).rem_euclid(max_count),
             max_num_bins: self.max_num_bins,
@@ -56,7 +56,7 @@ impl TimestepState {
 
     fn is_active_bin(&self, level: usize) -> bool {
         self.count
-            .rem_euclid(2usize.pow((self.max_num_bins - level) as u32))
+            .rem_euclid(2usize.pow((self.max_num_bins - 1 - level) as u32))
             == 0
     }
 
@@ -193,12 +193,8 @@ mod tests {
                 commands.spawn((DesiredTimestep(timestep), Counter::default(), LocalParticle));
             };
             spawn(&mut commands, 1);
-            spawn(&mut commands, 1);
-            spawn(&mut commands, 2);
             spawn(&mut commands, 2);
             spawn(&mut commands, 4);
-            spawn(&mut commands, 4);
-            spawn(&mut commands, 8);
             spawn(&mut commands, 8);
         }
         fn count_timesteps_system(
