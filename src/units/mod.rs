@@ -77,7 +77,7 @@ unit_system!(
     },
     PRESSURE2D, Pressure2D, mass: 1, length: 0, time: -2,
     {
-        pascals, 1.0, "Pa"
+        newtons_per_square_meter, 1.0, "N/m^2"
     },
     ENTROPY, Entropy, mass: 1, length: 2, time: -2, temperature: -1,
     {

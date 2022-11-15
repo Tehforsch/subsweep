@@ -129,6 +129,16 @@ impl Simulation {
         self
     }
 
+    pub fn add_startup_stage_after<S: Stage>(
+        &mut self,
+        target: impl StageLabel,
+        label: impl StageLabel,
+        stage: S,
+    ) -> &mut Self {
+        self.app.add_startup_stage_after(target, label, stage);
+        self
+    }
+
     pub fn add_state(&mut self, s: impl StateData) -> &mut Self {
         self.app.add_state(s);
         self

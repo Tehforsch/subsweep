@@ -8,6 +8,7 @@ use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationStages;
+use crate::simulation_plugin::SimulationStartupStages;
 use crate::visualization::VisualizationStage;
 
 #[derive(Named)]
@@ -32,6 +33,18 @@ impl RaxiomPlugin for SimulationStagesPlugin {
         ];
         for window in stages.windows(2) {
             sim.add_stage_after(
+                window[0].as_label(),
+                window[1].as_label(),
+                SystemStage::parallel(),
+            );
+        }
+        let startup_stages = &[
+            StartupStage::Startup.as_label(),
+            SimulationStartupStages::InsertComponents.as_label(),
+            SimulationStartupStages::InsertDerivedComponents.as_label(),
+        ];
+        for window in startup_stages.windows(2) {
+            sim.add_startup_stage_after(
                 window[0].as_label(),
                 window[1].as_label(),
                 SystemStage::parallel(),

@@ -25,6 +25,7 @@ use crate::prelude::LocalParticle;
 use crate::prelude::MVec;
 use crate::prelude::Particles;
 use crate::prelude::SimulationBox;
+use crate::prelude::SimulationStartupStages;
 use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -183,7 +184,7 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
                     .after("density_pressure_halo_exchange"),
             )
             .add_startup_system_to_stage(
-                StartupStage::PostStartup,
+                SimulationStartupStages::InsertDerivedComponents,
                 insert_pressure_and_density_system,
             )
             .add_derived_component::<components::Pressure>()
@@ -299,6 +300,9 @@ fn insert_pressure_and_density_system(
                 molecular_weight,
             } => temperature.to_internal_energy(molecular_weight) * **mass,
             InitialGasEnergy::Energy(energy) => energy * **mass,
+            InitialGasEnergy::Explicit => {
+                panic!("InitialGasEnergy is supposed to be initialized explicitly, but there are particles without an internal energy!")
+            }
         };
         commands.entity(entity).insert((
             components::Pressure::default(),

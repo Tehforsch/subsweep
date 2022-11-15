@@ -38,6 +38,10 @@ pub enum InitialGasEnergy {
     },
     /// Specify the initial thermal energy u directly
     Energy(EnergyPerMass),
+    /// All thermal energies will be set by initial conditions or a
+    /// startup system. Any hydro-particle with uninitialized internal
+    /// energy will lead to an error.
+    Explicit,
 }
 
 fn default_hydro_tree() -> QuadTreeConfig {

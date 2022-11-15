@@ -1,19 +1,5 @@
-timestep:
-  max_timestep: 2e-5 s
-hydrodynamics:
-  min_smoothing_length: 0.5 m
-  initial_gas_energy:
-    temperature: 100 K
-    molecular_weight: 4 dimensionless
-example:
-  num_particles: 100
-  wave:
-    max_velocity: 200 m s^-1
-    wave_length: 8 m
-  density: 0.01 kg m^-2 
-box_size: (8 0.1) m
 visualization:
   show_particles: True
   color_map:
     type: pressure
-    scale: 1e4 N m^-1
+    scale: 1.01 N m^-1

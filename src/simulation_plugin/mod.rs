@@ -36,6 +36,12 @@ pub enum SimulationStages {
     Physics,
 }
 
+#[derive(StageLabel)]
+pub enum SimulationStartupStages {
+    InsertComponents,
+    InsertDerivedComponents,
+}
+
 #[derive(Equivalence, Clone)]
 pub(super) struct ShouldExit(bool);
 
