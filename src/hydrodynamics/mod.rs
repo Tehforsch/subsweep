@@ -21,6 +21,7 @@ use crate::domain::extent::Extent;
 use crate::domain::TopLevelIndices;
 use crate::named::Named;
 use crate::performance_parameters::PerformanceParameters;
+use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::prelude::MVec;
 use crate::prelude::Particles;
@@ -29,6 +30,7 @@ use crate::prelude::SimulationStartupStages;
 use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::units;
 use crate::units::helpers::VecQuantity;
 use crate::units::Density;
 use crate::units::Dimension;
@@ -194,12 +196,35 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
     }
 }
 
+fn get_smoothing_length(
+    parameters: &HydrodynamicsParameters,
+    mass: units::Mass,
+    density: units::Density,
+) -> Length {
+    let num_neighbours = parameters.num_smoothing_neighbours as Float;
+
+    #[cfg(feature = "2d")]
+    let smoothing_length = (2.0 * num_neighbours * mass / (PI * density)).sqrt();
+
+    #[cfg(not(feature = "2d"))]
+    let smoothing_length = (2.0 * num_neighbours / (3.0 * density / (4.0 * PI * mass))).cbrt();
+
+    smoothing_length.clamp(
+        parameters.min_smoothing_length,
+        parameters.max_smoothing_length,
+    )
+}
+
 fn set_smoothing_lengths_system(
     parameters: Res<HydrodynamicsParameters>,
-    mut query: Particles<&mut SmoothingLength>,
+    mut query: Particles<(
+        &mut SmoothingLength,
+        &components::Mass,
+        &components::Density,
+    )>,
 ) {
-    for mut p in query.iter_mut() {
-        **p = parameters.min_smoothing_length;
+    for (mut smoothing_length, mass, density) in query.iter_mut() {
+        **smoothing_length = get_smoothing_length(&parameters, **mass, **density);
     }
 }
 
@@ -307,7 +332,7 @@ fn insert_pressure_and_density_system(
         commands.entity(entity).insert((
             components::Pressure::default(),
             components::Density::default(),
-            components::SmoothingLength::default(),
+            SmoothingLength(parameters.min_smoothing_length),
             components::InternalEnergy(energy),
         ));
     }

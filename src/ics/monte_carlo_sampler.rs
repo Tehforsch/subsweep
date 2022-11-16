@@ -35,7 +35,7 @@ impl MonteCarloSampler {
         let mut mass = Mass::zero();
         for _ in 0..self.num_samples {
             let pos = gen_range(rng, data.box_.min, data.box_.max);
-            mass += data.density_profile.density(pos) * volume_per_sample;
+            mass += data.density_profile.density(&data.box_, pos) * volume_per_sample;
         }
         mass
     }
@@ -54,7 +54,7 @@ impl Sampler for MonteCarloSampler {
         while positions.len() < num_particles_specified {
             let pos = gen_range(&mut rng, data.box_.min, data.box_.max);
             let random_density = rng.gen_range(Density::zero()..data.density_profile.max_value());
-            if random_density < data.density_profile.density(pos) {
+            if random_density < data.density_profile.density(&data.box_, pos) {
                 positions.push(pos);
             }
         }

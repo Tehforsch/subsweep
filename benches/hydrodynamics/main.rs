@@ -57,6 +57,8 @@ fn setup_hydro_sim(num_particles: usize) -> Simulation {
         .add_parameters_explicitly(SimulationBox::cube_from_side_length(Length::meters(100.0)))
         .add_parameters_explicitly(HydrodynamicsParameters {
             min_smoothing_length: Length::meters(1.0),
+            max_smoothing_length: Length::meters(1.0),
+            num_smoothing_neighbours: 20,
             initial_gas_energy: InitialGasEnergy::TemperatureAndMolecularWeight {
                 temperature: Temperature::kelvins(1e5),
                 molecular_weight: Dimensionless::dimensionless(1.0),

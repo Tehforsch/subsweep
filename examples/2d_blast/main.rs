@@ -4,42 +4,31 @@
 use raxiom::ics::DensityProfile;
 use raxiom::ics::InitialConditionsPlugin;
 use raxiom::ics::MonteCarloSampler;
-use raxiom::ics::VelocityProfile;
 use raxiom::prelude::*;
 use raxiom::units::Density;
+use raxiom::units::Length;
 use raxiom::units::VecLength;
-use raxiom::units::VecVelocity;
-use raxiom::units::Velocity;
 
 #[raxiom_parameters("example")]
 struct Parameters {
     num_particles: usize,
-    velocity_difference: Velocity,
-    top_fluid_density: Density,
-    bottom_fluid_density: Density,
+    min_density: Density,
+    max_density: Density,
+    radius: Length,
 }
 
 impl DensityProfile for Parameters {
-    fn density(&self, pos: VecLength) -> Density {
-        if pos.y().is_positive() {
-            self.top_fluid_density
+    fn density(&self, box_: &SimulationBox, pos: VecLength) -> Density {
+        let distance_to_center = box_.periodic_distance(&box_.center, &pos);
+        if distance_to_center < self.radius {
+            self.max_density
         } else {
-            self.bottom_fluid_density
+            self.min_density
         }
     }
 
     fn max_value(&self) -> Density {
-        self.top_fluid_density.max(self.bottom_fluid_density)
-    }
-}
-
-impl VelocityProfile for Parameters {
-    fn velocity(&self, pos: VecLength) -> VecVelocity {
-        if pos.y().is_positive() {
-            MVec::X * self.velocity_difference / 2.0
-        } else {
-            MVec::X * -self.velocity_difference / 2.0
-        }
+        self.max_density.max(self.min_density)
     }
 }
 
@@ -59,7 +48,6 @@ fn main() {
         .add_plugin(
             InitialConditionsPlugin::default()
                 .density_profile(parameters.clone())
-                .velocity_profile(parameters.clone())
                 .sampler(MonteCarloSampler::num_particles(parameters.num_particles)),
         )
         .run();

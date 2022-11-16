@@ -60,7 +60,7 @@ impl Sampler for RegularSampler {
         let volume_per_particle = volume / num_particles_specified as Float;
         let masses = positions
             .iter()
-            .map(|pos| data.density_profile.density(*pos) * volume_per_particle)
+            .map(|pos| data.density_profile.density(&data.box_, *pos) * volume_per_particle)
             .collect();
         PreSample { positions, masses }
     }

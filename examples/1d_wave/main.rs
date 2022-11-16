@@ -39,7 +39,7 @@ const WAVELENGTH: Length = Length::meters(1.0);
 struct Wave;
 
 impl DensityProfile for Wave {
-    fn density(&self, pos: VecLength) -> Density {
+    fn density(&self, _box: &SimulationBox, pos: VecLength) -> Density {
         let wave_factor = (2.0 * PI * pos.x() / WAVELENGTH).sin();
         DENSITY * (1.0 + WAVE_AMPLITUDE * wave_factor)
     }
@@ -64,7 +64,9 @@ fn build_sim(num_particles: usize) -> Simulation {
         });
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(HydrodynamicsParameters {
-        min_smoothing_length: BOX_SIZE / (num_particles as Float) * 8.0,
+        min_smoothing_length: Length::meters(1e-8),
+        max_smoothing_length: Length::meters(1.0),
+        num_smoothing_neighbours: 20,
         initial_gas_energy: InitialGasEnergy::Explicit,
         tree: QuadTreeConfig::default(),
     })
@@ -121,6 +123,7 @@ fn check_system(
     particles: Particles<(&Position, &components::Mass)>,
     mut events: EventReader<StopSimulationEvent>,
     time: Res<raxiom::simulation_plugin::Time>,
+    box_: Res<SimulationBox>,
 ) {
     // if !events.iter().next().is_some() {
     //     return;
@@ -130,7 +133,7 @@ fn check_system(
     for (pos, mass) in particles.iter() {
         // After one crossing time, the final state should be the initial state.
         let wave = Wave;
-        let desired = wave.density(**pos);
+        let desired = wave.density(&box_, **pos);
         let volume = BOX_SIZE.squared() / num_particles;
         let density = **mass / volume;
         l1 += ((density - desired) / DENSITY / num_particles).value();

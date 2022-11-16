@@ -11,8 +11,13 @@ use crate::units::Temperature;
 /// is added to the simulation
 #[raxiom_parameters("hydrodynamics")]
 pub struct HydrodynamicsParameters {
+    /// The number of neighbours that the adaptive smoothing length
+    /// tries to aim for.
+    pub num_smoothing_neighbours: usize,
     /// The minimum allowed smoothing length.
     pub min_smoothing_length: Length,
+    /// The maximum allowed smoothing length.
+    pub max_smoothing_length: Length,
     /// How to determine the initial temperature of gas particles.
     pub initial_gas_energy: InitialGasEnergy,
     /// Parameters of the tree used for the neighbour search in the

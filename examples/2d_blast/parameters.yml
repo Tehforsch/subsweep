@@ -1,7 +1,9 @@
 timestep:
   max_timestep: 2e-5 s
 hydrodynamics:
-  min_smoothing_length: 0.5 m
+  min_smoothing_length: 1e-7 m
+  max_smoothing_length: 1e0 m
+  num_smoothing_neighbours: 40
   initial_gas_energy:
     temperature: 300 K
     molecular_weight: 4 dimensionless
@@ -11,14 +13,13 @@ domain:
     min_depth: 4
     max_num_particles_per_leaf: 1
 example:
-  num_particles: 10000
-  top_fluid_density: 0.05 kg m^-2
-  bottom_fluid_density: 0.05 kg m^-2
-  velocity_difference: 150 m s^-1
+  num_particles: 100
+  max_density: 250.0 kg m^-2
+  min_density: 0.05 kg m^-2
+  radius: 0.1 m
 box_size: (8 8) m
 visualization:
   show_particles: True
   color_map:
     type: pressure
-    scale: 1 N m^-1
-  show_quadtree: True
+    scale: 200000 N m^-1

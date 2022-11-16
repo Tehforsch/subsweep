@@ -1,8 +1,9 @@
+use crate::parameters::SimulationBox;
 use crate::units::Density;
 use crate::units::VecLength;
 
 pub trait DensityProfile: DensityProfileClone {
-    fn density(&self, pos: VecLength) -> Density;
+    fn density(&self, _box_: &SimulationBox, pos: VecLength) -> Density;
     fn max_value(&self) -> Density;
 }
 
@@ -10,7 +11,7 @@ pub trait DensityProfile: DensityProfileClone {
 pub struct ConstantDensity(pub Density);
 
 impl DensityProfile for ConstantDensity {
-    fn density(&self, _pos: VecLength) -> Density {
+    fn density(&self, _box_: &SimulationBox, _pos: VecLength) -> Density {
         self.0
     }
 

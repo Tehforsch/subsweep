@@ -51,7 +51,7 @@ name = "figure8"
 required-features = ["mpi", "2d"]
 
 [[example]]
-name = "kelvin_helmholtz_instability"
+name = "2d_blast"
 required-features = ["mpi", "2d"]
 
 [[example]]
