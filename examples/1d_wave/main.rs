@@ -6,15 +6,18 @@ use std::f64::consts::PI;
 use bevy::prelude::*;
 use raxiom::components;
 use raxiom::components::Mass;
+use raxiom::components::Position;
 use raxiom::ics::DensityProfile;
 use raxiom::ics::InitialConditionsPlugin;
 use raxiom::ics::IntegerTuple;
 use raxiom::ics::RegularSampler;
 use raxiom::parameters::HydrodynamicsParameters;
 use raxiom::parameters::InitialGasEnergy;
+use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::TimestepParameters;
 use raxiom::prelude::*;
 use raxiom::quadtree::QuadTreeConfig;
+use raxiom::simulation_plugin::stop_simulation_system;
 use raxiom::units::Density;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
@@ -31,7 +34,6 @@ const PRESSURE: Pressure = Pressure::newtons_per_square_meter(3.0 / 5.0);
 const WAVE_AMPLITUDE: Dimensionless = Dimensionless::dimensionless(1.0e-6);
 const BOX_SIZE: Length = Length::meters(1.0);
 const WAVELENGTH: Length = Length::meters(1.0);
-const TIMESTEP: Time = Time::seconds(1e-3);
 
 #[derive(Clone)]
 struct Wave;
@@ -48,6 +50,10 @@ impl DensityProfile for Wave {
 }
 
 fn build_sim(num_particles: usize) -> Simulation {
+    let speed_of_sound = (PRESSURE / DENSITY * GAMMA).sqrt();
+    let crossing_time = WAVELENGTH / speed_of_sound * 4.0;
+    let delta_x = BOX_SIZE / num_particles as Float;
+    let max_timestep = 2.5 * delta_x / speed_of_sound;
     let initial_conditions = InitialConditionsPlugin::default()
         .density_profile(Wave)
         .sampler(RegularSampler {
@@ -58,24 +64,32 @@ fn build_sim(num_particles: usize) -> Simulation {
         });
     let mut sim = Simulation::default();
     sim.add_parameters_explicitly(HydrodynamicsParameters {
-        min_smoothing_length: Length::meters(0.1),
+        min_smoothing_length: BOX_SIZE / (num_particles as Float) * 8.0,
         initial_gas_energy: InitialGasEnergy::Explicit,
         tree: QuadTreeConfig::default(),
     })
     .add_parameters_explicitly(SimulationBox::from(Extent::cube_from_side_length(BOX_SIZE)))
+    .add_parameters_explicitly(SimulationParameters {
+        final_time: Some(crossing_time),
+    })
     .add_parameters_explicitly(TimestepParameters {
         num_levels: 1,
-        max_timestep: TIMESTEP,
+        max_timestep,
     });
     SimulationBuilder::new()
         .read_initial_conditions(false)
         .write_output(false)
         .headless(false)
         .parameters_from_relative_path(file!(), "parameters.yml")
+        .update_from_command_line_options()
         .build_with_sim(&mut sim)
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertComponents,
             initialize_energy_system,
+        )
+        .add_system_to_stage(
+            CoreStage::PostUpdate,
+            check_system.after(stop_simulation_system),
         )
         .add_plugin(HydrodynamicsPlugin)
         .add_plugin(initial_conditions);
@@ -101,6 +115,27 @@ fn initialize_energy_system(
             components::InternalEnergy(energy * **mass),
         ));
     }
+}
+
+fn check_system(
+    particles: Particles<(&Position, &components::Mass)>,
+    mut events: EventReader<StopSimulationEvent>,
+    time: Res<raxiom::simulation_plugin::Time>,
+) {
+    // if !events.iter().next().is_some() {
+    //     return;
+    // }
+    let num_particles = particles.iter().count() as Float;
+    let mut l1 = 0.0;
+    for (pos, mass) in particles.iter() {
+        // After one crossing time, the final state should be the initial state.
+        let wave = Wave;
+        let desired = wave.density(**pos);
+        let volume = BOX_SIZE.squared() / num_particles;
+        let density = **mass / volume;
+        l1 += ((density - desired) / DENSITY / num_particles).value();
+    }
+    println!("{:?} {:?}", **time, l1);
 }
 
 fn main() {

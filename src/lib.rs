@@ -30,7 +30,7 @@ pub(crate) mod rand;
 pub(crate) mod simulation;
 pub(crate) mod simulation_box;
 pub(crate) mod simulation_builder;
-pub(crate) mod simulation_plugin;
+pub mod simulation_plugin;
 pub(crate) mod stages;
 pub(crate) mod timestep;
 pub(crate) mod visualization;

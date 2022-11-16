@@ -3,6 +3,7 @@ mod time;
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
+use bevy::window::exit_on_all_closed;
 use mpi::traits::Equivalence;
 
 pub use self::parameters::SimulationParameters;
@@ -45,6 +46,8 @@ pub enum SimulationStartupStages {
 #[derive(Equivalence, Clone)]
 pub(super) struct ShouldExit(bool);
 
+pub struct StopSimulationEvent;
+
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<SimulationParameters>()
@@ -67,20 +70,17 @@ impl RaxiomPlugin for SimulationPlugin {
                 SimulationStages::Physics,
                 time_system.after(integrate_motion_system),
             )
+            .add_system_to_stage(CoreStage::PostUpdate, stop_simulation_system)
             .add_system_to_stage(
-                SimulationStages::Physics,
-                stop_simulation_system.after(time_system),
-            )
-            .add_system_to_stage(
-                SimulationStages::Physics,
-                handle_app_exit_system.after(stop_simulation_system),
+                CoreStage::PostUpdate,
+                handle_app_exit_system
+                    .after(stop_simulation_system)
+                    .before(exit_on_all_closed),
             );
     }
 }
 
-pub struct StopSimulationEvent;
-
-fn stop_simulation_system(
+pub fn stop_simulation_system(
     parameters: Res<SimulationParameters>,
     current_time: Res<Time>,
     mut stop_sim: EventWriter<StopSimulationEvent>,
