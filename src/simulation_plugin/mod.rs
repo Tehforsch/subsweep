@@ -1,6 +1,9 @@
 mod parameters;
 mod time;
 
+#[cfg(all(not(feature = "2d"), test))]
+mod tests;
+
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::window::exit_on_all_closed;
@@ -34,7 +37,8 @@ pub struct SimulationPlugin;
 // Cannot wait for stageless
 #[derive(StageLabel)]
 pub enum SimulationStages {
-    Physics,
+    ForceCalculation,
+    Integration,
 }
 
 #[derive(StageLabel)]
@@ -61,13 +65,13 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_event::<StopSimulationEvent>()
             .insert_resource(Time(units::Time::seconds(0.00)))
             .add_plugin(TimestepPlugin::<ConstantTimestep>::default())
-            .add_system_to_stage(SimulationStages::Physics, integrate_motion_system)
+            .add_system_to_stage(SimulationStages::Integration, integrate_motion_system)
             .add_system_to_stage(
-                SimulationStages::Physics,
+                SimulationStages::Integration,
                 show_time_system.before(time_system),
             )
             .add_system_to_stage(
-                SimulationStages::Physics,
+                SimulationStages::Integration,
                 time_system.after(integrate_motion_system),
             )
             .add_system_to_stage(CoreStage::PostUpdate, stop_simulation_system)

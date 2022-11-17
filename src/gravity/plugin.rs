@@ -20,13 +20,16 @@ pub struct GravityPlugin;
 impl RaxiomPlugin for GravityPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<GravityParameters>()
-            .add_system_to_stage(SimulationStages::Physics, construct_quad_tree_system)
             .add_system_to_stage(
-                SimulationStages::Physics,
+                SimulationStages::ForceCalculation,
+                construct_quad_tree_system,
+            )
+            .add_system_to_stage(
+                SimulationStages::ForceCalculation,
                 communicate_mass_moments_system.after(construct_quad_tree_system),
             )
             .add_system_to_stage(
-                SimulationStages::Physics,
+                SimulationStages::ForceCalculation,
                 gravity_system
                     .after(communicate_mass_moments_system)
                     .before(integrate_motion_system),

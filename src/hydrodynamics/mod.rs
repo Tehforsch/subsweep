@@ -30,6 +30,7 @@ use crate::prelude::SimulationStartupStages;
 use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation_plugin::SimulationStages;
 use crate::units;
 use crate::units::helpers::VecQuantity;
 use crate::units::Density;
@@ -141,8 +142,7 @@ fn symmetric_kernel_derivative(
 
 #[derive(StageLabel)]
 pub enum HydrodynamicsStages {
-    Initial,
-    Hydrodynamics,
+    BeforeForceCalculation,
 }
 
 #[derive(Named)]
@@ -157,30 +157,33 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
             .add_plugin(CommunicationPlugin::<RemoteParticleData>::sync())
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_system_to_stage(
-                HydrodynamicsStages::Initial,
+                HydrodynamicsStages::BeforeForceCalculation,
                 set_smoothing_lengths_system.before("initial_halo_exchange"),
             )
-            .add_system_to_stage(HydrodynamicsStages::Initial, initial_halo_exchange)
             .add_system_to_stage(
-                HydrodynamicsStages::Hydrodynamics,
+                HydrodynamicsStages::BeforeForceCalculation,
+                initial_halo_exchange,
+            )
+            .add_system_to_stage(
+                SimulationStages::ForceCalculation,
                 construct_quad_tree_system,
             )
             .add_system_to_stage(
-                HydrodynamicsStages::Hydrodynamics,
+                SimulationStages::ForceCalculation,
                 compute_pressure_and_density_system.after(construct_quad_tree_system),
             )
             .add_system_to_stage(
-                HydrodynamicsStages::Hydrodynamics,
+                SimulationStages::ForceCalculation,
                 density_pressure_halo_exchange.after(compute_pressure_and_density_system),
             )
             .add_system_to_stage(
-                HydrodynamicsStages::Hydrodynamics,
+                SimulationStages::ForceCalculation,
                 compute_energy_change_system
                     .after(compute_pressure_and_density_system)
                     .after("density_pressure_halo_exchange"),
             )
             .add_system_to_stage(
-                HydrodynamicsStages::Hydrodynamics,
+                SimulationStages::ForceCalculation,
                 compute_forces_system
                     .after(compute_energy_change_system)
                     .after("density_pressure_halo_exchange"),

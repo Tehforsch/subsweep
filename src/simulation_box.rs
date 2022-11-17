@@ -42,6 +42,10 @@ impl SimulationBox {
         Self(Extent::cube_from_side_length(side_length))
     }
 
+    pub fn cube_from_side_length_centered(side_length: Length) -> Self {
+        Self(Extent::cube_from_side_length_centered(side_length))
+    }
+
     pub fn periodic_wrap(&self, mut pos: VecLength) -> VecLength {
         pos.0.x = periodic_wrap_component(
             pos.0.x,

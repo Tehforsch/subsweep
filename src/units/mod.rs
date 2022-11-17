@@ -35,6 +35,7 @@ unit_system!(
     VELOCITY, Velocity, length: 1, time: -1,
     {
         meters_per_second, 1.0, "m/s",
+        kilometers_per_second, 1000.0, "km/s",
         astronomical_units_per_day, 1731460.0, "au/d"
     },
     MASS, Mass, mass: 1,

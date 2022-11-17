@@ -1,16 +1,16 @@
 timestep:
-  max_timestep: 2e-5 s
+  max_timestep: 3e-6 s
 hydrodynamics:
   min_smoothing_length: 1e-7 m
-  max_smoothing_length: 1e0 m
-  num_smoothing_neighbours: 40
+  max_smoothing_length: 1e-1 m
+  num_smoothing_neighbours: 20
   initial_gas_energy:
-    temperature: 300 K
+    temperature: 1000 K
     molecular_weight: 4 dimensionless
 domain:
   tree:
     max_depth: 20
-    min_depth: 4
+    min_depth: 3
     max_num_particles_per_leaf: 1
 example:
   num_particles: 100
@@ -21,5 +21,11 @@ box_size: (8 8) m
 visualization:
   show_particles: True
   color_map:
-    type: pressure
-    scale: 200000 N m^-1
+    type: rank
+output:
+  fields:
+    - velocity
+    - mass
+    - position
+  time_between_snapshots: 0.001 s
+  handle_existing_output: delete

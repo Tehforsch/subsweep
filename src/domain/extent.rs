@@ -36,6 +36,12 @@ impl Extent {
         Self::new(min, max)
     }
 
+    pub fn cube_from_side_length_centered(side_length: Length) -> Self {
+        let min = -MVec::ONE * side_length / 2.0;
+        let max = MVec::ONE * side_length / 2.0;
+        Self::new(min, max)
+    }
+
     pub fn get_all_encompassing<'a>(extent: impl Iterator<Item = &'a Extent>) -> Option<Self> {
         Self::from_positions(
             extent.flat_map(|extent: &Extent| [&extent.min, &extent.max].into_iter()),
