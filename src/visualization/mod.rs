@@ -35,10 +35,11 @@ use crate::simulation_plugin::StopSimulationEvent;
 
 #[derive(StageLabel)]
 pub enum VisualizationStage {
-    Synchronize,
     AddVisualization,
-    AddDrawComponents,
-    Draw,
+    ModifyVisualization,
+    Synchronize,
+    AddDrawComponentsOnMainRank,
+    DrawOnMainRank,
     AppExit,
 }
 

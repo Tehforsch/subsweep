@@ -31,7 +31,7 @@ impl RaxiomPlugin for ShowHaloParticlesPlugin {
             show_halo_particles_system,
         )
         .add_system_to_stage(
-            VisualizationStage::Draw,
+            VisualizationStage::DrawOnMainRank,
             position_to_translation_system.before(draw_translation_system::<DrawCircle>),
         );
     }

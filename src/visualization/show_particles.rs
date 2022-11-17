@@ -4,7 +4,6 @@ use derive_custom::raxiom_parameters;
 use super::color::color_map;
 use super::draw_item::change_colors_system;
 use super::draw_item::draw_translation_system;
-use super::draw_item::insert_meshes_system;
 use super::draw_item::DrawItem;
 use super::DrawCircle;
 use super::RColor;
@@ -60,30 +59,22 @@ impl RaxiomPlugin for ShowParticlesPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_system_to_stage(VisualizationStage::AddVisualization, show_particles_system)
             .add_system_to_stage(
-                VisualizationStage::Draw,
+                VisualizationStage::DrawOnMainRank,
                 position_to_translation_system
                     .before(draw_translation_system::<DrawCircle>)
                     .after(change_colors_system::<DrawCircle>),
             )
             .add_system_set_to_stage(
-                VisualizationStage::AddDrawComponents,
+                VisualizationStage::ModifyVisualization,
                 SystemSet::new()
                     .with_system(
-                        color_particles_by_temperature_system
-                            .label(ColorParticlesLabel)
-                            .ambiguous_with(ColorParticlesLabel),
+                        color_particles_by_temperature_system.ambiguous_with(ColorParticlesLabel),
                     )
+                    .with_system(color_particles_by_mass_system.ambiguous_with(ColorParticlesLabel))
                     .with_system(
-                        color_particles_by_mass_system
-                            .label(ColorParticlesLabel)
-                            .ambiguous_with(ColorParticlesLabel),
+                        color_particles_by_pressure_system.ambiguous_with(ColorParticlesLabel),
                     )
-                    .with_system(
-                        color_particles_by_pressure_system
-                            .label(ColorParticlesLabel)
-                            .ambiguous_with(ColorParticlesLabel),
-                    )
-                    .after(insert_meshes_system::<DrawCircle>),
+                    .label(ColorParticlesLabel),
             );
     }
 

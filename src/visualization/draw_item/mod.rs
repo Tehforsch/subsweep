@@ -113,19 +113,19 @@ where
                 receive_items_on_main_thread_system::<T>.as_system_label(),
             )
             .add_system_to_stage(
-                VisualizationStage::AddDrawComponents,
+                VisualizationStage::AddDrawComponentsOnMainRank,
                 insert_meshes_system::<T>
                     .label(InsertMeshesLabel)
                     .ambiguous_with(InsertMeshesLabel),
             )
             .add_system_to_stage(
-                VisualizationStage::Draw,
+                VisualizationStage::DrawOnMainRank,
                 change_colors_system::<T>
                     .label(ChangeColorsLabel)
                     .ambiguous_with(ChangeColorsLabel),
             )
             .add_system_to_stage(
-                VisualizationStage::Draw,
+                VisualizationStage::DrawOnMainRank,
                 draw_translation_system::<T>
                     .label(DrawTranslationLabel)
                     .ambiguous_with(DrawTranslationLabel),
