@@ -67,6 +67,7 @@ pub(crate) fn parameter_attr_derive(args: proc_macro::TokenStream, input: proc_m
     let output = quote! {
         #[derive(Clone, serde::Serialize, serde::Deserialize, bevy::prelude::Resource)]
         #[serde(deny_unknown_fields)]
+        #[serde(rename_all = "snake_case")]
         #input
 
         #trait_impl
