@@ -207,7 +207,7 @@ fn get_smoothing_length(
     let smoothing_length = (2.0 * num_neighbours * mass / (PI * density)).sqrt();
 
     #[cfg(not(feature = "2d"))]
-    let smoothing_length = (2.0 * num_neighbours / (3.0 * density / (4.0 * PI * mass))).cbrt();
+    let smoothing_length = (8.0 * num_neighbours * PI * mass / (3.0 * density)).cbrt();
 
     smoothing_length.clamp(
         parameters.min_smoothing_length,
