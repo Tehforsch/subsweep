@@ -20,6 +20,7 @@ fn run_all_examples() {
             "always",
             "--example",
             &name,
+            "--no-default-features",
             "--features",
             &required_features,
             "--",
