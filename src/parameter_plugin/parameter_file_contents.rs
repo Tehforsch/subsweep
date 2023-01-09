@@ -37,10 +37,7 @@ fn insert_sublevel_override(value: &mut Value, o: &Override) {
 
 fn extract_from_default<T: RaxiomParameters>(overrides: &[Override]) -> T {
     let section_name = T::unwrap_section_name();
-    debug!(
-        "Parameter section missing for '{}', assuming defaults",
-        section_name
-    );
+    debug!("Parameter section missing for '{section_name}', assuming defaults",);
     let get_value = || {
         let mut value = Value::Mapping(Mapping::default());
         insert_overrides(&mut value, overrides);
@@ -51,19 +48,13 @@ fn extract_from_default<T: RaxiomParameters>(overrides: &[Override]) -> T {
         Err(e) => {
             let value = get_value();
             if !value.is_mapping() {
-                panic!("Failed to parse section {}: {}", section_name, e);
+                panic!("Failed to parse section {section_name}: {e}");
             }
             let values_overriden = !value.as_mapping().unwrap().is_empty();
             if values_overriden {
-                panic!(
-                    "Failed to parse required section {}. Error: {}.",
-                    section_name, e
-                );
+                panic!("Failed to parse required section {section_name}. Error: {e}.",);
             } else {
-                panic!(
-                    "Required section {} not present in parameter file.",
-                    section_name
-                );
+                panic!("Required section {section_name} not present in parameter file.",);
             }
         }
     }

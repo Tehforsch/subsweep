@@ -60,7 +60,7 @@ fn make_output_dirs_system(parameters: Res<OutputParameters>) {
             ),
             parameters::HandleExistingOutput::Delete => {
                 fs::remove_dir_all(&parameters.output_dir)
-                    .unwrap_or_else(|e| panic!("Failed to remove output directory. {}", e));
+                    .unwrap_or_else(|e| panic!("Failed to remove output directory. {e}"));
             }
             parameters::HandleExistingOutput::Overwrite => {}
         }
@@ -77,7 +77,7 @@ fn make_output_dirs_system(parameters: Res<OutputParameters>) {
 
 fn make_snapshot_dir(snapshot_dir: &Path) {
     fs::create_dir_all(snapshot_dir)
-        .unwrap_or_else(|_| panic!("Failed to create snapshot dir: {:?}", snapshot_dir));
+        .unwrap_or_else(|_| panic!("Failed to create snapshot dir: {snapshot_dir:?}"));
 }
 
 fn open_file_system(

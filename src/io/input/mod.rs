@@ -156,8 +156,7 @@ fn spawn_entities_system(
         let num_entities_this_dataset = get_num_entities(dataset);
         if num_entities_this_dataset != num_entities {
             panic!(
-                "Different lengths of datasets: {} ({}) and {} ({})",
-                example_dataset, num_entities, dataset, num_entities_this_dataset
+                "Different lengths of datasets: {example_dataset} ({num_entities}) and {dataset} ({num_entities_this_dataset})",
             );
         }
     }
@@ -176,10 +175,10 @@ fn read_dataset_system<T: ToDataset + Component>(
     let data = files.iter().map(|file| {
         let set = file
             .dataset(name)
-            .unwrap_or_else(|e| panic!("Failed to open dataset: {}, {:?}", name, e));
+            .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
         let data = set
             .read_1d::<T>()
-            .unwrap_or_else(|e| panic!("Failed to read dataset: {}, {:?}", name, e));
+            .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}"));
         let conversion_factor: f64 = set
             .attr(SCALE_FACTOR_IDENTIFIER)
             .expect("No scale factor in dataset")
@@ -188,8 +187,7 @@ fn read_dataset_system<T: ToDataset + Component>(
         assert_eq!(
             read_dimension(&set),
             T::dimension(),
-            "Mismatch in dimension while reading dataset {}.",
-            name
+            "Mismatch in dimension while reading dataset {name}.",
         );
         (data, conversion_factor)
     });

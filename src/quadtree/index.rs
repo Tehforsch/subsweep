@@ -18,7 +18,7 @@ impl std::fmt::Debug for QuadTreeIndex {
             .0
             .map(|x| <u8 as Into<NodeIndex>>::into(x).to_string())
             .join("");
-        write!(f, "QuadTreeIndex({})", s)
+        write!(f, "QuadTreeIndex({s})")
     }
 }
 

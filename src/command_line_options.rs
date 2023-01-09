@@ -30,8 +30,7 @@ impl FromStr for Override {
         let split: Vec<_> = s.split(':').collect();
         if split.len() != 2 {
             return Err(ParseParameterOverrideError(format!(
-                "Expected key and value separated by `:`, found `{}`",
-                s
+                "Expected key and value separated by `:`, found `{s}`",
             )));
         }
         let mut keys: Vec<String> = split[0].split('/').map(|x| x.to_owned()).collect();
