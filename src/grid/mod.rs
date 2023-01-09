@@ -2,6 +2,7 @@ mod cell;
 
 pub use cell::Cell;
 pub use cell::Neighbour;
+pub use cell::NeighbourKind;
 use derive_custom::Named;
 
 use crate::simulation::RaxiomPlugin;

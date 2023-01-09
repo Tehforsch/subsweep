@@ -6,7 +6,7 @@ use crate::units::Dimensionless;
 use crate::units::MVec;
 use crate::units::VecDimensionless;
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Hash)]
 pub struct DirectionIndex(usize);
 
 #[derive(Deref, DerefMut)]

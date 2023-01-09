@@ -25,7 +25,8 @@ unit_system!(
     {
         meters, 1.0, "m",
         kilometers, 1000.0, "km",
-        astronomical_units, 1.4959787e11, "au"
+        astronomical_units, 1.4959787e11, "au",
+        parsec, 3.0857e16, "pc"
     },
     TIME, Time, time: 1,
     {

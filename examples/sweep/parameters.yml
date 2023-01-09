@@ -1,0 +1,7 @@
+box_size: 10 pc
+timestep:
+  max_timestep: 0.2 yr
+sweep_postprocess:
+  cell_size: 0.1 pc
+sweep:
+  num_directions: 1

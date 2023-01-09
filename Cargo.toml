@@ -63,6 +63,10 @@ required-features = ["mpi", "2d"] # This is slightly ironic, but this test is on
 name = "gravity_collapse"
 required-features = ["mpi", "3d"]
 
+[[example]]
+name = "sweep"
+required-features = ["mpi", "2d"]
+
 [[bench]]
 name = "hydrodynamics"
 harness = false

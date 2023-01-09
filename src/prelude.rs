@@ -19,6 +19,7 @@ pub use crate::simulation_builder::SimulationBuilder;
 pub use crate::simulation_plugin::SimulationStages;
 pub use crate::simulation_plugin::SimulationStartupStages;
 pub use crate::simulation_plugin::StopSimulationEvent;
+pub use crate::sweep::SweepPlugin;
 pub use crate::timestep::ActiveParticles;
 pub use crate::units;
 pub use crate::units::helpers::Float;

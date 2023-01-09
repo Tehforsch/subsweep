@@ -3,6 +3,7 @@ use bevy::prelude::Entity;
 use super::direction::DirectionIndex;
 use crate::units::Flux;
 
+#[derive(Debug)]
 pub struct Task {
     pub entity: Entity,
     pub dir: DirectionIndex,
