@@ -18,6 +18,7 @@ pub mod components;
 pub(crate) mod config;
 pub(crate) mod domain;
 pub(crate) mod gravity;
+pub(crate) mod grid;
 pub mod hydrodynamics;
 pub mod ics;
 pub(crate) mod io;
@@ -32,6 +33,7 @@ pub(crate) mod simulation_box;
 pub(crate) mod simulation_builder;
 pub mod simulation_plugin;
 pub(crate) mod stages;
+pub(crate) mod sweep;
 pub(crate) mod timestep;
 pub(crate) mod visualization;
 

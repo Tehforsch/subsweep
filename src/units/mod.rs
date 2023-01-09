@@ -97,6 +97,9 @@ unit_system!(
     NUMBERDENSITY2D, NumberDensity2D, length: -2,
     {
     },
+    FLUX, Flux, mass: 1, length: 2, time: -2,
+    {
+    },
     LENGTHMASS, LengthMass, mass: 1, length: 1,
     {
     },

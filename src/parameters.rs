@@ -9,5 +9,6 @@ pub use crate::performance_parameters::PerformanceParameters;
 pub use crate::prelude::SimulationBox;
 pub use crate::quadtree::QuadTreeConfig;
 pub use crate::simulation_plugin::SimulationParameters;
+pub use crate::sweep::SweepParameters;
 pub use crate::timestep::TimestepParameters;
 pub use crate::visualization::VisualizationParameters;
