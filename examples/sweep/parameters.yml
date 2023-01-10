@@ -2,6 +2,7 @@ box_size: 10 pc
 timestep:
   max_timestep: 0.2 yr
 sweep_postprocess:
-  cell_size: 0.1 pc
+  cell_size: 5.0 pc
+  density: 0.1 kg m^-2
 sweep:
   num_directions: 1

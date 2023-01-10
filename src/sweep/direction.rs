@@ -6,7 +6,7 @@ use crate::units::Dimensionless;
 use crate::units::MVec;
 use crate::units::VecDimensionless;
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Hash)]
+#[derive(Deref, DerefMut, PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Hash)]
 pub struct DirectionIndex(usize);
 
 #[derive(Deref, DerefMut)]
@@ -32,5 +32,13 @@ impl Directions {
             .iter()
             .enumerate()
             .map(|(i, dir)| (DirectionIndex(i), dir))
+    }
+}
+
+impl std::ops::Index<DirectionIndex> for Directions {
+    type Output = Direction;
+
+    fn index(&self, index: DirectionIndex) -> &Self::Output {
+        &self.directions[index.0]
     }
 }

@@ -4,17 +4,20 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use raxiom::components;
 use raxiom::components::Position;
 use raxiom::grid::Cell;
 use raxiom::grid::Neighbour;
 use raxiom::grid::NeighbourKind;
 use raxiom::prelude::*;
+use raxiom::units::Density;
 use raxiom::units::Length;
 use raxiom::units::VecLength;
 
 #[raxiom_parameters("sweep_postprocess")]
 struct Parameters {
     cell_size: Length,
+    density: Density,
 }
 
 fn main() {
@@ -49,6 +52,7 @@ fn init_grid_system(
                         x as f64 * parameters.cell_size,
                         y as f64 * parameters.cell_size,
                     )),
+                    components::Density(parameters.density),
                 ))
                 .id();
             map.insert((x, y), entity);
