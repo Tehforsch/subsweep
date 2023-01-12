@@ -1,5 +1,7 @@
+mod cartesian;
 mod cell;
 
+pub use cartesian::init_cartesian_grid_system;
 pub use cell::Cell;
 pub use cell::Neighbour;
 pub use cell::NeighbourKind;

@@ -3,6 +3,8 @@ mod direction;
 mod parameters;
 mod site;
 mod task;
+#[cfg(test)]
+mod tests;
 
 use bevy::prelude::*;
 pub use parameters::SweepParameters;
@@ -50,8 +52,8 @@ struct Sweep<'w, 's> {
 
 impl<'w, 's> Sweep<'w, 's> {
     fn run(parameters: &SweepParameters, cells: CellQuery<'w, 's>, sites: SiteQuery) {
-        let directions = Directions::from_num(parameters.num_directions);
-        let remaining_to_solve = CountByDir::new(parameters.num_directions, cells.iter().count());
+        let directions: Directions = (&parameters.directions).into();
+        let remaining_to_solve = CountByDir::new(directions.len(), cells.iter().count());
         let mut solver = Sweep {
             cells,
             sites,
@@ -148,8 +150,8 @@ fn solve_eq(_task: &Task) -> Flux {
 fn init_counts_system(cells: CellQuery, mut sites: SiteQuery, parameters: Res<SweepParameters>) {
     for (entity, cell, pos1) in cells.iter() {
         let (mut site, _) = sites.get_mut(entity).unwrap();
-        site.num_missing_upwind = CountByDir::new(parameters.num_directions, 0);
-        for (dir_index, dir) in Directions::from_num(parameters.num_directions).enumerate() {
+        site.num_missing_upwind = CountByDir::new(parameters.directions.len(), 0);
+        for (dir_index, dir) in Directions::from_num(parameters.directions.len()).enumerate() {
             for neighbour in cell.neighbours.iter() {
                 let pos2 = cells.get_component::<Position>(neighbour.entity).unwrap();
                 if is_upwind(pos2, pos1, dir) {
