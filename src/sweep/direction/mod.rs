@@ -1,3 +1,6 @@
+#[cfg(not(feature = "2d"))]
+mod healpix;
+
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use bevy::prelude::Resource;
@@ -12,7 +15,7 @@ use crate::units::VecDimensionless;
 #[derive(Deref, DerefMut, PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Hash)]
 pub struct DirectionIndex(usize);
 
-#[derive(Deref, DerefMut, Deserialize, Serialize, Clone)]
+#[derive(Deref, DerefMut, Deserialize, Serialize, Clone, Debug)]
 pub struct Direction(pub VecDimensionless);
 
 #[derive(Resource)]
@@ -21,12 +24,36 @@ pub struct Directions {
 }
 
 impl Directions {
+    #[cfg(feature = "2d")]
     fn from_num(num: usize) -> Self {
-        match num {
-            1 => Self {
-                directions: vec![Direction(MVec::X * Dimensionless::dimensionless(1.0))],
-            },
-            _ => todo!(),
+        use std::f64::consts::PI;
+
+        Self {
+            directions: (0..num)
+                .map(|i| {
+                    let fraction = (i as f64) / (num as f64);
+                    let x = (fraction * 2.0 * PI).cos();
+                    let y = (fraction * 2.0 * PI).sin();
+                    Direction(MVec::new(x, y) * Dimensionless::dimensionless(1.0))
+                })
+                .collect(),
+        }
+    }
+
+    #[cfg(not(feature = "2d"))]
+    fn from_num(num: usize) -> Self {
+        let bins: &[&[f64; 3]] = match num {
+            1 => &[&[1.0, 0.0, 0.0]],
+            84 => &healpix::DIRECTION_BINS_84,
+            _ => unimplemented!(),
+        };
+        Self {
+            directions: bins
+                .iter()
+                .map(|&[x, y, z]| {
+                    Direction(MVec::new(*x, *y, *z) * Dimensionless::dimensionless(1.0))
+                })
+                .collect(),
         }
     }
 

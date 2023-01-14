@@ -48,7 +48,7 @@ fn initialize_sweep_components_system(
     for (entity, _) in particles.iter() {
         commands.entity(entity).insert((
             components::Density(Density::zero()),
-            components::HydrogenAbundance(Dimensionless::zero()),
+            components::HydrogenIonizationFraction(Dimensionless::zero()),
         ));
     }
 }

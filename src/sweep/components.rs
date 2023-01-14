@@ -7,9 +7,14 @@ use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "source"]
+#[repr(transparent)]
+pub struct AbsorptionRate(pub crate::units::PhotonFlux);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "hydrogen_abundance"]
 #[repr(transparent)]
-pub struct HydrogenAbundance(pub crate::units::Dimensionless);
+pub struct HydrogenIonizationFraction(pub crate::units::Dimensionless);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "source"]
