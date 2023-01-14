@@ -2,6 +2,7 @@ use bevy::prelude::Component;
 use bevy::prelude::Entity;
 
 use crate::communication::Identified;
+use crate::units::Length;
 use crate::units::VecDimensionless;
 
 #[cfg(feature = "2d")]
@@ -34,6 +35,7 @@ pub struct RemoteNeighbour {
 #[derive(Component)]
 pub struct Cell {
     pub neighbours: Vec<(Face, Neighbour)>,
+    pub size: Length,
 }
 
 #[derive(Clone)]

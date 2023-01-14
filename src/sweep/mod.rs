@@ -1,3 +1,4 @@
+pub mod components;
 mod count_by_dir;
 mod direction;
 mod parameters;
@@ -9,6 +10,8 @@ mod tests;
 use bevy::prelude::*;
 pub use parameters::SweepParameters;
 
+use self::components::HydrogenAbundance;
+use self::components::Source;
 use self::count_by_dir::CountByDir;
 use self::direction::Direction;
 use self::direction::Directions;
@@ -21,12 +24,23 @@ use crate::grid::Neighbour;
 use crate::grid::RemoteNeighbour;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
-use crate::units::Flux;
+use crate::units::PhotonFlux;
+use crate::units::SourceRate;
 use crate::units::VecDimensionless;
+use crate::units::PROTON_MASS;
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
 
 type CellQuery<'w, 's> = Particles<'w, 's, (Entity, &'static Cell, &'static Position)>;
-type SiteQuery<'w, 's> = Particles<'w, 's, (&'static mut Site, &'static Density)>;
+type SiteQuery<'w, 's> = Particles<
+    'w,
+    's,
+    (
+        &'static mut Site,
+        &'static Density,
+        &'static HydrogenAbundance,
+    ),
+>;
+type SourceQuery<'w, 's> = Particles<'w, 's, &'static mut Source>;
 
 #[derive(Named)]
 pub struct SweepPlugin;
@@ -37,6 +51,8 @@ impl RaxiomPlugin for SweepPlugin {
             SimulationStartupStages::InsertDerivedComponents,
             initialize_sites_system,
         )
+        .add_required_component::<HydrogenAbundance>()
+        .add_required_component::<Source>()
         .add_system(init_counts_system.before(sweep_system))
         .add_system(sweep_system)
         .add_parameter_type::<SweepParameters>();
@@ -44,20 +60,27 @@ impl RaxiomPlugin for SweepPlugin {
 }
 
 struct Sweep<'w, 's> {
-    pub directions: Directions,
-    pub cells: CellQuery<'w, 's>,
-    pub sites: SiteQuery<'w, 's>,
-    pub to_solve: PriorityQueue<Task>,
-    pub remaining_to_solve_count: CountByDir,
+    directions: Directions,
+    cells: CellQuery<'w, 's>,
+    sites: SiteQuery<'w, 's>,
+    sources: SourceQuery<'w, 's>,
+    to_solve: PriorityQueue<Task>,
+    remaining_to_solve_count: CountByDir,
 }
 
 impl<'w, 's> Sweep<'w, 's> {
-    fn run(parameters: &SweepParameters, cells: CellQuery<'w, 's>, sites: SiteQuery) {
+    fn run(
+        parameters: &SweepParameters,
+        cells: CellQuery<'w, 's>,
+        sites: SiteQuery,
+        sources: SourceQuery,
+    ) {
         let directions: Directions = (&parameters.directions).into();
         let remaining_to_solve = CountByDir::new(directions.len(), cells.iter().count());
         let mut solver = Sweep {
             cells,
             sites,
+            sources,
             to_solve: PriorityQueue::new(),
             directions,
             remaining_to_solve_count: remaining_to_solve,
@@ -88,7 +111,7 @@ impl<'w, 's> Sweep<'w, 's> {
                     .map(move |(entity, _, _)| Task {
                         entity,
                         dir: dir_index,
-                        flux: Flux::zero(),
+                        flux: PhotonFlux::zero(),
                     })
             })
             .collect();
@@ -112,16 +135,28 @@ impl<'w, 's> Sweep<'w, 's> {
 
     fn send_all_messages(&self) {}
 
+    fn solve_eq(&mut self, task: &Task) -> PhotonFlux {
+        let cell = self.cells.get_component::<Cell>(task.entity).unwrap();
+        let density = **self.sites.get_component::<Density>(task.entity).unwrap();
+        let hydrogen_abundance = **self
+            .sites
+            .get_component::<HydrogenAbundance>(task.entity)
+            .unwrap();
+        let hydrogen_number_density = density / PROTON_MASS * hydrogen_abundance;
+        let source = match self.sources.get_component::<Source>(task.entity) {
+            Ok(source) => **source,
+            Err(_) => SourceRate::zero(),
+        };
+        let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
+        task.flux * (-hydrogen_number_density * sigma * cell.size).exp() + source
+    }
+
     fn solve_task(&mut self, task: Task) {
-        let outgoing_flux = solve_eq(&task);
+        let outgoing_flux = self.solve_eq(&task);
+        let cell = self.cells.get_component::<Cell>(task.entity).unwrap();
         self.remaining_to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
-        let neighbours = self
-            .cells
-            .get_component::<Cell>(task.entity)
-            .unwrap()
-            .neighbours
-            .clone();
+        let neighbours = cell.neighbours.clone();
         for (face, neighbour) in neighbours.iter() {
             if face_points_downwind(&face.normal, &self.directions[task.dir]) {
                 match neighbour {
@@ -134,7 +169,12 @@ impl<'w, 's> Sweep<'w, 's> {
         }
     }
 
-    fn handle_local_neighbour(&mut self, outgoing_flux: Flux, task: &Task, neighbour: Entity) {
+    fn handle_local_neighbour(
+        &mut self,
+        outgoing_flux: PhotonFlux,
+        task: &Task,
+        neighbour: Entity,
+    ) {
         let mut site = self.sites.get_component_mut::<Site>(neighbour).unwrap();
         site.num_missing_upwind.reduce(task.dir);
         if site.num_missing_upwind[task.dir] == 0 {
@@ -151,13 +191,9 @@ impl<'w, 's> Sweep<'w, 's> {
     }
 }
 
-fn solve_eq(_task: &Task) -> Flux {
-    Flux::zero()
-}
-
 fn init_counts_system(cells: CellQuery, mut sites: SiteQuery, parameters: Res<SweepParameters>) {
     for (entity, cell, _) in cells.iter() {
-        let (mut site, _) = sites.get_mut(entity).unwrap();
+        let (mut site, _, _) = sites.get_mut(entity).unwrap();
         site.num_missing_upwind = CountByDir::new(parameters.directions.len(), 0);
         let directions: Directions = (&parameters.directions).into();
         for (dir_index, dir) in directions.enumerate() {
@@ -170,8 +206,13 @@ fn init_counts_system(cells: CellQuery, mut sites: SiteQuery, parameters: Res<Sw
     }
 }
 
-fn sweep_system(parameters: Res<SweepParameters>, cells: CellQuery, sites: SiteQuery) {
-    Sweep::run(&parameters, cells, sites);
+fn sweep_system(
+    parameters: Res<SweepParameters>,
+    cells: CellQuery,
+    sites: SiteQuery,
+    sources: SourceQuery,
+) {
+    Sweep::run(&parameters, cells, sites, sources);
 }
 
 fn initialize_sites_system(mut commands: Commands, cells: CellQuery) {

@@ -5,12 +5,10 @@ use super::cell::Face;
 use super::cell::FaceArea;
 use super::Cell;
 use super::Neighbour;
-use crate::components;
 use crate::components::Position;
 use crate::parameters::SimulationBox;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
-use crate::units::Density;
 use crate::units::Length;
 use crate::units::VecLength;
 
@@ -122,16 +120,13 @@ pub fn init_cartesian_grid_system(
     mut commands: Commands,
     box_size: Res<SimulationBox>,
     cell_size: Length,
-    density: Density,
 ) {
     let mut map = HashMap::new();
     let num_cells =
         IntegerPosition::from_position_and_side_length(box_size.side_lengths(), cell_size);
     for integer_pos in num_cells.iter_all_contained() {
         let pos = integer_pos.to_pos(box_size.side_lengths());
-        let entity = commands
-            .spawn((LocalParticle, Position(pos), components::Density(density)))
-            .id();
+        let entity = commands.spawn((LocalParticle, Position(pos))).id();
         map.insert(integer_pos, entity);
     }
     for integer_pos in num_cells.iter_all_contained() {
@@ -154,7 +149,10 @@ pub fn init_cartesian_grid_system(
                 }
             })
             .collect();
-        commands.entity(entity).insert(Cell { neighbours });
+        commands.entity(entity).insert(Cell {
+            neighbours,
+            size: cell_size,
+        });
     }
 }
 

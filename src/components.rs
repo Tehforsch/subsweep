@@ -7,6 +7,7 @@ use mpi::traits::Equivalence;
 
 pub use crate::hydrodynamics::hydro_components::*;
 use crate::named::Named;
+pub use crate::sweep::components::*;
 use crate::units::Time;
 use crate::units::VecLength;
 use crate::units::VecVelocity;

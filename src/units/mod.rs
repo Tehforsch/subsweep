@@ -101,7 +101,16 @@ unit_system!(
     NUMBERDENSITY2D, NumberDensity2D, length: -2,
     {
     },
-    FLUX, Flux, mass: 1, length: 2, time: -2,
+    PHOTON_FLUX, PhotonFlux, time: -1,
+    {
+    },
+    CROSS_SECTION_2D, CrossSection2D, length: 1,
+    {
+    },
+    CROSS_SECTION_3D, CrossSection3D, length: 2,
+    {
+    },
+    SOURCE_RATE, SourceRate, time: -1,
     {
     },
     LENGTHMASS, LengthMass, mass: 1, length: 1,
@@ -121,6 +130,7 @@ mod reexport {
     pub type NumberDensity = super::NumberDensity2D;
     pub type Pressure = super::Pressure2D;
     pub type Volume = super::Volume2D;
+    pub type CrossSection = super::CrossSection2D;
 }
 
 #[cfg(not(feature = "2d"))]
@@ -129,6 +139,7 @@ mod reexport {
     pub type NumberDensity = super::NumberDensity3D;
     pub type Pressure = super::Pressure3D;
     pub type Volume = super::Volume3D;
+    pub type CrossSection = super::CrossSection3D;
 }
 
 pub use reexport::*;
