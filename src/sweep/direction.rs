@@ -13,7 +13,7 @@ use crate::units::VecDimensionless;
 pub struct DirectionIndex(usize);
 
 #[derive(Deref, DerefMut, Deserialize, Serialize, Clone)]
-pub struct Direction(VecDimensionless);
+pub struct Direction(pub VecDimensionless);
 
 #[derive(Resource)]
 pub struct Directions {
@@ -21,7 +21,7 @@ pub struct Directions {
 }
 
 impl Directions {
-    pub fn from_num(num: usize) -> Self {
+    fn from_num(num: usize) -> Self {
         match num {
             1 => Self {
                 directions: vec![Direction(MVec::X * Dimensionless::dimensionless(1.0))],

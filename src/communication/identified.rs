@@ -1,6 +1,6 @@
 pub(super) type EntityKey = u64;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct Identified<T> {
     pub key: EntityKey,
     pub data: T,

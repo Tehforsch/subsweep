@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 
+use super::cell::Face;
+use super::cell::FaceArea;
 use super::Cell;
 use super::Neighbour;
-use super::NeighbourKind;
 use crate::components;
 use crate::components::Position;
 use crate::parameters::SimulationBox;
@@ -13,7 +14,7 @@ use crate::units::Density;
 use crate::units::Length;
 use crate::units::VecLength;
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct IntegerPosition {
     x: i32,
     y: i32,
@@ -25,11 +26,16 @@ impl IntegerPosition {
     fn contained(&self, num_cells: &IntegerPosition) -> bool {
         #[cfg(feature = "2d")]
         {
-            self.x < num_cells.x && self.y < num_cells.y
+            0 <= self.x && 0 <= self.y && self.x < num_cells.x && self.y < num_cells.y
         }
         #[cfg(not(feature = "2d"))]
         {
-            self.x < num_cells.x && self.y < num_cells.y && self.z < num_cells.z
+            0 <= self.x
+                && 0 <= self.y
+                && 0 <= self.z
+                && self.x < num_cells.x
+                && self.y < num_cells.y
+                && self.z < num_cells.z
         }
     }
 
@@ -129,20 +135,36 @@ pub fn init_cartesian_grid_system(
         map.insert(integer_pos, entity);
     }
     for integer_pos in num_cells.iter_all_contained() {
+        let pos = integer_pos.to_pos(box_size.side_lengths());
         let entity = map[&integer_pos];
         let neighbours = integer_pos
             .iter_neighbours()
             .filter_map(|neighbour| {
                 if neighbour.contained(&num_cells) {
-                    Some(Neighbour {
-                        entity: map[&integer_pos],
-                        kind: NeighbourKind::Local,
-                    })
+                    let neighbour_pos = neighbour.to_pos(box_size.side_lengths());
+                    Some((
+                        Face {
+                            area: get_area(cell_size),
+                            normal: (neighbour_pos - pos).normalize(),
+                        },
+                        Neighbour::Local(map[&neighbour]),
+                    ))
                 } else {
                     None
                 }
             })
             .collect();
         commands.entity(entity).insert(Cell { neighbours });
+    }
+}
+
+fn get_area(cell_size: Length) -> FaceArea {
+    #[cfg(feature = "2d")]
+    {
+        cell_size
+    }
+    #[cfg(not(feature = "2d"))]
+    {
+        cell_size * cell_size
     }
 }

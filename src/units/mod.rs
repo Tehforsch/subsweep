@@ -61,6 +61,9 @@ unit_system!(
     {
         joules_per_kilogram, 1.0, "J/kg"
     },
+    AREA, Area, length: 2,
+    {
+    },
     VOLUME2D, Volume2D, length: 2,
     {
         square_meters, 1.0, "m^2"

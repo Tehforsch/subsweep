@@ -17,11 +17,12 @@ use self::task::Task;
 use crate::components::Density;
 use crate::components::Position;
 use crate::grid::Cell;
+use crate::grid::Neighbour;
+use crate::grid::RemoteNeighbour;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::units::Flux;
-use crate::units::VecLength;
-
+use crate::units::VecDimensionless;
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
 
 type CellQuery<'w, 's> = Particles<'w, 's, (Entity, &'static Cell, &'static Position)>;
@@ -74,20 +75,15 @@ impl<'w, 's> Sweep<'w, 's> {
                     .iter()
                     .filter(|entry| {
                         let cell1 = entry.1;
-                        let pos1 = entry.2;
-                        let has_no_upwind_neighbours = cell1
+                        // Importantly, the !face_points_upwind cannot
+                        // be changed to face_points_downwind, because
+                        // we need to be inclusive of all faces, even
+                        // those that have zero dot product with the
+                        // face normal.
+                        cell1
                             .neighbours
                             .iter()
-                            .filter(|neighbour| {
-                                let pos2 = self
-                                    .cells
-                                    .get_component::<Position>(neighbour.entity)
-                                    .unwrap();
-                                is_upwind(pos2, pos1, dir)
-                            })
-                            .count()
-                            == 0;
-                        has_no_upwind_neighbours
+                            .all(|(face, _)| !face_points_upwind(&face.normal, dir))
                     })
                     .map(move |(entity, _, _)| Task {
                         entity,
@@ -108,38 +104,50 @@ impl<'w, 's> Sweep<'w, 's> {
             while let Some(task) = self.to_solve.pop() {
                 self.solve_task(task);
             }
+            self.send_all_messages();
         }
     }
 
     fn receive_messages(&self) {}
 
+    fn send_all_messages(&self) {}
+
     fn solve_task(&mut self, task: Task) {
         let outgoing_flux = solve_eq(&task);
-        let pos1 = self.cells.get_component::<Position>(task.entity).unwrap();
         self.remaining_to_solve_count.reduce(task.dir);
-        for neighbour in self
+        // This is very inefficient, let's see if this ever becomes a bottleneck
+        let neighbours = self
             .cells
             .get_component::<Cell>(task.entity)
             .unwrap()
             .neighbours
-            .iter()
-        {
-            let (mut site, _) = self.sites.get_mut(neighbour.entity).unwrap();
-            let pos2 = self
-                .cells
-                .get_component::<Position>(neighbour.entity)
-                .unwrap();
-            if is_upwind(pos1, pos2, &self.directions[task.dir]) {
-                site.num_missing_upwind.reduce(task.dir);
-                if site.num_missing_upwind[task.dir] == 0 {
-                    self.to_solve.push(Task {
-                        dir: task.dir,
-                        entity: neighbour.entity,
-                        flux: outgoing_flux,
-                    })
+            .clone();
+        for (face, neighbour) in neighbours.iter() {
+            if face_points_downwind(&face.normal, &self.directions[task.dir]) {
+                match neighbour {
+                    Neighbour::Local(neighbour_entity) => {
+                        self.handle_local_neighbour(outgoing_flux, &task, *neighbour_entity)
+                    }
+                    Neighbour::Remote(remote) => self.handle_remote_neighbour(remote),
                 }
             }
         }
+    }
+
+    fn handle_local_neighbour(&mut self, outgoing_flux: Flux, task: &Task, neighbour: Entity) {
+        let mut site = self.sites.get_component_mut::<Site>(neighbour).unwrap();
+        site.num_missing_upwind.reduce(task.dir);
+        if site.num_missing_upwind[task.dir] == 0 {
+            self.to_solve.push(Task {
+                dir: task.dir,
+                entity: neighbour,
+                flux: outgoing_flux,
+            })
+        }
+    }
+
+    fn handle_remote_neighbour(&mut self, _remote: &RemoteNeighbour) {
+        todo!()
     }
 }
 
@@ -148,19 +156,20 @@ fn solve_eq(_task: &Task) -> Flux {
 }
 
 fn init_counts_system(cells: CellQuery, mut sites: SiteQuery, parameters: Res<SweepParameters>) {
-    for (entity, cell, pos1) in cells.iter() {
+    for (entity, cell, _) in cells.iter() {
         let (mut site, _) = sites.get_mut(entity).unwrap();
         site.num_missing_upwind = CountByDir::new(parameters.directions.len(), 0);
-        for (dir_index, dir) in Directions::from_num(parameters.directions.len()).enumerate() {
-            for neighbour in cell.neighbours.iter() {
-                let pos2 = cells.get_component::<Position>(neighbour.entity).unwrap();
-                if is_upwind(pos2, pos1, dir) {
+        let directions: Directions = (&parameters.directions).into();
+        for (dir_index, dir) in directions.enumerate() {
+            for (face, _) in cell.neighbours.iter() {
+                if face_points_upwind(&face.normal, dir) {
                     site.num_missing_upwind[dir_index] += 1;
                 }
             }
         }
     }
 }
+
 fn sweep_system(parameters: Res<SweepParameters>, cells: CellQuery, sites: SiteQuery) {
     Sweep::run(&parameters, cells, sites);
 }
@@ -173,8 +182,10 @@ fn initialize_sites_system(mut commands: Commands, cells: CellQuery) {
     }
 }
 
-/// Returns whether pos1 is upwind of pos2 along dir.
-fn is_upwind(pos1: &VecLength, pos2: &VecLength, dir: &Direction) -> bool {
-    let dist = *pos1 - *pos2;
-    dist.dot(**dir).is_negative()
+pub(super) fn face_points_upwind(normal: &VecDimensionless, dir: &Direction) -> bool {
+    normal.dot(**dir).is_negative()
+}
+
+pub(super) fn face_points_downwind(normal: &VecDimensionless, dir: &Direction) -> bool {
+    normal.dot(**dir).is_positive()
 }
