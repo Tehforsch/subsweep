@@ -56,21 +56,21 @@ impl IntegerPosition {
         }
     }
 
-    fn to_pos(&self, side_length: VecLength) -> VecLength {
+    fn to_pos(&self, side_length: VecLength, num_particles: &Self) -> VecLength {
         #[cfg(feature = "2d")]
         {
             VecLength::new(
-                side_length.x() * self.x as Float,
-                side_length.y() * self.y as Float,
+                side_length.x() * self.x as Float / num_particles.x as Float,
+                side_length.y() * self.y as Float / num_particles.y as Float,
             )
         }
 
         #[cfg(not(feature = "2d"))]
         {
             VecLength::new(
-                side_length.x() * self.x as Float,
-                side_length.y() * self.y as Float,
-                side_length.z() * self.z as Float,
+                side_length.x() * self.x as Float / num_particles.x as Float,
+                side_length.y() * self.y as Float / num_particles.y as Float,
+                side_length.z() * self.z as Float / num_particles.z as Float,
             )
         }
     }
@@ -124,19 +124,21 @@ pub fn init_cartesian_grid_system(
     let mut map = HashMap::new();
     let num_cells =
         IntegerPosition::from_position_and_side_length(box_size.side_lengths(), cell_size);
+    let to_pos =
+        |integer_pos: &IntegerPosition| integer_pos.to_pos(box_size.side_lengths(), &num_cells);
     for integer_pos in num_cells.iter_all_contained() {
-        let pos = integer_pos.to_pos(box_size.side_lengths());
+        let pos = to_pos(&integer_pos);
         let entity = commands.spawn((LocalParticle, Position(pos))).id();
         map.insert(integer_pos, entity);
     }
     for integer_pos in num_cells.iter_all_contained() {
-        let pos = integer_pos.to_pos(box_size.side_lengths());
+        let pos = to_pos(&integer_pos);
         let entity = map[&integer_pos];
         let neighbours = integer_pos
             .iter_neighbours()
             .filter_map(|neighbour| {
                 if neighbour.contained(&num_cells) {
-                    let neighbour_pos = neighbour.to_pos(box_size.side_lengths());
+                    let neighbour_pos = to_pos(&neighbour);
                     Some((
                         Face {
                             area: get_area(cell_size),
