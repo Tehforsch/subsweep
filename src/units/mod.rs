@@ -24,6 +24,7 @@ unit_system!(
     LENGTH, Length, length: 1,
     {
         meters, 1.0, "m",
+        centimeters, 1e-2, "cm",
         kilometers, 1000.0, "km",
         astronomical_units, 1.4959787e11, "au",
         parsec, 3.0857e16, "pc"
@@ -42,6 +43,7 @@ unit_system!(
     MASS, Mass, mass: 1,
     {
         kilograms, 1.0, "kg",
+        grams, 1e-3, "g",
         earth, 5.9722e24, "Mearth",
         solar, 1.988477e30, "Msol"
     },

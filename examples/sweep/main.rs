@@ -9,6 +9,7 @@ use raxiom::prelude::*;
 use raxiom::units::Density;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
+use raxiom::units::PhotonFlux;
 use raxiom::units::Time;
 
 #[raxiom_parameters("sweep_postprocess")]
@@ -16,6 +17,7 @@ struct Parameters {
     cell_size: Length,
     density: Density,
     initial_fraction_ionized_hydrogen: Dimensionless,
+    source_strength: PhotonFlux,
 }
 
 fn main() {
@@ -58,7 +60,7 @@ fn initialize_sweep_components_system(
             if 0.49 < pos_frac_y && pos_frac_y < 0.51 {
                 commands
                     .entity(entity)
-                    .insert(components::Source(1.0e-7 / Time::seconds(1.0)));
+                    .insert(components::Source(parameters.source_strength));
             }
         }
     }

@@ -38,8 +38,34 @@ pub struct Cell {
     pub size: Length,
 }
 
+impl Cell {
+    pub fn iter_faces(&self) -> impl Iterator<Item = &Face> + '_ {
+        self.neighbours.iter().map(|(face, _)| face)
+    }
+
+    pub fn iter_downwind_faces<'a>(
+        &'a self,
+        direction: &'a VecDimensionless,
+    ) -> impl Iterator<Item = &Face> + 'a {
+        self.neighbours
+            .iter()
+            .map(|(face, _)| face)
+            .filter(|face| face.points_downwind(direction))
+    }
+}
+
 #[derive(Clone)]
 pub struct Face {
     pub area: FaceArea,
     pub normal: VecDimensionless,
+}
+
+impl Face {
+    pub fn points_upwind(&self, dir: &VecDimensionless) -> bool {
+        self.normal.dot(*dir).is_negative()
+    }
+
+    pub fn points_downwind(&self, dir: &VecDimensionless) -> bool {
+        self.normal.dot(*dir).is_positive()
+    }
 }

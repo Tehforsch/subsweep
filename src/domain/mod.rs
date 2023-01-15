@@ -171,7 +171,9 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     let max_load = *loads.iter().max().unwrap() as f64;
     let min_load = *loads.iter().min().unwrap() as f64;
     let load_imbalance = (max_load - min_load) / max_load;
-    debug!("Load imbalance: {:.1}%", (load_imbalance * 100.0));
+    if num_ranks != 1 {
+        debug!("Load imbalance: {:.1}%", (load_imbalance * 100.0));
+    }
     let num_entries_to_fill = num_ranks as i32 - key_cutoffs_by_rank.len() as i32;
     if num_entries_to_fill > 0 {
         error!("One rank has no work - increase domain min_depth");

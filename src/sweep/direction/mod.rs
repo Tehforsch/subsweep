@@ -31,7 +31,7 @@ impl Directions {
         Self {
             directions: (0..num)
                 .map(|i| {
-                    let fraction = (i as f64) / (num as f64);
+                    let fraction = 0.125 + (i as f64) / (num as f64);
                     let x = (fraction * 2.0 * PI).cos();
                     let y = (fraction * 2.0 * PI).sin();
                     Direction(MVec::new(x, y) * Dimensionless::dimensionless(1.0))

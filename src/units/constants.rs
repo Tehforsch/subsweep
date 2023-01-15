@@ -18,7 +18,8 @@ constant!(PROTON_MASS, 1.67262192369e-27, mass: 1);
 pub const GAMMA: Float = 5.0 / 3.0;
 
 #[cfg(not(feature = "2d"))]
-constant!(SWEEP_HYDROGEN_ONLY_CROSS_SECTION, 1.0, length: 2);
+constant!(SWEEP_HYDROGEN_ONLY_CROSS_SECTION, 5.339944e-22, length: 2);
 
+// This is probably wrong
 #[cfg(feature = "2d")]
-constant!(SWEEP_HYDROGEN_ONLY_CROSS_SECTION, 1.0, length: 1);
+constant!(SWEEP_HYDROGEN_ONLY_CROSS_SECTION, 5.339944e-22, length: 1);

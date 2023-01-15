@@ -14,7 +14,6 @@ use self::components::AbsorptionRate;
 use self::components::HydrogenIonizationFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
-use self::direction::Direction;
 use self::direction::Directions;
 use self::site::Site;
 use self::task::Task;
@@ -22,6 +21,7 @@ use crate::components::Density;
 use crate::components::Position;
 use crate::components::Timestep;
 use crate::grid::Cell;
+use crate::grid::FaceArea;
 use crate::grid::Neighbour;
 use crate::grid::RemoteNeighbour;
 use crate::prelude::*;
@@ -29,8 +29,8 @@ use crate::simulation::RaxiomPlugin;
 use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
 use crate::units::SourceRate;
-use crate::units::VecDimensionless;
 use crate::units::PROTON_MASS;
+
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
 
 type CellQuery<'w, 's> = Particles<'w, 's, (Entity, &'static Cell, &'static Position)>;
@@ -59,6 +59,7 @@ impl RaxiomPlugin for SweepPlugin {
         .add_required_component::<Source>()
         .add_derived_component::<AbsorptionRate>()
         .add_system(init_counts_system.before(sweep_system))
+        .add_system(reset_sites_system.before(sweep_system))
         .add_system(sweep_system)
         .add_system(ionize_hydrogen_system.after(sweep_system))
         .add_parameter_type::<SweepParameters>();
@@ -112,7 +113,7 @@ impl<'w, 's> Sweep<'w, 's> {
                         cell1
                             .neighbours
                             .iter()
-                            .all(|(face, _)| !face_points_upwind(&face.normal, dir))
+                            .all(|(face, _)| !face.points_upwind(dir))
                     })
                     .map(move |(entity, _, _)| Task {
                         entity,
@@ -144,25 +145,24 @@ impl<'w, 's> Sweep<'w, 's> {
     fn solve_eq(&mut self, task: &Task) -> PhotonFlux {
         let cell = self.cells.get_component::<Cell>(task.entity).unwrap();
         let density = **self.sites.get_component::<Density>(task.entity).unwrap();
-        let hydrogen_abundance = **self
+        let ionized_hydrogen_abundance = **self
             .sites
             .get_component::<HydrogenIonizationFraction>(task.entity)
             .unwrap();
-        let hydrogen_number_density = density / PROTON_MASS * hydrogen_abundance;
+        let hydrogen_number_density = density / PROTON_MASS * (1.0 - ionized_hydrogen_abundance);
         let source = match self.sources.get_component::<Source>(task.entity) {
             Ok(source) => **source,
             Err(_) => SourceRate::zero(),
         };
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-        let mut absorbed_photons = self
+        let mut absorption_rate = self
             .sites
             .get_component_mut::<AbsorptionRate>(task.entity)
             .unwrap();
         let flux = task.flux + source;
-        let absorbed_fraction = (-hydrogen_number_density * sigma * cell.size).exp();
-        **absorbed_photons += flux * absorbed_fraction;
-        let outgoing_flux = flux * (1.0 - absorbed_fraction);
-        outgoing_flux
+        let absorbed_fraction = 1.0 - (-hydrogen_number_density * sigma * cell.size).exp();
+        **absorption_rate += flux * absorbed_fraction;
+        flux * (1.0 - absorbed_fraction)
     }
 
     fn solve_task(&mut self, task: Task) {
@@ -171,11 +171,16 @@ impl<'w, 's> Sweep<'w, 's> {
         self.remaining_to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
         let neighbours = cell.neighbours.clone();
+        let total_face_area: FaceArea = cell
+            .iter_downwind_faces(&self.directions[task.dir])
+            .map(|face| face.area)
+            .sum();
         for (face, neighbour) in neighbours.iter() {
-            if face_points_downwind(&face.normal, &self.directions[task.dir]) {
+            if face.points_downwind(&self.directions[task.dir]) {
+                let flux_this_cell = outgoing_flux * (face.area / total_face_area);
                 match neighbour {
                     Neighbour::Local(neighbour_entity) => {
-                        self.handle_local_neighbour(outgoing_flux, &task, *neighbour_entity)
+                        self.handle_local_neighbour(flux_this_cell, &task, *neighbour_entity)
                     }
                     Neighbour::Remote(remote) => self.handle_remote_neighbour(remote),
                 }
@@ -212,7 +217,7 @@ fn init_counts_system(cells: CellQuery, mut sites: SiteQuery, parameters: Res<Sw
         site.num_missing_upwind = CountByDir::new(parameters.directions.len(), 0);
         for (dir_index, dir) in directions.enumerate() {
             for (face, _) in cell.neighbours.iter() {
-                if face_points_upwind(&face.normal, dir) {
+                if face.points_upwind(dir) {
                     site.num_missing_upwind[dir_index] += 1;
                 }
             }
@@ -252,10 +257,8 @@ fn initialize_sites_system(mut commands: Commands, cells: CellQuery) {
     }
 }
 
-pub(super) fn face_points_upwind(normal: &VecDimensionless, dir: &Direction) -> bool {
-    normal.dot(**dir).is_negative()
-}
-
-pub(super) fn face_points_downwind(normal: &VecDimensionless, dir: &Direction) -> bool {
-    normal.dot(**dir).is_positive()
+fn reset_sites_system(mut sites: Particles<&mut AbsorptionRate>) {
+    for mut rate in sites.iter_mut() {
+        **rate = PhotonFlux::zero();
+    }
 }
