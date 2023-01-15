@@ -119,7 +119,7 @@ impl<'w, 's> Sweep<'w, 's> {
                         cell1
                             .neighbours
                             .iter()
-                            .all(|(face, _)| !face.points_upwind(dir))
+                            .all(|(face, neighbour)| !face.points_upwind(dir) || neighbour.is_boundary())
                     })
                     .map(move |(entity, _, _)| Task {
                         entity,
@@ -192,6 +192,7 @@ impl<'w, 's> Sweep<'w, 's> {
                         self.handle_local_neighbour(flux_this_cell, &task, *neighbour_entity)
                     }
                     Neighbour::Remote(remote) => self.handle_remote_neighbour(remote),
+                    Neighbour::Boundary => {}
                 }
             }
         }
@@ -230,8 +231,8 @@ fn init_counts_system(
         let mut site = sites.get_component_mut::<Site>(entity).unwrap();
         site.num_missing_upwind = CountByDir::new(parameters.directions.len(), 0);
         for (dir_index, dir) in directions.enumerate() {
-            for (face, _) in cell.neighbours.iter() {
-                if face.points_upwind(dir) {
+            for (face, neighbour) in cell.neighbours.iter() {
+                if !neighbour.is_boundary() && face.points_upwind(dir) {
                     site.num_missing_upwind[dir_index] += 1;
                 }
             }

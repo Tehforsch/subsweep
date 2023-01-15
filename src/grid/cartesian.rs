@@ -137,17 +137,21 @@ pub fn init_cartesian_grid_system(
         let neighbours = integer_pos
             .iter_neighbours()
             .filter_map(|neighbour| {
-                if neighbour.contained(&num_cells) {
-                    let neighbour_pos = to_pos(&neighbour);
-                    Some((
-                        Face {
+                let neighbour_pos = to_pos(&neighbour);
+                let face = Face {
                             area: get_area(cell_size),
                             normal: (neighbour_pos - pos).normalize(),
-                        },
+                        };
+                if neighbour.contained(&num_cells) {
+                    Some((
+                        face,
                         Neighbour::Local(map[&neighbour]),
                     ))
                 } else {
-                    None
+                    Some((
+                        face,
+                        Neighbour::Boundary,
+                    ))
                 }
             })
             .collect();

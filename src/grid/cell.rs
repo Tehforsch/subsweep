@@ -15,13 +15,15 @@ pub type FaceArea = crate::units::Area;
 pub enum Neighbour {
     Local(Entity),
     Remote(RemoteNeighbour),
+    Boundary,
 }
 
 impl Neighbour {
-    pub fn local_entity(&self) -> Entity {
+    pub fn is_boundary(&self) -> bool {
         match self {
-            Neighbour::Local(entity) => *entity,
-            Neighbour::Remote(remote) => remote.local_entity,
+            Self::Boundary => true,
+            Self::Local(_) => false,
+            Self::Remote(_) => false,
         }
     }
 }
