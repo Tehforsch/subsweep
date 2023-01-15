@@ -11,6 +11,7 @@ use bevy::prelude::*;
 pub use parameters::SweepParameters;
 
 use self::components::AbsorptionRate;
+use self::components::Flux;
 use self::components::HydrogenIonizationFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
@@ -40,6 +41,7 @@ type SiteQuery<'w, 's> = Particles<
     (
         &'static mut Site,
         &'static mut AbsorptionRate,
+        &'static mut components::Flux,
         &'static Density,
         &'static HydrogenIonizationFraction,
     ),
@@ -52,11 +54,16 @@ pub struct SweepPlugin;
 impl RaxiomPlugin for SweepPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_startup_system_to_stage(
+            SimulationStartupStages::InsertComponents,
+            initialize_directions_system,
+        )
+        .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
             initialize_sites_system,
         )
         .add_required_component::<HydrogenIonizationFraction>()
         .add_required_component::<Source>()
+        .add_derived_component::<components::Flux>()
         .add_derived_component::<AbsorptionRate>()
         .add_system(init_counts_system.before(sweep_system))
         .add_system(reset_sites_system.before(sweep_system))
@@ -77,19 +84,18 @@ struct Sweep<'w, 's> {
 
 impl<'w, 's> Sweep<'w, 's> {
     fn run(
-        parameters: &SweepParameters,
+        directions: &Directions,
         cells: CellQuery<'w, 's>,
         sites: SiteQuery,
         sources: SourceQuery,
     ) {
-        let directions: Directions = (&parameters.directions).into();
         let remaining_to_solve = CountByDir::new(directions.len(), cells.iter().count());
         let mut solver = Sweep {
             cells,
             sites,
             sources,
             to_solve: PriorityQueue::new(),
-            directions,
+            directions: directions.clone(),
             remaining_to_solve_count: remaining_to_solve,
         };
         solver.add_initial_tasks();
@@ -151,7 +157,7 @@ impl<'w, 's> Sweep<'w, 's> {
             .unwrap();
         let hydrogen_number_density = density / PROTON_MASS * (1.0 - ionized_hydrogen_abundance);
         let source = match self.sources.get_component::<Source>(task.entity) {
-            Ok(source) => **source,
+            Ok(source) => **source / self.directions.len() as f64,
             Err(_) => SourceRate::zero(),
         };
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
@@ -162,6 +168,8 @@ impl<'w, 's> Sweep<'w, 's> {
         let flux = task.flux + source;
         let absorbed_fraction = 1.0 - (-hydrogen_number_density * sigma * cell.size).exp();
         **absorption_rate += flux * absorbed_fraction;
+        let mut cell_flux = self.sites.get_component_mut::<Flux>(task.entity).unwrap();
+        **cell_flux += flux;
         flux * (1.0 - absorbed_fraction)
     }
 
@@ -171,13 +179,14 @@ impl<'w, 's> Sweep<'w, 's> {
         self.remaining_to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
         let neighbours = cell.neighbours.clone();
-        let total_face_area: FaceArea = cell
+        let total_effective_area: FaceArea = cell
             .iter_downwind_faces(&self.directions[task.dir])
-            .map(|face| face.area)
+            .map(|face| face.area * face.normal.dot(*self.directions[task.dir]))
             .sum();
         for (face, neighbour) in neighbours.iter() {
             if face.points_downwind(&self.directions[task.dir]) {
-                let flux_this_cell = outgoing_flux * (face.area / total_face_area);
+                let effective_area = face.area * face.normal.dot(*self.directions[task.dir]);
+                let flux_this_cell = outgoing_flux * (effective_area / total_effective_area);
                 match neighbour {
                     Neighbour::Local(neighbour_entity) => {
                         self.handle_local_neighbour(flux_this_cell, &task, *neighbour_entity)
@@ -190,17 +199,18 @@ impl<'w, 's> Sweep<'w, 's> {
 
     fn handle_local_neighbour(
         &mut self,
-        outgoing_flux: PhotonFlux,
+        incoming_flux: PhotonFlux,
         task: &Task,
         neighbour: Entity,
     ) {
         let mut site = self.sites.get_component_mut::<Site>(neighbour).unwrap();
-        site.num_missing_upwind.reduce(task.dir);
-        if site.num_missing_upwind[task.dir] == 0 {
+        let num_remaining = site.num_missing_upwind.reduce(task.dir);
+        site.flux[*task.dir] += incoming_flux;
+        if num_remaining == 0 {
             self.to_solve.push(Task {
                 dir: task.dir,
                 entity: neighbour,
-                flux: outgoing_flux,
+                flux: site.flux[*task.dir],
             })
         }
     }
@@ -210,8 +220,12 @@ impl<'w, 's> Sweep<'w, 's> {
     }
 }
 
-fn init_counts_system(cells: CellQuery, mut sites: SiteQuery, parameters: Res<SweepParameters>) {
-    let directions: Directions = (&parameters.directions).into();
+fn init_counts_system(
+    cells: CellQuery,
+    mut sites: SiteQuery,
+    parameters: Res<SweepParameters>,
+    directions: Res<Directions>,
+) {
     for (entity, cell, _) in cells.iter() {
         let mut site = sites.get_component_mut::<Site>(entity).unwrap();
         site.num_missing_upwind = CountByDir::new(parameters.directions.len(), 0);
@@ -226,12 +240,12 @@ fn init_counts_system(cells: CellQuery, mut sites: SiteQuery, parameters: Res<Sw
 }
 
 fn sweep_system(
-    parameters: Res<SweepParameters>,
+    directions: Res<Directions>,
     cells: CellQuery,
     sites: SiteQuery,
     sources: SourceQuery,
 ) {
-    Sweep::run(&parameters, cells, sites, sources);
+    Sweep::run(&directions, cells, sites, sources);
 }
 
 fn ionize_hydrogen_system(
@@ -246,19 +260,33 @@ fn ionize_hydrogen_system(
     }
 }
 
-fn initialize_sites_system(mut commands: Commands, cells: CellQuery) {
+fn initialize_sites_system(mut commands: Commands, cells: CellQuery, directions: Res<Directions>) {
     for (entity, _, _) in cells.iter() {
         commands.entity(entity).insert((
             Site {
                 num_missing_upwind: CountByDir::empty(),
+                flux: (0..directions.len()).map(|_| PhotonFlux::zero()).collect(),
             },
             AbsorptionRate(PhotonFlux::zero()),
+            components::Flux(PhotonFlux::zero()),
         ));
     }
 }
 
-fn reset_sites_system(mut sites: Particles<&mut AbsorptionRate>) {
-    for mut rate in sites.iter_mut() {
+fn initialize_directions_system(mut commands: Commands, parameters: Res<SweepParameters>) {
+    let directions: Directions = (&parameters.directions).into();
+    commands.insert_resource(directions);
+}
+
+fn reset_sites_system(
+    mut sites: Particles<(&mut Site, &mut AbsorptionRate, &mut components::Flux)>,
+    directions: Res<Directions>,
+) {
+    for (mut site, mut rate, mut flux) in sites.iter_mut() {
+        for (i, _) in directions.enumerate() {
+            site.flux[*i] = PhotonFlux::zero();
+        }
         **rate = PhotonFlux::zero();
+        **flux = PhotonFlux::zero();
     }
 }

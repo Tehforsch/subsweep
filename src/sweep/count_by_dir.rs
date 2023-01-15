@@ -15,8 +15,9 @@ impl CountByDir {
         self.count_by_dir.iter().sum()
     }
 
-    pub fn reduce(&mut self, dir: DirectionIndex) {
+    pub fn reduce(&mut self, dir: DirectionIndex) -> usize {
         self[dir] -= 1;
+        self[dir]
     }
 
     /// Initialize this struct with an empty vector. Used as a sentinel value.

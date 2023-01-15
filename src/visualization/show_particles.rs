@@ -9,6 +9,7 @@ use super::DrawCircle;
 use super::RColor;
 use super::VisualizationParameters;
 use super::VisualizationStage;
+use crate::components;
 use crate::components::HydrogenIonizationFraction;
 use crate::components::InternalEnergy;
 use crate::components::Mass;
@@ -50,6 +51,9 @@ pub enum ColorMap {
     IonizedHydrogenFraction {
         scale: units::Dimensionless,
     },
+    Flux {
+        scale: units::PhotonFlux,
+    },
 }
 
 #[derive(Named)]
@@ -78,6 +82,7 @@ impl RaxiomPlugin for ShowParticlesPlugin {
                         color_particles_by_ionized_hydrogen_fraction_system
                             .ambiguous_with(ColorParticlesLabel),
                     )
+                    .with_system(color_particles_by_flux_system.ambiguous_with(ColorParticlesLabel))
                     .with_system(
                         color_particles_by_pressure_system.ambiguous_with(ColorParticlesLabel),
                     )
@@ -135,6 +140,17 @@ fn color_particles_by_ionized_hydrogen_fraction_system(
     if let ColorMap::IonizedHydrogenFraction { scale } = visualization_parameters.color_map {
         for (mut circle, fraction) in particles.iter_mut() {
             circle.color = RColor::reds((**fraction / scale).value());
+        }
+    }
+}
+
+fn color_particles_by_flux_system(
+    visualization_parameters: Res<VisualizationParameters>,
+    mut particles: Particles<(&mut DrawCircle, &components::Flux)>,
+) {
+    if let ColorMap::Flux { scale } = visualization_parameters.color_map {
+        for (mut circle, flux) in particles.iter_mut() {
+            circle.color = RColor::reds((**flux / scale).value());
         }
     }
 }

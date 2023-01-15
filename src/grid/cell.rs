@@ -54,7 +54,7 @@ impl Cell {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Face {
     pub area: FaceArea,
     pub normal: VecDimensionless,

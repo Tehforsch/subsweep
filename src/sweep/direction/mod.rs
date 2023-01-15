@@ -18,7 +18,7 @@ pub struct DirectionIndex(usize);
 #[derive(Deref, DerefMut, Deserialize, Serialize, Clone, Debug)]
 pub struct Direction(pub VecDimensionless);
 
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct Directions {
     directions: Vec<Direction>,
 }
