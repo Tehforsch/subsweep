@@ -1,17 +1,18 @@
-box_size:
-  min: (0.0 0.0) pc
-  max: (10000.0 10000.0) pc
+box_size: 12.8 kpc
 timestep:
-  max_timestep: 0.002 yr
+  max_timestep: 1e-1 Myr
 sweep_postprocess:
-  cell_size: 10000.0 pc
-  density: 1e-26 g cm^-2
+  cell_size: 1.0 kpc
+  number_density: 1e-3 cm^-3
   initial_fraction_ionized_hydrogen: 0.00
-  source_strength: 1e35  photons s^-1
+  source_strength: 1e49  photons s^-1
 sweep:
   directions: 84
 visualization:
   show_particles: true
+  slice:
+    - z
+    - 0.2 kpc
   color_map:
     type: ionized_hydrogen_fraction
     scale: "1.0"

@@ -2,19 +2,21 @@
 #![feature(generic_const_exprs)]
 
 use bevy::prelude::*;
+use ordered_float::OrderedFloat;
 use raxiom::components;
 use raxiom::components::Position;
 use raxiom::grid::init_cartesian_grid_system;
 use raxiom::prelude::*;
-use raxiom::units::Density;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
+use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
+use raxiom::units::PROTON_MASS;
 
 #[raxiom_parameters("sweep_postprocess")]
 struct Parameters {
     cell_size: Length,
-    density: Density,
+    number_density: NumberDensity,
     initial_fraction_ionized_hydrogen: Dimensionless,
     source_strength: PhotonFlux,
 }
@@ -48,19 +50,21 @@ fn initialize_sweep_components_system(
     parameters: Res<Parameters>,
     box_size: Res<SimulationBox>,
 ) {
-    for (entity, pos) in particles.iter() {
+    for (entity, _) in particles.iter() {
         commands.entity(entity).insert((
-            components::Density(parameters.density),
+            components::Density(parameters.number_density * PROTON_MASS),
             components::HydrogenIonizationFraction(parameters.initial_fraction_ionized_hydrogen),
         ));
-        let pos_frac_x = (pos.x() / box_size.side_lengths().x()).value();
-        let pos_frac_y = (pos.y() / box_size.side_lengths().y()).value();
-        if 0.49 < pos_frac_x && pos_frac_x < 0.51 {
-            if 0.49 < pos_frac_y && pos_frac_y < 0.51 {
-                commands
-                    .entity(entity)
-                    .insert(components::Source(parameters.source_strength));
-            }
-        }
     }
+    let closest_entity_to_center = particles
+        .iter()
+        .min_by_key(|(_, pos)| {
+            let dist = ***pos - box_size.center();
+            OrderedFloat(dist.length().value_unchecked())
+        })
+        .map(|(entity, _)| entity)
+        .unwrap();
+    commands
+        .entity(closest_entity_to_center)
+        .insert(components::Source(parameters.source_strength));
 }

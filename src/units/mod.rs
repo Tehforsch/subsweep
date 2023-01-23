@@ -27,12 +27,15 @@ unit_system!(
         centimeters, 1e-2, "cm",
         kilometers, 1000.0, "km",
         astronomical_units, 1.4959787e11, "au",
-        parsec, 3.0857e16, "pc"
+        parsec, 3.0857e16, "pc",
+        kiloparsec, 3.0857e19, "kpc"
     },
     TIME, Time, time: 1,
     {
         seconds, 1.0, "s",
-        years, 31557600.0, "yr"
+        years, 3.15576e7, "yr",
+        kiloyears, 3.15576e10, "kyr",
+        megayears, 3.15576e13, "Myr"
     },
     VELOCITY, Velocity, length: 1, time: -1,
     {

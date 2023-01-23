@@ -16,6 +16,7 @@ use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Pressure;
 use crate::named::Named;
+use crate::parameters::SimulationBox;
 use crate::prelude::Float;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
@@ -159,14 +160,18 @@ fn show_particles_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position), Without<DrawCircle>>,
     rank: Res<WorldRank>,
+    visualization_parameters: Res<VisualizationParameters>,
+    box_size: Res<SimulationBox>,
 ) {
     for (entity, pos) in particles.iter() {
-        commands
-            .entity(entity)
-            .insert(DrawCircle::from_position_and_color(
-                **pos,
-                color_map(**rank),
-            ));
+        if visualization_parameters.slice.contains(**pos, &box_size) {
+            commands
+                .entity(entity)
+                .insert(DrawCircle::from_position_and_color(
+                    **pos,
+                    color_map(**rank),
+                ));
+        }
     }
 }
 
