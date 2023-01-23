@@ -1,3 +1,4 @@
+use super::Amount;
 use super::Dimension;
 use super::Dimensionless;
 use super::EnergyPerMass;
@@ -23,5 +24,11 @@ impl Temperature {
 impl EnergyPerMass {
     pub fn to_temperature(&self, molecular_weight: Dimensionless) -> Temperature {
         *self / (BOLTZMANN_CONSTANT / PROTON_MASS) / (1.0 / (GAMMA - 1.0)) * molecular_weight
+    }
+}
+
+impl Dimensionless {
+    pub fn to_amount(&self) -> Amount {
+        *self * Amount::one_unchecked()
     }
 }

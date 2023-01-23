@@ -10,7 +10,6 @@ use raxiom::units::Density;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
-use raxiom::units::Time;
 
 #[raxiom_parameters("sweep_postprocess")]
 struct Parameters {

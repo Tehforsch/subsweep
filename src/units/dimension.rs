@@ -4,6 +4,7 @@ const MASS_TO_SI: f64 = 1.0;
 const LENGTH_TO_SI: f64 = 1.0;
 const TIME_TO_SI: f64 = 1.0;
 const TEMPERATURE_TO_SI: f64 = 1.0;
+const AMOUNT_TO_SI: f64 = 1.0;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 #[diman_dimension]
@@ -12,6 +13,7 @@ pub struct Dimension {
     pub time: i32,
     pub mass: i32,
     pub temperature: i32,
+    pub amount: i32,
 }
 
 pub const NONE: Dimension = Dimension {
@@ -19,6 +21,7 @@ pub const NONE: Dimension = Dimension {
     time: 0,
     mass: 0,
     temperature: 0,
+    amount: 0,
 };
 
 impl Dimension {
@@ -27,9 +30,18 @@ impl Dimension {
     /// but will change if the base units are changed
     /// from SI to anything else
     pub fn base_conversion_factor(&self) -> f64 {
-        (LENGTH_TO_SI).powi(self.length)
-            * (TIME_TO_SI).powi(self.time)
-            * (MASS_TO_SI).powi(self.mass)
-            * (TEMPERATURE_TO_SI).powi(self.temperature)
+        // Make sure we notice this whenever we add a field to Dimension:
+        let Self {
+            length,
+            time,
+            mass,
+            temperature,
+            amount,
+        } = self;
+        (LENGTH_TO_SI).powi(*length)
+            * (TIME_TO_SI).powi(*time)
+            * (MASS_TO_SI).powi(*mass)
+            * (TEMPERATURE_TO_SI).powi(*temperature)
+            * (AMOUNT_TO_SI).powi(*amount)
     }
 }

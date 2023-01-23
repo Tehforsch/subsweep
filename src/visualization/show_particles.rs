@@ -150,7 +150,7 @@ fn color_particles_by_flux_system(
 ) {
     if let ColorMap::Flux { scale } = visualization_parameters.color_map {
         for (mut circle, flux) in particles.iter_mut() {
-            circle.color = RColor::reds((**flux / scale).value());
+            circle.color = RColor::reds((**flux / scale).ln().value());
         }
     }
 }

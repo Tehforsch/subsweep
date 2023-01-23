@@ -2,16 +2,19 @@ box_size:
   min: (0.0 0.0) pc
   max: (10000.0 10000.0) pc
 timestep:
-  max_timestep: 0.2 yr
+  max_timestep: 0.002 yr
 sweep_postprocess:
-  cell_size: 100.0 pc
-  density: 1e-30 g cm^-2
+  cell_size: 10000.0 pc
+  density: 1e-26 g cm^-2
   initial_fraction_ionized_hydrogen: 0.00
-  source_strength: 1e-4  s^-1
+  source_strength: 1e35  photons s^-1
 sweep:
-  directions: 10
+  directions: 84
 visualization:
   show_particles: true
   color_map:
-    type: flux
-    scale: "1.0e-4 s^-1"
+    type: ionized_hydrogen_fraction
+    scale: "1.0"
+  # color_map:
+  #   type: flux
+  #   scale: "1e33 photons s^-1"

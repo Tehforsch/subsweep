@@ -10,6 +10,7 @@ use hdf5::Dataset;
 use hdf5::File;
 
 use super::to_dataset::ToDataset;
+use super::to_dataset::AMOUNT_IDENTIFIER;
 use super::to_dataset::LENGTH_IDENTIFIER;
 use super::to_dataset::MASS_IDENTIFIER;
 use super::to_dataset::TEMPERATURE_IDENTIFIER;
@@ -203,30 +204,26 @@ fn read_dataset_system<T: ToDataset + Component>(
 }
 
 fn read_dimension(dataset: &Dataset) -> Dimension {
-    let length: i32 = dataset
-        .attr(LENGTH_IDENTIFIER)
-        .expect("No length scale factor in dataset")
-        .read_scalar()
-        .unwrap();
-    let mass: i32 = dataset
-        .attr(MASS_IDENTIFIER)
-        .expect("No mass scale factor in dataset")
-        .read_scalar()
-        .unwrap();
-    let time: i32 = dataset
-        .attr(TIME_IDENTIFIER)
-        .expect("No time scale factor in dataset")
-        .read_scalar()
-        .unwrap();
-    let temperature: i32 = dataset
-        .attr(TEMPERATURE_IDENTIFIER)
-        .expect("No temperature scale factor in dataset")
-        .read_scalar()
-        .unwrap();
+    let read_attr = |ident, error_message| {
+        dataset
+            .attr(ident)
+            .expect(error_message)
+            .read_scalar()
+            .unwrap()
+    };
+    let length: i32 = read_attr(LENGTH_IDENTIFIER, "No length scale factor in dataset");
+    let mass: i32 = read_attr(MASS_IDENTIFIER, "No mass scale factor in dataset");
+    let time: i32 = read_attr(TIME_IDENTIFIER, "No time scale factor in dataset");
+    let temperature: i32 = read_attr(
+        TEMPERATURE_IDENTIFIER,
+        "No temperature scale factor in dataset",
+    );
+    let amount: i32 = read_attr(AMOUNT_IDENTIFIER, "No amount scale factor in dataset");
     Dimension {
         length,
         mass,
         time,
         temperature,
+        amount,
     }
 }

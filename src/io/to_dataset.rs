@@ -17,6 +17,7 @@ pub const LENGTH_IDENTIFIER: &str = "scaling_length";
 pub const TIME_IDENTIFIER: &str = "scaling_time";
 pub const MASS_IDENTIFIER: &str = "scaling_mass";
 pub const TEMPERATURE_IDENTIFIER: &str = "scaling_temperature";
+pub const AMOUNT_IDENTIFIER: &str = "scaling_amount";
 
 #[derive(SystemLabel)]
 struct DatasetSystemAmbiguityLabel;
@@ -79,11 +80,13 @@ fn write_dataset<T: ToDataset>(query: Particles<&T>, file: ResMut<OutputFile>) {
         time,
         mass,
         temperature,
+        amount,
     } = dimension;
     write_dimension(&dataset, LENGTH_IDENTIFIER, length);
     write_dimension(&dataset, TIME_IDENTIFIER, time);
     write_dimension(&dataset, MASS_IDENTIFIER, mass);
     write_dimension(&dataset, TEMPERATURE_IDENTIFIER, temperature);
+    write_dimension(&dataset, AMOUNT_IDENTIFIER, amount);
 }
 
 fn write_dimension(dataset: &Dataset, identifier: &str, dimension: i32) {

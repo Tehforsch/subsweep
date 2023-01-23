@@ -65,8 +65,12 @@ impl RaxiomPlugin for SweepPlugin {
         .add_required_component::<Source>()
         .add_derived_component::<components::Flux>()
         .add_derived_component::<AbsorptionRate>()
+        .add_system(
+            reset_sites_system
+                .before(sweep_system)
+                .before(init_counts_system),
+        )
         .add_system(init_counts_system.before(sweep_system))
-        .add_system(reset_sites_system.before(sweep_system))
         .add_system(sweep_system)
         .add_system(ionize_hydrogen_system.after(sweep_system))
         .add_parameter_type::<SweepParameters>();
@@ -116,10 +120,9 @@ impl<'w, 's> Sweep<'w, 's> {
                         // we need to be inclusive of all faces, even
                         // those that have zero dot product with the
                         // face normal.
-                        cell1
-                            .neighbours
-                            .iter()
-                            .all(|(face, neighbour)| !face.points_upwind(dir) || neighbour.is_boundary())
+                        cell1.neighbours.iter().all(|(face, neighbour)| {
+                            !face.points_upwind(dir) || neighbour.is_boundary()
+                        })
                     })
                     .map(move |(entity, _, _)| Task {
                         entity,
@@ -155,7 +158,8 @@ impl<'w, 's> Sweep<'w, 's> {
             .sites
             .get_component::<HydrogenIonizationFraction>(task.entity)
             .unwrap();
-        let hydrogen_number_density = density / PROTON_MASS * (1.0 - ionized_hydrogen_abundance);
+        let neutral_hydrogen_number_density =
+            density / PROTON_MASS * (1.0 - ionized_hydrogen_abundance);
         let source = match self.sources.get_component::<Source>(task.entity) {
             Ok(source) => **source / self.directions.len() as f64,
             Err(_) => SourceRate::zero(),
@@ -166,7 +170,7 @@ impl<'w, 's> Sweep<'w, 's> {
             .get_component_mut::<AbsorptionRate>(task.entity)
             .unwrap();
         let flux = task.flux + source;
-        let absorbed_fraction = 1.0 - (-hydrogen_number_density * sigma * cell.size).exp();
+        let absorbed_fraction = 1.0 - (-neutral_hydrogen_number_density * sigma * cell.size).exp();
         **absorption_rate += flux * absorbed_fraction;
         let mut cell_flux = self.sites.get_component_mut::<Flux>(task.entity).unwrap();
         **cell_flux += flux;
@@ -250,10 +254,19 @@ fn sweep_system(
 }
 
 fn ionize_hydrogen_system(
-    mut particles: Particles<(&mut HydrogenIonizationFraction, &AbsorptionRate, &Timestep)>,
+    mut particles: Particles<(
+        &mut HydrogenIonizationFraction,
+        &AbsorptionRate,
+        &Timestep,
+        &Density,
+        &Cell,
+    )>,
 ) {
-    for (mut ionized_fraction, absorption_rate, timestep) in particles.iter_mut() {
-        **ionized_fraction += **absorption_rate * **timestep;
+    for (mut ionized_fraction, absorption_rate, timestep, density, cell) in particles.iter_mut() {
+        let hydrogen_number_density = **density / PROTON_MASS;
+        let num_hydrogen_atoms = (hydrogen_number_density * cell.volume()).to_amount();
+        let num_newly_ionized_hydrogen_atoms = **absorption_rate * **timestep;
+        **ionized_fraction += num_newly_ionized_hydrogen_atoms / num_hydrogen_atoms;
         **ionized_fraction = ionized_fraction.clamp(
             Dimensionless::dimensionless(0.0),
             Dimensionless::dimensionless(1.0),

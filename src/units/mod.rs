@@ -103,7 +103,11 @@ unit_system!(
     NUMBERDENSITY2D, NumberDensity2D, length: -2,
     {
     },
-    PHOTON_FLUX, PhotonFlux, time: -1,
+    AMOUNT, Amount, amount: 1,
+    {
+        photons, 1.0, "photons"
+    },
+    PHOTON_FLUX, PhotonFlux, time: -1, amount: 1,
     {
     },
     CROSS_SECTION_2D, CrossSection2D, length: 1,
@@ -112,7 +116,7 @@ unit_system!(
     CROSS_SECTION_3D, CrossSection3D, length: 2,
     {
     },
-    SOURCE_RATE, SourceRate, time: -1,
+    SOURCE_RATE, SourceRate, time: -1, amount: 1,
     {
     },
     LENGTHMASS, LengthMass, mass: 1, length: 1,
