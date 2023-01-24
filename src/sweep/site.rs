@@ -1,4 +1,5 @@
 use super::count_by_dir::CountByDir;
+use super::timestep_level::TimestepLevel;
 use crate::units::Density;
 use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
@@ -12,4 +13,5 @@ pub struct Site {
     pub source: SourceRate,
     pub absorption_rate: PhotonFlux,
     pub flux: Vec<PhotonFlux>,
+    pub timestep_level: TimestepLevel,
 }

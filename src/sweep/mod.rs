@@ -6,18 +6,19 @@ mod site;
 mod task;
 #[cfg(test)]
 mod tests;
+mod timestep_level;
 
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 pub use parameters::SweepParameters;
 
-use self::components::AbsorptionRate;
 use self::components::IonizedHydrogenFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
 use self::direction::Directions;
 use self::site::Site;
 use self::task::Task;
+use self::timestep_level::TimestepLevel;
 use crate::components::Density;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
@@ -29,6 +30,7 @@ use crate::simulation::RaxiomPlugin;
 use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
 use crate::units::SourceRate;
+use crate::units::Time;
 use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use crate::units::PROTON_MASS;
 
@@ -47,10 +49,6 @@ impl RaxiomPlugin for SweepPlugin {
         .add_required_component::<Source>()
         .add_derived_component::<components::Flux>()
         .add_system_to_stage(SimulationStages::ForceCalculation, sweep_system)
-        .add_system_to_stage(
-            SimulationStages::ForceCalculation,
-            ionize_hydrogen_system.after(sweep_system),
-        )
         .add_parameter_type::<SweepParameters>();
     }
 }
@@ -61,10 +59,16 @@ struct Sweep {
     sites: HashMap<Entity, Site>,
     to_solve: PriorityQueue<Task>,
     remaining_to_solve_count: CountByDir,
+    max_timestep: Time,
 }
 
 impl Sweep {
-    fn run(directions: &Directions, cells: HashMap<Entity, Cell>, sites: HashMap<Entity, Site>) {
+    fn run(
+        directions: &Directions,
+        cells: HashMap<Entity, Cell>,
+        sites: HashMap<Entity, Site>,
+        max_timestep: Time,
+    ) -> HashMap<Entity, Site> {
         assert!(cells.len() == sites.len());
         let remaining_to_solve = CountByDir::new(directions.len(), cells.iter().count());
         let mut solver = Sweep {
@@ -73,10 +77,13 @@ impl Sweep {
             to_solve: PriorityQueue::new(),
             directions: directions.clone(),
             remaining_to_solve_count: remaining_to_solve,
+            max_timestep,
         };
         solver.init_counts();
         solver.add_initial_tasks();
         solver.solve();
+        solver.update_chemistry();
+        solver.sites
     }
 
     fn add_initial_tasks(&mut self) {
@@ -196,17 +203,38 @@ impl Sweep {
             }
         }
     }
+
+    fn update_chemistry(&mut self) {
+        for (entity, cell) in self.cells.iter() {
+            let mut site = self.sites.get_mut(entity).unwrap();
+            let hydrogen_number_density = site.density / PROTON_MASS;
+            let num_hydrogen_atoms = hydrogen_number_density * cell.volume();
+            let num_newly_ionized_hydrogen_atoms = site.absorption_rate * self.max_timestep;
+            let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
+                * (hydrogen_number_density * site.ionized_hydrogen_fraction).powi::<2>();
+            let num_recombined_hydrogen_atoms =
+                (recombination_rate * self.max_timestep * cell.volume()).to_amount();
+            site.ionized_hydrogen_fraction += (num_newly_ionized_hydrogen_atoms
+                - num_recombined_hydrogen_atoms)
+                / num_hydrogen_atoms.to_amount();
+            site.ionized_hydrogen_fraction = site.ionized_hydrogen_fraction.clamp(
+                Dimensionless::dimensionless(0.0),
+                Dimensionless::dimensionless(1.0),
+            );
+        }
+    }
 }
 
 fn sweep_system(
     directions: Res<Directions>,
-    particles: Query<(
+    mut particles: Query<(
         Entity,
         &Cell,
         &Density,
-        &IonizedHydrogenFraction,
+        &mut IonizedHydrogenFraction,
         Option<&Source>,
     )>,
+    timestep: Res<TimestepParameters>,
 ) {
     let cells = particles
         .iter()
@@ -224,36 +252,14 @@ fn sweep_system(
                     num_missing_upwind: CountByDir::empty(),
                     absorption_rate: PhotonFlux::zero(),
                     flux: directions.enumerate().map(|_| PhotonFlux::zero()).collect(),
+                    timestep_level: TimestepLevel(0),
                 },
             )
         })
         .collect();
-    Sweep::run(&directions, cells, sites);
-}
-
-fn ionize_hydrogen_system(
-    mut particles: Particles<(
-        &mut IonizedHydrogenFraction,
-        &AbsorptionRate,
-        &Density,
-        &Cell,
-    )>,
-    timestep: Res<TimestepParameters>,
-) {
-    for (mut ionized_fraction, absorption_rate, density, cell) in particles.iter_mut() {
-        let hydrogen_number_density = **density / PROTON_MASS;
-        let num_hydrogen_atoms = hydrogen_number_density * cell.volume();
-        let num_newly_ionized_hydrogen_atoms = **absorption_rate * timestep.max_timestep;
-        let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
-            * (hydrogen_number_density * **ionized_fraction).powi::<2>();
-        let num_recombined_hydrogen_atoms =
-            (recombination_rate * timestep.max_timestep * cell.volume()).to_amount();
-        **ionized_fraction += (num_newly_ionized_hydrogen_atoms - num_recombined_hydrogen_atoms)
-            / num_hydrogen_atoms.to_amount();
-        **ionized_fraction = ionized_fraction.clamp(
-            Dimensionless::dimensionless(0.0),
-            Dimensionless::dimensionless(1.0),
-        );
+    let sites = Sweep::run(&directions, cells, sites, timestep.max_timestep);
+    for (entity, _, _, mut fraction, _) in particles.iter_mut() {
+        **fraction = sites[&entity].ionized_hydrogen_fraction;
     }
 }
 
