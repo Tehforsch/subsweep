@@ -53,7 +53,7 @@ fn initialize_sweep_components_system(
     for (entity, _) in particles.iter() {
         commands.entity(entity).insert((
             components::Density(parameters.number_density * PROTON_MASS),
-            components::HydrogenIonizationFraction(parameters.initial_fraction_ionized_hydrogen),
+            components::IonizedHydrogenFraction(parameters.initial_fraction_ionized_hydrogen),
         ));
     }
     let closest_entity_to_center = particles

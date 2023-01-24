@@ -12,7 +12,7 @@ pub type FaceArea = crate::units::Length;
 #[cfg(not(feature = "2d"))]
 pub type FaceArea = crate::units::Area;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Neighbour {
     Local(Entity),
     Remote(RemoteNeighbour),
@@ -29,13 +29,13 @@ impl Neighbour {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RemoteNeighbour {
     pub local_entity: Entity,
     pub remote_entity: Identified<Entity>,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Cell {
     pub neighbours: Vec<(Face, Neighbour)>,
     pub size: Length,

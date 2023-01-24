@@ -1,10 +1,15 @@
-use bevy::prelude::Component;
-
 use super::count_by_dir::CountByDir;
+use crate::units::Density;
+use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
+use crate::units::SourceRate;
 
-#[derive(Component, Debug)]
+#[derive(Debug)]
 pub struct Site {
     pub num_missing_upwind: CountByDir,
+    pub ionized_hydrogen_fraction: Dimensionless,
+    pub density: Density,
+    pub source: SourceRate,
+    pub absorption_rate: PhotonFlux,
     pub flux: Vec<PhotonFlux>,
 }

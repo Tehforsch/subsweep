@@ -2,12 +2,12 @@ box_size: 12.8 kpc
 timestep:
   max_timestep: 1e-1 Myr
 sweep_postprocess:
-  cell_size: 0.5 kpc
+  cell_size: 0.2 kpc
   number_density: 1e-3 cm^-3
   initial_fraction_ionized_hydrogen: 0.00
   source_strength: 1e49  photons s^-1
 sweep:
-  directions: 84
+  directions: 1
 visualization:
   show_particles: true
   slice:

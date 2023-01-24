@@ -10,8 +10,8 @@ use super::RColor;
 use super::VisualizationParameters;
 use super::VisualizationStage;
 use crate::components;
-use crate::components::HydrogenIonizationFraction;
 use crate::components::InternalEnergy;
+use crate::components::IonizedHydrogenFraction;
 use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Pressure;
@@ -136,7 +136,7 @@ fn color_particles_by_mass_system(
 
 fn color_particles_by_ionized_hydrogen_fraction_system(
     visualization_parameters: Res<VisualizationParameters>,
-    mut particles: Particles<(&mut DrawCircle, &HydrogenIonizationFraction)>,
+    mut particles: Particles<(&mut DrawCircle, &IonizedHydrogenFraction)>,
 ) {
     if let ColorMap::IonizedHydrogenFraction { scale } = visualization_parameters.color_map {
         for (mut circle, fraction) in particles.iter_mut() {

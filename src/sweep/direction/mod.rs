@@ -13,7 +13,7 @@ use crate::units::MVec;
 use crate::units::VecDimensionless;
 
 #[derive(Deref, DerefMut, PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Hash)]
-pub struct DirectionIndex(usize);
+pub struct DirectionIndex(pub usize);
 
 #[derive(Deref, DerefMut, Deserialize, Serialize, Clone, Debug)]
 pub struct Direction(pub VecDimensionless);
