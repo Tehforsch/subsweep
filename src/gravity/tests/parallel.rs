@@ -11,7 +11,6 @@ use crate::communication::local_sim_building::build_local_communication_sim_with
 use crate::communication::WorldRank;
 use crate::components;
 use crate::components::Position;
-use crate::components::Timestep;
 use crate::components::Velocity;
 use crate::domain::DomainDecompositionPlugin;
 use crate::gravity::plugin::GravityPlugin;
@@ -24,6 +23,7 @@ use crate::prelude::Particles;
 use crate::prelude::SimulationBox;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationPlugin;
+use crate::simulation_plugin::TimestepParameters;
 use crate::test_utils::run_system_on_sim;
 use crate::units::VecVelocity;
 
@@ -31,11 +31,12 @@ pub const NUM_PARTICLES_ONE_DIMENSION: i32 = 20;
 
 fn check_system(
     parameters: Res<GravityParameters>,
-    query: Particles<(&Velocity, &IndexIntoArray, &Timestep)>,
+    query: Particles<(&Velocity, &IndexIntoArray)>,
     box_: Res<SimulationBox>,
+    timestep: Res<TimestepParameters>,
 ) {
     let solver = Solver::new(&parameters, &box_);
-    for (vel, index, timestep) in query.iter() {
+    for (vel, index) in query.iter() {
         let particles = get_particles(NUM_PARTICLES_ONE_DIMENSION, NUM_PARTICLES_ONE_DIMENSION);
         // We can't use the particle position from a query here,
         // because that has already been integrated
@@ -49,7 +50,7 @@ fn check_system(
                 .collect(),
         );
         let acc1 = direct_sum;
-        let acc2 = **vel / **timestep;
+        let acc2 = **vel / timestep.max_timestep;
         compare_accelerations(acc1, acc2);
     }
     // Check that we haven't accidentally broken this test by removing all the particles
@@ -88,7 +89,6 @@ fn spawn_particles_system(rank: Res<WorldRank>, mut commands: Commands) {
 fn build_parallel_gravity_sim(sim: &mut Simulation) {
     use crate::domain::ExchangeDataPlugin;
     use crate::stages::SimulationStagesPlugin;
-    use crate::timestep::TimestepParameters;
     use crate::units::Dimensionless;
     use crate::units::Length;
     use crate::units::Time;
@@ -96,7 +96,6 @@ fn build_parallel_gravity_sim(sim: &mut Simulation) {
     sim.add_parameter_file_contents("".into())
         .add_parameters_explicitly(TimestepParameters {
             max_timestep: Time::seconds(1.0),
-            num_levels: 1,
         })
         .add_parameters_explicitly(GravityParameters {
             opening_angle: Dimensionless::dimensionless(0.0),

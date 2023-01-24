@@ -20,11 +20,11 @@ use self::site::Site;
 use self::task::Task;
 use crate::components::Density;
 use crate::components::Position;
-use crate::components::Timestep;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
 use crate::grid::Neighbour;
 use crate::grid::RemoteNeighbour;
+use crate::parameters::TimestepParameters;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::units::Dimensionless;
@@ -66,14 +66,21 @@ impl RaxiomPlugin for SweepPlugin {
         .add_required_component::<Source>()
         .add_derived_component::<components::Flux>()
         .add_derived_component::<AbsorptionRate>()
-        .add_system(
+        .add_system_to_stage(
+            SimulationStages::ForceCalculation,
             reset_sites_system
                 .before(sweep_system)
                 .before(init_counts_system),
         )
-        .add_system(init_counts_system.before(sweep_system))
-        .add_system(sweep_system)
-        .add_system(ionize_hydrogen_system.after(sweep_system))
+        .add_system_to_stage(
+            SimulationStages::ForceCalculation,
+            init_counts_system.before(sweep_system),
+        )
+        .add_system_to_stage(SimulationStages::ForceCalculation, sweep_system)
+        .add_system_to_stage(
+            SimulationStages::ForceCalculation,
+            ionize_hydrogen_system.after(sweep_system),
+        )
         .add_parameter_type::<SweepParameters>();
     }
 }
@@ -258,19 +265,19 @@ fn ionize_hydrogen_system(
     mut particles: Particles<(
         &mut HydrogenIonizationFraction,
         &AbsorptionRate,
-        &Timestep,
         &Density,
         &Cell,
     )>,
+    timestep: Res<TimestepParameters>,
 ) {
-    for (mut ionized_fraction, absorption_rate, timestep, density, cell) in particles.iter_mut() {
+    for (mut ionized_fraction, absorption_rate, density, cell) in particles.iter_mut() {
         let hydrogen_number_density = **density / PROTON_MASS;
         let num_hydrogen_atoms = hydrogen_number_density * cell.volume();
-        let num_newly_ionized_hydrogen_atoms = **absorption_rate * **timestep;
+        let num_newly_ionized_hydrogen_atoms = **absorption_rate * timestep.max_timestep;
         let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
             * (hydrogen_number_density * **ionized_fraction).powi::<2>();
         let num_recombined_hydrogen_atoms =
-            (recombination_rate * **timestep * cell.volume()).to_amount();
+            (recombination_rate * timestep.max_timestep * cell.volume()).to_amount();
         **ionized_fraction += (num_newly_ionized_hydrogen_atoms - num_recombined_hydrogen_atoms)
             / num_hydrogen_atoms.to_amount();
         **ionized_fraction = ionized_fraction.clamp(

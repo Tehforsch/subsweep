@@ -21,6 +21,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
             DomainDecompositionStages::Decomposition.as_label(),
             DomainDecompositionStages::Exchange.as_label(),
+            SimulationStages::SetTimestep.as_label(),
             HydrodynamicsStages::BeforeForceCalculation.as_label(),
             SimulationStages::ForceCalculation.as_label(),
             SimulationStages::Integration.as_label(),

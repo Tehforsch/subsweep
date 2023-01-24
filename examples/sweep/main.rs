@@ -68,3 +68,17 @@ fn initialize_sweep_components_system(
         .entity(closest_entity_to_center)
         .insert(components::Source(parameters.source_strength));
 }
+
+// fn set_desired_timestep_system(
+//     mut particles: Particles<(&Position, &mut DesiredTimestep)>,
+//     parameters: Res<TimestepParameters>,
+//     box_size: Res<SimulationBox>,
+// ) {
+//     for (pos, mut desired_timestep) in particles.iter_mut() {
+//         **desired_timestep = if pos.x() < box_size.center().x() {
+//             parameters.min_timestep()
+//         } else {
+//             parameters.max_timestep
+//         }
+//     }
+// }

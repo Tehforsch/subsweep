@@ -106,7 +106,7 @@ fn main() {
         .build()
         .add_plugin(GravityPlugin)
         .add_plugin(HydrodynamicsPlugin)
-        .add_system(my_custom_behavior)
+        .add_system_to_stage(SimulationStages::ForceCalculation, my_custom_behavior)
         .run();
 }
 

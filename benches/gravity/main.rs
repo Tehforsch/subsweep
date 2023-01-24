@@ -13,11 +13,11 @@ use raxiom::parameters::DomainParameters;
 use raxiom::parameters::GravityParameters;
 use raxiom::parameters::PerformanceParameters;
 use raxiom::parameters::SimulationParameters;
-use raxiom::parameters::TimestepParameters;
 use raxiom::prelude::GravityPlugin;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationBox;
 use raxiom::prelude::SimulationBuilder;
+use raxiom::simulation_plugin::TimestepParameters;
 use raxiom::units::Time;
 use raxiom::units::*;
 
@@ -61,8 +61,7 @@ fn setup_gravity_sim(num_particles: usize, opening_angle: Dimensionless) -> Simu
             final_time: Some(Time::seconds(10e-3)),
         })
         .add_parameters_explicitly(TimestepParameters {
-            max_timestep: Time::seconds(1e-3),
-            num_levels: 1,
+            max_timestep: Time::years(1e-3),
         });
     SimulationBuilder::bench()
         .build_with_sim(&mut sim)

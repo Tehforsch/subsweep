@@ -6,7 +6,9 @@ use crate::components;
 use crate::components::Position;
 use crate::grid::init_cartesian_grid_system;
 use crate::parameters::SimulationBox;
+use crate::parameters::SimulationParameters;
 use crate::parameters::SweepParameters;
+use crate::parameters::TimestepParameters;
 use crate::prelude::Particles;
 use crate::prelude::SimulationStartupStages;
 use crate::simulation::Simulation;
@@ -17,6 +19,7 @@ use crate::units::Density;
 use crate::units::Dimensionless;
 use crate::units::Length;
 use crate::units::MVec;
+use crate::units::Time;
 use crate::units::VecDimensionless;
 
 fn run_sweep(dirs: Vec<VecDimensionless>) {
@@ -29,6 +32,10 @@ fn run_sweep(dirs: Vec<VecDimensionless>) {
         .add_parameters_explicitly(simulation_box)
         .add_parameters_explicitly(SweepParameters {
             directions: DirectionsSpecification::Explicit(dirs),
+        })
+        .add_parameters_explicitly(SimulationParameters { final_time: None })
+        .add_parameters_explicitly(TimestepParameters {
+            max_timestep: Time::seconds(1e-3),
         })
         .add_startup_system(move |commands: Commands, box_size: Res<SimulationBox>| {
             init_cartesian_grid_system(commands, box_size, cell_size)

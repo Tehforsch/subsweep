@@ -14,12 +14,12 @@ use crate::communication::SyncCommunicator;
 use crate::components;
 use crate::components::Mass;
 use crate::components::Position;
-use crate::components::Timestep;
 use crate::components::Velocity;
 use crate::domain;
 use crate::domain::extent::Extent;
 use crate::domain::TopLevelIndices;
 use crate::named::Named;
+use crate::parameters::TimestepParameters;
 use crate::performance_parameters::PerformanceParameters;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
@@ -382,7 +382,6 @@ fn compute_energy_change_system(
         &SmoothingLength,
         &components::Pressure,
         &components::Density,
-        &Timestep,
     )>,
     particles2: HydroParticles<(
         &Position,
@@ -395,19 +394,11 @@ fn compute_energy_change_system(
     tree: Res<QuadTree>,
     box_: Res<SimulationBox>,
     performance_parameters: Res<PerformanceParameters>,
+    timestep: Res<TimestepParameters>,
 ) {
     particles1.par_for_each_mut(
         performance_parameters.batch_size(),
-        |(
-            mut energy1,
-            mass1,
-            velocity1,
-            position1,
-            smoothing_length1,
-            pressure1,
-            density1,
-            timestep,
-        )| {
+        |(mut energy1, mass1, velocity1, position1, smoothing_length1, pressure1, density1)| {
             let mut d_energy = Energy::zero()
                 / crate::units::Mass::one_unchecked()
                 / crate::units::Time::one_unchecked();
@@ -434,7 +425,7 @@ fn compute_energy_change_system(
                     * ((**pressure1 / density1.squared()) + (**pressure2 / density2.squared()))
                     * relative_velocity.dot(kernel_derivative);
             }
-            **energy1 += d_energy * **timestep * **mass1;
+            **energy1 += d_energy * timestep.max_timestep * **mass1;
         },
     );
 }
@@ -446,7 +437,6 @@ fn compute_forces_system(
         &SmoothingLength,
         &components::Pressure,
         &components::Density,
-        &Timestep,
     )>,
     particles2: HydroParticles<(
         &Position,
@@ -458,10 +448,11 @@ fn compute_forces_system(
     tree: Res<QuadTree>,
     box_: Res<SimulationBox>,
     performance_parameters: Res<PerformanceParameters>,
+    timestep: Res<TimestepParameters>,
 ) {
     particles1.par_for_each_mut(
         performance_parameters.batch_size(),
-        |(mut velocity1, position1, smoothing_length1, pressure1, density1, timestep)| {
+        |(mut velocity1, position1, smoothing_length1, pressure1, density1)| {
             let mut d_vel = VecAcceleration::zero();
             for particle in tree
                 .get_particles_in_radius(&box_, position1, smoothing_length1)
@@ -485,7 +476,7 @@ fn compute_forces_system(
                     * ((**pressure1 / density1.squared()) + (**pressure2 / density2.squared()))
                     * kernel_derivative;
             }
-            **velocity1 += d_vel * **timestep;
+            **velocity1 += d_vel * timestep.max_timestep;
         },
     );
 }

@@ -35,7 +35,6 @@ use crate::memory::ComponentMemoryUsagePlugin;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
-use crate::timestep::TimestepState;
 
 #[derive(Default)]
 pub struct Simulation {
@@ -141,11 +140,6 @@ impl Simulation {
 
     pub fn add_state(&mut self, s: impl StateData) -> &mut Self {
         self.app.add_state(s);
-        self
-    }
-
-    pub fn add_system<Params>(&mut self, system: impl IntoSystemDescriptor<Params>) -> &mut Self {
-        self.app.add_system(system);
         self
     }
 
@@ -272,21 +266,6 @@ impl Simulation {
 
     pub fn update(&mut self) {
         self.app.update()
-    }
-
-    pub fn timestep(&mut self) {
-        assert!(self
-            .unwrap_resource::<TimestepState>()
-            .on_synchronization_step());
-        loop {
-            self.app.update();
-            if self
-                .unwrap_resource::<TimestepState>()
-                .on_synchronization_step()
-            {
-                break;
-            }
-        }
     }
 
     pub fn get_resource<T: Resource>(&self) -> Option<&T> {

@@ -7,6 +7,7 @@ use mpi::traits::Equivalence;
 
 use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
+use crate::io::output::OutputStages;
 use crate::named::Named;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
@@ -64,7 +65,8 @@ impl<T: Named + Component> RaxiomPlugin for ComponentMemoryUsagePlugin<T> {
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_system(
+        sim.add_system_to_stage(
+            OutputStages::Output,
             calculate_memory_usage_system::<T>
                 .after(reset_memory_usage_system)
                 .before(communicate_memory_usage_system)
@@ -76,8 +78,8 @@ impl<T: Named + Component> RaxiomPlugin for ComponentMemoryUsagePlugin<T> {
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(MemoryUsage::default())
             .add_plugin(CommunicationPlugin::<Memory>::default())
-            .add_system(reset_memory_usage_system)
-            .add_system(communicate_memory_usage_system);
+            .add_system_to_stage(OutputStages::Output, reset_memory_usage_system)
+            .add_system_to_stage(OutputStages::Output, communicate_memory_usage_system);
     }
 }
 

@@ -14,10 +14,10 @@ use raxiom::ics::RegularSampler;
 use raxiom::parameters::HydrodynamicsParameters;
 use raxiom::parameters::InitialGasEnergy;
 use raxiom::parameters::SimulationParameters;
-use raxiom::parameters::TimestepParameters;
 use raxiom::prelude::*;
 use raxiom::quadtree::QuadTreeConfig;
 use raxiom::simulation_plugin::stop_simulation_system;
+use raxiom::simulation_plugin::TimestepParameters;
 use raxiom::units::Density;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
@@ -74,10 +74,7 @@ fn build_sim(num_particles: usize) -> Simulation {
     .add_parameters_explicitly(SimulationParameters {
         final_time: Some(crossing_time),
     })
-    .add_parameters_explicitly(TimestepParameters {
-        num_levels: 1,
-        max_timestep,
-    });
+    .add_parameters_explicitly(TimestepParameters { max_timestep });
     SimulationBuilder::new()
         .read_initial_conditions(false)
         .write_output(false)

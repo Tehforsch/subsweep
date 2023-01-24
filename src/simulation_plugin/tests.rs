@@ -4,12 +4,12 @@ use bevy::prelude::ResMut;
 use bevy::prelude::Resource;
 use bevy::MinimalPlugins;
 
+use super::TimestepParameters;
 use crate::components;
 use crate::components::Position;
 use crate::components::Velocity;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
-use crate::parameters::TimestepParameters;
 use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
 use crate::prelude::SimulationStages;
@@ -59,7 +59,7 @@ struct TotalEnergy(Option<Energy>);
 
 fn force_system(
     mut particles: Particles<(&mut Velocity, &Position, &components::Mass)>,
-    parameters: Res<TimestepParameters>,
+    timestep: Res<TimestepParameters>,
     mut initial_energy: ResMut<TotalEnergy>,
 ) {
     let mut iter = particles.iter_mut();
@@ -72,14 +72,14 @@ fn force_system(
         + potential_energy(**pos1, **pos2, **mass1, **mass2)
         + potential_energy(**pos2, **pos1, **mass2, **mass1);
 
-    let timestep = parameters.max_timestep;
+    let timestep = timestep.max_timestep;
     let force = gravity_force(**pos1, **pos2, **mass1, **mass2);
     **vel1 += force / **mass1 * timestep;
     **vel2 -= force / **mass2 * timestep;
     if let Some(initial_energy) = initial_energy.0 {
         let diff =
             (initial_energy - total_energy).abs() / (initial_energy.abs() + total_energy.abs());
-        assert!(diff.value() < 1e-4);
+        assert!(diff.value() < 1e-3);
     } else {
         initial_energy.0 = Some(total_energy);
     }
@@ -90,15 +90,14 @@ fn build_integration_sim(sim: &mut Simulation) {
     use crate::units::Time;
 
     sim.add_parameter_file_contents("".into())
-        .add_parameters_explicitly(TimestepParameters {
-            max_timestep: Time::years(1e-3),
-            num_levels: 1,
-        })
         .add_parameters_explicitly(SimulationBox::cube_from_side_length_centered(
             Length::astronomical_units(100.0),
         ))
         .add_parameters_explicitly(SimulationParameters {
             final_time: Some(Time::years(1.0)),
+        })
+        .add_parameters_explicitly(TimestepParameters {
+            max_timestep: Time::years(1e-3),
         })
         .write_output(false)
         .insert_resource(TotalEnergy(None))

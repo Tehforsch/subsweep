@@ -1,13 +1,10 @@
 #!/bin/bash
 
+
 diff=$(cargo fmt -- --check)
 result=$?
-
 if [[ ${result} -ne 0 ]] ; then
-    cat <<\EOF
-There are some code style issues, run `cargo fmt` first.
-EOF
-    exit 1
+    echo "There are some code style issues! Run cargo fmt"
 fi
 
 if ! cargo test --tests
@@ -45,5 +42,13 @@ then
     echo "There are some doctest issues."
     exit 1
 fi
+
+if [[ ${result} -ne 0 ]] ; then
+    cat <<\EOF
+There are some code style issues, run `cargo fmt` first.
+EOF
+    exit 1
+fi
+
 
 exit 0
