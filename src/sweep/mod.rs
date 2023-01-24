@@ -53,6 +53,23 @@ impl RaxiomPlugin for SweepPlugin {
     }
 }
 
+fn find_index_of_lowest_set_bit_in_int(iteration: u32) -> Option<u32> {
+    for bit_num in 0..32 {
+        let mask = 1 << bit_num;
+        if iteration & mask > 0 {
+            return Some(bit_num);
+        }
+    }
+    None
+}
+
+fn get_lowest_active_timestep_level_from_iteration(num_levels: usize, iteration: u32) -> usize {
+    // find the lowest set bit in iteration.
+    assert!(num_levels < 32);
+    let first_bit = find_index_of_lowest_set_bit_in_int(iteration).unwrap_or(num_levels as u32 - 1);
+    num_levels - 1 - first_bit as usize
+}
+
 struct Sweep {
     directions: Directions,
     cells: HashMap<Entity, Cell>,
@@ -60,6 +77,7 @@ struct Sweep {
     to_solve: PriorityQueue<Task>,
     remaining_to_solve_count: CountByDir,
     max_timestep: Time,
+    lowest_active_timestep_level: usize,
 }
 
 impl Sweep {
@@ -68,6 +86,7 @@ impl Sweep {
         cells: HashMap<Entity, Cell>,
         sites: HashMap<Entity, Site>,
         max_timestep: Time,
+        num_timestep_levels: usize,
     ) -> HashMap<Entity, Site> {
         assert!(cells.len() == sites.len());
         let remaining_to_solve = CountByDir::new(directions.len(), cells.iter().count());
@@ -78,12 +97,21 @@ impl Sweep {
             directions: directions.clone(),
             remaining_to_solve_count: remaining_to_solve,
             max_timestep,
+            lowest_active_timestep_level: 0,
         };
-        solver.init_counts();
-        solver.add_initial_tasks();
-        solver.solve();
-        solver.update_chemistry();
+        for i in 0..(2usize.pow(num_timestep_levels as u32 - 1)) {
+            solver.lowest_active_timestep_level =
+                get_lowest_active_timestep_level_from_iteration(num_timestep_levels, i as u32);
+            solver.single_sweep();
+        }
         solver.sites
+    }
+
+    fn single_sweep(&mut self) {
+        self.init_counts();
+        self.add_initial_tasks();
+        self.solve();
+        self.update_chemistry();
     }
 
     fn add_initial_tasks(&mut self) {
@@ -235,6 +263,7 @@ fn sweep_system(
         Option<&Source>,
     )>,
     timestep: Res<TimestepParameters>,
+    sweep_parameters: Res<SweepParameters>,
 ) {
     let cells = particles
         .iter()
@@ -257,7 +286,13 @@ fn sweep_system(
             )
         })
         .collect();
-    let sites = Sweep::run(&directions, cells, sites, timestep.max_timestep);
+    let sites = Sweep::run(
+        &directions,
+        cells,
+        sites,
+        timestep.max_timestep,
+        sweep_parameters.num_timestep_levels,
+    );
     for (entity, _, _, mut fraction, _) in particles.iter_mut() {
         **fraction = sites[&entity].ionized_hydrogen_fraction;
     }

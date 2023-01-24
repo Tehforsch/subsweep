@@ -5,6 +5,7 @@ use crate::units::VecDimensionless;
 #[raxiom_parameters("sweep")]
 pub struct SweepParameters {
     pub directions: DirectionsSpecification,
+    pub num_timestep_levels: usize,
 }
 
 #[raxiom_parameters]

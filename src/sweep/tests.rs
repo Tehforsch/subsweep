@@ -32,6 +32,7 @@ fn run_sweep(dirs: Vec<VecDimensionless>) {
         .add_parameters_explicitly(simulation_box)
         .add_parameters_explicitly(SweepParameters {
             directions: DirectionsSpecification::Explicit(dirs),
+            num_timestep_levels: 1,
         })
         .add_parameters_explicitly(SimulationParameters { final_time: None })
         .add_parameters_explicitly(TimestepParameters {
