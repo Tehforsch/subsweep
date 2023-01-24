@@ -26,7 +26,7 @@ fn main() {
     let mut sim = sim
         .parameters_from_relative_path(file!(), "parameters.yml")
         .headless(false)
-        .write_output(false)
+        .write_output(true)
         .read_initial_conditions(false)
         .update_from_command_line_options()
         .build();

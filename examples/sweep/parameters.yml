@@ -2,7 +2,7 @@ box_size: 12.8 kpc
 timestep:
   max_timestep: 1e-1 Myr
 sweep_postprocess:
-  cell_size: 1.0 kpc
+  cell_size: 0.5 kpc
   number_density: 1e-3 cm^-3
   initial_fraction_ionized_hydrogen: 0.00
   source_strength: 1e49  photons s^-1
@@ -19,3 +19,9 @@ visualization:
   # color_map:
   #   type: flux
   #   scale: "1e33 photons s^-1"
+output:
+  fields:
+    - ionized_hydrogen_fraction
+    - position
+    - time
+  handle_existing_output: delete

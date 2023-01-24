@@ -12,7 +12,7 @@ use mpi::traits::Equivalence;
 pub struct AbsorptionRate(pub crate::units::PhotonFlux);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
-#[name = "hydrogen_abundance"]
+#[name = "ionized_hydrogen_fraction"]
 #[repr(transparent)]
 pub struct HydrogenIonizationFraction(pub crate::units::Dimensionless);
 

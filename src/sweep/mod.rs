@@ -30,6 +30,7 @@ use crate::simulation::RaxiomPlugin;
 use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
 use crate::units::SourceRate;
+use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use crate::units::PROTON_MASS;
 
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
@@ -264,9 +265,14 @@ fn ionize_hydrogen_system(
 ) {
     for (mut ionized_fraction, absorption_rate, timestep, density, cell) in particles.iter_mut() {
         let hydrogen_number_density = **density / PROTON_MASS;
-        let num_hydrogen_atoms = (hydrogen_number_density * cell.volume()).to_amount();
+        let num_hydrogen_atoms = hydrogen_number_density * cell.volume();
         let num_newly_ionized_hydrogen_atoms = **absorption_rate * **timestep;
-        **ionized_fraction += num_newly_ionized_hydrogen_atoms / num_hydrogen_atoms;
+        let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
+            * (hydrogen_number_density * **ionized_fraction).powi::<2>();
+        let num_recombined_hydrogen_atoms =
+            (recombination_rate * **timestep * cell.volume()).to_amount();
+        **ionized_fraction += (num_newly_ionized_hydrogen_atoms - num_recombined_hydrogen_atoms)
+            / num_hydrogen_atoms.to_amount();
         **ionized_fraction = ionized_fraction.clamp(
             Dimensionless::dimensionless(0.0),
             Dimensionless::dimensionless(1.0),

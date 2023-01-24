@@ -23,3 +23,9 @@ constant!(SWEEP_HYDROGEN_ONLY_CROSS_SECTION, 5.339944e-22, length: 2);
 // This is probably wrong
 #[cfg(feature = "2d")]
 constant!(SWEEP_HYDROGEN_ONLY_CROSS_SECTION, 5.339944e-22, length: 1);
+
+#[cfg(not(feature = "2d"))]
+constant!(CASE_B_RECOMBINATION_RATE_HYDROGEN, 2.59e-19, length: 3, time: -1);
+
+#[cfg(feature = "2d")]
+constant!(CASE_B_RECOMBINATION_RATE_HYDROGEN, 2.59e-19, length: 2, time: -1);
