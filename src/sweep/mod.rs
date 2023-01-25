@@ -79,13 +79,15 @@ impl Sweep {
         num_timestep_levels: usize,
     ) -> Sites {
         assert!(cells.len() == sites.len());
-        let remaining_to_solve = CountByDir::new(directions.len(), cells.iter().count());
+        for level in levels.values() {
+            assert!(level.0 < num_timestep_levels);
+        }
         let mut solver = Sweep {
             cells: Cells::new(cells, &levels),
             sites: Sites::new(sites, &levels),
             to_solve: PriorityQueue::new(),
             directions: directions.clone(),
-            remaining_to_solve_count: remaining_to_solve,
+            remaining_to_solve_count: CountByDir::empty(),
             max_timestep,
             current_level: TimestepLevel(0),
         };
@@ -98,10 +100,18 @@ impl Sweep {
     }
 
     fn single_sweep(&mut self) {
+        info!(
+            "Sweeping {} cells at level {:?}",
+            self.cells.enumerate_active(self.current_level).count(),
+            self.current_level.0
+        );
         self.init_counts();
         self.add_initial_tasks();
         self.solve();
         self.update_chemistry();
+        for site in self.sites.iter() {
+            debug_assert_eq!(site.num_missing_upwind.total(), 0);
+        }
     }
 
     fn add_initial_tasks(&mut self) {
@@ -118,7 +128,11 @@ impl Sweep {
                         // those that have zero dot product with the
                         // face normal.
                         cell.neighbours.iter().all(|(face, neighbour)| {
-                            !face.points_upwind(dir) || neighbour.is_boundary()
+                            !face.points_upwind(dir)
+                                || neighbour.is_boundary()
+                                || !self
+                                    .cells
+                                    .is_active(neighbour.unwrap_entity(), self.current_level)
                         })
                     })
                     .map(move |(entity, _)| Task {
@@ -149,8 +163,8 @@ impl Sweep {
     fn send_all_messages(&self) {}
 
     fn solve_eq(&mut self, task: &Task) -> PhotonFlux {
-        let cell = &self.cells[task.entity];
-        let site = self.sites.get_mut(task.entity).unwrap();
+        let cell = &self.cells.get(task.entity);
+        let site = self.sites.get_mut(task.entity);
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
         let source = site.source / self.directions.len() as f64;
@@ -162,7 +176,7 @@ impl Sweep {
 
     fn solve_task(&mut self, task: Task) {
         let outgoing_flux = self.solve_eq(&task);
-        let cell = &self.cells[task.entity];
+        let cell = &self.cells.get(task.entity);
         self.remaining_to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
         let neighbours = cell.neighbours.clone();
@@ -191,15 +205,19 @@ impl Sweep {
         task: &Task,
         neighbour: Entity,
     ) {
-        let site = self.sites.get_mut(neighbour).unwrap();
-        let num_remaining = site.num_missing_upwind.reduce(task.dir);
+        let (site, is_active) = self
+            .sites
+            .get_mut_and_active_state(neighbour, self.current_level);
         site.flux[*task.dir] += incoming_flux;
-        if num_remaining == 0 {
-            self.to_solve.push(Task {
-                dir: task.dir,
-                entity: neighbour,
-                flux: site.flux[*task.dir],
-            })
+        if is_active {
+            let num_remaining = site.num_missing_upwind.reduce(task.dir);
+            if num_remaining == 0 {
+                self.to_solve.push(Task {
+                    dir: task.dir,
+                    entity: neighbour,
+                    flux: site.flux[*task.dir],
+                })
+            }
         }
     }
 
@@ -208,12 +226,21 @@ impl Sweep {
     }
 
     pub fn init_counts(&mut self) {
+        self.remaining_to_solve_count = CountByDir::new(
+            self.directions.len(),
+            self.cells.enumerate_active(self.current_level).count(),
+        );
         for (entity, cell) in self.cells.enumerate_active(self.current_level) {
-            let mut site = self.sites.get_mut(*entity).unwrap();
+            let mut site = self.sites.get_mut(*entity);
             site.num_missing_upwind = CountByDir::new(self.directions.len(), 0);
             for (dir_index, dir) in self.directions.enumerate() {
                 for (face, neighbour) in cell.neighbours.iter() {
-                    if !neighbour.is_boundary() && face.points_upwind(dir) {
+                    if !neighbour.is_boundary()
+                        && face.points_upwind(dir)
+                        && self
+                            .cells
+                            .is_active(neighbour.unwrap_entity(), self.current_level)
+                    {
                         site.num_missing_upwind[dir_index] += 1;
                     }
                 }
@@ -223,13 +250,14 @@ impl Sweep {
 
     fn update_chemistry(&mut self) {
         for (entity, cell) in self.cells.enumerate_active(self.current_level) {
-            let mut site = self.sites.get_mut(*entity).unwrap();
+            let (level, mut site) = self.sites.get_mut_with_level(*entity);
+            let timestep = level.to_timestep(self.max_timestep);
             let hydrogen_number_density = site.density / PROTON_MASS;
             let num_hydrogen_atoms = hydrogen_number_density * cell.volume();
             let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
                 * (hydrogen_number_density * site.ionized_hydrogen_fraction).powi::<2>();
             let num_recombined_hydrogen_atoms =
-                (recombination_rate * self.max_timestep * cell.volume()).to_amount();
+                (recombination_rate * timestep * cell.volume()).to_amount();
             let neutral_hydrogen_number_density =
                 site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
             let source = site.source / self.directions.len() as f64;
@@ -237,7 +265,7 @@ impl Sweep {
             let flux = site.total_flux() + source;
             let absorbed_fraction =
                 1.0 - (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-            let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * flux) * self.max_timestep;
+            let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * flux) * timestep;
             site.ionized_hydrogen_fraction += (num_newly_ionized_hydrogen_atoms
                 - num_recombined_hydrogen_atoms)
                 / num_hydrogen_atoms.to_amount();
@@ -258,41 +286,34 @@ pub fn sweep_system(
         &mut IonizedHydrogenFraction,
         Option<&Source>,
         &Position,
+        &TimestepLevel,
     )>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
-    simulation_box: Res<SimulationBox>,
 ) {
     let cells = particles
         .iter()
-        .map(|(entity, cell, _, _, _, _)| (entity, cell.clone()))
+        .map(|(entity, cell, _, _, _, _, _)| (entity, cell.clone()))
         .collect();
     let sites = particles
         .iter()
         .map(
-            |(entity, _, density, ionized_hydrogen_fraction, source, _)| {
+            |(entity, _, density, ionized_hydrogen_fraction, source, _, _)| {
                 (
                     entity,
-                    Site {
-                        density: **density,
-                        ionized_hydrogen_fraction: **ionized_hydrogen_fraction,
-                        source: source.map(|source| **source).unwrap_or(SourceRate::zero()),
-                        num_missing_upwind: CountByDir::empty(),
-                        flux: directions.enumerate().map(|_| PhotonFlux::zero()).collect(),
-                    },
+                    Site::new(
+                        &directions,
+                        **density,
+                        **ionized_hydrogen_fraction,
+                        source.map(|source| **source).unwrap_or(SourceRate::zero()),
+                    ),
                 )
             },
         )
         .collect();
     let levels = particles
         .iter()
-        .map(|(entity, _, _, _, _, pos)| {
-            if pos.x() < simulation_box.center().x() {
-                (entity, TimestepLevel(0))
-            } else {
-                (entity, TimestepLevel(0))
-            }
-        })
+        .map(|(entity, _, _, _, _, _, level)| (entity, *level))
         .collect();
     let sites = Sweep::run(
         &directions,
@@ -302,8 +323,8 @@ pub fn sweep_system(
         timestep.max_timestep,
         sweep_parameters.num_timestep_levels,
     );
-    for (entity, _, _, mut fraction, _, _) in particles.iter_mut() {
-        **fraction = sites[entity].ionized_hydrogen_fraction;
+    for (entity, _, _, mut fraction, _, _, _) in particles.iter_mut() {
+        **fraction = sites.get(entity).ionized_hydrogen_fraction;
     }
 }
 

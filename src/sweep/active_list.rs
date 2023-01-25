@@ -1,5 +1,3 @@
-use std::ops::Index;
-
 use bevy::prelude::Entity;
 use bevy::utils::HashMap;
 
@@ -19,10 +17,6 @@ impl<T> ActiveList<T> {
         }
     }
 
-    pub fn iter_active(&self, current_level: TimestepLevel) -> impl Iterator<Item = &T> {
-        self.enumerate_active(current_level).map(|(_, cell)| cell)
-    }
-
     pub fn enumerate_active(
         &self,
         current_level: TimestepLevel,
@@ -30,18 +24,36 @@ impl<T> ActiveList<T> {
         self.items
             .iter()
             .filter(move |(_, (level, _))| level.is_active(current_level))
-            .map(|(entity, (_, cell))| (entity, cell))
+            .map(|(entity, (_, item))| (entity, item))
     }
 
-    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        self.items.get_mut(&entity).map(|(_, t)| t)
+    pub fn get_mut_and_active_state(
+        &mut self,
+        entity: Entity,
+        current_level: TimestepLevel,
+    ) -> (&mut T, bool) {
+        let (level, item) = self.items.get_mut(&entity).unwrap();
+        (item, level.is_active(current_level))
     }
-}
 
-impl<T> Index<Entity> for ActiveList<T> {
-    type Output = T;
+    pub fn get_mut(&mut self, entity: Entity) -> &mut T {
+        &mut self.items.get_mut(&entity).unwrap().1
+    }
 
-    fn index(&self, index: Entity) -> &Self::Output {
-        &self.items[&index].1
+    pub fn get_mut_with_level(&mut self, entity: Entity) -> (TimestepLevel, &mut T) {
+        let (level, item) = self.items.get_mut(&entity).unwrap();
+        (*level, item)
+    }
+
+    pub fn get(&self, entity: Entity) -> &T {
+        &self.items.get(&entity).unwrap().1
+    }
+
+    pub fn is_active(&self, entity: Entity, current_level: TimestepLevel) -> bool {
+        self.items[&entity].0.is_active(current_level)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.items.values().map(|(_, item)| item)
     }
 }

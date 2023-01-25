@@ -1,6 +1,7 @@
 use bevy::prelude::Component;
 
-use crate::units::{Time, helpers::Float};
+use crate::units::helpers::Float;
+use crate::units::Time;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Component)]
 pub struct TimestepLevel(pub usize);

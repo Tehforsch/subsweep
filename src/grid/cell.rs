@@ -27,6 +27,14 @@ impl Neighbour {
             Self::Remote(_) => false,
         }
     }
+
+    pub fn unwrap_entity(&self) -> Entity {
+        match self {
+            Self::Local(entity) => *entity,
+            Self::Remote(neighbour) => neighbour.local_entity,
+            _ => panic!("Unwrap entity called on boundary neighbour"),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
