@@ -1,3 +1,4 @@
+mod active_list;
 pub mod components;
 mod count_by_dir;
 mod direction;
@@ -12,6 +13,7 @@ use bevy::prelude::*;
 use bevy::utils::HashMap;
 pub use parameters::SweepParameters;
 
+use self::active_list::ActiveList;
 use self::components::IonizedHydrogenFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
@@ -20,6 +22,7 @@ use self::site::Site;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
 use crate::components::Density;
+use crate::components::Position;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
 use crate::grid::Neighbour;
@@ -35,6 +38,9 @@ use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use crate::units::PROTON_MASS;
 
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
+
+type Cells = ActiveList<Cell>;
+type Sites = ActiveList<Site>;
 
 #[derive(Named)]
 pub struct SweepPlugin;
@@ -55,12 +61,12 @@ impl RaxiomPlugin for SweepPlugin {
 
 struct Sweep {
     directions: Directions,
-    cells: HashMap<Entity, Cell>,
-    sites: HashMap<Entity, Site>,
+    cells: Cells,
+    sites: Sites,
     to_solve: PriorityQueue<Task>,
     remaining_to_solve_count: CountByDir,
     max_timestep: Time,
-    lowest_active_timestep_level: TimestepLevel,
+    current_level: TimestepLevel,
 }
 
 impl Sweep {
@@ -68,22 +74,23 @@ impl Sweep {
         directions: &Directions,
         cells: HashMap<Entity, Cell>,
         sites: HashMap<Entity, Site>,
+        levels: HashMap<Entity, TimestepLevel>,
         max_timestep: Time,
         num_timestep_levels: usize,
-    ) -> HashMap<Entity, Site> {
+    ) -> Sites {
         assert!(cells.len() == sites.len());
         let remaining_to_solve = CountByDir::new(directions.len(), cells.iter().count());
         let mut solver = Sweep {
-            cells,
-            sites,
+            cells: Cells::new(cells, &levels),
+            sites: Sites::new(sites, &levels),
             to_solve: PriorityQueue::new(),
             directions: directions.clone(),
             remaining_to_solve_count: remaining_to_solve,
             max_timestep,
-            lowest_active_timestep_level: TimestepLevel(0),
+            current_level: TimestepLevel(0),
         };
         for i in 0..(2usize.pow(num_timestep_levels as u32 - 1)) {
-            solver.lowest_active_timestep_level =
+            solver.current_level =
                 TimestepLevel::lowest_active_from_iteration(num_timestep_levels, i as u32);
             solver.single_sweep();
         }
@@ -103,7 +110,7 @@ impl Sweep {
             .enumerate()
             .flat_map(|(dir_index, dir)| {
                 self.cells
-                    .iter()
+                    .enumerate_active(self.current_level)
                     .filter(|(_, cell)| {
                         // Importantly, the !face_points_upwind cannot
                         // be changed to face_points_downwind, because
@@ -142,8 +149,8 @@ impl Sweep {
     fn send_all_messages(&self) {}
 
     fn solve_eq(&mut self, task: &Task) -> PhotonFlux {
-        let cell = &self.cells[&task.entity];
-        let site = self.sites.get_mut(&task.entity).unwrap();
+        let cell = &self.cells[task.entity];
+        let site = self.sites.get_mut(task.entity).unwrap();
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
         let source = site.source / self.directions.len() as f64;
@@ -156,7 +163,7 @@ impl Sweep {
 
     fn solve_task(&mut self, task: Task) {
         let outgoing_flux = self.solve_eq(&task);
-        let cell = &self.cells[&task.entity];
+        let cell = &self.cells[task.entity];
         self.remaining_to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
         let neighbours = cell.neighbours.clone();
@@ -185,7 +192,7 @@ impl Sweep {
         task: &Task,
         neighbour: Entity,
     ) {
-        let site = self.sites.get_mut(&neighbour).unwrap();
+        let site = self.sites.get_mut(neighbour).unwrap();
         let num_remaining = site.num_missing_upwind.reduce(task.dir);
         site.flux[*task.dir] += incoming_flux;
         if num_remaining == 0 {
@@ -202,8 +209,8 @@ impl Sweep {
     }
 
     pub fn init_counts(&mut self) {
-        for (entity, cell) in self.cells.iter() {
-            let mut site = self.sites.get_mut(entity).unwrap();
+        for (entity, cell) in self.cells.enumerate_active(self.current_level) {
+            let mut site = self.sites.get_mut(*entity).unwrap();
             site.num_missing_upwind = CountByDir::new(self.directions.len(), 0);
             for (dir_index, dir) in self.directions.enumerate() {
                 for (face, neighbour) in cell.neighbours.iter() {
@@ -216,8 +223,8 @@ impl Sweep {
     }
 
     fn update_chemistry(&mut self) {
-        for (entity, cell) in self.cells.iter() {
-            let mut site = self.sites.get_mut(entity).unwrap();
+        for (entity, cell) in self.cells.enumerate_active(self.current_level) {
+            let mut site = self.sites.get_mut(*entity).unwrap();
             let hydrogen_number_density = site.density / PROTON_MASS;
             let num_hydrogen_atoms = hydrogen_number_density * cell.volume();
             let num_newly_ionized_hydrogen_atoms = site.absorption_rate * self.max_timestep;
@@ -244,40 +251,54 @@ fn sweep_system(
         &Density,
         &mut IonizedHydrogenFraction,
         Option<&Source>,
+        &Position,
     )>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
+    simulation_box: Res<SimulationBox>,
 ) {
     let cells = particles
         .iter()
-        .map(|(entity, cell, _, _, _)| (entity, cell.clone()))
+        .map(|(entity, cell, _, _, _, _)| (entity, cell.clone()))
         .collect();
     let sites = particles
         .iter()
-        .map(|(entity, _, density, ionized_hydrogen_fraction, source)| {
-            (
-                entity,
-                Site {
-                    density: **density,
-                    ionized_hydrogen_fraction: **ionized_hydrogen_fraction,
-                    source: source.map(|source| **source).unwrap_or(SourceRate::zero()),
-                    num_missing_upwind: CountByDir::empty(),
-                    absorption_rate: PhotonFlux::zero(),
-                    flux: directions.enumerate().map(|_| PhotonFlux::zero()).collect(),
-                    timestep_level: TimestepLevel(0),
-                },
-            )
+        .map(
+            |(entity, _, density, ionized_hydrogen_fraction, source, _)| {
+                (
+                    entity,
+                    Site {
+                        density: **density,
+                        ionized_hydrogen_fraction: **ionized_hydrogen_fraction,
+                        source: source.map(|source| **source).unwrap_or(SourceRate::zero()),
+                        num_missing_upwind: CountByDir::empty(),
+                        absorption_rate: PhotonFlux::zero(),
+                        flux: directions.enumerate().map(|_| PhotonFlux::zero()).collect(),
+                    },
+                )
+            },
+        )
+        .collect();
+    let levels = particles
+        .iter()
+        .map(|(entity, _, _, _, _, pos)| {
+            if pos.x() < simulation_box.center().x() {
+                (entity, TimestepLevel(0))
+            } else {
+                (entity, TimestepLevel(1))
+            }
         })
         .collect();
     let sites = Sweep::run(
         &directions,
         cells,
         sites,
+        levels,
         timestep.max_timestep,
         sweep_parameters.num_timestep_levels,
     );
-    for (entity, _, _, mut fraction, _) in particles.iter_mut() {
-        **fraction = sites[&entity].ionized_hydrogen_fraction;
+    for (entity, _, _, mut fraction, _, _) in particles.iter_mut() {
+        **fraction = sites[entity].ionized_hydrogen_fraction;
     }
 }
 
