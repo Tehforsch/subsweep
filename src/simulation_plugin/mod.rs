@@ -125,5 +125,5 @@ fn time_system(mut time: ResMut<Time>, parameters: Res<TimestepParameters>) {
 }
 
 pub fn show_time_system(time: Res<self::Time>) {
-    debug!("Time: {:?}", **time);
+    info!("Time: {:?}", **time);
 }
