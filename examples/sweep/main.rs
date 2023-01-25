@@ -93,12 +93,15 @@ fn print_ionization_system(
     for frac in ionization.iter() {
         volume += **frac * parameters.cell_size.powi::<3>();
     }
-    let t_rec = Time::megayears(122.4);
-    let st_radius = Length::kiloparsec(6.79);
+    let recombination_time = Time::megayears(122.4);
+    let stroemgren_radius = Length::kiloparsec(6.79);
     let radius = (volume / (4.0 * PI / 3.0)).cbrt();
+    let analytical = (1.0 - (-**time / recombination_time).exp()).cbrt() * stroemgren_radius;
+    let error = (radius - analytical).abs() / (radius.max(analytical));
     info!(
-        "Radius of ionized region: {:?} {:?}",
+        "Radius of ionized region: {:.3?} (analytical: {:.3?}, {:.3?}%)",
         radius,
-        (1.0 - (-**time / t_rec).exp()).cbrt() * st_radius
+        analytical,
+        error.in_percent(),
     );
 }
