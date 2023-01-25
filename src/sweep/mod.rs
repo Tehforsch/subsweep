@@ -53,23 +53,6 @@ impl RaxiomPlugin for SweepPlugin {
     }
 }
 
-fn find_index_of_lowest_set_bit_in_int(iteration: u32) -> Option<u32> {
-    for bit_num in 0..32 {
-        let mask = 1 << bit_num;
-        if iteration & mask > 0 {
-            return Some(bit_num);
-        }
-    }
-    None
-}
-
-fn get_lowest_active_timestep_level_from_iteration(num_levels: usize, iteration: u32) -> usize {
-    // find the lowest set bit in iteration.
-    assert!(num_levels < 32);
-    let first_bit = find_index_of_lowest_set_bit_in_int(iteration).unwrap_or(num_levels as u32 - 1);
-    num_levels - 1 - first_bit as usize
-}
-
 struct Sweep {
     directions: Directions,
     cells: HashMap<Entity, Cell>,
@@ -77,7 +60,7 @@ struct Sweep {
     to_solve: PriorityQueue<Task>,
     remaining_to_solve_count: CountByDir,
     max_timestep: Time,
-    lowest_active_timestep_level: usize,
+    lowest_active_timestep_level: TimestepLevel,
 }
 
 impl Sweep {
@@ -97,11 +80,11 @@ impl Sweep {
             directions: directions.clone(),
             remaining_to_solve_count: remaining_to_solve,
             max_timestep,
-            lowest_active_timestep_level: 0,
+            lowest_active_timestep_level: TimestepLevel(0),
         };
         for i in 0..(2usize.pow(num_timestep_levels as u32 - 1)) {
             solver.lowest_active_timestep_level =
-                get_lowest_active_timestep_level_from_iteration(num_timestep_levels, i as u32);
+                TimestepLevel::lowest_active_from_iteration(num_timestep_levels, i as u32);
             solver.single_sweep();
         }
         solver.sites

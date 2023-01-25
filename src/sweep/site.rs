@@ -8,10 +8,10 @@ use crate::units::SourceRate;
 #[derive(Debug)]
 pub struct Site {
     pub num_missing_upwind: CountByDir,
+    pub flux: Vec<PhotonFlux>,
     pub ionized_hydrogen_fraction: Dimensionless,
     pub density: Density,
     pub source: SourceRate,
     pub absorption_rate: PhotonFlux,
-    pub flux: Vec<PhotonFlux>,
     pub timestep_level: TimestepLevel,
 }
