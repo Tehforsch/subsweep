@@ -109,8 +109,17 @@ impl Sweep {
         self.add_initial_tasks();
         self.solve();
         self.update_chemistry();
+        self.reset_fluxes();
         for site in self.sites.iter() {
             debug_assert_eq!(site.num_missing_upwind.total(), 0);
+        }
+    }
+
+    fn reset_fluxes(&mut self) {
+        for site in self.sites.iter_mut() {
+            for (dir, _) in self.directions.enumerate() {
+                site.flux[dir.0] = PhotonFlux::zero();
+            }
         }
     }
 
