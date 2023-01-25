@@ -1,16 +1,24 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
+use std::f64::consts::PI;
+
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 use raxiom::components;
+use raxiom::components::IonizedHydrogenFraction;
 use raxiom::components::Position;
 use raxiom::grid::init_cartesian_grid_system;
 use raxiom::prelude::*;
+use raxiom::sweep::sweep_system;
+use raxiom::sweep::timestep_level::TimestepLevel;
+use raxiom::sweep::SweepParameters;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
+use raxiom::units::Time;
+use raxiom::units::Volume;
 use raxiom::units::PROTON_MASS;
 
 #[raxiom_parameters("sweep_postprocess")]
@@ -40,6 +48,10 @@ fn main() {
         SimulationStartupStages::InsertDerivedComponents,
         initialize_sweep_components_system,
     )
+    .add_system_to_stage(
+        SimulationStages::ForceCalculation,
+        print_ionization_system.after(sweep_system),
+    )
     .add_plugin(SweepPlugin)
     .run();
 }
@@ -48,12 +60,15 @@ fn initialize_sweep_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
+    sweep_parameters: Res<SweepParameters>,
     box_size: Res<SimulationBox>,
 ) {
-    for (entity, _) in particles.iter() {
+    for (entity, pos) in particles.iter() {
+        let level = { TimestepLevel(sweep_parameters.num_timestep_levels - 1) };
         commands.entity(entity).insert((
             components::Density(parameters.number_density * PROTON_MASS),
             components::IonizedHydrogenFraction(parameters.initial_fraction_ionized_hydrogen),
+            level,
         ));
     }
     let closest_entity_to_center = particles
@@ -69,16 +84,21 @@ fn initialize_sweep_components_system(
         .insert(components::Source(parameters.source_strength));
 }
 
-// fn set_desired_timestep_system(
-//     mut particles: Particles<(&Position, &mut DesiredTimestep)>,
-//     parameters: Res<TimestepParameters>,
-//     box_size: Res<SimulationBox>,
-// ) {
-//     for (pos, mut desired_timestep) in particles.iter_mut() {
-//         **desired_timestep = if pos.x() < box_size.center().x() {
-//             parameters.min_timestep()
-//         } else {
-//             parameters.max_timestep
-//         }
-//     }
-// }
+fn print_ionization_system(
+    ionization: Query<&IonizedHydrogenFraction>,
+    parameters: Res<Parameters>,
+    time: Res<raxiom::simulation_plugin::Time>,
+) {
+    let mut volume = Volume::zero();
+    for frac in ionization.iter() {
+        volume += **frac * parameters.cell_size.powi::<3>();
+    }
+    let t_rec = Time::megayears(122.4);
+    let st_radius = Length::kiloparsec(6.79);
+    let radius = (volume / (4.0 * PI / 3.0)).cbrt();
+    info!(
+        "Radius of ionized region: {:?} {:?}",
+        radius,
+        (1.0 - (-**time / t_rec).exp()).cbrt() * st_radius
+    );
+}

@@ -33,7 +33,7 @@ pub(crate) mod simulation_box;
 pub(crate) mod simulation_builder;
 pub mod simulation_plugin;
 pub(crate) mod stages;
-pub(crate) mod sweep;
+pub mod sweep;
 pub(crate) mod visualization;
 
 pub mod named {

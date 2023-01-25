@@ -1,4 +1,8 @@
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+use bevy::prelude::Component;
+
+use crate::units::{Time, helpers::Float};
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Component)]
 pub struct TimestepLevel(pub usize);
 
 fn find_index_of_lowest_set_bit_in_int(iteration: u32) -> Option<u32> {
@@ -22,5 +26,9 @@ impl TimestepLevel {
 
     pub fn is_active(&self, current_level: TimestepLevel) -> bool {
         *self >= current_level
+    }
+
+    pub fn to_timestep(&self, max_timestep: Time) -> Time {
+        max_timestep / (2.0 as Float).powi(self.0 as i32)
     }
 }

@@ -11,5 +11,10 @@ pub struct Site {
     pub ionized_hydrogen_fraction: Dimensionless,
     pub density: Density,
     pub source: SourceRate,
-    pub absorption_rate: PhotonFlux,
+}
+
+impl Site {
+    pub fn total_flux(&self) -> PhotonFlux {
+        self.flux.iter().copied().sum()
+    }
 }

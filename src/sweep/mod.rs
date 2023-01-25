@@ -7,7 +7,7 @@ mod site;
 mod task;
 #[cfg(test)]
 mod tests;
-mod timestep_level;
+pub mod timestep_level;
 
 use bevy::prelude::*;
 use bevy::utils::HashMap;
@@ -157,7 +157,6 @@ impl Sweep {
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         let flux = task.flux + source;
         let absorbed_fraction = 1.0 - (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-        site.absorption_rate += flux * absorbed_fraction;
         flux * (1.0 - absorbed_fraction)
     }
 
@@ -227,11 +226,18 @@ impl Sweep {
             let mut site = self.sites.get_mut(*entity).unwrap();
             let hydrogen_number_density = site.density / PROTON_MASS;
             let num_hydrogen_atoms = hydrogen_number_density * cell.volume();
-            let num_newly_ionized_hydrogen_atoms = site.absorption_rate * self.max_timestep;
             let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
                 * (hydrogen_number_density * site.ionized_hydrogen_fraction).powi::<2>();
             let num_recombined_hydrogen_atoms =
                 (recombination_rate * self.max_timestep * cell.volume()).to_amount();
+            let neutral_hydrogen_number_density =
+                site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
+            let source = site.source / self.directions.len() as f64;
+            let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
+            let flux = site.total_flux() + source;
+            let absorbed_fraction =
+                1.0 - (-neutral_hydrogen_number_density * sigma * cell.size).exp();
+            let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * flux) * self.max_timestep;
             site.ionized_hydrogen_fraction += (num_newly_ionized_hydrogen_atoms
                 - num_recombined_hydrogen_atoms)
                 / num_hydrogen_atoms.to_amount();
@@ -243,7 +249,7 @@ impl Sweep {
     }
 }
 
-fn sweep_system(
+pub fn sweep_system(
     directions: Res<Directions>,
     mut particles: Query<(
         Entity,
@@ -272,7 +278,6 @@ fn sweep_system(
                         ionized_hydrogen_fraction: **ionized_hydrogen_fraction,
                         source: source.map(|source| **source).unwrap_or(SourceRate::zero()),
                         num_missing_upwind: CountByDir::empty(),
-                        absorption_rate: PhotonFlux::zero(),
                         flux: directions.enumerate().map(|_| PhotonFlux::zero()).collect(),
                     },
                 )
@@ -285,7 +290,7 @@ fn sweep_system(
             if pos.x() < simulation_box.center().x() {
                 (entity, TimestepLevel(0))
             } else {
-                (entity, TimestepLevel(1))
+                (entity, TimestepLevel(0))
             }
         })
         .collect();
