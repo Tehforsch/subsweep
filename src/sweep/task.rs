@@ -1,13 +1,11 @@
 use bevy::prelude::Entity;
 
 use super::direction::DirectionIndex;
-use crate::units::PhotonFlux;
 
 #[derive(Debug)]
 pub struct Task {
     pub entity: Entity,
     pub dir: DirectionIndex,
-    pub flux: PhotonFlux,
 }
 
 impl PartialOrd for Task {

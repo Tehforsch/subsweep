@@ -140,7 +140,6 @@ impl Sweep {
                     .map(move |(entity, _)| Task {
                         entity: *entity,
                         dir: dir_index,
-                        flux: self.sites.get(*entity).incoming_total_flux[dir_index.0],
                     })
             })
             .collect();
@@ -171,7 +170,7 @@ impl Sweep {
             site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
         let source = site.source / self.directions.len() as f64;
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-        let flux = task.flux + source;
+        let flux = site.incoming_total_flux[task.dir.0] + source;
         let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
         flux * absorbed_fraction
     }
@@ -223,7 +222,6 @@ impl Sweep {
                 self.to_solve.push(Task {
                     dir: task.dir,
                     entity: neighbour,
-                    flux: site.incoming_total_flux[*task.dir],
                 })
             }
         }
