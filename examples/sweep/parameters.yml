@@ -1,6 +1,6 @@
 box_size: 12.8 kpc
 timestep:
-  max_timestep: 1e-1 Myr
+  max_timestep: 1e1 Myr
 sweep_postprocess:
   cell_size: 0.8 kpc
   number_density: 1e-3 cm^-3

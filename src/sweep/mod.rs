@@ -101,29 +101,22 @@ impl Sweep {
 
     fn single_sweep(&mut self) {
         info!(
-            "Sweeping {} cells at level {:?}",
+            "{:indent$}Sweeping {} cells at level {:?}",
+            "",
             self.cells.enumerate_active(self.current_level).count(),
-            self.current_level.0
+            self.current_level.0,
+            indent = self.current_level.0 * 2,
         );
         self.init_counts();
-        self.add_initial_tasks();
+        self.to_solve = self.get_initial_tasks();
         self.solve();
         self.update_chemistry();
-        self.reset_fluxes();
         for site in self.sites.iter() {
             debug_assert_eq!(site.num_missing_upwind.total(), 0);
         }
     }
 
-    fn reset_fluxes(&mut self) {
-        for site in self.sites.iter_mut() {
-            for (dir, _) in self.directions.enumerate() {
-                site.flux[dir.0] = PhotonFlux::zero();
-            }
-        }
-    }
-
-    fn add_initial_tasks(&mut self) {
+    fn get_initial_tasks(&self) -> PriorityQueue<Task> {
         let tasks = self
             .directions
             .enumerate()
@@ -147,11 +140,11 @@ impl Sweep {
                     .map(move |(entity, _)| Task {
                         entity: *entity,
                         dir: dir_index,
-                        flux: PhotonFlux::zero(),
+                        flux: self.sites.get(*entity).incoming_total_flux[dir_index.0],
                     })
             })
             .collect();
-        self.to_solve = tasks;
+        tasks
     }
 
     fn solve(&mut self) {
@@ -171,7 +164,7 @@ impl Sweep {
 
     fn send_all_messages(&self) {}
 
-    fn solve_eq(&mut self, task: &Task) -> PhotonFlux {
+    fn get_outgoing_flux(&mut self, task: &Task) -> PhotonFlux {
         let cell = &self.cells.get(task.entity);
         let site = self.sites.get_mut(task.entity);
         let neutral_hydrogen_number_density =
@@ -179,12 +172,15 @@ impl Sweep {
         let source = site.source / self.directions.len() as f64;
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         let flux = task.flux + source;
-        let absorbed_fraction = 1.0 - (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-        flux * (1.0 - absorbed_fraction)
+        let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
+        flux * absorbed_fraction
     }
 
     fn solve_task(&mut self, task: Task) {
-        let outgoing_flux = self.solve_eq(&task);
+        let outgoing_flux = self.get_outgoing_flux(&task);
+        let site = self.sites.get_mut(task.entity);
+        let outgoing_flux_correction = outgoing_flux - site.outgoing_total_flux[task.dir.0];
+        site.outgoing_total_flux[task.dir.0] = outgoing_flux;
         let cell = &self.cells.get(task.entity);
         self.remaining_to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
@@ -196,11 +192,14 @@ impl Sweep {
         for (face, neighbour) in neighbours.iter() {
             if face.points_downwind(&self.directions[task.dir]) {
                 let effective_area = face.area * face.normal.dot(*self.directions[task.dir]);
-                let flux_this_cell = outgoing_flux * (effective_area / total_effective_area);
+                let flux_correction_this_cell =
+                    outgoing_flux_correction * (effective_area / total_effective_area);
                 match neighbour {
-                    Neighbour::Local(neighbour_entity) => {
-                        self.handle_local_neighbour(flux_this_cell, &task, *neighbour_entity)
-                    }
+                    Neighbour::Local(neighbour_entity) => self.handle_local_neighbour(
+                        flux_correction_this_cell,
+                        &task,
+                        *neighbour_entity,
+                    ),
                     Neighbour::Remote(remote) => self.handle_remote_neighbour(remote),
                     Neighbour::Boundary => {}
                 }
@@ -210,21 +209,21 @@ impl Sweep {
 
     fn handle_local_neighbour(
         &mut self,
-        incoming_flux: PhotonFlux,
+        incoming_flux_correction: PhotonFlux,
         task: &Task,
         neighbour: Entity,
     ) {
         let (site, is_active) = self
             .sites
             .get_mut_and_active_state(neighbour, self.current_level);
-        site.flux[*task.dir] += incoming_flux;
+        site.incoming_total_flux[*task.dir] += incoming_flux_correction;
         if is_active {
             let num_remaining = site.num_missing_upwind.reduce(task.dir);
             if num_remaining == 0 {
                 self.to_solve.push(Task {
                     dir: task.dir,
                     entity: neighbour,
-                    flux: site.flux[*task.dir],
+                    flux: site.incoming_total_flux[*task.dir],
                 })
             }
         }
@@ -271,7 +270,7 @@ impl Sweep {
                 site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
             let source = site.source / self.directions.len() as f64;
             let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-            let flux = site.total_flux() + source;
+            let flux = site.total_incoming_flux() + source;
             let absorbed_fraction =
                 1.0 - (-neutral_hydrogen_number_density * sigma * cell.size).exp();
             let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * flux) * timestep;

@@ -113,6 +113,7 @@ unit_system!(
     },
     PHOTON_FLUX, PhotonFlux, time: -1, amount: 1,
     {
+        photons_per_s, 1.0, "photons/s"
     },
     CROSS_SECTION_2D, CrossSection2D, length: 1,
     {

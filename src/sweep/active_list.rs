@@ -56,8 +56,4 @@ impl<T> ActiveList<T> {
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.items.values().map(|(_, item)| item)
     }
-
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        self.items.values_mut().map(|(_, item)| item)
-    }
 }

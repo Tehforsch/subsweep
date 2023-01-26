@@ -63,8 +63,12 @@ fn initialize_sweep_components_system(
     sweep_parameters: Res<SweepParameters>,
     box_size: Res<SimulationBox>,
 ) {
-    for (entity, _) in particles.iter() {
-        let level = { TimestepLevel(sweep_parameters.num_timestep_levels - 1) };
+    for (entity, pos) in particles.iter() {
+        let level = if (**pos - box_size.center()).length() > Length::kiloparsec(1.0) {
+            TimestepLevel(sweep_parameters.num_timestep_levels - 1)
+        } else {
+            TimestepLevel(0)
+        };
         commands.entity(entity).insert((
             components::Density(parameters.number_density * PROTON_MASS),
             components::IonizedHydrogenFraction(parameters.initial_fraction_ionized_hydrogen),

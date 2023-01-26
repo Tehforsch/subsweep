@@ -8,7 +8,8 @@ use crate::units::SourceRate;
 #[derive(Debug)]
 pub struct Site {
     pub num_missing_upwind: CountByDir,
-    pub flux: Vec<PhotonFlux>,
+    pub incoming_total_flux: Vec<PhotonFlux>,
+    pub outgoing_total_flux: Vec<PhotonFlux>,
     pub ionized_hydrogen_fraction: Dimensionless,
     pub density: Density,
     pub source: SourceRate,
@@ -26,11 +27,12 @@ impl Site {
             ionized_hydrogen_fraction,
             source,
             num_missing_upwind: CountByDir::empty(),
-            flux: directions.enumerate().map(|_| PhotonFlux::zero()).collect(),
+            incoming_total_flux: directions.enumerate().map(|_| PhotonFlux::zero()).collect(),
+            outgoing_total_flux: directions.enumerate().map(|_| PhotonFlux::zero()).collect(),
         }
     }
 
-    pub fn total_flux(&self) -> PhotonFlux {
-        self.flux.iter().copied().sum()
+    pub fn total_incoming_flux(&self) -> PhotonFlux {
+        self.incoming_total_flux.iter().copied().sum()
     }
 }
