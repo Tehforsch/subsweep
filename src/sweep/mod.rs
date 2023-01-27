@@ -1,4 +1,5 @@
 mod active_list;
+mod chemistry_solver;
 pub mod components;
 mod count_by_dir;
 mod direction;
@@ -14,6 +15,7 @@ use bevy::utils::HashMap;
 pub use parameters::SweepParameters;
 
 use self::active_list::ActiveList;
+use self::chemistry_solver::solve_chemistry;
 use self::components::IonizedHydrogenFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
@@ -31,11 +33,9 @@ use crate::parameters::TimestepParameters;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::units::Amount;
-use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
 use crate::units::SourceRate;
 use crate::units::Time;
-use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use crate::units::PROTON_MASS;
 
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
@@ -169,7 +169,7 @@ impl Sweep {
         let site = self.sites.get_mut(task.entity);
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
-        let source = site.source / self.directions.len() as f64;
+        let source = site.source_per_direction_bin(&self.directions);
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         let flux = site.incoming_total_flux[task.dir.0] + source;
         let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
@@ -257,28 +257,18 @@ impl Sweep {
 
     fn update_chemistry(&mut self) {
         for (entity, cell) in self.cells.enumerate_active(self.current_level) {
-            let (level, mut site) = self.sites.get_mut_with_level(*entity);
+            let (level, site) = self.sites.get_mut_with_level(*entity);
             let timestep = level.to_timestep(self.max_timestep);
-            let hydrogen_number_density = site.density / PROTON_MASS;
-            let num_hydrogen_atoms = hydrogen_number_density * cell.volume();
-            let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
-                * (hydrogen_number_density * site.ionized_hydrogen_fraction).powi::<2>();
-            let num_recombined_hydrogen_atoms =
-                (recombination_rate * timestep * cell.volume()).to_amount();
-            let neutral_hydrogen_number_density =
-                site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
-            let source = site.source / self.directions.len() as f64;
-            let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-            let flux = site.total_incoming_flux() + source;
-            let absorbed_fraction =
-                1.0 - (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-            let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * flux) * timestep;
-            site.ionized_hydrogen_fraction += (num_newly_ionized_hydrogen_atoms
-                - num_recombined_hydrogen_atoms)
-                / num_hydrogen_atoms.to_amount();
-            site.ionized_hydrogen_fraction = site.ionized_hydrogen_fraction.clamp(
-                Dimensionless::dimensionless(0.0),
-                Dimensionless::dimensionless(1.0),
+            let source = site.source_per_direction_bin(&self.directions);
+            let flux = site.total_incoming_flux();
+            solve_chemistry(
+                &mut site.ionized_hydrogen_fraction,
+                timestep,
+                site.density,
+                cell.volume(),
+                cell.size,
+                source,
+                flux,
             );
         }
     }

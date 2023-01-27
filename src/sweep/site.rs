@@ -1,5 +1,6 @@
 use super::count_by_dir::CountByDir;
 use super::direction::Directions;
+use crate::units::helpers::Float;
 use crate::units::Density;
 use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
@@ -12,7 +13,7 @@ pub struct Site {
     pub outgoing_total_flux: Vec<PhotonFlux>,
     pub ionized_hydrogen_fraction: Dimensionless,
     pub density: Density,
-    pub source: SourceRate,
+    source: SourceRate,
 }
 
 impl Site {
@@ -34,5 +35,9 @@ impl Site {
 
     pub fn total_incoming_flux(&self) -> PhotonFlux {
         self.incoming_total_flux.iter().copied().sum()
+    }
+
+    pub fn source_per_direction_bin(&self, directions: &Directions) -> SourceRate {
+        self.source / directions.len() as Float
     }
 }
