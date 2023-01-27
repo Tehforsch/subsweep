@@ -19,7 +19,7 @@ unit_system!(
     UNIT_NAMES,
     DIMENSIONLESS, Dimensionless, length: 0,
     {
-        dimensionless, 1.0, "dimensionless",
+        dimensionless, 1.0, "",
         percent, 0.01, "%"
     },
     LENGTH, Length, length: 1,

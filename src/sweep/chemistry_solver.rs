@@ -2,37 +2,100 @@ use crate::units::Density;
 use crate::units::Dimensionless;
 use crate::units::Length;
 use crate::units::PhotonFlux;
-use crate::units::SourceRate;
 use crate::units::Time;
 use crate::units::Volume;
 use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use crate::units::PROTON_MASS;
 
-pub fn solve_chemistry(
-    ionized_hydrogen_fraction: &mut Dimensionless,
-    timestep: Time,
-    density: Density,
-    volume: Volume,
-    size: Length,
-    source: SourceRate,
-    flux: PhotonFlux,
-) {
-    let hydrogen_number_density = density / PROTON_MASS;
-    let num_hydrogen_atoms = hydrogen_number_density * volume;
-    let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
-        * (hydrogen_number_density * *ionized_hydrogen_fraction).powi::<2>();
-    let num_recombined_hydrogen_atoms = (recombination_rate * timestep * volume).to_amount();
-    let neutral_hydrogen_number_density =
-        density / PROTON_MASS * (1.0 - *ionized_hydrogen_fraction);
-    let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-    let flux = flux + source;
-    let absorbed_fraction = 1.0 - (-neutral_hydrogen_number_density * sigma * size).exp();
-    let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * flux) * timestep;
-    *ionized_hydrogen_fraction += (num_newly_ionized_hydrogen_atoms
-        - num_recombined_hydrogen_atoms)
-        / num_hydrogen_atoms.to_amount();
-    *ionized_hydrogen_fraction = ionized_hydrogen_fraction.clamp(
-        Dimensionless::dimensionless(0.0),
-        Dimensionless::dimensionless(1.0),
-    );
+pub struct Solver {
+    pub ionized_hydrogen_fraction: Dimensionless,
+    pub timestep: Time,
+    pub density: Density,
+    pub volume: Volume,
+    pub length: Length,
+    pub flux: PhotonFlux,
+}
+
+impl Solver {
+    pub fn get_new_abundance(self) -> Dimensionless {
+        let hydrogen_number_density = self.density / PROTON_MASS;
+        let num_hydrogen_atoms = hydrogen_number_density * self.volume;
+        let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
+            * (hydrogen_number_density * self.ionized_hydrogen_fraction).powi::<2>()
+            * self.volume;
+        let num_recombined_hydrogen_atoms = (recombination_rate * self.timestep).to_amount();
+        let neutral_hydrogen_number_density =
+            self.density / PROTON_MASS * (1.0 - self.ionized_hydrogen_fraction);
+        let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
+        let absorbed_fraction =
+            1.0 - (-neutral_hydrogen_number_density * sigma * self.length).exp();
+        let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.flux) * self.timestep;
+        dbg!(absorbed_fraction, self.flux);
+        dbg!(recombination_rate, absorbed_fraction * self.flux);
+        let new_ionized_hydrogen_fraction = self.ionized_hydrogen_fraction
+            + (num_newly_ionized_hydrogen_atoms - num_recombined_hydrogen_atoms)
+                / num_hydrogen_atoms.to_amount();
+        new_ionized_hydrogen_fraction.clamp(
+            Dimensionless::dimensionless(0.0),
+            Dimensionless::dimensionless(1.0),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Solver;
+    use crate::test_utils::assert_is_close;
+    use crate::units::Amount;
+    use crate::units::Dimensionless;
+    use crate::units::Length;
+    use crate::units::Time;
+    use crate::units::Volume;
+    use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
+    use crate::units::PROTON_MASS;
+
+    #[test]
+    fn chemistry_solver_stays_in_equillibrium() {
+        for initial_ionized_hydrogen_fraction in [
+            Dimensionless::dimensionless(0.2),
+            Dimensionless::dimensionless(0.5),
+            Dimensionless::dimensionless(0.7),
+            Dimensionless::dimensionless(0.99),
+            Dimensionless::dimensionless(1.0),
+        ] {
+            for timestep in [
+                Time::megayears(1.0),
+                Time::megayears(10.0),
+                Time::megayears(100.0),
+                Time::megayears(1000.0),
+            ] {
+                println!(
+                    "Testing xHI = {:?}, Delta_t = {:?}",
+                    initial_ionized_hydrogen_fraction, timestep
+                );
+                // Make sure this cell is optically thick by making it gigantic and dense
+                let number_density = 1e5 / Volume::cubic_meters(1.0);
+                let length = Length::kiloparsec(100.0);
+                let volume = length.powi::<3>();
+                // Set up flux such that recombination should be in equillibrium with ionization
+                let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
+                    * (number_density * initial_ionized_hydrogen_fraction).powi::<2>()
+                    * volume;
+                let flux = recombination_rate * Amount::one_unchecked();
+                let final_ionized_hydrogen_fraction = Solver {
+                    ionized_hydrogen_fraction: initial_ionized_hydrogen_fraction,
+                    timestep,
+                    density: number_density * PROTON_MASS,
+                    volume,
+                    length,
+                    flux,
+                }
+                .get_new_abundance();
+                assert_is_close(
+                    final_ionized_hydrogen_fraction,
+                    initial_ionized_hydrogen_fraction,
+                );
+            }
+        }
+    }
 }

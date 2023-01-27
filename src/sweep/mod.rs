@@ -15,7 +15,7 @@ use bevy::utils::HashMap;
 pub use parameters::SweepParameters;
 
 use self::active_list::ActiveList;
-use self::chemistry_solver::solve_chemistry;
+use self::chemistry_solver::Solver;
 use self::components::IonizedHydrogenFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
@@ -260,16 +260,16 @@ impl Sweep {
             let (level, site) = self.sites.get_mut_with_level(*entity);
             let timestep = level.to_timestep(self.max_timestep);
             let source = site.source_per_direction_bin(&self.directions);
-            let flux = site.total_incoming_flux();
-            solve_chemistry(
-                &mut site.ionized_hydrogen_fraction,
+            let flux = site.total_incoming_flux() + source;
+            site.ionized_hydrogen_fraction = Solver {
+                ionized_hydrogen_fraction: site.ionized_hydrogen_fraction,
                 timestep,
-                site.density,
-                cell.volume(),
-                cell.size,
-                source,
+                density: site.density,
+                volume: cell.volume(),
+                length: cell.size,
                 flux,
-            );
+            }
+            .get_new_abundance();
         }
     }
 }
