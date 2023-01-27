@@ -17,6 +17,17 @@ fn find_index_of_lowest_set_bit_in_int(iteration: u32) -> Option<u32> {
 }
 
 impl TimestepLevel {
+    pub fn from_max_timestep_and_desired_timestep(
+        max_num_levels: usize,
+        max_timestep: Time,
+        desired_timestep: Time,
+    ) -> Self {
+        let ratio = max_timestep / desired_timestep;
+        let level = ratio.log2().ceil().value() as usize;
+        let result = level.clamp(0, max_num_levels - 1);
+        Self(result)
+    }
+
     pub fn lowest_active_from_iteration(num_levels: usize, iteration: u32) -> Self {
         // find the lowest set bit in iteration.
         assert!(num_levels < 32);
@@ -31,5 +42,36 @@ impl TimestepLevel {
 
     pub fn to_timestep(&self, max_timestep: Time) -> Time {
         max_timestep / (2.0 as Float).powi(self.0 as i32)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TimestepLevel;
+    use crate::units::Time;
+
+    #[test]
+    fn compute_timestep_level() {
+        let check_level = |max_num_levels, secs_desired, result| {
+            dbg!(max_num_levels, secs_desired, result);
+            assert_eq!(
+                TimestepLevel::from_max_timestep_and_desired_timestep(
+                    max_num_levels,
+                    Time::seconds(1.0),
+                    Time::seconds(secs_desired)
+                ),
+                TimestepLevel(result)
+            );
+        };
+        check_level(1, 1.0, 0);
+        check_level(2, 1.0, 0);
+        check_level(1, 0.001, 0);
+        check_level(2, 0.001, 1);
+        check_level(3, 0.001, 2);
+        check_level(2, 0.500001, 1);
+        check_level(2, 0.499999, 1);
+        check_level(3, 0.499999, 2);
+        check_level(5, 100.0, 0);
+        check_level(5, 0.0, 4);
     }
 }

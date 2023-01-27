@@ -120,7 +120,7 @@ pub fn integrate_motion_system(
     }
 }
 
-fn time_system(mut time: ResMut<Time>, parameters: Res<TimestepParameters>) {
+pub fn time_system(mut time: ResMut<Time>, parameters: Res<TimestepParameters>) {
     **time += parameters.max_timestep;
 }
 

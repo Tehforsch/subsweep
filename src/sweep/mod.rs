@@ -30,6 +30,7 @@ use crate::grid::RemoteNeighbour;
 use crate::parameters::TimestepParameters;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
+use crate::units::Amount;
 use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
 use crate::units::SourceRate;
@@ -292,7 +293,7 @@ pub fn sweep_system(
         &mut IonizedHydrogenFraction,
         Option<&Source>,
         &Position,
-        &TimestepLevel,
+        &mut TimestepLevel,
     )>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
@@ -329,8 +330,26 @@ pub fn sweep_system(
         timestep.max_timestep,
         sweep_parameters.num_timestep_levels,
     );
-    for (entity, _, _, mut fraction, _, _, _) in particles.iter_mut() {
-        **fraction = sites.get(entity).ionized_hydrogen_fraction;
+    for (entity, cell, density, mut fraction, _, _, mut level) in particles.iter_mut() {
+        let site = sites.get(entity);
+        let new_fraction = site.ionized_hydrogen_fraction;
+        // let change_timescale =
+        //     (**fraction / ((**fraction - new_fraction) / timestep.max_timestep)).abs();
+        let change_timescale = cell.volume() * (**density / PROTON_MASS)
+            / site.total_incoming_flux()
+            * Amount::one_unchecked();
+        let desired_timestep = change_timescale * 0.1;
+        let mut desired_level = TimestepLevel::from_max_timestep_and_desired_timestep(
+            sweep_parameters.num_timestep_levels,
+            timestep.max_timestep,
+            desired_timestep,
+        );
+        if desired_level.0 + 1 < level.0 {
+            // Never move down more than one level at a time
+            desired_level.0 = level.0 - 1;
+        }
+        level.0 = desired_level.0;
+        **fraction = new_fraction;
     }
 }
 

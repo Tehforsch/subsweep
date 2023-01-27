@@ -9,7 +9,6 @@ use super::DrawCircle;
 use super::RColor;
 use super::VisualizationParameters;
 use super::VisualizationStage;
-use crate::components;
 use crate::components::InternalEnergy;
 use crate::components::IonizedHydrogenFraction;
 use crate::components::Mass;
@@ -17,11 +16,13 @@ use crate::components::Position;
 use crate::components::Pressure;
 use crate::named::Named;
 use crate::parameters::SimulationBox;
+use crate::parameters::SweepParameters;
 use crate::prelude::Float;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
+use crate::sweep::timestep_level::TimestepLevel;
 use crate::units;
 use crate::units::Dimensionless;
 use crate::units::EnergyPerMass;
@@ -52,9 +53,7 @@ pub enum ColorMap {
     IonizedHydrogenFraction {
         scale: units::Dimensionless,
     },
-    Flux {
-        scale: units::PhotonFlux,
-    },
+    TimestepLevel {},
 }
 
 #[derive(Named)]
@@ -83,7 +82,10 @@ impl RaxiomPlugin for ShowParticlesPlugin {
                         color_particles_by_ionized_hydrogen_fraction_system
                             .ambiguous_with(ColorParticlesLabel),
                     )
-                    .with_system(color_particles_by_flux_system.ambiguous_with(ColorParticlesLabel))
+                    .with_system(
+                        color_particles_by_timestep_level_system
+                            .ambiguous_with(ColorParticlesLabel),
+                    )
                     .with_system(
                         color_particles_by_pressure_system.ambiguous_with(ColorParticlesLabel),
                     )
@@ -145,13 +147,16 @@ fn color_particles_by_ionized_hydrogen_fraction_system(
     }
 }
 
-fn color_particles_by_flux_system(
+fn color_particles_by_timestep_level_system(
     visualization_parameters: Res<VisualizationParameters>,
-    mut particles: Particles<(&mut DrawCircle, &components::Flux)>,
+    sweep_parameters: Res<SweepParameters>,
+    mut particles: Particles<(&mut DrawCircle, &TimestepLevel)>,
 ) {
-    if let ColorMap::Flux { scale } = visualization_parameters.color_map {
-        for (mut circle, flux) in particles.iter_mut() {
-            circle.color = RColor::reds((**flux / scale).ln().value());
+    if let ColorMap::TimestepLevel {} = visualization_parameters.color_map {
+        for (mut circle, level) in particles.iter_mut() {
+            circle.color = RColor::reds(
+                level.0 as Float / (sweep_parameters.num_timestep_levels - 1) as Float,
+            );
         }
     }
 }

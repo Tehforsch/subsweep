@@ -10,7 +10,8 @@ use raxiom::components::IonizedHydrogenFraction;
 use raxiom::components::Position;
 use raxiom::grid::init_cartesian_grid_system;
 use raxiom::prelude::*;
-use raxiom::sweep::sweep_system;
+use raxiom::simulation_plugin::show_time_system;
+use raxiom::simulation_plugin::time_system;
 use raxiom::sweep::timestep_level::TimestepLevel;
 use raxiom::sweep::SweepParameters;
 use raxiom::units::Dimensionless;
@@ -49,8 +50,10 @@ fn main() {
         initialize_sweep_components_system,
     )
     .add_system_to_stage(
-        SimulationStages::ForceCalculation,
-        print_ionization_system.after(sweep_system),
+        SimulationStages::Integration,
+        print_ionization_system
+            .after(time_system)
+            .after(show_time_system),
     )
     .add_plugin(SweepPlugin)
     .run();
@@ -63,16 +66,11 @@ fn initialize_sweep_components_system(
     sweep_parameters: Res<SweepParameters>,
     box_size: Res<SimulationBox>,
 ) {
-    for (entity, pos) in particles.iter() {
-        let level = if (**pos - box_size.center()).length() > Length::kiloparsec(1.0) {
-            TimestepLevel(sweep_parameters.num_timestep_levels - 1)
-        } else {
-            TimestepLevel(0)
-        };
+    for (entity, _) in particles.iter() {
         commands.entity(entity).insert((
             components::Density(parameters.number_density * PROTON_MASS),
             components::IonizedHydrogenFraction(parameters.initial_fraction_ionized_hydrogen),
-            level,
+            TimestepLevel(sweep_parameters.num_timestep_levels - 1),
         ));
     }
     let closest_entity_to_center = particles
