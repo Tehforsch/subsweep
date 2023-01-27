@@ -17,25 +17,24 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn get_new_abundance(self) -> Dimensionless {
+    pub fn get_new_abundance(mut self) -> Dimensionless {
         let hydrogen_number_density = self.density / PROTON_MASS;
         let num_hydrogen_atoms = hydrogen_number_density * self.volume;
         let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
             * (hydrogen_number_density * self.ionized_hydrogen_fraction).powi::<2>()
             * self.volume;
         let num_recombined_hydrogen_atoms = (recombination_rate * self.timestep).to_amount();
+        self.ionized_hydrogen_fraction -=
+            num_recombined_hydrogen_atoms / num_hydrogen_atoms.to_amount();
         let neutral_hydrogen_number_density =
             self.density / PROTON_MASS * (1.0 - self.ionized_hydrogen_fraction);
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         let absorbed_fraction =
             1.0 - (-neutral_hydrogen_number_density * sigma * self.length).exp();
         let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.flux) * self.timestep;
-        dbg!(absorbed_fraction, self.flux);
-        dbg!(recombination_rate, absorbed_fraction * self.flux);
-        let new_ionized_hydrogen_fraction = self.ionized_hydrogen_fraction
-            + (num_newly_ionized_hydrogen_atoms - num_recombined_hydrogen_atoms)
-                / num_hydrogen_atoms.to_amount();
-        new_ionized_hydrogen_fraction.clamp(
+        self.ionized_hydrogen_fraction +=
+            num_newly_ionized_hydrogen_atoms / num_hydrogen_atoms.to_amount();
+        self.ionized_hydrogen_fraction.clamp(
             Dimensionless::dimensionless(0.0),
             Dimensionless::dimensionless(1.0),
         )
@@ -45,7 +44,6 @@ impl Solver {
 #[cfg(test)]
 mod tests {
     use super::Solver;
-    use crate::test_utils::assert_is_close;
     use crate::units::Amount;
     use crate::units::Dimensionless;
     use crate::units::Length;
@@ -57,6 +55,7 @@ mod tests {
     #[test]
     fn chemistry_solver_stays_in_equillibrium() {
         for initial_ionized_hydrogen_fraction in [
+            Dimensionless::dimensionless(0.0),
             Dimensionless::dimensionless(0.2),
             Dimensionless::dimensionless(0.5),
             Dimensionless::dimensionless(0.7),
@@ -91,9 +90,11 @@ mod tests {
                     flux,
                 }
                 .get_new_abundance();
-                assert_is_close(
-                    final_ionized_hydrogen_fraction,
-                    initial_ionized_hydrogen_fraction,
+                assert!(
+                    ((initial_ionized_hydrogen_fraction - final_ionized_hydrogen_fraction)
+                        / (initial_ionized_hydrogen_fraction + 1e-20))
+                        .value()
+                        < 1e-10,
                 );
             }
         }
