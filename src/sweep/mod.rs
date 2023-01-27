@@ -32,7 +32,6 @@ use crate::grid::RemoteNeighbour;
 use crate::parameters::TimestepParameters;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
-use crate::units::Amount;
 use crate::units::PhotonFlux;
 use crate::units::SourceRate;
 use crate::units::Time;
@@ -68,6 +67,7 @@ struct Sweep {
     remaining_to_solve_count: CountByDir,
     max_timestep: Time,
     current_level: TimestepLevel,
+    flux_treshold: PhotonFlux,
 }
 
 impl Sweep {
@@ -77,11 +77,11 @@ impl Sweep {
         sites: HashMap<Entity, Site>,
         levels: HashMap<Entity, TimestepLevel>,
         max_timestep: Time,
-        num_timestep_levels: usize,
+        parameters: &SweepParameters,
     ) -> Sites {
         assert!(cells.len() == sites.len());
         for level in levels.values() {
-            assert!(level.0 < num_timestep_levels);
+            assert!(level.0 < parameters.num_timestep_levels);
         }
         let mut solver = Sweep {
             cells: Cells::new(cells, &levels),
@@ -91,10 +91,13 @@ impl Sweep {
             remaining_to_solve_count: CountByDir::empty(),
             max_timestep,
             current_level: TimestepLevel(0),
+            flux_treshold: parameters.significant_flux_treshold,
         };
-        for i in 0..(2usize.pow(num_timestep_levels as u32 - 1)) {
-            solver.current_level =
-                TimestepLevel::lowest_active_from_iteration(num_timestep_levels, i as u32);
+        for i in 0..(2usize.pow(parameters.num_timestep_levels as u32 - 1)) {
+            solver.current_level = TimestepLevel::lowest_active_from_iteration(
+                parameters.num_timestep_levels,
+                i as u32,
+            );
             solver.single_sweep();
         }
         solver.sites
@@ -172,8 +175,12 @@ impl Sweep {
         let source = site.source_per_direction_bin(&self.directions);
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         let flux = site.incoming_total_flux[task.dir.0] + source;
-        let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-        flux * absorbed_fraction
+        if flux < self.flux_treshold {
+            PhotonFlux::zero()
+        } else {
+            let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
+            flux * absorbed_fraction
+        }
     }
 
     fn solve_task(&mut self, task: Task) {
@@ -318,17 +325,14 @@ pub fn sweep_system(
         sites,
         levels,
         timestep.max_timestep,
-        sweep_parameters.num_timestep_levels,
+        &sweep_parameters,
     );
-    for (entity, cell, density, mut fraction, _, _, mut level) in particles.iter_mut() {
+    for (entity, _, _, mut fraction, _, _, mut level) in particles.iter_mut() {
         let site = sites.get(entity);
         let new_fraction = site.ionized_hydrogen_fraction;
-        // let change_timescale =
-        //     (**fraction / ((**fraction - new_fraction) / timestep.max_timestep)).abs();
-        let change_timescale = cell.volume() * (**density / PROTON_MASS)
-            / site.total_incoming_flux()
-            * Amount::one_unchecked();
-        let desired_timestep = change_timescale * 0.1;
+        let change_timescale =
+            (**fraction / ((**fraction - new_fraction) / timestep.max_timestep)).abs();
+        let desired_timestep = change_timescale * 0.01;
         let mut desired_level = TimestepLevel::from_max_timestep_and_desired_timestep(
             sweep_parameters.num_timestep_levels,
             timestep.max_timestep,

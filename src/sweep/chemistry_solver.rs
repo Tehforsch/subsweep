@@ -41,6 +41,7 @@ impl Solver {
     }
 }
 
+#[cfg(not(feature = "2d"))]
 #[cfg(test)]
 mod tests {
     use super::Solver;
@@ -69,8 +70,7 @@ mod tests {
                 Time::megayears(1000.0),
             ] {
                 println!(
-                    "Testing xHI = {:?}, Delta_t = {:?}",
-                    initial_ionized_hydrogen_fraction, timestep
+                    "Testing xHI = {initial_ionized_hydrogen_fraction:?}, Delta_t = {timestep:?}",
                 );
                 // Make sure this cell is optically thick by making it gigantic and dense
                 let number_density = 1e5 / Volume::cubic_meters(1.0);

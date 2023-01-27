@@ -6,7 +6,7 @@ hydrodynamics:
   num_smoothing_neighbours: 20
   initial_gas_energy:
     temperature: 1000 K
-    molecular_weight: 4 dimensionless
+    molecular_weight: "4"
 domain:
   tree:
     max_depth: 20

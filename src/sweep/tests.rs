@@ -19,6 +19,7 @@ use crate::units::Density;
 use crate::units::Dimensionless;
 use crate::units::Length;
 use crate::units::MVec;
+use crate::units::PhotonFlux;
 use crate::units::Time;
 use crate::units::VecDimensionless;
 
@@ -33,6 +34,7 @@ fn run_sweep(dirs: Vec<VecDimensionless>) {
         .add_parameters_explicitly(SweepParameters {
             directions: DirectionsSpecification::Explicit(dirs),
             num_timestep_levels: 1,
+            significant_flux_treshold: PhotonFlux::zero(),
         })
         .add_parameters_explicitly(SimulationParameters { final_time: None })
         .add_parameters_explicitly(TimestepParameters {
