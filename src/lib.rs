@@ -21,7 +21,7 @@ pub(crate) mod gravity;
 pub mod grid;
 pub mod hydrodynamics;
 pub mod ics;
-pub(crate) mod io;
+pub mod io;
 pub(crate) mod memory;
 pub(crate) mod parameter_plugin;
 pub(crate) mod particle;

@@ -4,14 +4,15 @@
 use std::f64::consts::PI;
 
 use bevy::prelude::*;
+use derive_more::From;
+use hdf5::H5Type;
 use ordered_float::OrderedFloat;
 use raxiom::components;
 use raxiom::components::IonizedHydrogenFraction;
 use raxiom::components::Position;
 use raxiom::grid::init_cartesian_grid_system;
+use raxiom::io::time_series::TimeSeriesPlugin;
 use raxiom::prelude::*;
-use raxiom::simulation_plugin::show_time_system;
-use raxiom::simulation_plugin::time_system;
 use raxiom::sweep::timestep_level::TimestepLevel;
 use raxiom::sweep::SweepParameters;
 use raxiom::units::Dimensionless;
@@ -22,7 +23,7 @@ use raxiom::units::Time;
 use raxiom::units::Volume;
 use raxiom::units::PROTON_MASS;
 
-#[raxiom_parameters("sweep_postprocess")]
+#[raxiom_parameters("rtype")]
 struct Parameters {
     cell_size: Length,
     number_density: NumberDensity,
@@ -49,12 +50,9 @@ fn main() {
         SimulationStartupStages::InsertDerivedComponents,
         initialize_sweep_components_system,
     )
-    .add_system_to_stage(
-        SimulationStages::Integration,
-        print_ionization_system
-            .after(time_system)
-            .after(show_time_system),
-    )
+    .add_system_to_stage(SimulationStages::Integration, print_ionization_system)
+    .add_plugin(TimeSeriesPlugin::<RTypeRadius>::default())
+    .add_plugin(TimeSeriesPlugin::<RTypeError>::default())
     .add_plugin(SweepPlugin)
     .run();
 }
@@ -86,10 +84,22 @@ fn initialize_sweep_components_system(
         .insert(components::Source(parameters.source_strength));
 }
 
+#[derive(Named, Debug, H5Type, Clone, Deref, From)]
+#[name = "rtype_error"]
+#[repr(transparent)]
+struct RTypeError(Dimensionless);
+
+#[derive(Named, Debug, H5Type, Clone, Deref, From)]
+#[name = "rtype_radius"]
+#[repr(transparent)]
+struct RTypeRadius(Length);
+
 fn print_ionization_system(
     ionization: Query<&IonizedHydrogenFraction>,
     parameters: Res<Parameters>,
     time: Res<raxiom::simulation_plugin::Time>,
+    mut radius_writer: EventWriter<RTypeRadius>,
+    mut error_writer: EventWriter<RTypeError>,
 ) {
     let mut volume = Volume::zero();
     for frac in ionization.iter() {
@@ -106,4 +116,6 @@ fn print_ionization_system(
         analytical,
         error.in_percent(),
     );
+    radius_writer.send(RTypeRadius(radius));
+    error_writer.send(RTypeError(error));
 }

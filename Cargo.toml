@@ -65,7 +65,7 @@ name = "gravity_collapse"
 required-features = ["mpi", "3d"]
 
 [[example]]
-name = "sweep"
+name = "rtype_expansion"
 required-features = ["mpi", "3d"]
 
 [[bench]]

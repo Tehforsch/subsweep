@@ -12,6 +12,7 @@ pub mod timestep_level;
 
 use bevy::prelude::*;
 use bevy::utils::HashMap;
+pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
 use self::active_list::ActiveList;

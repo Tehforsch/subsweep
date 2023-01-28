@@ -3,7 +3,9 @@ use std::ops::Deref;
 use bevy::ecs::schedule::SystemDescriptor;
 use bevy::prelude::*;
 use hdf5::Dataset;
+use hdf5::File;
 use hdf5::H5Type;
+use hdf5::SimpleExtents;
 
 use super::output::plugin::IntoOutputSystem;
 use super::output::OutputFile;
@@ -22,7 +24,7 @@ pub const AMOUNT_IDENTIFIER: &str = "scaling_amount";
 #[derive(SystemLabel)]
 struct DatasetSystemAmbiguityLabel;
 
-pub trait ToDataset: Clone + Component + H5Type + Named + Sync + Send + 'static {
+pub trait ToDataset: Clone + H5Type + Named + Sync + Send + 'static {
     fn dimension() -> Dimension;
     fn convert_base_units(self, factor: f64) -> Self;
 }
@@ -31,8 +33,10 @@ impl<const D: Dimension, S, T> ToDataset for T
 where
     S: Clone + 'static + std::ops::Mul<f64, Output = S>,
     T: Clone
-        + Component
         + Named
+        + Sync
+        + Send
+        + 'static
         + H5Type
         + Deref<Target = Quantity<S, D>>
         + From<<Quantity<S, D> as std::ops::Mul<f64>>::Output>,
@@ -47,23 +51,40 @@ where
     }
 }
 
-impl<T: ToDataset> IntoOutputSystem for T {
+impl<T: ToDataset + Component> IntoOutputSystem for T {
     fn system() -> SystemDescriptor {
-        write_dataset::<T>
+        write_dataset_system::<T>
             .into_descriptor()
             .label(DatasetSystemAmbiguityLabel)
             .ambiguous_with(DatasetSystemAmbiguityLabel)
     }
 }
 
-fn write_dataset<T: ToDataset>(query: Particles<&T>, file: ResMut<OutputFile>) {
-    let f = file.f.as_ref().unwrap();
+fn write_dataset_system<T: Component + ToDataset>(query: Particles<&T>, file: ResMut<OutputFile>) {
     let data: Vec<T> = query.iter().cloned().collect();
-    let dataset = f
+    write_dataset(data, file.f.as_ref().unwrap());
+}
+
+pub fn create_empty_dataset<T: ToDataset>(file: &File) {
+    let dataset = file
+        .new_dataset::<T>()
+        .shape(SimpleExtents::resizable([0]))
+        .create(T::name())
+        .expect("Failed to write dataset");
+
+    add_dimension_attrs::<T>(&dataset);
+}
+
+pub fn write_dataset<T: ToDataset>(data: Vec<T>, file: &File) {
+    let dataset = file
         .new_dataset_builder()
         .with_data(&data)
         .create(T::name())
         .expect("Failed to write dataset");
+    add_dimension_attrs::<T>(&dataset);
+}
+
+pub fn add_dimension_attrs<T: ToDataset>(dataset: &Dataset) {
     let attr = dataset
         .new_attr::<f64>()
         .shape(())
@@ -82,11 +103,11 @@ fn write_dataset<T: ToDataset>(query: Particles<&T>, file: ResMut<OutputFile>) {
         temperature,
         amount,
     } = dimension;
-    write_dimension(&dataset, LENGTH_IDENTIFIER, length);
-    write_dimension(&dataset, TIME_IDENTIFIER, time);
-    write_dimension(&dataset, MASS_IDENTIFIER, mass);
-    write_dimension(&dataset, TEMPERATURE_IDENTIFIER, temperature);
-    write_dimension(&dataset, AMOUNT_IDENTIFIER, amount);
+    write_dimension(dataset, LENGTH_IDENTIFIER, length);
+    write_dimension(dataset, TIME_IDENTIFIER, time);
+    write_dimension(dataset, MASS_IDENTIFIER, mass);
+    write_dimension(dataset, TEMPERATURE_IDENTIFIER, temperature);
+    write_dimension(dataset, AMOUNT_IDENTIFIER, amount);
 }
 
 fn write_dimension(dataset: &Dataset, identifier: &str, dimension: i32) {

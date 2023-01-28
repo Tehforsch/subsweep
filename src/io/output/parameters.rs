@@ -42,6 +42,10 @@ pub struct OutputParameters {
     /// to which the snapshots are written
     #[serde(default = "default_snapshots_dir")]
     pub snapshots_dir: PathBuf,
+    /// The name of the sub-directory of the output directory
+    /// to which the time series are written
+    #[serde(default = "default_time_series_dir")]
+    pub time_series_dir: PathBuf,
     /// Names of all the fields that should be written to snapshots.
     /// Can be names of both attributes and datasets. Example value:
     /// ["position", "velocity", "time"]
@@ -72,6 +76,10 @@ fn default_snapshots_dir() -> PathBuf {
     "snapshots".into()
 }
 
+fn default_time_series_dir() -> PathBuf {
+    "time_series".into()
+}
+
 fn default_fields() -> Vec<String> {
     ["position", "mass", "velocity"]
         .map(|x| x.to_string())
@@ -92,5 +100,9 @@ impl OutputParameters {
 
     pub fn snapshot_dir(&self) -> PathBuf {
         self.output_dir.join(&self.snapshots_dir)
+    }
+
+    pub fn time_series_dir(&self) -> PathBuf {
+        self.output_dir.join(&self.time_series_dir)
     }
 }
