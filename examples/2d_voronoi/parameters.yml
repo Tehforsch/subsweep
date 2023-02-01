@@ -1,0 +1,3 @@
+box_size: 12.8 kpc
+timestep:
+  max_timestep: 1e1 Myr

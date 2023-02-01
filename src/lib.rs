@@ -35,6 +35,7 @@ pub mod simulation_plugin;
 pub(crate) mod stages;
 pub mod sweep;
 pub(crate) mod visualization;
+pub mod voronoi;
 
 pub mod named {
     pub use derive_custom::Named;
