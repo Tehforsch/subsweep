@@ -1,6 +1,6 @@
 use generational_arena::Index;
 
-use super::{PointIndex, Point};
+use super::Point;
 
 #[cfg(not(feature = "2d"))]
 pub struct Tetra {
@@ -18,7 +18,6 @@ pub struct TetraData {
     pub p4: Point,
 }
 
-
 #[cfg(feature = "2d")]
 pub type Tetra = Triangle;
 #[cfg(feature = "2d")]
@@ -35,4 +34,3 @@ pub struct TriangleData {
     pub p2: Point,
     pub p3: Point,
 }
-

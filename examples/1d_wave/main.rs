@@ -22,7 +22,6 @@ use raxiom::units::Density;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::Pressure;
-use raxiom::units::Time;
 use raxiom::units::VecLength;
 use raxiom::units::GAMMA;
 
@@ -118,7 +117,7 @@ fn initialize_energy_system(
 
 fn check_system(
     particles: Particles<(&Position, &components::Mass)>,
-    mut events: EventReader<StopSimulationEvent>,
+    mut _events: EventReader<StopSimulationEvent>,
     time: Res<raxiom::simulation_plugin::Time>,
     box_: Res<SimulationBox>,
 ) {

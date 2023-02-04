@@ -1,19 +1,16 @@
 use generational_arena::Arena;
 
 use self::face::Face;
-use self::tetra::{Tetra, TetraData};
+use self::tetra::Tetra;
+use self::tetra::TetraData;
 
 mod face;
 mod tetra;
 
-#[cfg(feature="2d")]
+#[cfg(feature = "2d")]
 pub type Point = glam::DVec2;
-#[cfg(feature="3d")]
+#[cfg(feature = "3d")]
 pub type Point = glam::DVec3;
-
-struct TetraIndex(pub usize);
-struct FaceIndex(pub usize);
-struct PointIndex(pub usize);
 
 type TetraList = Arena<Tetra>;
 type FaceList = Arena<Face>;
@@ -21,7 +18,7 @@ type PointList = Arena<Point>;
 
 pub struct DelaunayTriangulation {
     pub tetras: TetraList,
-    faces: FaceList,
+    pub faces: FaceList,
     pub points: PointList,
 }
 
@@ -40,7 +37,7 @@ impl DelaunayTriangulation {
             p2,
             p3,
             #[cfg(not(feature = "2d"))]
-            p4
+            p4,
         });
         DelaunayTriangulation {
             tetras,
@@ -57,9 +54,7 @@ impl DelaunayTriangulation {
         constructor
     }
 
-    pub fn insert(&mut self, point: Point) {
-
-    }
+    pub fn insert(&mut self, _point: Point) {}
 }
 
 #[cfg(feature = "2d")]
@@ -71,7 +66,6 @@ fn get_all_encompassing_tetra(points: &[Point]) -> TetraData {
     let p2 = Point::new(min.x, max.y + (max.y - min.y) * (1.0 + alpha));
     let p3 = Point::new(max.x + (max.x - min.x) * (1.0 + alpha), min.y);
     TetraData { p1, p2, p3 }
-
 }
 
 fn get_min_and_max(points: &[Point]) -> Option<(Point, Point)> {
