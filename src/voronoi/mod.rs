@@ -1,4 +1,5 @@
 use generational_arena::Arena;
+use generational_arena::Index;
 
 use self::face::Face;
 use self::tetra::Tetra;
@@ -54,7 +55,29 @@ impl DelaunayTriangulation {
         constructor
     }
 
-    pub fn insert(&mut self, _point: Point) {}
+    fn get_tetra_data(&self, tetra: &Tetra) -> TetraData {
+        TetraData {
+            p1: self.points[tetra.p1],
+            p2: self.points[tetra.p2],
+            p3: self.points[tetra.p3],
+        }
+    }
+
+    pub fn find_containing_tetra(&self, point: Point) -> Index {
+        self.tetras
+            .iter()
+            .find(|(_, tetra)| {
+                let tetra_data = self.get_tetra_data(tetra);
+                tetra_data.contains(point)
+            })
+            .map(|(index, _)| index)
+            .expect("No tetra containing the point {point:?} found")
+    }
+
+    pub fn insert(&mut self, point: Point) {
+        let _t = self.find_containing_tetra(point);
+        todo!()
+    }
 }
 
 #[cfg(feature = "2d")]
