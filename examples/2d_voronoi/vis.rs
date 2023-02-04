@@ -13,9 +13,21 @@ pub struct DrawTriangle {
 impl DrawTriangle {
     pub fn get_mesh(&self) -> Mesh {
         let vertices = [
-            ([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0]),
-            ([1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0]),
-            ([0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0]),
+            (
+                [self.p1.x as f32, self.p1.y as f32, 0.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 1.0],
+            ),
+            (
+                [self.p2.x as f32, self.p2.y as f32, 0.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0],
+            ),
+            (
+                [self.p3.x as f32, self.p3.y as f32, 0.0],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0],
+            ),
         ];
 
         let indices = Indices::U32(vec![0, 1, 2, 0]);

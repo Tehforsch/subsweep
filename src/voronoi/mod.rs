@@ -74,9 +74,30 @@ impl DelaunayTriangulation {
             .expect("No tetra containing the point {point:?} found")
     }
 
-    pub fn insert(&mut self, point: Point) {
-        let _t = self.find_containing_tetra(point);
-        todo!()
+    fn insert(&mut self, point: Point) {
+        let t = self.find_containing_tetra(point);
+        let new_point_index = self.points.insert(point);
+        self.split(t, new_point_index);
+    }
+
+    fn split(&mut self, tetra: Index, point: Index) {
+        let old_tetra = self.tetras.remove(tetra).unwrap();
+        let t1 = Tetra {
+            p1: old_tetra.p1,
+            p2: old_tetra.p2,
+            p3: point,
+        };
+        let t2 = Tetra {
+            p1: old_tetra.p2,
+            p2: old_tetra.p3,
+            p3: point,
+        };
+        let t3 = Tetra {
+            p1: old_tetra.p3,
+            p2: old_tetra.p1,
+            p3: point,
+        };
+        self.tetras.extend([t1, t2, t3])
     }
 }
 
