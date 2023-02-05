@@ -29,12 +29,17 @@ type TetraList = IndexedArena<TetraIndex, Tetra>;
 type FaceList = IndexedArena<FaceIndex, Face>;
 type PointList = IndexedArena<PointIndex, Point>;
 
+pub struct FlipCheckData {
+    tetra: TetraIndex,
+    face: FaceIndex,
+}
+
 #[derive(Resource)]
 pub struct DelaunayTriangulation {
     pub tetras: TetraList,
     pub faces: FaceList,
     pub points: PointList,
-    pub to_check: Vec<TetraIndex>,
+    pub to_check: Vec<FlipCheckData>,
 }
 
 impl DelaunayTriangulation {
@@ -114,7 +119,7 @@ impl DelaunayTriangulation {
         let new_point_index = self.points.insert(point);
         self.split(t, new_point_index);
         while let Some(check) = self.to_check.pop() {
-            self.check_empty_circumcircle(check);
+            self.flip_check(check);
         }
     }
 
@@ -197,13 +202,31 @@ impl DelaunayTriangulation {
         self.fix_opposing_in_old_tetra(old_tetra.f1, t1, point, old_tetra_index);
         self.fix_opposing_in_old_tetra(old_tetra.f2, t2, point, old_tetra_index);
         self.fix_opposing_in_old_tetra(old_tetra.f3, t3, point, old_tetra_index);
-        for t in [t1, t2, t3] {
-            self.to_check.push(t);
+        for (tetra, face) in [(t1, old_tetra.f1), (t2, old_tetra.f2), (t3, old_tetra.f3)] {
+            self.to_check.push(FlipCheckData { tetra, face });
         }
     }
 
-    fn check_empty_circumcircle(&mut self, to_check: TetraIndex) {
-        println!("Nothing to do lol");
+    fn circumcircle_contains_other_points(&self, tetra: TetraIndex) -> bool {
+        let tetra = &self.tetras[tetra];
+        let tetra_data = self.get_tetra_data(tetra);
+        let other_point_contained = self
+            .points
+            .iter()
+            .find(|(point, _)| *point != tetra.p1 && *point != tetra.p2 && *point != tetra.p3)
+            .map(|(_, point)| tetra_data.circumcircle_contains(*point))
+            .is_some();
+        other_point_contained
+    }
+
+    fn flip(&mut self, check: FlipCheckData) {
+        todo!()
+    }
+
+    fn flip_check(&mut self, to_check: FlipCheckData) {
+        if self.circumcircle_contains_other_points(to_check.tetra) {
+            self.flip(to_check);
+        }
     }
 }
 
