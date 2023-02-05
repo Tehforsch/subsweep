@@ -2,6 +2,7 @@ use generational_arena::Arena;
 use generational_arena::Index;
 
 use self::face::Face;
+use self::face::OtherTetraInfo;
 use self::tetra::Tetra;
 use self::tetra::TetraData;
 
@@ -21,6 +22,7 @@ pub struct DelaunayTriangulation {
     pub tetras: TetraList,
     pub faces: FaceList,
     pub points: PointList,
+    pub to_check: Vec<Index>,
 }
 
 impl DelaunayTriangulation {
@@ -32,17 +34,37 @@ impl DelaunayTriangulation {
         let p3 = points.insert(initial_tetra_data.p3);
         #[cfg(not(feature = "2d"))]
         let p4 = points.insert(initial_tetra_data.p4);
+        let mut faces = FaceList::new();
+        let f3 = faces.insert(Face {
+            p1: p1,
+            p2: p2,
+            opposing: None,
+        });
+        let f1 = faces.insert(Face {
+            p1: p2,
+            p2: p3,
+            opposing: None,
+        });
+        let f2 = faces.insert(Face {
+            p1: p3,
+            p2: p1,
+            opposing: None,
+        });
         let mut tetras = TetraList::new();
         tetras.insert(Tetra {
             p1,
             p2,
             p3,
+            f1,
+            f2,
+            f3,
             #[cfg(not(feature = "2d"))]
             p4,
         });
         DelaunayTriangulation {
             tetras,
             faces: FaceList::default(),
+            to_check: vec![],
             points,
         }
     }
@@ -78,26 +100,61 @@ impl DelaunayTriangulation {
         let t = self.find_containing_tetra(point);
         let new_point_index = self.points.insert(point);
         self.split(t, new_point_index);
+        while let Some(check) = self.to_check.pop() {
+            self.check_empty_circumcircle(check);
+        }
+    }
+
+    fn set_opposing_tetras(&mut self, tetra: Index, tetra_a: Index, tetra_b: Index, point: Index) {
+        let tetra = &self.tetras[tetra];
+        self.faces[tetra.f1].opposing = Some(OtherTetraInfo {
+            tetra: tetra_a,
+            point,
+        });
+        self.faces[tetra.f2].opposing = Some(OtherTetraInfo {
+            tetra: tetra_b,
+            point,
+        });
+    }
+
+    fn make_tetra(&mut self, p: Index, p_a: Index, p_b: Index, old_face: Index) -> Index {
+        // Leave f1.opposing and f2.opposing uninitialized for now, since we do not know the index
+        // before we have inserted the other two tetras
+        let f1 = self.faces.insert(Face {
+            p1: p,
+            p2: p_a,
+            opposing: None,
+        });
+        let f2 = self.faces.insert(Face {
+            p1: p,
+            p2: p_b,
+            opposing: None,
+        });
+        self.tetras.insert(Tetra {
+            p1: p_a,
+            p2: p_b,
+            p3: p,
+            f1,
+            f2,
+            f3: old_face,
+        })
     }
 
     fn split(&mut self, tetra: Index, point: Index) {
         let old_tetra = self.tetras.remove(tetra).unwrap();
-        let t1 = Tetra {
-            p1: old_tetra.p1,
-            p2: old_tetra.p2,
-            p3: point,
-        };
-        let t2 = Tetra {
-            p1: old_tetra.p2,
-            p2: old_tetra.p3,
-            p3: point,
-        };
-        let t3 = Tetra {
-            p1: old_tetra.p3,
-            p2: old_tetra.p1,
-            p3: point,
-        };
-        self.tetras.extend([t1, t2, t3])
+        let t1 = self.make_tetra(point, old_tetra.p2, old_tetra.p3, old_tetra.f1);
+        let t2 = self.make_tetra(point, old_tetra.p3, old_tetra.p1, old_tetra.f2);
+        let t3 = self.make_tetra(point, old_tetra.p1, old_tetra.p2, old_tetra.f3);
+        self.set_opposing_tetras(t1, t3, t2, old_tetra.p1);
+        self.set_opposing_tetras(t2, t1, t3, old_tetra.p2);
+        self.set_opposing_tetras(t3, t2, t1, old_tetra.p3);
+        for t in [t1, t2, t3] {
+            self.to_check.push(t);
+        }
+    }
+
+    fn check_empty_circumcircle(&mut self, to_check: Index) {
+        todo!()
     }
 }
 

@@ -28,6 +28,9 @@ pub struct Triangle {
     pub p1: Index,
     pub p2: Index,
     pub p3: Index,
+    pub f1: Index,
+    pub f2: Index,
+    pub f3: Index,
 }
 
 pub struct TriangleData {
