@@ -146,17 +146,17 @@ impl DelaunayTriangulation {
 
     fn set_opposing_in_new_tetras(
         &mut self,
-        tetra: TetraIndex,
+        face_a: FaceIndex,
+        face_b: FaceIndex,
         tetra_a: TetraIndex,
         tetra_b: TetraIndex,
         point: PointIndex,
     ) {
-        let tetra = &self.tetras[tetra];
-        self.faces[tetra.f1].opposing = Some(OtherTetraInfo {
+        self.faces[face_a].opposing = Some(OtherTetraInfo {
             tetra: tetra_a,
             point,
         });
-        self.faces[tetra.f2].opposing = Some(OtherTetraInfo {
+        self.faces[face_b].opposing = Some(OtherTetraInfo {
             tetra: tetra_b,
             point,
         });
@@ -168,9 +168,10 @@ impl DelaunayTriangulation {
         p_a: PointIndex,
         p_b: PointIndex,
         old_face: FaceIndex,
-    ) -> TetraIndex {
+    ) -> (TetraIndex, FaceIndex, FaceIndex) {
         // Leave f1.opposing and f2.opposing uninitialized for now, since we do not know the index
-        // before we have inserted the other two tetras
+        // before we have inserted the other two tetras. We return f1 and f2 to make it easier
+        // for the caller to set the opposing faces afterwards.
         let f1 = self.faces.insert(Face {
             p1: p,
             p2: p_a,
@@ -181,24 +182,57 @@ impl DelaunayTriangulation {
             p2: p_b,
             opposing: None,
         });
-        self.tetras.insert(Tetra {
-            p1: p_a,
-            p2: p_b,
-            p3: p,
+        (
+            self.tetras
+                .insert(self.create_positively_oriented_tetra(p_a, p_b, p, f1, f2, old_face)),
             f1,
             f2,
-            f3: old_face,
-        })
+        )
+    }
+
+    fn create_positively_oriented_tetra(
+        &self,
+        p1: PointIndex,
+        p2: PointIndex,
+        p3: PointIndex,
+        f1: FaceIndex,
+        f2: FaceIndex,
+        f3: FaceIndex,
+    ) -> Tetra {
+        let tetra_data = TetraData {
+            p1: self.points[p1],
+            p2: self.points[p2],
+            p3: self.points[p3],
+        };
+        if tetra_data.is_positively_oriented() {
+            Tetra {
+                p1,
+                p2,
+                p3,
+                f1,
+                f2,
+                f3,
+            }
+        } else {
+            Tetra {
+                p1: p2,
+                p2: p1,
+                p3,
+                f1: f2,
+                f2: f1,
+                f3,
+            }
+        }
     }
 
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
-        let t1 = self.make_tetra(point, old_tetra.p2, old_tetra.p3, old_tetra.f1);
-        let t2 = self.make_tetra(point, old_tetra.p3, old_tetra.p1, old_tetra.f2);
-        let t3 = self.make_tetra(point, old_tetra.p1, old_tetra.p2, old_tetra.f3);
-        self.set_opposing_in_new_tetras(t1, t2, t3, old_tetra.p1);
-        self.set_opposing_in_new_tetras(t2, t3, t1, old_tetra.p2);
-        self.set_opposing_in_new_tetras(t3, t1, t2, old_tetra.p3);
+        let (t1, f1a, f1b) = self.make_tetra(point, old_tetra.p2, old_tetra.p3, old_tetra.f1);
+        let (t2, f2a, f2b) = self.make_tetra(point, old_tetra.p3, old_tetra.p1, old_tetra.f2);
+        let (t3, f3a, f3b) = self.make_tetra(point, old_tetra.p1, old_tetra.p2, old_tetra.f3);
+        self.set_opposing_in_new_tetras(f1a, f1b, t2, t3, old_tetra.p1);
+        self.set_opposing_in_new_tetras(f2a, f2b, t3, t1, old_tetra.p2);
+        self.set_opposing_in_new_tetras(f3a, f3b, t1, t2, old_tetra.p3);
         self.fix_opposing_in_old_tetra(old_tetra.f1, t1, point, old_tetra_index);
         self.fix_opposing_in_old_tetra(old_tetra.f2, t2, point, old_tetra_index);
         self.fix_opposing_in_old_tetra(old_tetra.f3, t3, point, old_tetra_index);
@@ -220,7 +254,7 @@ impl DelaunayTriangulation {
     }
 
     fn flip(&mut self, check: FlipCheckData) {
-        todo!()
+        // todo!()
     }
 
     fn flip_check(&mut self, to_check: FlipCheckData) {
