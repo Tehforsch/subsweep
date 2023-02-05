@@ -33,6 +33,7 @@ pub struct Triangle {
     pub f3: Index,
 }
 
+#[derive(Debug)]
 pub struct TriangleData {
     pub p1: Point,
     pub p2: Point,

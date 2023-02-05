@@ -1,3 +1,4 @@
+use bevy::prelude::Resource;
 use generational_arena::Arena;
 use generational_arena::Index;
 
@@ -18,6 +19,7 @@ type TetraList = Arena<Tetra>;
 type FaceList = Arena<Face>;
 type PointList = Arena<Point>;
 
+#[derive(Resource)]
 pub struct DelaunayTriangulation {
     pub tetras: TetraList,
     pub faces: FaceList,
@@ -85,7 +87,7 @@ impl DelaunayTriangulation {
         }
     }
 
-    pub fn find_containing_tetra(&self, point: Point) -> Index {
+    pub fn find_containing_tetra(&self, point: Point) -> Option<Index> {
         self.tetras
             .iter()
             .find(|(_, tetra)| {
@@ -93,11 +95,12 @@ impl DelaunayTriangulation {
                 tetra_data.contains(point)
             })
             .map(|(index, _)| index)
-            .expect("No tetra containing the point {point:?} found")
     }
 
     fn insert(&mut self, point: Point) {
-        let t = self.find_containing_tetra(point);
+        let t = self
+            .find_containing_tetra(point)
+            .expect("No tetra containing the point {point:?} found");
         let new_point_index = self.points.insert(point);
         self.split(t, new_point_index);
         while let Some(check) = self.to_check.pop() {
@@ -154,7 +157,7 @@ impl DelaunayTriangulation {
     }
 
     fn check_empty_circumcircle(&mut self, to_check: Index) {
-        todo!()
+        println!("Nothing to do lol");
     }
 }
 

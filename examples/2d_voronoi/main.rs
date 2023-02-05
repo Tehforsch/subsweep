@@ -1,22 +1,40 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
+mod camera;
 mod vis;
 
 use bevy::prelude::*;
+use generational_arena::Index;
+use glam::DVec2;
 use raxiom::components::Position;
 use raxiom::prelude::*;
 use raxiom::units::VecLength;
 use raxiom::voronoi::DelaunayTriangulation;
 use vis::DrawTriangle;
 
-const SCALE: f64 = 900.0;
+use crate::camera::setup_camera_system;
+use crate::camera::track_mouse_world_position_system;
+use crate::camera::MousePosition;
+
+#[derive(Resource)]
+struct Colors {
+    red: Handle<ColorMaterial>,
+    blue: Handle<ColorMaterial>,
+}
+
+#[derive(Component, Debug)]
+struct VisTriangle {
+    index: Index,
+}
 
 fn main() {
     let mut app = App::new();
     app.add_startup_system(add_points_system)
         .add_startup_system(setup_camera_system)
         .add_startup_system_to_stage(StartupStage::PostStartup, show_voronoi_system)
+        .add_system(highlight_triangle_system)
+        .add_system(track_mouse_world_position_system)
         .add_plugins(DefaultPlugins)
         .run();
 }
@@ -36,17 +54,16 @@ fn add_points_system(mut commands: Commands) {
         }
     }
 }
-
-fn setup_camera_system(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-}
-
 fn show_voronoi_system(
     mut commands: Commands,
     particles: Particles<&Position>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let colors = Colors {
+        blue: materials.add(ColorMaterial::from(Color::BLUE)),
+        red: materials.add(ColorMaterial::from(Color::RED)),
+    };
     let triangulation = DelaunayTriangulation::construct(
         &particles
             .into_iter()
@@ -54,31 +71,50 @@ fn show_voronoi_system(
             .collect::<Vec<_>>(),
     );
     for p in particles.iter() {
-        let c = DrawCircle::from_position_and_color(**p, RColor::BLUE);
         commands.spawn(ColorMesh2dBundle {
             mesh: meshes.add(shape::Circle::new(5.0).into()).into(),
-            material: materials.add(ColorMaterial::from(Color::RED)),
-            transform: Transform::from_translation(
-                SCALE as f32
-                    * Vec3::new(
-                        p.x().value_unchecked() as f32,
-                        p.y().value_unchecked() as f32,
-                        1.0,
-                    ),
-            ),
+            material: colors.blue.clone(),
+            transform: Transform::from_translation(Vec3::new(
+                p.x().value_unchecked() as f32,
+                p.y().value_unchecked() as f32,
+                1.0,
+            )),
             ..default()
         });
     }
-    for t in triangulation.tetras {
+    for (index, t) in triangulation.tetras.iter() {
         let triangle = DrawTriangle {
-            p1: triangulation.points[t.p1] * SCALE,
-            p2: triangulation.points[t.p2] * SCALE,
-            p3: triangulation.points[t.p3] * SCALE,
+            p1: triangulation.points[t.p1],
+            p2: triangulation.points[t.p2],
+            p3: triangulation.points[t.p3],
         };
-        commands.spawn(ColorMesh2dBundle {
-            mesh: meshes.add(triangle.get_mesh()).into(),
-            material: materials.add(ColorMaterial::from(Color::RED)),
-            ..default()
-        });
+        commands
+            .spawn(ColorMesh2dBundle {
+                mesh: meshes.add(triangle.get_mesh()).into(),
+                material: colors.red.clone(),
+                ..default()
+            })
+            .insert(VisTriangle { index });
+    }
+    commands.insert_resource(triangulation);
+    commands.insert_resource(colors);
+}
+
+fn highlight_triangle_system(
+    mut particles: Query<(&VisTriangle, &mut Handle<ColorMaterial>, &mut Transform)>,
+    triangulation: Res<DelaunayTriangulation>,
+    colors: Res<Colors>,
+    mouse_pos: Res<MousePosition>,
+) {
+    let index =
+        triangulation.find_containing_tetra(DVec2::new(mouse_pos.0.x as f64, mouse_pos.0.y as f64));
+    for (triangle, mut color, mut transform) in particles.iter_mut() {
+        if Some(triangle.index) == index {
+            *color = colors.red.clone();
+            transform.translation.z = -1.0;
+        } else {
+            *color = colors.blue.clone();
+            transform.translation.z = -1.05;
+        };
     }
 }
