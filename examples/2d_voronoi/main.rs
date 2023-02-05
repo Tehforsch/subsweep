@@ -52,8 +52,8 @@ fn add_points_system(mut commands: Commands) {
             commands.spawn((
                 LocalParticle,
                 Position(VecLength::meters(
-                    (i as f64 - n_x as f64 / 2.0) * 0.1,
-                    (j as f64 - n_y as f64 / 2.0) as f64 * 0.1,
+                    (i as f64 - n_x as f64 / 2.0 + j as f64 * 0.6122) * 0.1,
+                    (j as f64 - n_y as f64 / 2.0 - i as f64 * 0.71123) as f64 * 0.1,
                 )),
             ));
         }
@@ -78,12 +78,12 @@ fn show_voronoi_system(
     );
     for p in particles.iter() {
         commands.spawn(ColorMesh2dBundle {
-            mesh: meshes.add(shape::Circle::new(5.0).into()).into(),
+            mesh: meshes.add(shape::Circle::new(0.005).into()).into(),
             material: colors.blue.clone(),
             transform: Transform::from_translation(Vec3::new(
                 p.x().value_unchecked() as f32,
                 p.y().value_unchecked() as f32,
-                1.0,
+                LOW_LAYER,
             )),
             ..default()
         });
