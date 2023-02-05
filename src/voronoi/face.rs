@@ -1,12 +1,13 @@
-use generational_arena::Index;
+use super::PointIndex;
+use super::TetraIndex;
 
 pub struct Face {
-    pub p1: Index,
-    pub p2: Index,
+    pub p1: PointIndex,
+    pub p2: PointIndex,
     pub opposing: Option<OtherTetraInfo>,
 }
 
 pub struct OtherTetraInfo {
-    pub tetra: Index,
-    pub point: Index,
+    pub tetra: TetraIndex,
+    pub point: PointIndex,
 }

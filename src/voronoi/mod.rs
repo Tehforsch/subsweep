@@ -1,30 +1,40 @@
 use bevy::prelude::Resource;
-use generational_arena::Arena;
+use derive_more::From;
+use derive_more::Into;
 use generational_arena::Index;
 
 use self::face::Face;
 use self::face::OtherTetraInfo;
+use self::indexed_arena::IndexedArena;
 use self::tetra::Tetra;
 use self::tetra::TetraData;
 
 mod face;
+mod indexed_arena;
 mod tetra;
+
+#[derive(Clone, Copy, Debug, From, Into, PartialEq, Eq)]
+pub struct TetraIndex(Index);
+#[derive(Clone, Copy, Debug, From, Into, PartialEq, Eq)]
+pub struct FaceIndex(Index);
+#[derive(Clone, Copy, Debug, From, Into, PartialEq, Eq)]
+pub struct PointIndex(Index);
 
 #[cfg(feature = "2d")]
 pub type Point = glam::DVec2;
 #[cfg(feature = "3d")]
 pub type Point = glam::DVec3;
 
-type TetraList = Arena<Tetra>;
-type FaceList = Arena<Face>;
-type PointList = Arena<Point>;
+type TetraList = IndexedArena<TetraIndex, Tetra>;
+type FaceList = IndexedArena<FaceIndex, Face>;
+type PointList = IndexedArena<PointIndex, Point>;
 
 #[derive(Resource)]
 pub struct DelaunayTriangulation {
     pub tetras: TetraList,
     pub faces: FaceList,
     pub points: PointList,
-    pub to_check: Vec<Index>,
+    pub to_check: Vec<TetraIndex>,
 }
 
 impl DelaunayTriangulation {
@@ -37,11 +47,6 @@ impl DelaunayTriangulation {
         #[cfg(not(feature = "2d"))]
         let p4 = points.insert(initial_tetra_data.p4);
         let mut faces = FaceList::new();
-        let f3 = faces.insert(Face {
-            p1: p1,
-            p2: p2,
-            opposing: None,
-        });
         let f1 = faces.insert(Face {
             p1: p2,
             p2: p3,
@@ -50,6 +55,11 @@ impl DelaunayTriangulation {
         let f2 = faces.insert(Face {
             p1: p3,
             p2: p1,
+            opposing: None,
+        });
+        let f3 = faces.insert(Face {
+            p1: p1,
+            p2: p2,
             opposing: None,
         });
         let mut tetras = TetraList::new();
@@ -65,7 +75,7 @@ impl DelaunayTriangulation {
         });
         DelaunayTriangulation {
             tetras,
-            faces: FaceList::default(),
+            faces: faces,
             to_check: vec![],
             points,
         }
@@ -87,7 +97,7 @@ impl DelaunayTriangulation {
         }
     }
 
-    pub fn find_containing_tetra(&self, point: Point) -> Option<Index> {
+    pub fn find_containing_tetra(&self, point: Point) -> Option<TetraIndex> {
         self.tetras
             .iter()
             .find(|(_, tetra)| {
@@ -108,7 +118,34 @@ impl DelaunayTriangulation {
         }
     }
 
-    fn set_opposing_tetras(&mut self, tetra: Index, tetra_a: Index, tetra_b: Index, point: Index) {
+    fn fix_opposing_in_old_tetra(
+        &mut self,
+        old_face: FaceIndex,
+        new_tetra: TetraIndex,
+        new_point: PointIndex,
+        old_tetra_index: TetraIndex,
+    ) {
+        if let Some(ref opposing) = self.faces[old_face].opposing {
+            let tetra = &self.tetras[opposing.tetra];
+            let faces = [tetra.f1, tetra.f2, tetra.f3];
+            let corresponding_face = faces
+                .iter()
+                .find(|f| self.faces[**f].opposing.as_ref().unwrap().tetra == old_tetra_index)
+                .unwrap();
+            self.faces[*corresponding_face].opposing = Some(OtherTetraInfo {
+                tetra: new_tetra,
+                point: new_point,
+            });
+        }
+    }
+
+    fn set_opposing_in_new_tetras(
+        &mut self,
+        tetra: TetraIndex,
+        tetra_a: TetraIndex,
+        tetra_b: TetraIndex,
+        point: PointIndex,
+    ) {
         let tetra = &self.tetras[tetra];
         self.faces[tetra.f1].opposing = Some(OtherTetraInfo {
             tetra: tetra_a,
@@ -120,7 +157,13 @@ impl DelaunayTriangulation {
         });
     }
 
-    fn make_tetra(&mut self, p: Index, p_a: Index, p_b: Index, old_face: Index) -> Index {
+    fn make_tetra(
+        &mut self,
+        p: PointIndex,
+        p_a: PointIndex,
+        p_b: PointIndex,
+        old_face: FaceIndex,
+    ) -> TetraIndex {
         // Leave f1.opposing and f2.opposing uninitialized for now, since we do not know the index
         // before we have inserted the other two tetras
         let f1 = self.faces.insert(Face {
@@ -143,20 +186,23 @@ impl DelaunayTriangulation {
         })
     }
 
-    fn split(&mut self, tetra: Index, point: Index) {
-        let old_tetra = self.tetras.remove(tetra).unwrap();
+    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
+        let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
         let t1 = self.make_tetra(point, old_tetra.p2, old_tetra.p3, old_tetra.f1);
         let t2 = self.make_tetra(point, old_tetra.p3, old_tetra.p1, old_tetra.f2);
         let t3 = self.make_tetra(point, old_tetra.p1, old_tetra.p2, old_tetra.f3);
-        self.set_opposing_tetras(t1, t3, t2, old_tetra.p1);
-        self.set_opposing_tetras(t2, t1, t3, old_tetra.p2);
-        self.set_opposing_tetras(t3, t2, t1, old_tetra.p3);
+        self.set_opposing_in_new_tetras(t1, t2, t3, old_tetra.p1);
+        self.set_opposing_in_new_tetras(t2, t3, t1, old_tetra.p2);
+        self.set_opposing_in_new_tetras(t3, t1, t2, old_tetra.p3);
+        self.fix_opposing_in_old_tetra(old_tetra.f1, t1, point, old_tetra_index);
+        self.fix_opposing_in_old_tetra(old_tetra.f2, t2, point, old_tetra_index);
+        self.fix_opposing_in_old_tetra(old_tetra.f3, t3, point, old_tetra_index);
         for t in [t1, t2, t3] {
             self.to_check.push(t);
         }
     }
 
-    fn check_empty_circumcircle(&mut self, to_check: Index) {
+    fn check_empty_circumcircle(&mut self, to_check: TetraIndex) {
         println!("Nothing to do lol");
     }
 }
@@ -164,8 +210,8 @@ impl DelaunayTriangulation {
 #[cfg(feature = "2d")]
 fn get_all_encompassing_tetra(points: &[Point]) -> TetraData {
     let (min, max) = get_min_and_max(points).unwrap();
-    // A small overshooting factor for numerical safety
-    let alpha = 0.01;
+    // An overshooting factor for numerical safety
+    let alpha = 1.00;
     let p1 = min - (max - min) * alpha;
     let p2 = Point::new(min.x, max.y + (max.y - min.y) * (1.0 + alpha));
     let p3 = Point::new(max.x + (max.x - min.x) * (1.0 + alpha), min.y);

@@ -1,14 +1,14 @@
-use generational_arena::Index;
-
+use super::FaceIndex;
 use super::Point;
+use super::PointIndex;
 use crate::prelude::Float;
 
 #[cfg(not(feature = "2d"))]
 pub struct Tetra {
-    pub p1: Index,
-    pub p2: Index,
-    pub p3: Index,
-    pub p4: Index,
+    pub p1: PointIndex,
+    pub p2: PointIndex,
+    pub p3: PointIndex,
+    pub p4: PointIndex,
 }
 
 #[cfg(not(feature = "2d"))]
@@ -24,13 +24,14 @@ pub type Tetra = Triangle;
 #[cfg(feature = "2d")]
 pub type TetraData = TriangleData;
 
+#[derive(Debug)]
 pub struct Triangle {
-    pub p1: Index,
-    pub p2: Index,
-    pub p3: Index,
-    pub f1: Index,
-    pub f2: Index,
-    pub f3: Index,
+    pub p1: PointIndex,
+    pub p2: PointIndex,
+    pub p3: PointIndex,
+    pub f1: FaceIndex,
+    pub f2: FaceIndex,
+    pub f3: FaceIndex,
 }
 
 #[derive(Debug)]

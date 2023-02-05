@@ -5,27 +5,32 @@ mod camera;
 mod vis;
 
 use bevy::prelude::*;
-use generational_arena::Index;
 use glam::DVec2;
 use raxiom::components::Position;
 use raxiom::prelude::*;
 use raxiom::units::VecLength;
 use raxiom::voronoi::DelaunayTriangulation;
+use raxiom::voronoi::TetraIndex;
 use vis::DrawTriangle;
 
 use crate::camera::setup_camera_system;
 use crate::camera::track_mouse_world_position_system;
 use crate::camera::MousePosition;
 
+const HIGHLIGHT_LAYER: f32 = -0.1;
+const INTERMEDIATE_LAYER: f32 = -0.5;
+const LOW_LAYER: f32 = -2.0;
+
 #[derive(Resource)]
 struct Colors {
     red: Handle<ColorMaterial>,
     blue: Handle<ColorMaterial>,
+    green: Handle<ColorMaterial>,
 }
 
 #[derive(Component, Debug)]
 struct VisTriangle {
-    index: Index,
+    index: TetraIndex,
 }
 
 fn main() {
@@ -63,6 +68,7 @@ fn show_voronoi_system(
     let colors = Colors {
         blue: materials.add(ColorMaterial::from(Color::BLUE)),
         red: materials.add(ColorMaterial::from(Color::RED)),
+        green: materials.add(ColorMaterial::from(Color::GREEN)),
     };
     let triangulation = DelaunayTriangulation::construct(
         &particles
@@ -111,10 +117,26 @@ fn highlight_triangle_system(
     for (triangle, mut color, mut transform) in particles.iter_mut() {
         if Some(triangle.index) == index {
             *color = colors.red.clone();
-            transform.translation.z = -1.0;
+            transform.translation.z = HIGHLIGHT_LAYER;
         } else {
             *color = colors.blue.clone();
-            transform.translation.z = -1.05;
+            transform.translation.z = LOW_LAYER;
         };
+    }
+    if let Some(index) = index {
+        let tetra = &triangulation.tetras[index];
+        let neighbours = [tetra.f1, tetra.f2, tetra.f3];
+        for face in neighbours.iter() {
+            let face = &triangulation.faces[*face];
+            if let Some(ref opp) = face.opposing {
+                assert!(triangulation.tetras.contains(opp.tetra));
+            }
+            for (triangle, mut color, mut transform) in particles.iter_mut() {
+                if Some(triangle.index) == face.opposing.as_ref().map(|opposing| opposing.tetra) {
+                    *color = colors.green.clone();
+                    transform.translation.z = INTERMEDIATE_LAYER;
+                };
+            }
+        }
     }
 }
