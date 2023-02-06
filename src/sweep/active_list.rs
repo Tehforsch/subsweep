@@ -1,18 +1,18 @@
-use bevy::prelude::Entity;
 use bevy::utils::HashMap;
 
 use super::timestep_level::TimestepLevel;
+use crate::particle::ParticleId;
 
 pub struct ActiveList<T> {
-    items: HashMap<Entity, (TimestepLevel, T)>,
+    items: HashMap<ParticleId, (TimestepLevel, T)>,
 }
 
 impl<T> ActiveList<T> {
-    pub fn new(map: HashMap<Entity, T>, levels: &HashMap<Entity, TimestepLevel>) -> Self {
+    pub fn new(map: HashMap<ParticleId, T>, levels: &HashMap<ParticleId, TimestepLevel>) -> Self {
         Self {
             items: map
                 .into_iter()
-                .map(|(entity, item)| (entity, (levels[&entity], item)))
+                .map(|(id, item)| (id, (levels[&id], item)))
                 .collect(),
         }
     }
@@ -20,37 +20,37 @@ impl<T> ActiveList<T> {
     pub fn enumerate_active(
         &self,
         current_level: TimestepLevel,
-    ) -> impl Iterator<Item = (&Entity, &T)> {
+    ) -> impl Iterator<Item = (&ParticleId, &T)> {
         self.items
             .iter()
             .filter(move |(_, (level, _))| level.is_active(current_level))
-            .map(|(entity, (_, item))| (entity, item))
+            .map(|(id, (_, item))| (id, item))
     }
 
     pub fn get_mut_and_active_state(
         &mut self,
-        entity: Entity,
+        id: ParticleId,
         current_level: TimestepLevel,
     ) -> (&mut T, bool) {
-        let (level, item) = self.items.get_mut(&entity).unwrap();
+        let (level, item) = self.items.get_mut(&id).unwrap();
         (item, level.is_active(current_level))
     }
 
-    pub fn get_mut(&mut self, entity: Entity) -> &mut T {
-        &mut self.items.get_mut(&entity).unwrap().1
+    pub fn get_mut(&mut self, id: ParticleId) -> &mut T {
+        &mut self.items.get_mut(&id).unwrap().1
     }
 
-    pub fn get_mut_with_level(&mut self, entity: Entity) -> (TimestepLevel, &mut T) {
-        let (level, item) = self.items.get_mut(&entity).unwrap();
+    pub fn get_mut_with_level(&mut self, id: ParticleId) -> (TimestepLevel, &mut T) {
+        let (level, item) = self.items.get_mut(&id).unwrap();
         (*level, item)
     }
 
-    pub fn get(&self, entity: Entity) -> &T {
-        &self.items.get(&entity).unwrap().1
+    pub fn get(&self, id: ParticleId) -> &T {
+        &self.items.get(&id).unwrap().1
     }
 
-    pub fn is_active(&self, entity: Entity, current_level: TimestepLevel) -> bool {
-        self.items[&entity].0.is_active(current_level)
+    pub fn is_active(&self, id: ParticleId, current_level: TimestepLevel) -> bool {
+        self.items[&id].0.is_active(current_level)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {

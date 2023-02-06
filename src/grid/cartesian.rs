@@ -8,8 +8,10 @@ use super::Neighbour;
 use crate::communication::Rank;
 use crate::components::Position;
 use crate::parameters::SimulationBox;
+use crate::particle::ParticleId;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
+use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
 use crate::units::Length;
 use crate::units::VecLength;
@@ -120,33 +122,39 @@ impl IntegerPosition {
 
 struct GridConstructor {
     cells: HashMap<IntegerPosition, Cell>,
-    entities: HashMap<IntegerPosition, Entity>,
+    ids: HashMap<IntegerPosition, ParticleId>,
     box_size: SimulationBox,
     cell_size: Length,
     num_cells: IntegerPosition,
     rank_function: Box<dyn Fn(VecLength) -> Rank>,
+    rank: Rank,
 }
 
 impl GridConstructor {
     fn construct(
-        mut commands: Commands,
+        commands: Commands,
         box_size: SimulationBox,
         cell_size: Length,
         rank_function: Box<dyn Fn(VecLength) -> Rank>,
+        rank: Rank,
     ) {
         let num_cells =
             IntegerPosition::from_position_and_side_length(box_size.side_lengths(), cell_size);
         let mut constructor = Self {
             cells: HashMap::default(),
-            entities: HashMap::default(),
+            ids: HashMap::default(),
             box_size,
             cell_size,
             num_cells,
             rank_function,
+            rank,
         };
-        for integer_pos in constructor.get_all_integer_positions() {
-            let entity = commands.spawn(LocalParticle).id();
-            constructor.entities.insert(integer_pos, entity);
+        for (i, integer_pos) in constructor
+            .get_all_integer_positions()
+            .into_iter()
+            .enumerate()
+        {
+            constructor.ids.insert(integer_pos, ParticleId(i));
         }
         constructor.construct_neighbours();
         constructor.spawn_local_cells(commands);
@@ -155,7 +163,6 @@ impl GridConstructor {
     fn construct_neighbours(&mut self) {
         for integer_pos in self.get_all_integer_positions() {
             let pos = self.to_pos(integer_pos);
-            let entity = self.entities[&integer_pos];
             let neighbours = integer_pos
                 .iter_neighbours()
                 .map(|neighbour| {
@@ -165,7 +172,7 @@ impl GridConstructor {
                         normal: (neighbour_pos - pos).normalize(),
                     };
                     if neighbour.contained(&self.num_cells) {
-                        (face, Neighbour::Local(self.entities[&neighbour]))
+                        (face, Neighbour::Local(self.ids[&neighbour]))
                     } else {
                         (face, Neighbour::Boundary)
                     }
@@ -190,9 +197,11 @@ impl GridConstructor {
     fn spawn_local_cells(&mut self, mut commands: Commands) {
         let drained_cells: Vec<_> = self.cells.drain().collect();
         for (integer_pos, cell) in drained_cells {
-            let entity = self.entities[&integer_pos];
+            let particle_id = self.ids[&integer_pos];
             let pos = self.to_pos(integer_pos);
-            commands.entity(entity).insert((Position(pos), cell));
+            // if (self.rank_function)(pos) == self.rank {
+            commands.spawn((LocalParticle, Position(pos), cell, particle_id));
+            // }
         }
     }
 }
@@ -202,6 +211,7 @@ pub fn init_cartesian_grid_system(
     box_size: Res<SimulationBox>,
     cell_size: Length,
     world_size: Res<WorldSize>,
+    world_rank: Res<WorldRank>,
 ) {
     let cloned_box_size = box_size.clone();
     let cloned_world_size = world_size.clone();
@@ -214,6 +224,7 @@ pub fn init_cartesian_grid_system(
         box_size.clone(),
         cell_size,
         Box::new(rank_function),
+        **world_rank,
     );
 }
 

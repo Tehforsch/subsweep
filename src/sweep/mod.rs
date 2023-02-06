@@ -26,7 +26,6 @@ use self::task::FluxData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
 use crate::communication::DataByRank;
-use crate::communication::Identified;
 use crate::communication::Rank;
 use crate::components::Density;
 use crate::components::Position;
@@ -35,6 +34,7 @@ use crate::grid::FaceArea;
 use crate::grid::Neighbour;
 use crate::grid::RemoteNeighbour;
 use crate::parameters::TimestepParameters;
+use crate::particle::ParticleId;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::units::PhotonFlux;
@@ -70,7 +70,7 @@ struct Sweep {
     cells: Cells,
     sites: Sites,
     to_solve: PriorityQueue<Task>,
-    to_send: DataByRank<Queue<Identified<FluxData>>>,
+    to_send: DataByRank<Queue<FluxData>>,
     remaining_to_solve_count: CountByDir,
     max_timestep: Time,
     current_level: TimestepLevel,
@@ -80,9 +80,9 @@ struct Sweep {
 impl Sweep {
     fn run(
         directions: &Directions,
-        cells: HashMap<Entity, Cell>,
-        sites: HashMap<Entity, Site>,
-        levels: HashMap<Entity, TimestepLevel>,
+        cells: HashMap<ParticleId, Cell>,
+        sites: HashMap<ParticleId, Site>,
+        levels: HashMap<ParticleId, TimestepLevel>,
         max_timestep: Time,
         parameters: &SweepParameters,
         world_size: usize,
@@ -148,11 +148,11 @@ impl Sweep {
                                 || neighbour.is_boundary()
                                 || !self
                                     .cells
-                                    .is_active(neighbour.unwrap_entity(), self.current_level)
+                                    .is_active(neighbour.unwrap_id(), self.current_level)
                         })
                     })
-                    .map(move |(entity, _)| Task {
-                        entity: *entity,
+                    .map(move |(id, _)| Task {
+                        id: *id,
                         dir: dir_index,
                     })
             })
@@ -178,8 +178,8 @@ impl Sweep {
     fn send_all_messages(&self) {}
 
     fn get_outgoing_flux(&mut self, task: &Task) -> PhotonFlux {
-        let cell = &self.cells.get(task.entity);
-        let site = self.sites.get_mut(task.entity);
+        let cell = &self.cells.get(task.id);
+        let site = self.sites.get_mut(task.id);
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
         let source = site.source_per_direction_bin(&self.directions);
@@ -195,10 +195,10 @@ impl Sweep {
 
     fn solve_task(&mut self, task: Task) {
         let outgoing_flux = self.get_outgoing_flux(&task);
-        let site = self.sites.get_mut(task.entity);
+        let site = self.sites.get_mut(task.id);
         let outgoing_flux_correction = outgoing_flux - site.outgoing_total_flux[task.dir.0];
         site.outgoing_total_flux[task.dir.0] = outgoing_flux;
-        let cell = &self.cells.get(task.entity);
+        let cell = &self.cells.get(task.id);
         self.remaining_to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
         let neighbours = cell.neighbours.clone();
@@ -212,11 +212,9 @@ impl Sweep {
                 let flux_correction_this_cell =
                     outgoing_flux_correction * (effective_area / total_effective_area);
                 match neighbour {
-                    Neighbour::Local(neighbour_entity) => self.handle_local_neighbour(
-                        flux_correction_this_cell,
-                        &task,
-                        *neighbour_entity,
-                    ),
+                    Neighbour::Local(neighbour_id) => {
+                        self.handle_local_neighbour(flux_correction_this_cell, &task, *neighbour_id)
+                    }
                     Neighbour::Remote(remote) => {
                         self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
                     }
@@ -230,7 +228,7 @@ impl Sweep {
         &mut self,
         incoming_flux_correction: PhotonFlux,
         task: &Task,
-        neighbour: Entity,
+        neighbour: ParticleId,
     ) {
         let (site, is_active) = self
             .sites
@@ -241,7 +239,7 @@ impl Sweep {
             if num_remaining == 0 {
                 self.to_solve.push(Task {
                     dir: task.dir,
-                    entity: neighbour,
+                    id: neighbour,
                 })
             }
         }
@@ -253,10 +251,11 @@ impl Sweep {
         flux_correction: PhotonFlux,
         remote: &RemoteNeighbour,
     ) {
-        let flux_data = remote.remote_entity.clone().map(|_| FluxData {
+        let flux_data = FluxData {
             dir: task.dir,
             flux: flux_correction,
-        });
+            id: remote.remote_entity,
+        };
         self.to_send[remote.rank].push_back(flux_data);
     }
 
@@ -274,7 +273,7 @@ impl Sweep {
                         && face.points_upwind(dir)
                         && self
                             .cells
-                            .is_active(neighbour.unwrap_entity(), self.current_level)
+                            .is_active(neighbour.unwrap_id(), self.current_level)
                     {
                         site.num_missing_upwind[dir_index] += 1;
                     }
@@ -305,7 +304,7 @@ impl Sweep {
 pub fn sweep_system(
     directions: Res<Directions>,
     mut particles: Query<(
-        Entity,
+        &ParticleId,
         &Cell,
         &Density,
         &mut IonizedHydrogenFraction,
@@ -318,16 +317,16 @@ pub fn sweep_system(
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
 ) {
-    let cells = particles
+    let cells: HashMap<_, _> = particles
         .iter()
-        .map(|(entity, cell, _, _, _, _, _)| (entity, cell.clone()))
+        .map(|(id, cell, _, _, _, _, _)| (*id, cell.clone()))
         .collect();
-    let sites = particles
+    let sites: HashMap<_, _> = particles
         .iter()
         .map(
-            |(entity, _, density, ionized_hydrogen_fraction, source, _, _)| {
+            |(id, _, density, ionized_hydrogen_fraction, source, _, _)| {
                 (
-                    entity,
+                    *id,
                     Site::new(
                         &directions,
                         **density,
@@ -338,10 +337,12 @@ pub fn sweep_system(
             },
         )
         .collect();
-    let levels = particles
+    let levels: HashMap<_, _> = particles
         .iter()
-        .map(|(entity, _, _, _, _, _, level)| (entity, *level))
+        .map(|(id, _, _, _, _, _, level)| (*id, *level))
         .collect();
+    #[cfg(test)]
+    assert!(cells.len() > 0 && sites.len() > 0 && levels.len() > 0);
     let sites = Sweep::run(
         &directions,
         cells,
@@ -352,8 +353,8 @@ pub fn sweep_system(
         **world_size,
         **world_rank,
     );
-    for (entity, _, _, mut fraction, _, _, mut level) in particles.iter_mut() {
-        let site = sites.get(entity);
+    for (id, _, _, mut fraction, _, _, mut level) in particles.iter_mut() {
+        let site = sites.get(*id);
         let new_fraction = site.ionized_hydrogen_fraction;
         let change_timescale =
             (**fraction / ((**fraction - new_fraction) / timestep.max_timestep)).abs();

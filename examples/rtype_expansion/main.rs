@@ -44,8 +44,17 @@ fn main() {
         .add_parameter_type_and_get_result::<Parameters>()
         .clone();
     sim.add_startup_system(
-        move |commands: Commands, box_size: Res<SimulationBox>, world_size: Res<WorldSize>| {
-            init_cartesian_grid_system(commands, box_size, parameters.cell_size, world_size)
+        move |commands: Commands,
+              box_size: Res<SimulationBox>,
+              world_size: Res<WorldSize>,
+              world_rank: Res<WorldRank>| {
+            init_cartesian_grid_system(
+                commands,
+                box_size,
+                parameters.cell_size,
+                world_size,
+                world_rank,
+            )
         },
     )
     .add_startup_system_to_stage(

@@ -1,17 +1,18 @@
-use bevy::prelude::Entity;
 use mpi::traits::Equivalence;
 
 use super::direction::DirectionIndex;
+use crate::particle::ParticleId;
 use crate::units::PhotonFlux;
 
 #[derive(Debug)]
 pub struct Task {
-    pub entity: Entity,
+    pub id: ParticleId,
     pub dir: DirectionIndex,
 }
 
 #[derive(Debug, Equivalence)]
 pub struct FluxData {
+    pub id: ParticleId,
     pub dir: DirectionIndex,
     pub flux: PhotonFlux,
 }
@@ -32,6 +33,6 @@ impl Ord for Task {
 
 impl PartialEq for Task {
     fn eq(&self, other: &Self) -> bool {
-        self.entity == other.entity && self.dir == other.dir
+        self.id == other.id && self.dir == other.dir
     }
 }

@@ -1,8 +1,7 @@
 use bevy::prelude::Component;
-use bevy::prelude::Entity;
 
-use crate::communication::Identified;
 use crate::communication::Rank;
+use crate::particle::ParticleId;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
@@ -15,7 +14,7 @@ pub type FaceArea = crate::units::Area;
 
 #[derive(Clone, Debug)]
 pub enum Neighbour {
-    Local(Entity),
+    Local(ParticleId),
     Remote(RemoteNeighbour),
     Boundary,
 }
@@ -29,9 +28,9 @@ impl Neighbour {
         }
     }
 
-    pub fn unwrap_entity(&self) -> Entity {
+    pub fn unwrap_id(&self) -> ParticleId {
         match self {
-            Self::Local(entity) => *entity,
+            Self::Local(particle_id) => *particle_id,
             Self::Remote(neighbour) => neighbour.local_entity,
             _ => panic!("Unwrap entity called on boundary neighbour"),
         }
@@ -40,8 +39,8 @@ impl Neighbour {
 
 #[derive(Clone, Debug)]
 pub struct RemoteNeighbour {
-    pub local_entity: Entity,
-    pub remote_entity: Identified<()>,
+    pub local_entity: ParticleId,
+    pub remote_entity: ParticleId,
     pub rank: Rank,
 }
 

@@ -16,6 +16,7 @@ use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 use crate::stages::SimulationStagesPlugin;
 use crate::sweep::parameters::DirectionsSpecification;
+use crate::sweep::timestep_level::TimestepLevel;
 use crate::sweep::SweepPlugin;
 use crate::units::Density;
 use crate::units::Dimensionless;
@@ -45,8 +46,11 @@ fn run_sweep(dirs: Vec<VecDimensionless>) {
             max_timestep: Time::seconds(1e-3),
         })
         .add_startup_system(
-            move |commands: Commands, box_size: Res<SimulationBox>, world_size: Res<WorldSize>| {
-                init_cartesian_grid_system(commands, box_size, cell_size, world_size)
+            move |commands: Commands,
+                  box_size: Res<SimulationBox>,
+                  world_size: Res<WorldSize>,
+                  world_rank: Res<WorldRank>| {
+                init_cartesian_grid_system(commands, box_size, cell_size, world_size, world_rank)
             },
         )
         .add_startup_system_to_stage(
@@ -60,11 +64,13 @@ fn run_sweep(dirs: Vec<VecDimensionless>) {
 fn initialize_sweep_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
+    sweep_parameters: Res<SweepParameters>,
 ) {
     for (entity, _) in particles.iter() {
         commands.entity(entity).insert((
             components::Density(Density::zero()),
             components::IonizedHydrogenFraction(Dimensionless::zero()),
+            TimestepLevel(sweep_parameters.num_timestep_levels - 1),
         ));
     }
 }

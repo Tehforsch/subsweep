@@ -6,6 +6,7 @@ use bevy::prelude::Component;
 use bevy::prelude::Query;
 use bevy::prelude::StartupStage;
 use bevy::prelude::With;
+use mpi::traits::Equivalence;
 
 use crate::components::Mass;
 use crate::components::Position;
@@ -13,6 +14,9 @@ use crate::components::Velocity;
 use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
+
+#[derive(Component, Clone, Debug, PartialEq, Eq, Hash, Equivalence, Copy)]
+pub struct ParticleId(pub usize);
 
 #[derive(Component)]
 pub struct LocalParticle;
