@@ -32,6 +32,8 @@ type PointList = IndexedArena<PointIndex, Point>;
 
 pub struct FlipCheckData {
     tetra: TetraIndex,
+    face: TetraFace,
+    point: PointIndex,
 }
 
 #[derive(Resource)]
@@ -207,10 +209,7 @@ impl DelaunayTriangulation {
                 face: f2,
                 opposing: None,
             },
-            TetraFace {
-                face: old_face.face,
-                opposing: old_face.opposing,
-            },
+            old_face,
         ))
     }
 
@@ -240,8 +239,8 @@ impl DelaunayTriangulation {
         self.set_opposing_in_existing_tetra(old_tetra.f1, t1, point, old_tetra_index);
         self.set_opposing_in_existing_tetra(old_tetra.f2, t2, point, old_tetra_index);
         self.set_opposing_in_existing_tetra(old_tetra.f3, t3, point, old_tetra_index);
-        for (tetra, _face) in [(t1, old_tetra.f1), (t2, old_tetra.f2), (t3, old_tetra.f3)] {
-            self.to_check.push(FlipCheckData { tetra });
+        for (tetra, face) in [(t1, old_tetra.f1), (t2, old_tetra.f2), (t3, old_tetra.f3)] {
+            self.to_check.push(FlipCheckData { tetra, face, point });
         }
     }
 
@@ -257,8 +256,27 @@ impl DelaunayTriangulation {
         other_point_contained
     }
 
-    fn flip(&mut self, _check: FlipCheckData) {
-        // todo!()
+    fn flip(&mut self, check: FlipCheckData) {
+        // let old_tetra = self.tetras.remove(check.tetra).unwrap();
+        // let old_face = self.faces.remove(check.face.face).unwrap();
+        // // I am not sure whether unwrapping here is correct -
+        // // can a boundary face require a flip? what does that even mean?
+        // let opposing = check.face.opposing.unwrap();
+        // let opposing_old_tetra = self.tetras.remove(opposing.tetra);
+        // let opposing_point = opposing.point;
+        // let new_face = self.faces.insert(Face {
+        //     p1: check.point,
+        //     p2: opposing_point,
+        // });
+        // let t1 = Tetra {
+        //     p1: old_face.p1,
+        //     p2: check.point,
+        //     p3: opposing_point,
+        //     // Leave uninitialized for now
+        //     f1: TetraFace { face: new_face, opposing: None},
+        //     f2: opposing_old_tetra.find_face_oppsite(old_face.p2),
+        //     f3: old_tetra.find_face_opposite(old_face.p2),
+        // };
     }
 
     fn flip_check(&mut self, to_check: FlipCheckData) {
@@ -315,28 +333,11 @@ mod tests {
     use super::PointList;
     use super::TetraList;
 
-    #[test]
-    fn insertion_creates_sane_triangulation() {
+    fn perform_check_on_each_level_of_construction(check: fn(&DelaunayTriangulation, usize) -> ()) {
         let mut triangulation = get_basic_triangle();
-        for i in 0..10 {
-            triangulation.insert(Point::new(0.5, 0.5 / 2f64.powf(i as f64)));
-            assert_eq!(triangulation.points.len(), 4 + i);
-            assert_eq!(triangulation.tetras.len(), 3 + 2 * i);
-            assert_eq!(triangulation.faces.len(), 6 + 3 * i);
-            check_opposing_faces_are_symmetric(&triangulation);
-            check_opposing_faces_contain_valid_indices(&triangulation);
-            check_faces_share_points_with_tetra(&triangulation);
-            if i == 0 {
-                // After the first insertion, we know that each tetra
-                // should contain two faces which have an opposing
-                // face (the `inner` ones).
-                for (_, tetra) in triangulation.tetras.iter() {
-                    assert_eq!(
-                        tetra.iter_faces().filter_map(|face| face.opposing).count(),
-                        2
-                    );
-                }
-            }
+        for num_points_inserted in 1..10 {
+            triangulation.insert(Point::new(0.5, 0.5 / 2f64.powf(num_points_inserted as f64)));
+            check(&triangulation, num_points_inserted);
         }
     }
 
@@ -376,41 +377,76 @@ mod tests {
         }
     }
 
-    fn check_opposing_faces_are_symmetric(triangulation: &DelaunayTriangulation) {
-        for (i, t) in triangulation.tetras.iter() {
-            for (face, opposing) in t
-                .iter_faces()
-                .filter_map(|face| face.opposing.map(|opp| (face, opp)))
-            {
-                let opposing_tetra = &triangulation.tetras[opposing.tetra];
-                assert!(opposing_tetra
+    #[test]
+    fn correct_number_of_objects() {
+        perform_check_on_each_level_of_construction(|triangulation, num_points_inserted| {
+            assert_eq!(triangulation.points.len(), 3 + num_points_inserted);
+            assert_eq!(triangulation.tetras.len(), 1 + 2 * num_points_inserted);
+            assert_eq!(triangulation.faces.len(), 3 + 3 * num_points_inserted);
+        });
+    }
+
+    #[test]
+    fn first_insertion_creates_correct_number_of_opposing_faces() {
+        perform_check_on_each_level_of_construction(|triangulation, num_points_inserted| {
+            if num_points_inserted == 1 {
+                // After the first insertion, we know that each tetra
+                // should contain two faces which have an opposing
+                // face (the `inner` ones).
+                for (_, tetra) in triangulation.tetras.iter() {
+                    assert_eq!(
+                        tetra.iter_faces().filter_map(|face| face.opposing).count(),
+                        2
+                    );
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn opposing_faces_are_symmetric() {
+        perform_check_on_each_level_of_construction(|triangulation, _| {
+            for (i, t) in triangulation.tetras.iter() {
+                for (face, opposing) in t
                     .iter_faces()
                     .filter_map(|face| face.opposing.map(|opp| (face, opp)))
-                    .any(|(opposing_face, opposing_opposing)| {
-                        opposing_opposing.tetra == i && face.face == opposing_face.face
-                    }));
-            }
-        }
-    }
-
-    fn check_opposing_faces_contain_valid_indices(triangulation: &DelaunayTriangulation) {
-        for (_, tetra) in triangulation.tetras.iter() {
-            for face in tetra.iter_faces() {
-                if let Some(opp) = face.opposing {
-                    assert!(triangulation.tetras.contains(opp.tetra));
+                {
+                    let opposing_tetra = &triangulation.tetras[opposing.tetra];
+                    assert!(opposing_tetra
+                        .iter_faces()
+                        .filter_map(|face| face.opposing.map(|opp| (face, opp)))
+                        .any(|(opposing_face, opposing_opposing)| {
+                            opposing_opposing.tetra == i && face.face == opposing_face.face
+                        }));
                 }
             }
-        }
+        });
     }
 
-    fn check_faces_share_points_with_tetra(triangulation: &DelaunayTriangulation) {
-        for (_, tetra) in triangulation.tetras.iter() {
-            for face in tetra.iter_faces() {
-                let face = &triangulation.faces[face.face];
-                for p in [face.p1, face.p2] {
-                    assert!(tetra.p1 == p || tetra.p2 == p || tetra.p3 == p);
+    #[test]
+    fn opposing_faces_contain_valid_indices() {
+        perform_check_on_each_level_of_construction(|triangulation, _| {
+            for (_, tetra) in triangulation.tetras.iter() {
+                for face in tetra.iter_faces() {
+                    if let Some(opp) = face.opposing {
+                        assert!(triangulation.tetras.contains(opp.tetra));
+                    }
                 }
             }
-        }
+        });
+    }
+
+    #[test]
+    fn faces_share_points_with_tetra() {
+        perform_check_on_each_level_of_construction(|triangulation, _| {
+            for (_, tetra) in triangulation.tetras.iter() {
+                for face in tetra.iter_faces() {
+                    let face = &triangulation.faces[face.face];
+                    for p in [face.p1, face.p2] {
+                        assert!(tetra.p1 == p || tetra.p2 == p || tetra.p3 == p);
+                    }
+                }
+            }
+        });
     }
 }
