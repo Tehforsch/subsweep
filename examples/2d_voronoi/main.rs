@@ -125,12 +125,7 @@ fn highlight_triangle_system(
     }
     if let Some(index) = index {
         let tetra = &triangulation.tetras[index];
-        let neighbours = [tetra.f1, tetra.f2, tetra.f3];
-        for face in neighbours.iter() {
-            let face = &triangulation.faces[*face];
-            if let Some(ref opp) = face.opposing {
-                assert!(triangulation.tetras.contains(opp.tetra));
-            }
+        for face in tetra.iter_faces() {
             for (triangle, mut color, mut transform) in particles.iter_mut() {
                 if Some(triangle.index) == face.opposing.as_ref().map(|opposing| opposing.tetra) {
                     *color = colors.green.clone();

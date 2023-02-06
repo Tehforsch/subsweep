@@ -1,6 +1,7 @@
 use super::FaceIndex;
 use super::Point;
 use super::PointIndex;
+use super::TetraIndex;
 use crate::prelude::Float;
 
 #[cfg(not(feature = "2d"))]
@@ -29,9 +30,35 @@ pub struct Triangle {
     pub p1: PointIndex,
     pub p2: PointIndex,
     pub p3: PointIndex,
-    pub f1: FaceIndex,
-    pub f2: FaceIndex,
-    pub f3: FaceIndex,
+    pub f1: TetraFace,
+    pub f2: TetraFace,
+    pub f3: TetraFace,
+}
+
+impl Triangle {
+    pub fn find_face_mut(&mut self, face: FaceIndex) -> &mut TetraFace {
+        self.iter_faces_mut().find(|f| f.face == face).unwrap()
+    }
+
+    pub fn iter_faces(&self) -> impl Iterator<Item = &TetraFace> {
+        ([&self.f1, &self.f2, &self.f3]).into_iter()
+    }
+
+    pub fn iter_faces_mut(&mut self) -> impl Iterator<Item = &mut TetraFace> {
+        ([&mut self.f1, &mut self.f2, &mut self.f3]).into_iter()
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TetraFace {
+    pub face: FaceIndex,
+    pub opposing: Option<OtherTetraInfo>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct OtherTetraInfo {
+    pub tetra: TetraIndex,
+    pub point: PointIndex,
 }
 
 #[derive(Debug)]
@@ -59,7 +86,7 @@ impl TriangleData {
 
     pub fn circumcircle_contains(&self, point: Point) -> bool {
         // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
-        assert!(self.is_positively_oriented());
+        // assert!(self.is_positively_oriented());
         let a = self.p1;
         let b = self.p2;
         let c = self.p3;

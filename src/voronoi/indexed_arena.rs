@@ -34,6 +34,10 @@ impl<Id: Into<Index> + From<Index>, T> IndexedArena<Id, T> {
     pub fn contains(&self, id: Id) -> bool {
         self.arena.contains(id.into())
     }
+
+    pub fn len(&self) -> usize {
+        self.arena.len()
+    }
 }
 
 impl<Id: Into<Index> + From<Index>, T> IntoIterator for IndexedArena<Id, T> {
