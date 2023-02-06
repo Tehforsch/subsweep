@@ -43,9 +43,11 @@ fn main() {
     let parameters = sim
         .add_parameter_type_and_get_result::<Parameters>()
         .clone();
-    sim.add_startup_system(move |commands: Commands, box_size: Res<SimulationBox>| {
-        init_cartesian_grid_system(commands, box_size, parameters.cell_size)
-    })
+    sim.add_startup_system(
+        move |commands: Commands, box_size: Res<SimulationBox>, world_size: Res<WorldSize>| {
+            init_cartesian_grid_system(commands, box_size, parameters.cell_size, world_size)
+        },
+    )
     .add_startup_system_to_stage(
         SimulationStartupStages::InsertDerivedComponents,
         initialize_sweep_components_system,

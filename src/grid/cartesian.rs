@@ -5,14 +5,16 @@ use super::cell::Face;
 use super::cell::FaceArea;
 use super::Cell;
 use super::Neighbour;
+use crate::communication::Rank;
 use crate::components::Position;
 use crate::parameters::SimulationBox;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
+use crate::prelude::WorldSize;
 use crate::units::Length;
 use crate::units::VecLength;
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub struct IntegerPosition {
     x: i32,
     y: i32,
@@ -116,44 +118,103 @@ impl IntegerPosition {
     }
 }
 
+struct GridConstructor {
+    cells: HashMap<IntegerPosition, Cell>,
+    entities: HashMap<IntegerPosition, Entity>,
+    box_size: SimulationBox,
+    cell_size: Length,
+    num_cells: IntegerPosition,
+    rank_function: Box<dyn Fn(VecLength) -> Rank>,
+}
+
+impl GridConstructor {
+    fn construct(
+        mut commands: Commands,
+        box_size: SimulationBox,
+        cell_size: Length,
+        rank_function: Box<dyn Fn(VecLength) -> Rank>,
+    ) {
+        let num_cells =
+            IntegerPosition::from_position_and_side_length(box_size.side_lengths(), cell_size);
+        let mut constructor = Self {
+            cells: HashMap::default(),
+            entities: HashMap::default(),
+            box_size,
+            cell_size,
+            num_cells,
+            rank_function,
+        };
+        for integer_pos in constructor.get_all_integer_positions() {
+            let entity = commands.spawn(LocalParticle).id();
+            constructor.entities.insert(integer_pos, entity);
+        }
+        constructor.construct_neighbours();
+        constructor.spawn_local_cells(commands);
+    }
+
+    fn construct_neighbours(&mut self) {
+        for integer_pos in self.get_all_integer_positions() {
+            let pos = self.to_pos(integer_pos);
+            let entity = self.entities[&integer_pos];
+            let neighbours = integer_pos
+                .iter_neighbours()
+                .map(|neighbour| {
+                    let neighbour_pos = self.to_pos(neighbour);
+                    let face = Face {
+                        area: get_area(self.cell_size),
+                        normal: (neighbour_pos - pos).normalize(),
+                    };
+                    if neighbour.contained(&self.num_cells) {
+                        (face, Neighbour::Local(self.entities[&neighbour]))
+                    } else {
+                        (face, Neighbour::Boundary)
+                    }
+                })
+                .collect();
+            let cell = Cell {
+                neighbours,
+                size: self.cell_size,
+            };
+            self.cells.insert(integer_pos, cell);
+        }
+    }
+
+    fn get_all_integer_positions(&self) -> Vec<IntegerPosition> {
+        self.num_cells.iter_all_contained().collect()
+    }
+
+    fn to_pos(&self, integer_pos: IntegerPosition) -> VecLength {
+        integer_pos.to_pos(self.box_size.side_lengths(), &self.num_cells)
+    }
+
+    fn spawn_local_cells(&mut self, mut commands: Commands) {
+        let drained_cells: Vec<_> = self.cells.drain().collect();
+        for (integer_pos, cell) in drained_cells {
+            let entity = self.entities[&integer_pos];
+            let pos = self.to_pos(integer_pos);
+            commands.entity(entity).insert((Position(pos), cell));
+        }
+    }
+}
+
 pub fn init_cartesian_grid_system(
-    mut commands: Commands,
+    commands: Commands,
     box_size: Res<SimulationBox>,
     cell_size: Length,
+    world_size: Res<WorldSize>,
 ) {
-    let mut map = HashMap::new();
-    let num_cells =
-        IntegerPosition::from_position_and_side_length(box_size.side_lengths(), cell_size);
-    let to_pos =
-        |integer_pos: &IntegerPosition| integer_pos.to_pos(box_size.side_lengths(), &num_cells);
-    for integer_pos in num_cells.iter_all_contained() {
-        let pos = to_pos(&integer_pos);
-        let entity = commands.spawn((LocalParticle, Position(pos))).id();
-        map.insert(integer_pos, entity);
-    }
-    for integer_pos in num_cells.iter_all_contained() {
-        let pos = to_pos(&integer_pos);
-        let entity = map[&integer_pos];
-        let neighbours = integer_pos
-            .iter_neighbours()
-            .map(|neighbour| {
-                let neighbour_pos = to_pos(&neighbour);
-                let face = Face {
-                    area: get_area(cell_size),
-                    normal: (neighbour_pos - pos).normalize(),
-                };
-                if neighbour.contained(&num_cells) {
-                    (face, Neighbour::Local(map[&neighbour]))
-                } else {
-                    (face, Neighbour::Boundary)
-                }
-            })
-            .collect();
-        commands.entity(entity).insert(Cell {
-            neighbours,
-            size: cell_size,
-        });
-    }
+    let cloned_box_size = box_size.clone();
+    let cloned_world_size = world_size.clone();
+    let rank_function = move |pos: VecLength| {
+        ((pos.x() / cloned_box_size.side_lengths().x()) * cloned_world_size.0 as f64).round()
+            as Rank
+    };
+    GridConstructor::construct(
+        commands,
+        box_size.clone(),
+        cell_size,
+        Box::new(rank_function),
+    );
 }
 
 fn get_area(cell_size: Length) -> FaceArea {

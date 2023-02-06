@@ -30,7 +30,9 @@ fn run_sweep(dirs: Vec<VecDimensionless>) {
     let cell_size = Length::meters(0.1);
     let simulation_box = SimulationBox::cube_from_side_length(cell_size * num_cells as f64);
     let mut sim = Simulation::test();
-    sim.add_parameter_file_contents("".into())
+    sim.insert_resource(WorldSize(1))
+        .insert_resource(WorldRank(0))
+        .add_parameter_file_contents("".into())
         .add_plugin(SimulationStagesPlugin)
         .add_parameters_explicitly(simulation_box)
         .add_parameters_explicitly(SweepParameters {
@@ -42,9 +44,11 @@ fn run_sweep(dirs: Vec<VecDimensionless>) {
         .add_parameters_explicitly(TimestepParameters {
             max_timestep: Time::seconds(1e-3),
         })
-        .add_startup_system(move |commands: Commands, box_size: Res<SimulationBox>| {
-            init_cartesian_grid_system(commands, box_size, cell_size)
-        })
+        .add_startup_system(
+            move |commands: Commands, box_size: Res<SimulationBox>, world_size: Res<WorldSize>| {
+                init_cartesian_grid_system(commands, box_size, cell_size, world_size)
+            },
+        )
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
             initialize_sweep_components_system,
@@ -63,8 +67,6 @@ fn initialize_sweep_components_system(
             components::IonizedHydrogenFraction(Dimensionless::zero()),
         ));
     }
-    commands.insert_resource(WorldRank(0));
-    commands.insert_resource(WorldSize(1));
 }
 
 #[test]
