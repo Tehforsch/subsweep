@@ -11,6 +11,8 @@ use crate::parameters::SweepParameters;
 use crate::parameters::TimestepParameters;
 use crate::prelude::Particles;
 use crate::prelude::SimulationStartupStages;
+use crate::prelude::WorldRank;
+use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 use crate::stages::SimulationStagesPlugin;
 use crate::sweep::parameters::DirectionsSpecification;
@@ -61,6 +63,8 @@ fn initialize_sweep_components_system(
             components::IonizedHydrogenFraction(Dimensionless::zero()),
         ));
     }
+    commands.insert_resource(WorldRank(0));
+    commands.insert_resource(WorldSize(1));
 }
 
 #[test]

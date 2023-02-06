@@ -22,8 +22,12 @@ use self::components::Source;
 use self::count_by_dir::CountByDir;
 use self::direction::Directions;
 use self::site::Site;
+use self::task::FluxData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
+use crate::communication::DataByRank;
+use crate::communication::Identified;
+use crate::communication::Rank;
 use crate::components::Density;
 use crate::components::Position;
 use crate::grid::Cell;
@@ -39,6 +43,7 @@ use crate::units::Time;
 use crate::units::PROTON_MASS;
 
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
+type Queue<T> = std::collections::vec_deque::VecDeque<T>;
 
 type Cells = ActiveList<Cell>;
 type Sites = ActiveList<Site>;
@@ -65,6 +70,7 @@ struct Sweep {
     cells: Cells,
     sites: Sites,
     to_solve: PriorityQueue<Task>,
+    to_send: DataByRank<Queue<Identified<FluxData>>>,
     remaining_to_solve_count: CountByDir,
     max_timestep: Time,
     current_level: TimestepLevel,
@@ -79,6 +85,8 @@ impl Sweep {
         levels: HashMap<Entity, TimestepLevel>,
         max_timestep: Time,
         parameters: &SweepParameters,
+        world_size: usize,
+        world_rank: Rank,
     ) -> Sites {
         assert!(cells.len() == sites.len());
         for level in levels.values() {
@@ -88,6 +96,7 @@ impl Sweep {
             cells: Cells::new(cells, &levels),
             sites: Sites::new(sites, &levels),
             to_solve: PriorityQueue::new(),
+            to_send: DataByRank::from_size_and_rank(world_size, world_rank),
             directions: directions.clone(),
             remaining_to_solve_count: CountByDir::empty(),
             max_timestep,
@@ -208,7 +217,9 @@ impl Sweep {
                         &task,
                         *neighbour_entity,
                     ),
-                    Neighbour::Remote(remote) => self.handle_remote_neighbour(remote),
+                    Neighbour::Remote(remote) => {
+                        self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
+                    }
                     Neighbour::Boundary => {}
                 }
             }
@@ -236,8 +247,17 @@ impl Sweep {
         }
     }
 
-    fn handle_remote_neighbour(&mut self, _remote: &RemoteNeighbour) {
-        todo!()
+    fn handle_remote_neighbour(
+        &mut self,
+        task: &Task,
+        flux_correction: PhotonFlux,
+        remote: &RemoteNeighbour,
+    ) {
+        let flux_data = remote.remote_entity.clone().map(|_| FluxData {
+            dir: task.dir,
+            flux: flux_correction,
+        });
+        self.to_send[remote.rank].push_back(flux_data);
     }
 
     pub fn init_counts(&mut self) {
@@ -295,6 +315,8 @@ pub fn sweep_system(
     )>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
+    world_rank: Res<WorldRank>,
+    world_size: Res<WorldSize>,
 ) {
     let cells = particles
         .iter()
@@ -327,6 +349,8 @@ pub fn sweep_system(
         levels,
         timestep.max_timestep,
         &sweep_parameters,
+        **world_size,
+        **world_rank,
     );
     for (entity, _, _, mut fraction, _, _, mut level) in particles.iter_mut() {
         let site = sites.get(entity);

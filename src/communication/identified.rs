@@ -17,6 +17,13 @@ impl<T> Identified<T> {
     pub fn entity(&self) -> Entity {
         Entity::from_bits(self.key)
     }
+
+    pub fn map<S>(self, f: impl Fn(T) -> S) -> Identified<S> {
+        Identified::<S> {
+            key: self.key,
+            data: f(self.data),
+        }
+    }
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for Identified<T> {

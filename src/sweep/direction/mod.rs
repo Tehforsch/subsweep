@@ -4,6 +4,7 @@ mod healpix;
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use bevy::prelude::Resource;
+use mpi::traits::Equivalence;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -12,7 +13,9 @@ use crate::units::Dimensionless;
 use crate::units::MVec;
 use crate::units::VecDimensionless;
 
-#[derive(Deref, DerefMut, PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Hash)]
+#[derive(
+    Deref, DerefMut, PartialOrd, Ord, PartialEq, Eq, Clone, Copy, Debug, Hash, Equivalence,
+)]
 pub struct DirectionIndex(pub usize);
 
 #[derive(Deref, DerefMut, Deserialize, Serialize, Clone, Debug)]

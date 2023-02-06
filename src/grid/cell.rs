@@ -2,6 +2,7 @@ use bevy::prelude::Component;
 use bevy::prelude::Entity;
 
 use crate::communication::Identified;
+use crate::communication::Rank;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
@@ -40,7 +41,8 @@ impl Neighbour {
 #[derive(Clone, Debug)]
 pub struct RemoteNeighbour {
     pub local_entity: Entity,
-    pub remote_entity: Identified<Entity>,
+    pub remote_entity: Identified<()>,
+    pub rank: Rank,
 }
 
 #[derive(Component, Clone)]
