@@ -335,10 +335,20 @@ mod tests {
 
     fn perform_check_on_each_level_of_construction(check: fn(&DelaunayTriangulation, usize) -> ()) {
         let mut triangulation = get_basic_triangle();
-        for num_points_inserted in 1..10 {
-            triangulation.insert(Point::new(0.5, 0.5 / 2f64.powf(num_points_inserted as f64)));
+        let points = [
+            Point::new(0.5, 0.5),
+            Point::new(0.25, 0.5),
+            Point::new(0.5, 0.25),
+            Point::new(0.125, 0.5),
+            Point::new(0.5, 0.125),
+            Point::new(0.8, 0.1),
+            Point::new(0.1, 0.8),
+        ];
+        for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);
+            triangulation.insert(*point);
         }
+        check(&triangulation, points.len());
     }
 
     fn get_basic_triangle() -> DelaunayTriangulation {
