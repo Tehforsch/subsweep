@@ -33,14 +33,22 @@ struct VisTriangle {
     index: TetraIndex,
 }
 
+#[derive(Component, Debug)]
+struct VisCircle;
+
+#[derive(Debug)]
+struct RedrawEvent;
+
 fn main() {
     let mut app = App::new();
     app.add_startup_system(add_points_system)
         .add_startup_system(setup_camera_system)
-        .add_startup_system_to_stage(StartupStage::PostStartup, show_voronoi_system)
+        .add_system_to_stage(CoreStage::PreUpdate, show_voronoi_system)
         .add_system(highlight_triangle_system)
         .add_system(track_mouse_world_position_system)
+        .add_system(spawn_points_system)
         .add_plugins(DefaultPlugins)
+        .add_event::<RedrawEvent>()
         .run();
 }
 
@@ -59,12 +67,26 @@ fn add_points_system(mut commands: Commands) {
         }
     }
 }
+
 fn show_voronoi_system(
     mut commands: Commands,
     particles: Particles<&Position>,
+    triangles: Query<(Entity, &VisTriangle)>,
+    circles: Query<(Entity, &VisCircle)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut redraw_events: EventReader<RedrawEvent>,
+    triangulation: Option<Res<DelaunayTriangulation>>,
 ) {
+    if triangulation.is_some() && redraw_events.iter().count() == 0 {
+        return;
+    }
+    for (e, _) in triangles.iter() {
+        commands.entity(e).despawn();
+    }
+    for (e, _) in circles.iter() {
+        commands.entity(e).despawn();
+    }
     let colors = Colors {
         blue: materials.add(ColorMaterial::from(Color::BLUE)),
         red: materials.add(ColorMaterial::from(Color::RED)),
@@ -77,16 +99,19 @@ fn show_voronoi_system(
             .collect::<Vec<_>>(),
     );
     for p in particles.iter() {
-        commands.spawn(ColorMesh2dBundle {
-            mesh: meshes.add(shape::Circle::new(0.005).into()).into(),
-            material: colors.blue.clone(),
-            transform: Transform::from_translation(Vec3::new(
-                p.x().value_unchecked() as f32,
-                p.y().value_unchecked() as f32,
-                LOW_LAYER,
-            )),
-            ..default()
-        });
+        commands.spawn((
+            VisCircle,
+            ColorMesh2dBundle {
+                mesh: meshes.add(shape::Circle::new(0.005).into()).into(),
+                material: colors.blue.clone(),
+                transform: Transform::from_translation(Vec3::new(
+                    p.x().value_unchecked() as f32,
+                    p.y().value_unchecked() as f32,
+                    LOW_LAYER,
+                )),
+                ..default()
+            },
+        ));
     }
     for (index, t) in triangulation.tetras.iter() {
         let triangle = DrawTriangle {
@@ -133,5 +158,23 @@ fn highlight_triangle_system(
                 };
             }
         }
+    }
+}
+
+fn spawn_points_system(
+    mut commands: Commands,
+    mouse_pos: Res<MousePosition>,
+    mouse_input: Res<Input<MouseButton>>,
+    mut redraw_events: EventWriter<RedrawEvent>,
+) {
+    for _ in mouse_input.get_just_pressed() {
+        commands.spawn((
+            LocalParticle,
+            Position(VecLength::meters(
+                mouse_pos.0.x as f64,
+                mouse_pos.0.y as f64,
+            )),
+        ));
+        redraw_events.send(RedrawEvent);
     }
 }
