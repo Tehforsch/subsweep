@@ -36,8 +36,36 @@ pub struct Triangle {
 }
 
 impl Triangle {
+    pub fn find_face(&self, face: FaceIndex) -> &TetraFace {
+        self.iter_faces().find(|f| f.face == face).unwrap()
+    }
+
     pub fn find_face_mut(&mut self, face: FaceIndex) -> &mut TetraFace {
         self.iter_faces_mut().find(|f| f.face == face).unwrap()
+    }
+
+    pub fn find_face_opposite(&self, p: PointIndex) -> &TetraFace {
+        if p == self.p1 {
+            &self.f1
+        } else if p == self.p2 {
+            &self.f2
+        } else if p == self.p3 {
+            &self.f3
+        } else {
+            panic!("find_face_opposite called with point that is not part of the tetra.");
+        }
+    }
+
+    pub fn find_point_opposite(&self, f: FaceIndex) -> PointIndex {
+        if f == self.f1.face {
+            self.p1
+        } else if f == self.f2.face {
+            self.p2
+        } else if f == self.f3.face {
+            self.p3
+        } else {
+            panic!("find_point_opposite called with face that is not part of the tetra.");
+        }
     }
 
     pub fn iter_faces(&self) -> impl Iterator<Item = &TetraFace> {

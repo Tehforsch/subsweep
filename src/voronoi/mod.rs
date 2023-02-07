@@ -32,8 +32,7 @@ type PointList = IndexedArena<PointIndex, Point>;
 
 pub struct FlipCheckData {
     tetra: TetraIndex,
-    face: TetraFace,
-    point: PointIndex,
+    face: FaceIndex,
 }
 
 #[derive(Resource)]
@@ -150,21 +149,27 @@ impl DelaunayTriangulation {
         self.tetras[new_tetra].find_face_mut(face).opposing = Some(OtherTetraInfo { tetra, point });
     }
 
-    fn create_positively_oriented_tetra(
-        &self,
+    fn insert_positively_oriented_tetra(
+        &mut self,
         p1: PointIndex,
         p2: PointIndex,
         p3: PointIndex,
         f1: TetraFace,
         f2: TetraFace,
         f3: TetraFace,
-    ) -> Tetra {
+    ) -> TetraIndex {
         let tetra_data = TetraData {
             p1: self.points[p1],
             p2: self.points[p2],
             p3: self.points[p3],
         };
-        if tetra_data.is_positively_oriented() {
+        debug_assert!(self.faces[f1.face].contains_point(p2));
+        debug_assert!(self.faces[f1.face].contains_point(p3));
+        debug_assert!(self.faces[f2.face].contains_point(p1));
+        debug_assert!(self.faces[f2.face].contains_point(p3));
+        debug_assert!(self.faces[f3.face].contains_point(p1));
+        debug_assert!(self.faces[f3.face].contains_point(p2));
+        let tetra = if tetra_data.is_positively_oriented() {
             Tetra {
                 p1,
                 p2,
@@ -182,7 +187,8 @@ impl DelaunayTriangulation {
                 f2: f1,
                 f3,
             }
-        }
+        };
+        self.tetras.insert(tetra)
     }
 
     fn make_tetra(
@@ -197,7 +203,7 @@ impl DelaunayTriangulation {
         // Leave opposing data of the newly created faces
         // uninitialized for now, since we do not know the indices of
         // the other tetras before we have inserted them.
-        self.tetras.insert(self.create_positively_oriented_tetra(
+        self.insert_positively_oriented_tetra(
             p_a,
             p_b,
             p,
@@ -210,7 +216,7 @@ impl DelaunayTriangulation {
                 opposing: None,
             },
             old_face,
-        ))
+        )
     }
 
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
@@ -232,15 +238,18 @@ impl DelaunayTriangulation {
         let t3 = self.make_tetra(point, old_tetra.p1, old_tetra.p2, f2, f1, old_tetra.f3);
         self.set_opposing_in_new_tetra(t1, f3, t2, old_tetra.p1);
         self.set_opposing_in_new_tetra(t1, f2, t3, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t2, f3, t1, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t2, f1, t3, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t3, f1, t2, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t3, f2, t1, old_tetra.p1);
+        self.set_opposing_in_new_tetra(t2, f3, t1, old_tetra.p2);
+        self.set_opposing_in_new_tetra(t2, f1, t3, old_tetra.p2);
+        self.set_opposing_in_new_tetra(t3, f1, t2, old_tetra.p3);
+        self.set_opposing_in_new_tetra(t3, f2, t1, old_tetra.p3);
         self.set_opposing_in_existing_tetra(old_tetra.f1, t1, point, old_tetra_index);
         self.set_opposing_in_existing_tetra(old_tetra.f2, t2, point, old_tetra_index);
         self.set_opposing_in_existing_tetra(old_tetra.f3, t3, point, old_tetra_index);
         for (tetra, face) in [(t1, old_tetra.f1), (t2, old_tetra.f2), (t3, old_tetra.f3)] {
-            self.to_check.push(FlipCheckData { tetra, face, point });
+            self.to_check.push(FlipCheckData {
+                tetra,
+                face: face.face,
+            });
         }
     }
 
@@ -250,33 +259,78 @@ impl DelaunayTriangulation {
         let other_point_contained = self
             .points
             .iter()
-            .find(|(point, _)| *point != tetra.p1 && *point != tetra.p2 && *point != tetra.p3)
-            .map(|(_, point)| tetra_data.circumcircle_contains(*point))
+            .filter(|(point, _)| *point != tetra.p1 && *point != tetra.p2 && *point != tetra.p3)
+            .find(|(_, point)| tetra_data.circumcircle_contains(**point))
             .is_some();
         other_point_contained
     }
 
     fn flip(&mut self, check: FlipCheckData) {
-        // let old_tetra = self.tetras.remove(check.tetra).unwrap();
-        // let old_face = self.faces.remove(check.face.face).unwrap();
-        // // I am not sure whether unwrapping here is correct -
-        // // can a boundary face require a flip? what does that even mean?
-        // let opposing = check.face.opposing.unwrap();
-        // let opposing_old_tetra = self.tetras.remove(opposing.tetra);
-        // let opposing_point = opposing.point;
-        // let new_face = self.faces.insert(Face {
-        //     p1: check.point,
-        //     p2: opposing_point,
-        // });
-        // let t1 = Tetra {
-        //     p1: old_face.p1,
-        //     p2: check.point,
-        //     p3: opposing_point,
-        //     // Leave uninitialized for now
-        //     f1: TetraFace { face: new_face, opposing: None},
-        //     f2: opposing_old_tetra.find_face_oppsite(old_face.p2),
-        //     f3: old_tetra.find_face_opposite(old_face.p2),
-        // };
+        let old_tetra = self.tetras.remove(check.tetra).unwrap();
+        let old_face = self.faces.remove(check.face).unwrap();
+        // I am not sure whether unwrapping here is correct -
+        // can a boundary face require a flip? what does that even mean?
+        let opposing = old_tetra.find_face(check.face).opposing.clone().unwrap();
+        let opposing_old_tetra = self.tetras.remove(opposing.tetra).unwrap();
+        let opposing_point = opposing.point;
+        let check_point = old_tetra.find_point_opposite(check.face);
+        let new_face = self.faces.insert(Face {
+            p1: check_point,
+            p2: opposing_point,
+        });
+
+        let f1_a = opposing_old_tetra.find_face_opposite(old_face.p2).clone();
+        let f1_b = old_tetra.find_face_opposite(old_face.p2).clone();
+        let f2_a = opposing_old_tetra.find_face_opposite(old_face.p1).clone();
+        let f2_b = old_tetra.find_face_opposite(old_face.p1).clone();
+
+        let t1 = self.insert_positively_oriented_tetra(
+            old_face.p1,
+            check_point,
+            opposing_point,
+            // Leave uninitialized for now
+            TetraFace {
+                face: new_face,
+                opposing: None,
+            },
+            f1_a,
+            f1_b,
+        );
+        let t2 = self.insert_positively_oriented_tetra(
+            old_face.p2,
+            check_point,
+            opposing_point,
+            // Leave uninitialized for now
+            TetraFace {
+                face: new_face,
+                opposing: None,
+            },
+            f2_a,
+            f2_b,
+        );
+        // Set previously uninitialized opposing data, now that we know the tetra indices
+        self.tetras[t1].find_face_mut(new_face).opposing = Some(OtherTetraInfo {
+            tetra: t2,
+            point: old_face.p2,
+        });
+        self.tetras[t2].find_face_mut(new_face).opposing = Some(OtherTetraInfo {
+            tetra: t1,
+            point: old_face.p1,
+        });
+        self.set_opposing_in_existing_tetra(f1_a, t1, check_point, opposing.tetra);
+        self.set_opposing_in_existing_tetra(f1_b, t1, opposing_point, check.tetra);
+        self.set_opposing_in_existing_tetra(f2_a, t2, check_point, opposing.tetra);
+        self.set_opposing_in_existing_tetra(f2_b, t2, opposing_point, check.tetra);
+        // Now that we have flipped this edge, we have to check the remaining edges
+        // in the opposing tetra as well
+        self.to_check.push(FlipCheckData {
+            tetra: t1,
+            face: f1_a.face,
+        });
+        self.to_check.push(FlipCheckData {
+            tetra: t2,
+            face: f2_a.face,
+        });
     }
 
     fn flip_check(&mut self, to_check: FlipCheckData) {
