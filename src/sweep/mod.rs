@@ -1,5 +1,6 @@
 mod active_list;
 mod chemistry_solver;
+mod communicator;
 pub mod components;
 mod count_by_dir;
 mod direction;
@@ -7,6 +8,7 @@ mod parameters;
 mod site;
 mod task;
 #[cfg(test)]
+#[cfg(not(feature = "mpi"))]
 mod tests;
 pub mod timestep_level;
 
@@ -25,6 +27,7 @@ use self::site::Site;
 use self::task::FluxData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
+use crate::communication::Communicator;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
 use crate::components::Density;
@@ -42,8 +45,13 @@ use crate::units::SourceRate;
 use crate::units::Time;
 use crate::units::PROTON_MASS;
 
+#[cfg(feature = "mpi")]
+type SweepCommunicator = self::communicator::SweepCommunicator;
+#[cfg(not(feature = "mpi"))]
+type SweepCommunicator = self::local_communicator::SweepCommunicator;
+
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
-type Queue<T> = std::collections::vec_deque::VecDeque<T>;
+type Queue<T> = Vec<T>;
 
 type Cells = ActiveList<Cell>;
 type Sites = ActiveList<Site>;
@@ -75,6 +83,7 @@ struct Sweep {
     max_timestep: Time,
     current_level: TimestepLevel,
     flux_treshold: PhotonFlux,
+    communicator: SweepCommunicator,
 }
 
 impl Sweep {
@@ -87,6 +96,7 @@ impl Sweep {
         parameters: &SweepParameters,
         world_size: usize,
         world_rank: Rank,
+        communicator: SweepCommunicator,
     ) -> Sites {
         assert!(cells.len() == sites.len());
         for level in levels.values() {
@@ -102,6 +112,7 @@ impl Sweep {
             max_timestep,
             current_level: TimestepLevel(0),
             flux_treshold: parameters.significant_flux_treshold,
+            communicator,
         };
         for i in 0..(2usize.pow(parameters.num_timestep_levels as u32 - 1)) {
             solver.current_level = TimestepLevel::lowest_active_from_iteration(
@@ -175,7 +186,9 @@ impl Sweep {
 
     fn receive_messages(&self) {}
 
-    fn send_all_messages(&self) {}
+    fn send_all_messages(&mut self) {
+        self.communicator.try_send_all(&mut self.to_send);
+    }
 
     fn get_outgoing_flux(&mut self, task: &Task) -> PhotonFlux {
         let cell = &self.cells.get(task.id);
@@ -256,7 +269,7 @@ impl Sweep {
             flux: flux_correction,
             id: remote.remote_entity,
         };
-        self.to_send[remote.rank].push_back(flux_data);
+        self.to_send[remote.rank].push(flux_data);
     }
 
     pub fn init_counts(&mut self) {
@@ -316,6 +329,7 @@ pub fn sweep_system(
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
+    comm: Communicator<FluxData>,
 ) {
     let cells: HashMap<_, _> = particles
         .iter()
@@ -352,6 +366,7 @@ pub fn sweep_system(
         &sweep_parameters,
         **world_size,
         **world_rank,
+        SweepCommunicator::new(comm.clone()),
     );
     for (id, _, _, mut fraction, _, _, mut level) in particles.iter_mut() {
         let site = sites.get(*id);

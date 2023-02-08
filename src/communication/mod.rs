@@ -23,6 +23,7 @@ pub type Communicator<'a, T> = NonSendMut<'a, communicator::Communicator<T>>;
 pub type ExchangeCommunicator<'a, T> =
     NonSendMut<'a, exchange_communicator::ExchangeCommunicator<T>>;
 pub type SyncCommunicator<'a, T> = NonSendMut<'a, sync_communicator::SyncCommunicator<T>>;
+pub type DataCommunicator<T> = communicator::Communicator<T>;
 
 #[cfg(feature = "mpi")]
 mod verify_tag_type_mapping;

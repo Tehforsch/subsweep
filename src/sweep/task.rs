@@ -10,7 +10,7 @@ pub struct Task {
     pub dir: DirectionIndex,
 }
 
-#[derive(Debug, Equivalence)]
+#[derive(Clone, Debug, Equivalence)]
 pub struct FluxData {
     pub id: ParticleId,
     pub dir: DirectionIndex,

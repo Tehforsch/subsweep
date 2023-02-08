@@ -10,6 +10,7 @@ use lazy_static::lazy_static;
 use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;
 use mpi::point_to_point::Status;
+use mpi::request::Request;
 use mpi::request::Scope;
 use mpi::request::WaitGuard;
 use mpi::topology::Rank;
@@ -121,17 +122,26 @@ where
         scope: Sc,
         rank: Rank,
         data: &'a [S],
-    ) -> Option<WaitGuard<'a, [S], Sc>> {
+    ) -> Option<Request<'a, [S], Sc>> {
         let num = data.len();
         let process = self.world.process_at_rank(rank);
         process.buffered_send_with_tag(&num, self.tag);
         if num > 0 {
-            Some(WaitGuard::from(
-                process.immediate_send_with_tag(scope, data, self.tag),
-            ))
+            Some(process.immediate_send_with_tag(scope, data, self.tag))
         } else {
             None
         }
+    }
+
+    #[must_use]
+    pub fn immediate_send_vec_wait_guard<'a, Sc: Scope<'a>>(
+        &mut self,
+        scope: Sc,
+        rank: Rank,
+        data: &'a [S],
+    ) -> Option<WaitGuard<'a, [S], Sc>> {
+        self.immediate_send_vec(scope, rank, data)
+            .map(|request| WaitGuard::from(request))
     }
 }
 
@@ -244,7 +254,7 @@ mod tests {
         let mut world = MpiWorld::<i32>::new(Tag::default());
         let x: [i32; 3] = [1, 2, 3];
         let result: Vec<i32> = scope(|scope| {
-            let _guard = world.immediate_send_vec(scope, 0, &x);
+            let _guard = world.immediate_send_vec_wait_guard(scope, 0, &x);
             world.receive_vec(0)
         });
         assert_eq!(result, &[1, 2, 3]);

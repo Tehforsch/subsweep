@@ -117,6 +117,10 @@ impl<T> DataByRank<T> {
     pub fn iter(&self) -> impl Iterator<Item = (&Rank, &T)> + '_ {
         self.0.iter()
     }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&Rank, &mut T)> + '_ {
+        self.0.iter_mut()
+    }
 }
 
 impl<T> IntoIterator for DataByRank<T> {

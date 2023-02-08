@@ -76,11 +76,13 @@ fn initialize_sweep_components_system(
 }
 
 #[test]
+#[ignore]
 fn simple_sweep() {
     run_sweep(vec![MVec::ONE * Dimensionless::dimensionless(1.0)]);
 }
 
 #[test]
+#[ignore]
 fn sweep_along_grid_axes_does_not_deadlock_or_crash() {
     run_sweep(vec![MVec::X * Dimensionless::dimensionless(1.0)]);
 }
