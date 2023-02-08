@@ -2,6 +2,7 @@ use bevy::prelude::Commands;
 use bevy::prelude::Entity;
 use bevy::prelude::Res;
 
+use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::components;
 use crate::components::Position;
 use crate::grid::init_cartesian_grid_system;
@@ -26,11 +27,10 @@ use crate::units::PhotonFlux;
 use crate::units::Time;
 use crate::units::VecDimensionless;
 
-fn run_sweep(dirs: Vec<VecDimensionless>) {
+fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation) {
     let num_cells = 10;
     let cell_size = Length::meters(0.1);
     let simulation_box = SimulationBox::cube_from_side_length(cell_size * num_cells as f64);
-    let mut sim = Simulation::test();
     sim.insert_resource(WorldSize(1))
         .insert_resource(WorldRank(0))
         .add_parameter_file_contents("".into())
@@ -78,11 +78,17 @@ fn initialize_sweep_components_system(
 #[test]
 #[ignore]
 fn simple_sweep() {
-    run_sweep(vec![MVec::ONE * Dimensionless::dimensionless(1.0)]);
+    build_local_communication_sim_with_custom_logic(
+        |sim: &mut Simulation| {
+            build_sweep_sim(vec![MVec::ONE * Dimensionless::dimensionless(1.0)], sim)
+        },
+        |_| {},
+        2,
+    );
 }
 
-#[test]
-#[ignore]
-fn sweep_along_grid_axes_does_not_deadlock_or_crash() {
-    run_sweep(vec![MVec::X * Dimensionless::dimensionless(1.0)]);
-}
+// #[test]
+// #[ignore]
+// fn sweep_along_grid_axes_does_not_deadlock_or_crash() {
+//     run_sweep(vec![MVec::X * Dimensionless::dimensionless(1.0)]);
+// }

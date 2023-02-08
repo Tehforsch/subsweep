@@ -1,6 +1,5 @@
 use mpi::request::scope;
 use mpi::request::Request;
-use mpi::request::Scope;
 
 use super::task::FluxData;
 use crate::communication::DataByRank;
@@ -96,7 +95,7 @@ impl<'comm> SweepCommunicator<'comm> {
     fn wait_for_request(&self, _rank: Rank, _request: OutstandingRequest) {}
 
     #[cfg(feature = "mpi")]
-    fn to_scoped_request<'a, Sc: Scope<'a>>(
+    fn to_scoped_request<'a, Sc: mpi::request::Scope<'a>>(
         &self,
         scope: Sc,
         data: &'a Vec<FluxData>,
