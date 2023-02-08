@@ -1,7 +1,7 @@
 use bevy::prelude::Resource;
 
 use super::face::Face;
-use super::tetra::OtherTetraInfo;
+use super::tetra::ConnectionData;
 use super::tetra::Tetra;
 use super::tetra::TetraData;
 use super::tetra::TetraFace;
@@ -115,7 +115,7 @@ impl DelaunayTriangulation {
             let existing_tetra = &mut self.tetras[opposing.tetra];
             let corresponding_face = existing_tetra.find_face_mut(face.face);
             assert!(corresponding_face.opposing.unwrap().tetra == old_tetra_index);
-            corresponding_face.opposing = Some(OtherTetraInfo {
+            corresponding_face.opposing = Some(ConnectionData {
                 tetra: new_tetra,
                 point: new_point,
             });
@@ -129,7 +129,7 @@ impl DelaunayTriangulation {
         tetra: TetraIndex,
         point: PointIndex,
     ) {
-        self.tetras[new_tetra].find_face_mut(face).opposing = Some(OtherTetraInfo { tetra, point });
+        self.tetras[new_tetra].find_face_mut(face).opposing = Some(ConnectionData { tetra, point });
     }
 
     fn insert_positively_oriented_tetra(
@@ -292,11 +292,11 @@ impl DelaunayTriangulation {
             f2_b,
         );
         // Set previously uninitialized opposing data, now that we know the tetra indices
-        self.tetras[t1].find_face_mut(new_face).opposing = Some(OtherTetraInfo {
+        self.tetras[t1].find_face_mut(new_face).opposing = Some(ConnectionData {
             tetra: t2,
             point: old_face.p2,
         });
-        self.tetras[t2].find_face_mut(new_face).opposing = Some(OtherTetraInfo {
+        self.tetras[t2].find_face_mut(new_face).opposing = Some(ConnectionData {
             tetra: t1,
             point: old_face.p1,
         });

@@ -80,11 +80,11 @@ impl Triangle {
 #[derive(Debug, Clone, Copy)]
 pub struct TetraFace {
     pub face: FaceIndex,
-    pub opposing: Option<OtherTetraInfo>,
+    pub opposing: Option<ConnectionData>,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct OtherTetraInfo {
+pub struct ConnectionData {
     pub tetra: TetraIndex,
     pub point: PointIndex,
 }
