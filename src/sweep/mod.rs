@@ -355,7 +355,7 @@ pub fn sweep_system(
         .map(|(id, _, _, _, _, _, level)| (*id, *level))
         .collect();
     #[cfg(test)]
-    assert!(cells.len() > 0 && sites.len() > 0 && levels.len() > 0);
+    assert!(!cells.is_empty() && !sites.is_empty() && !levels.is_empty());
     let sites = Sweep::run(
         &directions,
         cells,

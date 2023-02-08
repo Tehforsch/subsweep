@@ -18,7 +18,7 @@ pub enum DirectionsSpecification {
 }
 
 impl DirectionsSpecification {
-    pub fn len(&self) -> usize {
+    pub fn num(&self) -> usize {
         match self {
             DirectionsSpecification::Num(num) => *num,
             DirectionsSpecification::Explicit(directions) => directions.len(),

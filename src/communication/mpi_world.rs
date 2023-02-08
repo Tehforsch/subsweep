@@ -141,7 +141,7 @@ where
         data: &'a [S],
     ) -> Option<WaitGuard<'a, [S], Sc>> {
         self.immediate_send_vec(scope, rank, data)
-            .map(|request| WaitGuard::from(request))
+            .map(WaitGuard::from)
     }
 }
 

@@ -60,7 +60,7 @@ impl IntegerPosition {
         }
     }
 
-    fn to_pos(&self, side_length: VecLength, num_particles: &Self) -> VecLength {
+    fn to_pos(self, side_length: VecLength, num_particles: &Self) -> VecLength {
         #[cfg(feature = "2d")]
         {
             VecLength::new(
@@ -214,7 +214,7 @@ pub fn init_cartesian_grid_system(
     world_rank: Res<WorldRank>,
 ) {
     let cloned_box_size = box_size.clone();
-    let cloned_world_size = world_size.clone();
+    let cloned_world_size = *world_size;
     let rank_function = move |pos: VecLength| {
         ((pos.x() / cloned_box_size.side_lengths().x()) * cloned_world_size.0 as f64).round()
             as Rank

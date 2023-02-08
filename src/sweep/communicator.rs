@@ -19,8 +19,8 @@ pub struct SweepCommunicator<'comm> {
 }
 
 #[cfg(feature = "mpi")]
-fn to_unscoped<'a, 'b>(
-    scoped_request: Request<'a, [FluxData], &'b mpi::request::LocalScope<'a>>,
+fn to_unscoped<'a>(
+    scoped_request: Request<'a, [FluxData], &mpi::request::LocalScope<'a>>,
 ) -> OutstandingRequest {
     // SAFETY:
     // We only overwrite the data in a send buffer whenever the previous request is finished.
@@ -29,8 +29,8 @@ fn to_unscoped<'a, 'b>(
 }
 
 #[cfg(not(feature = "mpi"))]
-fn to_unscoped<'a, 'b>(
-    _scoped_request: Request<'a, [FluxData], &'b mpi::request::LocalScope<'a>>,
+fn to_unscoped<'a>(
+    _scoped_request: Request<'a, [FluxData], &mpi::request::LocalScope<'a>>,
 ) -> () {
     ()
 }
@@ -48,20 +48,19 @@ impl<'comm> SweepCommunicator<'comm> {
 
     pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData>>) {
         for (rank, data) in to_send.iter_mut() {
-            if self.requests[*rank].is_some() {
-                if self.request_completed(*rank, self.requests[*rank].unwrap()) {
-                    self.requests[*rank] = None;
-                }
+            if self.requests[*rank].is_some() && self.request_completed(*rank, self.requests[*rank].unwrap()) {
+                self.requests[*rank] = None;
+                self.send_buffers[*rank].clear();
             }
             if self.requests[*rank].is_none() {
-                self.send_buffers[*rank].extend(data.drain(..));
+                self.send_buffers[*rank].append(data);
                 self.requests[*rank] = scope(|scope| {
                     let scoped_request = self.communicator.immediate_send_vec(
                         scope,
                         *rank,
                         &self.send_buffers[*rank][..],
                     );
-                    scoped_request.map(|scoped_request| to_unscoped(scoped_request))
+                    scoped_request.map(to_unscoped)
                 })
             }
         }
@@ -71,7 +70,7 @@ impl<'comm> SweepCommunicator<'comm> {
     fn request_completed(&self, rank: Rank, request: OutstandingRequest) -> bool {
         scope(|s| {
             let data = &self.send_buffers[rank];
-            match self.to_scoped_request(s, &data, request).test() {
+            match self.to_scoped_request(s, data, request).test() {
                 Ok(_status) => true,
                 Err(_) => false,
             }
@@ -87,7 +86,7 @@ impl<'comm> SweepCommunicator<'comm> {
     fn wait_for_request(&self, rank: Rank, request: OutstandingRequest) {
         scope(|s| {
             let data = &self.send_buffers[rank];
-            self.to_scoped_request(s, &data, request).wait();
+            self.to_scoped_request(s, data, request).wait();
         });
     }
 
@@ -101,7 +100,7 @@ impl<'comm> SweepCommunicator<'comm> {
         data: &'a Vec<FluxData>,
         request: OutstandingRequest,
     ) -> Request<'a, [FluxData], Sc> {
-        unsafe { Request::from_raw(request, &data, scope) }
+        unsafe { Request::from_raw(request, data, scope) }
     }
 }
 
