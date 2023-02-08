@@ -1,16 +1,20 @@
 use bevy::prelude::Commands;
 use bevy::prelude::Entity;
+use bevy::prelude::Or;
+use bevy::prelude::Query;
 use bevy::prelude::Res;
+use bevy::prelude::With;
 
 use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::components;
 use crate::components::Position;
 use crate::grid::init_cartesian_grid_system;
+use crate::hydrodynamics::HaloParticle;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
 use crate::parameters::SweepParameters;
 use crate::parameters::TimestepParameters;
-use crate::prelude::Particles;
+use crate::prelude::LocalParticle;
 use crate::prelude::SimulationStartupStages;
 use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
@@ -56,12 +60,11 @@ fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation) {
             initialize_sweep_components_system,
         )
         .add_plugin(SweepPlugin);
-    sim.update();
 }
 
 fn initialize_sweep_components_system(
     mut commands: Commands,
-    particles: Particles<(Entity, &Position)>,
+    particles: Query<(Entity, &Position), Or<(With<LocalParticle>, With<HaloParticle>)>>,
     sweep_parameters: Res<SweepParameters>,
 ) {
     for (entity, _) in particles.iter() {
@@ -80,13 +83,23 @@ fn simple_sweep() {
         |sim: &mut Simulation| {
             build_sweep_sim(vec![MVec::ONE * Dimensionless::dimensionless(1.0)], sim)
         },
-        |_| {},
+        |mut sim| {
+            sim.update();
+        },
         2,
     );
 }
 
-// #[test]
-// #[ignore]
-// fn sweep_along_grid_axes_does_not_deadlock_or_crash() {
-//     run_sweep(vec![MVec::X * Dimensionless::dimensionless(1.0)]);
-// }
+#[test]
+#[ignore]
+fn sweep_along_grid_axes_does_not_deadlock_or_crash() {
+    build_local_communication_sim_with_custom_logic(
+        |sim: &mut Simulation| {
+            build_sweep_sim(vec![MVec::X * Dimensionless::dimensionless(1.0)], sim)
+        },
+        |mut sim| {
+            sim.update();
+        },
+        2,
+    );
+}

@@ -12,6 +12,9 @@ mod task;
 mod tests;
 pub mod timestep_level;
 
+use std::thread;
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 pub use parameters::DirectionsSpecification;
@@ -32,7 +35,6 @@ use crate::communication::Communicator;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
 use crate::components::Density;
-use crate::components::Position;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
 use crate::grid::Neighbour;
@@ -97,7 +99,8 @@ impl<'a> Sweep<'a> {
         world_rank: Rank,
         communicator: SweepCommunicator,
     ) -> Sites {
-        assert!(cells.len() == sites.len());
+        dbg!(levels.len(), cells.len(), sites.len());
+        assert!(levels.len() == cells.len());
         for level in levels.values() {
             assert!(level.0 < parameters.num_timestep_levels);
         }
@@ -181,6 +184,8 @@ impl<'a> Sweep<'a> {
             }
             self.send_all_messages();
         }
+        dbg!("sleepy sleeperson");
+        thread::sleep(Duration::from_secs(1));
     }
 
     fn receive_messages(&self) {}
@@ -315,44 +320,42 @@ impl<'a> Sweep<'a> {
 
 pub fn sweep_system(
     directions: Res<Directions>,
-    mut particles: Query<(
+    cells_query: HydroParticles<(&ParticleId, &Cell)>,
+    mut sites_query: Particles<(
+        Entity,
         &ParticleId,
-        &Cell,
         &Density,
         &mut IonizedHydrogenFraction,
         Option<&Source>,
-        &Position,
-        &mut TimestepLevel,
     )>,
+    mut levels_query: HydroParticles<(&ParticleId, &mut TimestepLevel)>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
     mut comm: Communicator<FluxData>,
 ) {
-    let cells: HashMap<_, _> = particles
+    let cells: HashMap<_, _> = cells_query
         .iter()
-        .map(|(id, cell, _, _, _, _, _)| (*id, cell.clone()))
+        .map(|(id, cell)| (*id, cell.clone()))
         .collect();
-    let sites: HashMap<_, _> = particles
+    let sites: HashMap<_, _> = sites_query
         .iter()
-        .map(
-            |(id, _, density, ionized_hydrogen_fraction, source, _, _)| {
-                (
-                    *id,
-                    Site::new(
-                        &directions,
-                        **density,
-                        **ionized_hydrogen_fraction,
-                        source.map(|source| **source).unwrap_or(SourceRate::zero()),
-                    ),
-                )
-            },
-        )
+        .map(|(_, id, density, ionized_hydrogen_fraction, source)| {
+            (
+                *id,
+                Site::new(
+                    &directions,
+                    **density,
+                    **ionized_hydrogen_fraction,
+                    source.map(|source| **source).unwrap_or(SourceRate::zero()),
+                ),
+            )
+        })
         .collect();
-    let levels: HashMap<_, _> = particles
+    let levels: HashMap<_, _> = levels_query
         .iter()
-        .map(|(id, _, _, _, _, _, level)| (*id, *level))
+        .map(|(id, level)| (*id, *level))
         .collect();
     #[cfg(test)]
     assert!(!cells.is_empty() && !sites.is_empty() && !levels.is_empty());
@@ -367,7 +370,7 @@ pub fn sweep_system(
         **world_rank,
         SweepCommunicator::new(&mut comm),
     );
-    for (id, _, _, mut fraction, _, _, mut level) in particles.iter_mut() {
+    for (entity, id, _, mut fraction, _) in sites_query.iter_mut() {
         let site = sites.get(*id);
         let new_fraction = site.ionized_hydrogen_fraction;
         let change_timescale =
@@ -378,6 +381,9 @@ pub fn sweep_system(
             timestep.max_timestep,
             desired_timestep,
         );
+        let mut level = levels_query
+            .get_component_mut::<TimestepLevel>(entity)
+            .unwrap();
         if desired_level.0 + 1 < level.0 {
             // Never move down more than one level at a time
             desired_level.0 = level.0 - 1;

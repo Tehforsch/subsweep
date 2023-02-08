@@ -8,6 +8,7 @@ use super::Neighbour;
 use super::RemoteNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
+use crate::hydrodynamics::HaloParticle;
 use crate::parameters::SimulationBox;
 use crate::particle::ParticleId;
 use crate::prelude::Float;
@@ -219,8 +220,17 @@ impl GridConstructor {
         for (integer_pos, cell) in drained_cells {
             let particle_id = self.ids[&integer_pos];
             let pos = self.to_pos(integer_pos);
-            if self.on_this_rank(integer_pos) {
+            let rank = self.get_rank(integer_pos);
+            if rank == self.rank {
                 commands.spawn((LocalParticle, Position(pos), cell, particle_id));
+            } else {
+                if cell
+                    .neighbours
+                    .iter()
+                    .any(|(_, neighbour)| matches!(neighbour, Neighbour::Remote(_)))
+                {
+                    commands.spawn((HaloParticle { rank }, Position(pos), cell, particle_id));
+                }
             }
         }
     }
@@ -236,8 +246,9 @@ pub fn init_cartesian_grid_system(
     let cloned_box_size = box_size.clone();
     let cloned_world_size = *world_size;
     let rank_function = move |pos: VecLength| {
-        ((pos.x() / cloned_box_size.side_lengths().x()) * cloned_world_size.0 as f64).round()
-            as Rank
+        ((pos.x() / cloned_box_size.side_lengths().x()) * cloned_world_size.0 as f64)
+            .floor()
+            .round() as Rank
     };
     GridConstructor::construct(
         commands,
