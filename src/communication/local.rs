@@ -80,6 +80,17 @@ impl<T> LocalCommunicator<T> {
         _scope: Sc,
         rank: Rank,
         data: &'a [T],
+    ) -> Option<mpi::request::Request<'a, [T], Sc>> {
+        // Local communication does not block anyways
+        self.blocking_send_vec(rank, data);
+        None
+    }
+
+    pub fn immediate_send_vec_wait_guard<'a, Sc: Scope<'a>>(
+        &mut self,
+        _scope: Sc,
+        rank: Rank,
+        data: &'a [T],
     ) -> Option<WaitGuard<'a, [T], Sc>> {
         // Local communication does not block anyways
         self.blocking_send_vec(rank, data);

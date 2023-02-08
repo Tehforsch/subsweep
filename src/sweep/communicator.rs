@@ -1,4 +1,3 @@
-use mpi::ffi::MPI_Request;
 use mpi::request::scope;
 use mpi::request::Request;
 use mpi::request::Scope;
@@ -8,18 +7,39 @@ use crate::communication::DataByRank;
 use crate::communication::DataCommunicator;
 use crate::communication::Rank;
 
-type OutstandingRequest = MPI_Request;
+#[cfg(feature = "mpi")]
+type OutstandingRequest = mpi::ffi::MPI_Request;
 
-pub struct SweepCommunicator {
-    communicator: DataCommunicator<FluxData>,
+#[cfg(not(feature = "mpi"))]
+type OutstandingRequest = ();
+
+pub struct SweepCommunicator<'comm> {
+    communicator: &'comm mut DataCommunicator<FluxData>,
     send_buffers: DataByRank<Vec<FluxData>>,
     requests: DataByRank<Option<OutstandingRequest>>,
 }
 
-impl SweepCommunicator {
-    pub fn new(communicator: DataCommunicator<FluxData>) -> Self {
-        let send_buffers = DataByRank::from_communicator(&communicator);
-        let requests = DataByRank::from_communicator(&communicator);
+#[cfg(feature = "mpi")]
+fn to_unscoped<'a, 'b>(
+    scoped_request: Request<'a, [FluxData], &'b mpi::request::LocalScope<'a>>,
+) -> OutstandingRequest {
+    // SAFETY:
+    // We only overwrite the data in a send buffer whenever the previous request is finished.
+    // We also await all requests before dropping the send buffers.
+    unsafe { scoped_request.into_raw().0 }
+}
+
+#[cfg(not(feature = "mpi"))]
+fn to_unscoped<'a, 'b>(
+    _scoped_request: Request<'a, [FluxData], &'b mpi::request::LocalScope<'a>>,
+) -> () {
+    ()
+}
+
+impl<'comm> SweepCommunicator<'comm> {
+    pub fn new(communicator: &'comm mut DataCommunicator<FluxData>) -> Self {
+        let send_buffers = DataByRank::from_communicator(communicator);
+        let requests = DataByRank::from_communicator(communicator);
         Self {
             communicator,
             send_buffers,
@@ -29,9 +49,12 @@ impl SweepCommunicator {
 
     pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData>>) {
         for (rank, data) in to_send.iter_mut() {
-            if let Some(request) = self.requests[*rank] {
-                self.request_completed(*rank, request);
-            } else {
+            if self.requests[*rank].is_some() {
+                if self.request_completed(*rank, self.requests[*rank].unwrap()) {
+                    self.requests[*rank] = None;
+                }
+            }
+            if self.requests[*rank].is_none() {
                 self.send_buffers[*rank].extend(data.drain(..));
                 self.requests[*rank] = scope(|scope| {
                     let scoped_request = self.communicator.immediate_send_vec(
@@ -39,38 +62,45 @@ impl SweepCommunicator {
                         *rank,
                         &self.send_buffers[*rank][..],
                     );
-                    // SAFETY:
-                    // We only overwrite the data in a send buffer whenever the previous request is finished.
-                    // We also await all requests before dropping the send buffers.
-                    unsafe { scoped_request.map(|scoped_request| scoped_request.into_raw().0) }
+                    scoped_request.map(|scoped_request| to_unscoped(scoped_request))
                 })
             }
         }
     }
 
-    fn request_completed(&self, rank: Rank, request: MPI_Request) {
+    #[cfg(feature = "mpi")]
+    fn request_completed(&self, rank: Rank, request: OutstandingRequest) -> bool {
         scope(|s| {
             let data = &self.send_buffers[rank];
-            match self.to_scoped_request(s, &data, rank, request).test() {
+            match self.to_scoped_request(s, &data, request).test() {
                 Ok(_status) => true,
                 Err(_) => false,
             }
-        });
+        })
     }
 
-    fn wait_for_request(&self, rank: Rank, request: MPI_Request) {
+    #[cfg(not(feature = "mpi"))]
+    fn request_completed(&self, _rank: Rank, _request: OutstandingRequest) -> bool {
+        true
+    }
+
+    #[cfg(feature = "mpi")]
+    fn wait_for_request(&self, rank: Rank, request: OutstandingRequest) {
         scope(|s| {
             let data = &self.send_buffers[rank];
-            self.to_scoped_request(s, &data, rank, request).wait();
+            self.to_scoped_request(s, &data, request).wait();
         });
     }
 
+    #[cfg(not(feature = "mpi"))]
+    fn wait_for_request(&self, _rank: Rank, _request: OutstandingRequest) {}
+
+    #[cfg(feature = "mpi")]
     fn to_scoped_request<'a, Sc: Scope<'a>>(
         &self,
         scope: Sc,
         data: &'a Vec<FluxData>,
-        rank: Rank,
-        request: MPI_Request,
+        request: OutstandingRequest,
     ) -> Request<'a, [FluxData], Sc> {
         unsafe { Request::from_raw(request, &data, scope) }
     }
@@ -78,7 +108,7 @@ impl SweepCommunicator {
 
 // Make sure we cannot accidentally drop the send buffers while
 // there are still pending MPI requests.
-impl Drop for SweepCommunicator {
+impl<'comm> Drop for SweepCommunicator<'comm> {
     fn drop(&mut self) {
         for (rank, request) in self.requests.iter() {
             if let Some(request) = request {

@@ -27,6 +27,7 @@ use self::site::Site;
 use self::task::FluxData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
+use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
@@ -45,10 +46,7 @@ use crate::units::SourceRate;
 use crate::units::Time;
 use crate::units::PROTON_MASS;
 
-#[cfg(feature = "mpi")]
-type SweepCommunicator = self::communicator::SweepCommunicator;
-#[cfg(not(feature = "mpi"))]
-type SweepCommunicator = self::local_communicator::SweepCommunicator;
+type SweepCommunicator<'a> = self::communicator::SweepCommunicator<'a>;
 
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
 type Queue<T> = Vec<T>;
@@ -69,11 +67,12 @@ impl RaxiomPlugin for SweepPlugin {
         .add_required_component::<Source>()
         .add_derived_component::<components::Flux>()
         .add_system_to_stage(SimulationStages::ForceCalculation, sweep_system)
-        .add_parameter_type::<SweepParameters>();
+        .add_parameter_type::<SweepParameters>()
+        .add_plugin(CommunicationPlugin::<FluxData>::default());
     }
 }
 
-struct Sweep {
+struct Sweep<'a> {
     directions: Directions,
     cells: Cells,
     sites: Sites,
@@ -83,10 +82,10 @@ struct Sweep {
     max_timestep: Time,
     current_level: TimestepLevel,
     flux_treshold: PhotonFlux,
-    communicator: SweepCommunicator,
+    communicator: SweepCommunicator<'a>,
 }
 
-impl Sweep {
+impl<'a> Sweep<'a> {
     fn run(
         directions: &Directions,
         cells: HashMap<ParticleId, Cell>,
@@ -329,7 +328,7 @@ pub fn sweep_system(
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
-    comm: Communicator<FluxData>,
+    mut comm: Communicator<FluxData>,
 ) {
     let cells: HashMap<_, _> = particles
         .iter()
@@ -366,7 +365,7 @@ pub fn sweep_system(
         &sweep_parameters,
         **world_size,
         **world_rank,
-        SweepCommunicator::new(comm.clone()),
+        SweepCommunicator::new(&mut comm),
     );
     for (id, _, _, mut fraction, _, _, mut level) in particles.iter_mut() {
         let site = sites.get(*id);
