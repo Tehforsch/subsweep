@@ -513,4 +513,13 @@ mod tests {
             }
         });
     }
+
+    #[test]
+    fn circumcircles_contain_no_additional_points() {
+        perform_check_on_each_level_of_construction(|triangulation, _| {
+            for (tetra, _) in triangulation.tetras.iter() {
+                assert!(!triangulation.circumcircle_contains_other_points(tetra));
+            }
+        });
+    }
 }
