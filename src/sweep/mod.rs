@@ -266,7 +266,7 @@ impl<'a> Sweep<'a> {
         let flux_data = FluxData {
             dir: task.dir,
             flux: flux_correction,
-            id: remote.remote_entity,
+            id: remote.id,
         };
         self.to_send[remote.rank].push(flux_data);
     }

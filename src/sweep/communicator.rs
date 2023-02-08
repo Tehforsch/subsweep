@@ -29,9 +29,7 @@ fn to_unscoped<'a>(
 }
 
 #[cfg(not(feature = "mpi"))]
-fn to_unscoped<'a>(
-    _scoped_request: Request<'a, [FluxData], &mpi::request::LocalScope<'a>>,
-) -> () {
+fn to_unscoped<'a>(_scoped_request: Request<'a, [FluxData], &mpi::request::LocalScope<'a>>) -> () {
     ()
 }
 
@@ -48,7 +46,9 @@ impl<'comm> SweepCommunicator<'comm> {
 
     pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData>>) {
         for (rank, data) in to_send.iter_mut() {
-            if self.requests[*rank].is_some() && self.request_completed(*rank, self.requests[*rank].unwrap()) {
+            if self.requests[*rank].is_some()
+                && self.request_completed(*rank, self.requests[*rank].unwrap())
+            {
                 self.requests[*rank] = None;
                 self.send_buffers[*rank].clear();
             }

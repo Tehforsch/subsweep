@@ -31,7 +31,7 @@ impl Neighbour {
     pub fn unwrap_id(&self) -> ParticleId {
         match self {
             Self::Local(particle_id) => *particle_id,
-            Self::Remote(neighbour) => neighbour.local_entity,
+            Self::Remote(neighbour) => neighbour.id,
             _ => panic!("Unwrap entity called on boundary neighbour"),
         }
     }
@@ -39,8 +39,7 @@ impl Neighbour {
 
 #[derive(Clone, Debug)]
 pub struct RemoteNeighbour {
-    pub local_entity: ParticleId,
-    pub remote_entity: ParticleId,
+    pub id: ParticleId,
     pub rank: Rank,
 }
 

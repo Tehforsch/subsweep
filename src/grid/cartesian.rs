@@ -5,6 +5,7 @@ use super::cell::Face;
 use super::cell::FaceArea;
 use super::Cell;
 use super::Neighbour;
+use super::RemoteNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
 use crate::parameters::SimulationBox;
@@ -172,7 +173,17 @@ impl GridConstructor {
                         normal: (neighbour_pos - pos).normalize(),
                     };
                     if neighbour.contained(&self.num_cells) {
-                        (face, Neighbour::Local(self.ids[&neighbour]))
+                        if self.on_this_rank(neighbour) {
+                            (face, Neighbour::Local(self.ids[&neighbour]))
+                        } else {
+                            (
+                                face,
+                                Neighbour::Remote(RemoteNeighbour {
+                                    id: self.ids[&neighbour],
+                                    rank: self.get_rank(neighbour),
+                                }),
+                            )
+                        }
                     } else {
                         (face, Neighbour::Boundary)
                     }
@@ -194,14 +205,23 @@ impl GridConstructor {
         integer_pos.to_pos(self.box_size.side_lengths(), &self.num_cells)
     }
 
+    fn get_rank(&self, pos: IntegerPosition) -> Rank {
+        let pos = self.to_pos(pos);
+        (self.rank_function)(pos)
+    }
+
+    fn on_this_rank(&self, pos: IntegerPosition) -> bool {
+        self.get_rank(pos) == self.rank
+    }
+
     fn spawn_local_cells(&mut self, mut commands: Commands) {
         let drained_cells: Vec<_> = self.cells.drain().collect();
         for (integer_pos, cell) in drained_cells {
             let particle_id = self.ids[&integer_pos];
             let pos = self.to_pos(integer_pos);
-            // if (self.rank_function)(pos) == self.rank {
-            commands.spawn((LocalParticle, Position(pos), cell, particle_id));
-            // }
+            if self.on_this_rank(integer_pos) {
+                commands.spawn((LocalParticle, Position(pos), cell, particle_id));
+            }
         }
     }
 }

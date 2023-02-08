@@ -31,9 +31,7 @@ fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation) {
     let num_cells = 10;
     let cell_size = Length::meters(0.1);
     let simulation_box = SimulationBox::cube_from_side_length(cell_size * num_cells as f64);
-    sim.insert_resource(WorldSize(1))
-        .insert_resource(WorldRank(0))
-        .add_parameter_file_contents("".into())
+    sim.add_parameter_file_contents("".into())
         .add_plugin(SimulationStagesPlugin)
         .add_parameters_explicitly(simulation_box)
         .add_parameters_explicitly(SweepParameters {
