@@ -165,16 +165,18 @@ impl GridConstructor {
     fn construct_neighbours(&mut self) {
         for integer_pos in self.get_all_integer_positions() {
             let pos = self.to_pos(integer_pos);
+            let rank = self.get_rank(integer_pos);
             let neighbours = integer_pos
                 .iter_neighbours()
                 .map(|neighbour| {
                     let neighbour_pos = self.to_pos(neighbour);
+                    let neighbour_rank = self.get_rank(neighbour);
                     let face = Face {
                         area: get_area(self.cell_size),
                         normal: (neighbour_pos - pos).normalize(),
                     };
                     if neighbour.contained(&self.num_cells) {
-                        if self.on_this_rank(neighbour) {
+                        if rank == neighbour_rank {
                             (face, Neighbour::Local(self.ids[&neighbour]))
                         } else {
                             (
@@ -211,10 +213,6 @@ impl GridConstructor {
         (self.rank_function)(pos)
     }
 
-    fn on_this_rank(&self, pos: IntegerPosition) -> bool {
-        self.get_rank(pos) == self.rank
-    }
-
     fn spawn_local_cells(&mut self, mut commands: Commands) {
         let drained_cells: Vec<_> = self.cells.drain().collect();
         for (integer_pos, cell) in drained_cells {
@@ -223,14 +221,14 @@ impl GridConstructor {
             let rank = self.get_rank(integer_pos);
             if rank == self.rank {
                 commands.spawn((LocalParticle, Position(pos), cell, particle_id));
-            } else {
-                if cell
-                    .neighbours
-                    .iter()
-                    .any(|(_, neighbour)| matches!(neighbour, Neighbour::Remote(_)))
-                {
-                    commands.spawn((HaloParticle { rank }, Position(pos), cell, particle_id));
+            } else if cell.neighbours.iter().any(|(_, neighbour)| {
+                if let Neighbour::Remote(neighbour) = neighbour {
+                    neighbour.rank == self.rank
+                } else {
+                    false
                 }
+            }) {
+                commands.spawn((HaloParticle { rank }, Position(pos), cell, particle_id));
             }
         }
     }

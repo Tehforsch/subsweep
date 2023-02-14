@@ -13,15 +13,13 @@ use raxiom::components::Position;
 use raxiom::grid::init_cartesian_grid_system;
 use raxiom::io::time_series::TimeSeriesPlugin;
 use raxiom::prelude::*;
-use raxiom::sweep::timestep_level::TimestepLevel;
-use raxiom::sweep::SweepParameters;
+use raxiom::sweep::initialize_sweep_components_system;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
 use raxiom::units::Time;
 use raxiom::units::Volume;
-use raxiom::units::PROTON_MASS;
 
 #[raxiom_parameters("rtype")]
 struct Parameters {
@@ -61,6 +59,10 @@ fn main() {
         SimulationStartupStages::InsertDerivedComponents,
         initialize_sweep_components_system,
     )
+    .add_startup_system_to_stage(
+        SimulationStartupStages::InsertDerivedComponents,
+        initialize_source_system,
+    )
     .add_system_to_stage(SimulationStages::Integration, print_ionization_system)
     .add_plugin(TimeSeriesPlugin::<RTypeRadius>::default())
     .add_plugin(TimeSeriesPlugin::<RTypeError>::default())
@@ -68,20 +70,12 @@ fn main() {
     .run();
 }
 
-fn initialize_sweep_components_system(
+fn initialize_source_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
-    sweep_parameters: Res<SweepParameters>,
     box_size: Res<SimulationBox>,
 ) {
-    for (entity, _) in particles.iter() {
-        commands.entity(entity).insert((
-            components::Density(parameters.number_density * PROTON_MASS),
-            components::IonizedHydrogenFraction(parameters.initial_fraction_ionized_hydrogen),
-            TimestepLevel(sweep_parameters.num_timestep_levels - 1),
-        ));
-    }
     let closest_entity_to_center = particles
         .iter()
         .min_by_key(|(_, pos)| {

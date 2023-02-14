@@ -5,6 +5,7 @@ use super::task::FluxData;
 use crate::communication::DataByRank;
 use crate::communication::DataCommunicator;
 use crate::communication::Rank;
+use crate::communication::SizedCommunicator;
 
 #[cfg(feature = "mpi")]
 type OutstandingRequest = mpi::ffi::MPI_Request;
@@ -44,14 +45,28 @@ impl<'comm> SweepCommunicator<'comm> {
         }
     }
 
-    pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData>>) {
-        for (rank, data) in to_send.iter_mut() {
-            if self.requests[*rank].is_some()
-                && self.request_completed(*rank, self.requests[*rank].unwrap())
+    pub fn count_remaining_to_send(&self) -> usize {
+        self.send_buffers
+            .iter()
+            .map(|(_, buffer)| buffer.len())
+            .sum()
+    }
+
+    pub fn update_pending_requests(&mut self) {
+        for rank in self.communicator.other_ranks() {
+            if self.requests[rank]
+                .map(|request| self.request_completed(rank, request))
+                .unwrap_or(true)
             {
-                self.requests[*rank] = None;
-                self.send_buffers[*rank].clear();
+                self.requests[rank] = None;
+                self.send_buffers[rank].clear();
             }
+        }
+    }
+
+    pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData>>) {
+        self.update_pending_requests();
+        for (rank, data) in to_send.iter_mut() {
             if self.requests[*rank].is_none() {
                 self.send_buffers[*rank].append(data);
                 self.requests[*rank] = scope(|scope| {
@@ -64,6 +79,15 @@ impl<'comm> SweepCommunicator<'comm> {
                 })
             }
         }
+    }
+
+    pub fn try_recv_all(&mut self) -> DataByRank<Vec<FluxData>> {
+        let mut received_data = DataByRank::from_communicator(self.communicator);
+        for rank in self.communicator.other_ranks() {
+            let received = self.communicator.receive_vec(rank);
+            received_data.insert(rank, received);
+        }
+        received_data
     }
 
     #[cfg(feature = "mpi")]

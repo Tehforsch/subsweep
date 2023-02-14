@@ -1,14 +1,17 @@
-use bevy::utils::HashMap;
+use bevy::utils::StableHashMap;
 
 use super::timestep_level::TimestepLevel;
 use crate::particle::ParticleId;
 
 pub struct ActiveList<T> {
-    items: HashMap<ParticleId, (TimestepLevel, T)>,
+    items: StableHashMap<ParticleId, (TimestepLevel, T)>,
 }
 
 impl<T> ActiveList<T> {
-    pub fn new(map: HashMap<ParticleId, T>, levels: &HashMap<ParticleId, TimestepLevel>) -> Self {
+    pub fn new(
+        map: StableHashMap<ParticleId, T>,
+        levels: &StableHashMap<ParticleId, TimestepLevel>,
+    ) -> Self {
         Self {
             items: map
                 .into_iter()
@@ -47,10 +50,6 @@ impl<T> ActiveList<T> {
 
     pub fn get(&self, id: ParticleId) -> &T {
         &self.items.get(&id).unwrap().1
-    }
-
-    pub fn is_active(&self, id: ParticleId, current_level: TimestepLevel) -> bool {
-        self.items[&id].0.is_active(current_level)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {

@@ -12,11 +12,8 @@ mod task;
 mod tests;
 pub mod timestep_level;
 
-use std::thread;
-use std::time::Duration;
-
 use bevy::prelude::*;
-use bevy::utils::HashMap;
+use bevy::utils::StableHashMap;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
@@ -25,6 +22,7 @@ use self::chemistry_solver::Solver;
 use self::components::IonizedHydrogenFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
+use self::direction::DirectionIndex;
 use self::direction::Directions;
 use self::site::Site;
 use self::task::FluxData;
@@ -39,10 +37,12 @@ use crate::grid::Cell;
 use crate::grid::FaceArea;
 use crate::grid::Neighbour;
 use crate::grid::RemoteNeighbour;
+use crate::hydrodynamics::HaloParticle;
 use crate::parameters::TimestepParameters;
 use crate::particle::ParticleId;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
+use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
 use crate::units::SourceRate;
 use crate::units::Time;
@@ -78,6 +78,7 @@ struct Sweep<'a> {
     directions: Directions,
     cells: Cells,
     sites: Sites,
+    levels: StableHashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
     to_send: DataByRank<Queue<FluxData>>,
     remaining_to_solve_count: CountByDir,
@@ -90,23 +91,22 @@ struct Sweep<'a> {
 impl<'a> Sweep<'a> {
     fn run(
         directions: &Directions,
-        cells: HashMap<ParticleId, Cell>,
-        sites: HashMap<ParticleId, Site>,
-        levels: HashMap<ParticleId, TimestepLevel>,
+        cells: StableHashMap<ParticleId, Cell>,
+        sites: StableHashMap<ParticleId, Site>,
+        levels: StableHashMap<ParticleId, TimestepLevel>,
         max_timestep: Time,
         parameters: &SweepParameters,
         world_size: usize,
         world_rank: Rank,
         communicator: SweepCommunicator,
     ) -> Sites {
-        dbg!(levels.len(), cells.len(), sites.len());
-        assert!(levels.len() == cells.len());
         for level in levels.values() {
             assert!(level.0 < parameters.num_timestep_levels);
         }
         let mut solver = Sweep {
             cells: Cells::new(cells, &levels),
             sites: Sites::new(sites, &levels),
+            levels,
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
             directions: directions.clone(),
@@ -159,9 +159,7 @@ impl<'a> Sweep<'a> {
                         cell.neighbours.iter().all(|(face, neighbour)| {
                             !face.points_upwind(dir)
                                 || neighbour.is_boundary()
-                                || !self
-                                    .cells
-                                    .is_active(neighbour.unwrap_id(), self.current_level)
+                                || !self.is_active(neighbour.unwrap_id())
                         })
                     })
                     .map(move |(id, _)| Task {
@@ -173,9 +171,12 @@ impl<'a> Sweep<'a> {
         tasks
     }
 
+    fn is_active(&self, id: ParticleId) -> bool {
+        self.levels[&id].is_active(self.current_level)
+    }
+
     fn solve(&mut self) {
-        let remaining_to_send = 0;
-        while self.remaining_to_solve_count.total() > 0 || remaining_to_send > 0 {
+        while self.remaining_to_solve_count.total() > 0 || self.remaining_to_send_count() > 0 {
             if self.to_solve.is_empty() {
                 self.receive_messages();
             }
@@ -184,11 +185,20 @@ impl<'a> Sweep<'a> {
             }
             self.send_all_messages();
         }
-        dbg!("sleepy sleeperson");
-        thread::sleep(Duration::from_secs(1));
     }
 
-    fn receive_messages(&self) {}
+    fn remaining_to_send_count(&self) -> usize {
+        self.communicator.count_remaining_to_send()
+    }
+
+    fn receive_messages(&mut self) {
+        let received = self.communicator.try_recv_all();
+        for (_, incoming) in received.into_iter() {
+            for d in incoming.into_iter() {
+                self.handle_local_neighbour(d.flux, d.dir, d.id);
+            }
+        }
+    }
 
     fn send_all_messages(&mut self) {
         self.communicator.try_send_all(&mut self.to_send);
@@ -229,9 +239,11 @@ impl<'a> Sweep<'a> {
                 let flux_correction_this_cell =
                     outgoing_flux_correction * (effective_area / total_effective_area);
                 match neighbour {
-                    Neighbour::Local(neighbour_id) => {
-                        self.handle_local_neighbour(flux_correction_this_cell, &task, *neighbour_id)
-                    }
+                    Neighbour::Local(neighbour_id) => self.handle_local_neighbour(
+                        flux_correction_this_cell,
+                        task.dir,
+                        *neighbour_id,
+                    ),
                     Neighbour::Remote(remote) => {
                         self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
                     }
@@ -244,20 +256,17 @@ impl<'a> Sweep<'a> {
     fn handle_local_neighbour(
         &mut self,
         incoming_flux_correction: PhotonFlux,
-        task: &Task,
+        dir: DirectionIndex,
         neighbour: ParticleId,
     ) {
         let (site, is_active) = self
             .sites
             .get_mut_and_active_state(neighbour, self.current_level);
-        site.incoming_total_flux[*task.dir] += incoming_flux_correction;
+        site.incoming_total_flux[*dir] += incoming_flux_correction;
         if is_active {
-            let num_remaining = site.num_missing_upwind.reduce(task.dir);
+            let num_remaining = site.num_missing_upwind.reduce(dir);
             if num_remaining == 0 {
-                self.to_solve.push(Task {
-                    dir: task.dir,
-                    id: neighbour,
-                })
+                self.to_solve.push(Task { dir, id: neighbour })
             }
         }
     }
@@ -288,9 +297,7 @@ impl<'a> Sweep<'a> {
                 for (face, neighbour) in cell.neighbours.iter() {
                     if !neighbour.is_boundary()
                         && face.points_upwind(dir)
-                        && self
-                            .cells
-                            .is_active(neighbour.unwrap_id(), self.current_level)
+                        && self.levels[&neighbour.unwrap_id()].is_active(self.current_level)
                     {
                         site.num_missing_upwind[dir_index] += 1;
                     }
@@ -320,7 +327,7 @@ impl<'a> Sweep<'a> {
 
 pub fn sweep_system(
     directions: Res<Directions>,
-    cells_query: HydroParticles<(&ParticleId, &Cell)>,
+    cells_query: Particles<(&ParticleId, &Cell)>,
     mut sites_query: Particles<(
         Entity,
         &ParticleId,
@@ -335,11 +342,11 @@ pub fn sweep_system(
     world_size: Res<WorldSize>,
     mut comm: Communicator<FluxData>,
 ) {
-    let cells: HashMap<_, _> = cells_query
+    let cells: StableHashMap<_, _> = cells_query
         .iter()
         .map(|(id, cell)| (*id, cell.clone()))
         .collect();
-    let sites: HashMap<_, _> = sites_query
+    let sites: StableHashMap<_, _> = sites_query
         .iter()
         .map(|(_, id, density, ionized_hydrogen_fraction, source)| {
             (
@@ -353,7 +360,7 @@ pub fn sweep_system(
             )
         })
         .collect();
-    let levels: HashMap<_, _> = levels_query
+    let levels: StableHashMap<_, _> = levels_query
         .iter()
         .map(|(id, level)| (*id, *level))
         .collect();
@@ -396,4 +403,24 @@ pub fn sweep_system(
 fn initialize_directions_system(mut commands: Commands, parameters: Res<SweepParameters>) {
     let directions: Directions = (&parameters.directions).into();
     commands.insert_resource(directions);
+}
+
+pub fn initialize_sweep_components_system(
+    mut commands: Commands,
+    local_particles: Query<Entity, With<LocalParticle>>,
+    halo_particles: Query<Entity, With<HaloParticle>>,
+    sweep_parameters: Res<SweepParameters>,
+) {
+    for entity in local_particles.iter() {
+        commands.entity(entity).insert((
+            Density(units::Density::zero()),
+            components::IonizedHydrogenFraction(Dimensionless::zero()),
+            TimestepLevel(sweep_parameters.num_timestep_levels - 1),
+        ));
+    }
+    for entity in halo_particles.iter() {
+        commands
+            .entity(entity)
+            .insert((TimestepLevel(sweep_parameters.num_timestep_levels - 1),));
+    }
 }

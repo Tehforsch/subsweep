@@ -32,7 +32,7 @@ impl Neighbour {
         match self {
             Self::Local(particle_id) => *particle_id,
             Self::Remote(neighbour) => neighbour.id,
-            _ => panic!("Unwrap entity called on boundary neighbour"),
+            _ => panic!("Unwrap id called on boundary neighbour"),
         }
     }
 }

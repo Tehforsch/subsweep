@@ -24,3 +24,5 @@ output:
     - time
   time_between_snapshots: 10 Myr
   handle_existing_output: delete
+simulation:
+  final_time: 10 Myr
