@@ -67,6 +67,9 @@ impl<'comm> SweepCommunicator<'comm> {
     pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData>>) {
         self.update_pending_requests();
         for (rank, data) in to_send.iter_mut() {
+            if data.is_empty() {
+                continue;
+            }
             if self.requests[*rank].is_none() {
                 self.send_buffers[*rank].append(data);
                 self.requests[*rank] = scope(|scope| {
@@ -81,13 +84,8 @@ impl<'comm> SweepCommunicator<'comm> {
         }
     }
 
-    pub fn try_recv_all(&mut self) -> DataByRank<Vec<FluxData>> {
-        let mut received_data = DataByRank::from_communicator(self.communicator);
-        for rank in self.communicator.other_ranks() {
-            let received = self.communicator.receive_vec(rank);
-            received_data.insert(rank, received);
-        }
-        received_data
+    pub fn try_recv(&mut self, rank: Rank) -> Vec<FluxData> {
+        self.communicator.receive_vec(rank)
     }
 
     #[cfg(feature = "mpi")]
@@ -137,5 +135,15 @@ impl<'comm> Drop for SweepCommunicator<'comm> {
                 self.wait_for_request(*rank, *request);
             }
         }
+    }
+}
+
+impl<'comm> SizedCommunicator for SweepCommunicator<'comm> {
+    fn size(&self) -> usize {
+        self.communicator.size()
+    }
+
+    fn rank(&self) -> Rank {
+        self.communicator.rank()
     }
 }

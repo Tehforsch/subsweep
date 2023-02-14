@@ -22,8 +22,7 @@ use crate::units::PhotonFlux;
 use crate::units::Time;
 use crate::units::VecDimensionless;
 
-fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation) {
-    let num_cells = 5;
+fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation, num_cells: usize) {
     let cell_size = Length::meters(0.1);
     let simulation_box = SimulationBox::cube_from_side_length(cell_size * num_cells as f64);
     sim.add_parameter_file_contents("".into())
@@ -56,15 +55,18 @@ fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation) {
 #[test]
 #[ignore]
 fn simple_sweep() {
-    build_local_communication_sim_with_custom_logic(
-        |sim: &mut Simulation| {
-            build_sweep_sim(vec![MVec::ONE * Dimensionless::dimensionless(1.0)], sim)
-        },
-        |mut sim| {
-            sim.update();
-        },
-        2,
-    );
+    for num_ranks in 1..10 {
+        println!("Running on {}", num_ranks);
+        build_local_communication_sim_with_custom_logic(
+            |sim: &mut Simulation| {
+                build_sweep_sim(vec![MVec::ONE * Dimensionless::dimensionless(1.0)], sim, 10)
+            },
+            |mut sim| {
+                sim.update();
+            },
+            num_ranks,
+        );
+    }
 }
 
 #[test]
@@ -72,7 +74,7 @@ fn simple_sweep() {
 fn sweep_along_grid_axes_does_not_deadlock_or_crash() {
     build_local_communication_sim_with_custom_logic(
         |sim: &mut Simulation| {
-            build_sweep_sim(vec![MVec::X * Dimensionless::dimensionless(1.0)], sim)
+            build_sweep_sim(vec![MVec::X * Dimensionless::dimensionless(1.0)], sim, 5)
         },
         |mut sim| {
             sim.update();

@@ -32,6 +32,7 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
+use crate::communication::SizedCommunicator;
 use crate::components::Density;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
@@ -81,7 +82,8 @@ struct Sweep<'a> {
     levels: StableHashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
     to_send: DataByRank<Queue<FluxData>>,
-    remaining_to_solve_count: CountByDir,
+    to_solve_count: CountByDir,
+    to_receive_count: DataByRank<usize>,
     max_timestep: Time,
     current_level: TimestepLevel,
     flux_treshold: PhotonFlux,
@@ -110,7 +112,8 @@ impl<'a> Sweep<'a> {
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
             directions: directions.clone(),
-            remaining_to_solve_count: CountByDir::empty(),
+            to_solve_count: CountByDir::empty(),
+            to_receive_count: DataByRank::empty(),
             max_timestep,
             current_level: TimestepLevel(0),
             flux_treshold: parameters.significant_flux_treshold,
@@ -126,20 +129,36 @@ impl<'a> Sweep<'a> {
         solver.sites
     }
 
-    fn single_sweep(&mut self) {
-        info!(
-            "{:indent$}Sweeping {} cells at level {:?}",
-            "",
+    pub fn init_counts(&mut self) {
+        self.to_solve_count = CountByDir::new(
+            self.directions.len(),
             self.cells.enumerate_active(self.current_level).count(),
-            self.current_level.0,
-            indent = self.current_level.0 * 2,
         );
-        self.init_counts();
-        self.to_solve = self.get_initial_tasks();
-        self.solve();
-        self.update_chemistry();
-        for site in self.sites.iter() {
-            debug_assert_eq!(site.num_missing_upwind.total(), 0);
+        self.to_receive_count = self
+            .communicator
+            .other_ranks()
+            .into_iter()
+            .map(|rank| (rank, 0))
+            .collect();
+        for (entity, cell) in self.cells.enumerate_active(self.current_level) {
+            let mut site = self.sites.get_mut(*entity);
+            site.num_missing_upwind = CountByDir::new(self.directions.len(), 0);
+            for (dir_index, dir) in self.directions.enumerate() {
+                for (face, neighbour) in cell.neighbours.iter() {
+                    if !face.points_upwind(dir) || neighbour.is_boundary() {
+                        continue;
+                    }
+                    let is_active =
+                        self.levels[&neighbour.unwrap_id()].is_active(self.current_level);
+                    if !is_active {
+                        continue;
+                    }
+                    site.num_missing_upwind[dir_index] += 1;
+                    if let Neighbour::Remote(neighbour) = neighbour {
+                        self.to_receive_count[neighbour.rank] += 1;
+                    }
+                }
+            }
         }
     }
 
@@ -175,10 +194,27 @@ impl<'a> Sweep<'a> {
         self.levels[&id].is_active(self.current_level)
     }
 
+    fn single_sweep(&mut self) {
+        info!(
+            "{:indent$}Sweeping {} cells at level {:?}",
+            "",
+            self.cells.enumerate_active(self.current_level).count(),
+            self.current_level.0,
+            indent = self.current_level.0 * 2,
+        );
+        self.init_counts();
+        self.to_solve = self.get_initial_tasks();
+        self.solve();
+        self.update_chemistry();
+        for site in self.sites.iter() {
+            debug_assert_eq!(site.num_missing_upwind.total(), 0);
+        }
+    }
+
     fn solve(&mut self) {
-        while self.remaining_to_solve_count.total() > 0 || self.remaining_to_send_count() > 0 {
+        while self.to_solve_count.total() > 0 || self.remaining_to_send_count() > 0 {
             if self.to_solve.is_empty() {
-                self.receive_messages();
+                self.receive_all_messages();
             }
             while let Some(task) = self.to_solve.pop() {
                 self.solve_task(task);
@@ -191,12 +227,19 @@ impl<'a> Sweep<'a> {
         self.communicator.count_remaining_to_send()
     }
 
-    fn receive_messages(&mut self) {
-        let received = self.communicator.try_recv_all();
-        for (_, incoming) in received.into_iter() {
-            for d in incoming.into_iter() {
-                self.handle_local_neighbour(d.flux, d.dir, d.id);
+    fn receive_all_messages(&mut self) {
+        for rank in self.communicator.other_ranks() {
+            if self.to_receive_count[rank] > 0 {
+                self.receive_messages_from_rank(rank);
             }
+        }
+    }
+
+    fn receive_messages_from_rank(&mut self, rank: Rank) {
+        let received = self.communicator.try_recv(rank);
+        self.to_receive_count[rank] -= received.len();
+        for d in received.into_iter() {
+            self.handle_local_neighbour(d.flux, d.dir, d.id);
         }
     }
 
@@ -226,7 +269,7 @@ impl<'a> Sweep<'a> {
         let outgoing_flux_correction = outgoing_flux - site.outgoing_total_flux[task.dir.0];
         site.outgoing_total_flux[task.dir.0] = outgoing_flux;
         let cell = &self.cells.get(task.id);
-        self.remaining_to_solve_count.reduce(task.dir);
+        self.to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
         let neighbours = cell.neighbours.clone();
         let total_effective_area: FaceArea = cell
@@ -283,27 +326,6 @@ impl<'a> Sweep<'a> {
             id: remote.id,
         };
         self.to_send[remote.rank].push(flux_data);
-    }
-
-    pub fn init_counts(&mut self) {
-        self.remaining_to_solve_count = CountByDir::new(
-            self.directions.len(),
-            self.cells.enumerate_active(self.current_level).count(),
-        );
-        for (entity, cell) in self.cells.enumerate_active(self.current_level) {
-            let mut site = self.sites.get_mut(*entity);
-            site.num_missing_upwind = CountByDir::new(self.directions.len(), 0);
-            for (dir_index, dir) in self.directions.enumerate() {
-                for (face, neighbour) in cell.neighbours.iter() {
-                    if !neighbour.is_boundary()
-                        && face.points_upwind(dir)
-                        && self.levels[&neighbour.unwrap_id()].is_active(self.current_level)
-                    {
-                        site.num_missing_upwind[dir_index] += 1;
-                    }
-                }
-            }
-        }
     }
 
     fn update_chemistry(&mut self) {
