@@ -11,15 +11,18 @@ use raxiom::components;
 use raxiom::components::IonizedHydrogenFraction;
 use raxiom::components::Position;
 use raxiom::grid::init_cartesian_grid_system;
+use raxiom::hydrodynamics::HaloParticle;
 use raxiom::io::time_series::TimeSeriesPlugin;
 use raxiom::prelude::*;
-use raxiom::sweep::initialize_sweep_components_system;
+use raxiom::sweep::timestep_level::TimestepLevel;
+use raxiom::sweep::SweepParameters;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
 use raxiom::units::Time;
 use raxiom::units::Volume;
+use raxiom::units::PROTON_MASS;
 
 #[raxiom_parameters("rtype")]
 struct Parameters {
@@ -87,6 +90,27 @@ fn initialize_source_system(
     commands
         .entity(closest_entity_to_center)
         .insert(components::Source(parameters.source_strength));
+}
+
+fn initialize_sweep_components_system(
+    mut commands: Commands,
+    local_particles: Query<Entity, With<LocalParticle>>,
+    halo_particles: Query<Entity, With<HaloParticle>>,
+    sweep_parameters: Res<SweepParameters>,
+    parameters: Res<Parameters>,
+) {
+    for entity in local_particles.iter() {
+        commands.entity(entity).insert((
+            components::Density(parameters.number_density * PROTON_MASS),
+            components::IonizedHydrogenFraction(parameters.initial_fraction_ionized_hydrogen),
+            TimestepLevel(sweep_parameters.num_timestep_levels - 1),
+        ));
+    }
+    for entity in halo_particles.iter() {
+        commands
+            .entity(entity)
+            .insert((TimestepLevel(sweep_parameters.num_timestep_levels - 1),));
+    }
 }
 
 #[derive(Named, Debug, H5Type, Clone, Deref, From)]
