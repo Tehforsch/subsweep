@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn compute_timestep_level() {
         let check_level = |max_num_levels, secs_desired, result| {
-            dbg!(max_num_levels, secs_desired, result);
+            println!("{} {} {}", max_num_levels, secs_desired, result);
             assert_eq!(
                 TimestepLevel::from_max_timestep_and_desired_timestep(
                     max_num_levels,

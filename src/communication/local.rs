@@ -4,6 +4,7 @@ use std::ptr;
 use std::slice;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
+use std::sync::mpsc::TryRecvError;
 
 use mpi::request::Scope;
 use mpi::request::WaitGuard;
@@ -86,6 +87,17 @@ impl<T> LocalCommunicator<T> {
         None
     }
 
+    pub fn immediate_send_vec_unchecked<'a, Sc: Scope<'a>>(
+        &mut self,
+        _scope: Sc,
+        rank: Rank,
+        data: &'a [T],
+    ) -> Option<mpi::request::Request<'a, [T], Sc>> {
+        // Local communication does not block anyways
+        self.blocking_send_vec(rank, data);
+        None
+    }
+
     pub fn immediate_send_vec_wait_guard<'a, Sc: Scope<'a>>(
         &mut self,
         _scope: Sc,
@@ -95,6 +107,25 @@ impl<T> LocalCommunicator<T> {
         // Local communication does not block anyways
         self.blocking_send_vec(rank, data);
         None
+    }
+
+    pub fn try_receive_vec(&mut self, rank: Rank) -> Option<Vec<T>> {
+        self.receivers[rank]
+            .try_recv()
+            .map(|message| {
+                let bytes = message.bytes;
+                let size = mem::size_of::<T>();
+                debug_assert_eq!(bytes.len().rem_euclid(size), 0);
+                bytes
+                    .chunks_exact(size)
+                    .map(|chunk| unsafe { ptr::read(chunk.as_ptr().cast()) })
+                    .collect()
+            })
+            .map_err(|err| match err {
+                TryRecvError::Empty => TryRecvError::Empty,
+                TryRecvError::Disconnected => panic!("Channel disconnected"),
+            })
+            .ok()
     }
 }
 

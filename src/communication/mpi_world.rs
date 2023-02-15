@@ -19,6 +19,7 @@ use mpi::traits::Communicator;
 use mpi::traits::CommunicatorCollectives;
 use mpi::traits::Destination;
 use mpi::traits::Equivalence;
+use mpi::traits::MatchedReceiveVec;
 use mpi::traits::Source;
 use mpi::Count;
 use mpi::Tag;
@@ -114,6 +115,26 @@ where
             return data;
         }
         vec![]
+    }
+
+    pub fn try_receive_vec(&mut self, rank: Rank) -> Option<Vec<S>> {
+        let process = self.world.process_at_rank(rank);
+        let result = process.immediate_matched_probe_with_tag(self.tag);
+        result.map(|result| {
+            let (data, _) = result.matched_receive_vec();
+            data
+        })
+    }
+
+    #[must_use]
+    pub fn immediate_send_vec_unchecked<'a, Sc: Scope<'a>>(
+        &mut self,
+        scope: Sc,
+        rank: Rank,
+        data: &'a [S],
+    ) -> Option<Request<'a, [S], Sc>> {
+        let process = self.world.process_at_rank(rank);
+        Some(process.immediate_send_with_tag(scope, data, self.tag))
     }
 
     #[must_use]

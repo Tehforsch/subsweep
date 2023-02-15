@@ -55,7 +55,7 @@ impl<'comm> SweepCommunicator<'comm> {
     pub fn update_pending_requests(&mut self) {
         for rank in self.communicator.other_ranks() {
             if self.requests[rank]
-                .map(|request| self.request_completed(rank, request))
+                .map(|request| self.request_completed(request))
                 .unwrap_or(true)
             {
                 self.requests[rank] = None;
@@ -73,34 +73,38 @@ impl<'comm> SweepCommunicator<'comm> {
             if self.requests[*rank].is_none() {
                 self.send_buffers[*rank].append(data);
                 self.requests[*rank] = scope(|scope| {
-                    let scoped_request = self.communicator.immediate_send_vec(
+                    let scoped_request = self.communicator.immediate_send_vec_unchecked(
                         scope,
                         *rank,
                         &self.send_buffers[*rank][..],
                     );
                     scoped_request.map(to_unscoped)
-                })
+                });
             }
         }
     }
 
-    pub fn try_recv(&mut self, rank: Rank) -> Vec<FluxData> {
-        self.communicator.receive_vec(rank)
+    pub fn try_recv(&mut self, rank: Rank) -> Option<Vec<FluxData>> {
+        self.communicator.try_receive_vec(rank)
     }
 
     #[cfg(feature = "mpi")]
-    fn request_completed(&self, rank: Rank, request: OutstandingRequest) -> bool {
-        scope(|s| {
-            let data = &self.send_buffers[rank];
-            match self.to_scoped_request(s, data, request).test() {
-                Ok(_status) => true,
-                Err(_) => false,
-            }
-        })
+    fn request_completed(&self, mut request: OutstandingRequest) -> bool {
+        use std::mem::MaybeUninit;
+
+        use mpi::ffi;
+
+        unsafe {
+            let mut status = MaybeUninit::uninit();
+            let mut flag = MaybeUninit::uninit();
+
+            ffi::MPI_Test(&mut request, flag.as_mut_ptr(), status.as_mut_ptr());
+            flag.assume_init() != 0
+        }
     }
 
     #[cfg(not(feature = "mpi"))]
-    fn request_completed(&self, _rank: Rank, _request: OutstandingRequest) -> bool {
+    fn request_completed(&self, _request: OutstandingRequest) -> bool {
         true
     }
 
@@ -133,6 +137,7 @@ impl<'comm> Drop for SweepCommunicator<'comm> {
         for (rank, request) in self.requests.iter() {
             if let Some(request) = request {
                 self.wait_for_request(*rank, *request);
+                return;
             }
         }
     }

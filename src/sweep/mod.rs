@@ -22,10 +22,10 @@ use self::chemistry_solver::Solver;
 use self::components::IonizedHydrogenFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
-use self::direction::DirectionIndex;
+pub use self::direction::DirectionIndex;
 use self::direction::Directions;
 use self::site::Site;
-use self::task::FluxData;
+pub use self::task::FluxData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
 use crate::communication::CommunicationPlugin;
@@ -49,7 +49,7 @@ use crate::units::SourceRate;
 use crate::units::Time;
 use crate::units::PROTON_MASS;
 
-type SweepCommunicator<'a> = self::communicator::SweepCommunicator<'a>;
+pub type SweepCommunicator<'a> = self::communicator::SweepCommunicator<'a>;
 
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
 type Queue<T> = Vec<T>;
@@ -237,9 +237,11 @@ impl<'a> Sweep<'a> {
 
     fn receive_messages_from_rank(&mut self, rank: Rank) {
         let received = self.communicator.try_recv(rank);
-        self.to_receive_count[rank] -= received.len();
-        for d in received.into_iter() {
-            self.handle_local_neighbour(d.flux, d.dir, d.id);
+        if let Some(received) = received {
+            self.to_receive_count[rank] -= received.len();
+            for d in received.into_iter() {
+                self.handle_local_neighbour(d.flux, d.dir, d.id);
+            }
         }
     }
 
