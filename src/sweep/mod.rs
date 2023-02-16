@@ -14,6 +14,7 @@ pub mod timestep_level;
 
 use bevy::prelude::*;
 use bevy::utils::StableHashMap;
+use mpi::traits::Equivalence;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
@@ -31,6 +32,7 @@ use self::timestep_level::TimestepLevel;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
 use crate::communication::DataByRank;
+use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::components::Density;
@@ -60,6 +62,12 @@ type Sites = ActiveList<Site>;
 #[derive(Named)]
 pub struct SweepPlugin;
 
+#[derive(Equivalence, PartialEq, Eq, Hash)]
+pub struct TimestepLevelData {
+    level: TimestepLevel,
+    id: ParticleId,
+}
+
 impl RaxiomPlugin for SweepPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_startup_system_to_stage(
@@ -70,8 +78,13 @@ impl RaxiomPlugin for SweepPlugin {
         .add_required_component::<Source>()
         .add_derived_component::<components::Flux>()
         .add_system_to_stage(SimulationStages::ForceCalculation, sweep_system)
+        .add_system_to_stage(
+            SimulationStages::ForceCalculation,
+            communicate_levels_system.after(sweep_system),
+        )
         .add_parameter_type::<SweepParameters>()
-        .add_plugin(CommunicationPlugin::<FluxData>::default());
+        .add_plugin(CommunicationPlugin::<FluxData>::default())
+        .add_plugin(CommunicationPlugin::<TimestepLevelData>::exchange());
     }
 }
 
@@ -421,6 +434,36 @@ pub fn sweep_system(
         }
         level.0 = desired_level.0;
         **fraction = new_fraction;
+    }
+}
+
+fn communicate_levels_system(
+    mut levels_comm: ExchangeCommunicator<TimestepLevelData>,
+    mut halo_levels: HaloParticles<
+        (Entity, &ParticleId, &mut TimestepLevel),
+        Without<LocalParticle>,
+    >,
+    local_levels: Particles<(&ParticleId, &TimestepLevel, &Cell), Without<HaloParticle>>,
+) {
+    let mut data: DataByRank<Vec<TimestepLevelData>> = DataByRank::from_communicator(&*levels_comm);
+    for (id, level, cell) in local_levels.iter() {
+        for (_, n) in cell.neighbours.iter() {
+            if let Neighbour::Remote(n) = n {
+                data[n.rank].push(TimestepLevelData {
+                    id: *id,
+                    level: *level,
+                });
+            }
+        }
+    }
+    let id_to_entity: StableHashMap<ParticleId, Entity> = halo_levels
+        .iter()
+        .map(|(entity, id, _)| (*id, entity))
+        .collect();
+    for (_, levels) in levels_comm.exchange_all(data).iter() {
+        for level_data in levels {
+            *halo_levels.get_mut(id_to_entity[&level_data.id]).unwrap().2 = level_data.level;
+        }
     }
 }
 
