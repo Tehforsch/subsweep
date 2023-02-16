@@ -1,3 +1,4 @@
+use std::iter::Sum;
 use std::marker::PhantomData;
 use std::mem;
 use std::mem::MaybeUninit;
@@ -145,6 +146,30 @@ impl<S> MpiWorld<S>
 where
     S: Equivalence + Clone,
 {
+    // Temporary replacement for a proper AllReduce call
+    pub fn all_gather_sum<T>(&mut self, send: &S) -> T
+    where
+        T: Sum<T> + From<S>,
+    {
+        self.verify_tag();
+        unchecked_all_gather(self.world, send)
+            .into_iter()
+            .map(|s| T::from(s))
+            .sum()
+    }
+
+    // Temporary replacement for a proper AllReduce call
+    pub fn all_gather_min<T>(&mut self, send: &S) -> Option<T>
+    where
+        T: PartialOrd<T> + From<S>,
+    {
+        self.verify_tag();
+        unchecked_all_gather(self.world, send)
+            .into_iter()
+            .map(|s| T::from(s))
+            .min_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal))
+    }
+
     pub fn all_gather(&mut self, send: &S) -> Vec<S> {
         self.verify_tag();
         unchecked_all_gather(self.world, send)

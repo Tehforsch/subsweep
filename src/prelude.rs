@@ -1,5 +1,7 @@
 pub use derive_custom::raxiom_parameters;
 
+pub use crate::communication::CommunicationPlugin;
+pub use crate::communication::Communicator;
 pub use crate::communication::WorldRank;
 pub use crate::communication::WorldSize;
 pub use crate::domain::Extent;

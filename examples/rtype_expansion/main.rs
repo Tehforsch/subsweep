@@ -5,7 +5,10 @@ use std::f64::consts::PI;
 
 use bevy::prelude::*;
 use derive_more::From;
+use derive_more::Into;
 use hdf5::H5Type;
+use mpi::traits::Equivalence;
+use mpi::Rank;
 use ordered_float::OrderedFloat;
 use raxiom::components;
 use raxiom::components::IonizedHydrogenFraction;
@@ -14,6 +17,7 @@ use raxiom::grid::init_cartesian_grid_system;
 use raxiom::hydrodynamics::HaloParticle;
 use raxiom::io::time_series::TimeSeriesPlugin;
 use raxiom::prelude::*;
+use raxiom::simulation_plugin::time_system;
 use raxiom::sweep::timestep_level::TimestepLevel;
 use raxiom::sweep::SweepParameters;
 use raxiom::units::Dimensionless;
@@ -23,6 +27,26 @@ use raxiom::units::PhotonFlux;
 use raxiom::units::Time;
 use raxiom::units::Volume;
 use raxiom::units::PROTON_MASS;
+
+#[derive(Named, Debug, H5Type, Clone, Deref, From)]
+#[name = "rtype_error"]
+#[repr(transparent)]
+struct RTypeError(Dimensionless);
+
+#[derive(Named, Debug, H5Type, Clone, Deref, From)]
+#[name = "rtype_radius"]
+#[repr(transparent)]
+struct RTypeRadius(Length);
+
+#[derive(Equivalence, Clone, Into)]
+#[repr(transparent)]
+struct RTypeVolume(Volume);
+
+#[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
+struct DistanceToSourceData {
+    distance: Length,
+    rank: Rank,
+}
 
 #[raxiom_parameters("rtype")]
 struct Parameters {
@@ -66,7 +90,12 @@ fn main() {
         SimulationStartupStages::InsertDerivedComponents,
         initialize_source_system,
     )
-    .add_system_to_stage(SimulationStages::Integration, print_ionization_system)
+    .add_system_to_stage(
+        SimulationStages::Integration,
+        print_ionization_system.after(time_system),
+    )
+    .add_plugin(CommunicationPlugin::<RTypeVolume>::default())
+    .add_plugin(CommunicationPlugin::<DistanceToSourceData>::default())
     .add_plugin(TimeSeriesPlugin::<RTypeRadius>::default())
     .add_plugin(TimeSeriesPlugin::<RTypeError>::default())
     .add_plugin(SweepPlugin)
@@ -78,18 +107,29 @@ fn initialize_source_system(
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
     box_size: Res<SimulationBox>,
+    mut comm: Communicator<DistanceToSourceData>,
+    world_rank: Res<WorldRank>,
 ) {
-    let closest_entity_to_center = particles
+    let (closest_entity_to_center, distance) = particles
         .iter()
-        .min_by_key(|(_, pos)| {
-            let dist = ***pos - box_size.center();
-            OrderedFloat(dist.length().value_unchecked())
+        .map(|(entity, pos)| {
+            let dist = **pos - box_size.center();
+            (entity, OrderedFloat(dist.length().value_unchecked()))
         })
-        .map(|(entity, _)| entity)
+        .min_by_key(|(_, dist)| *dist)
         .unwrap();
-    commands
-        .entity(closest_entity_to_center)
-        .insert(components::Source(parameters.source_strength));
+    let rank_with_min_distance: Rank = comm
+        .all_gather_min::<DistanceToSourceData>(&DistanceToSourceData {
+            distance: Length::new_unchecked(*distance),
+            rank: **world_rank,
+        })
+        .unwrap()
+        .rank;
+    if **world_rank == rank_with_min_distance {
+        commands
+            .entity(closest_entity_to_center)
+            .insert(components::Source(parameters.source_strength));
+    }
 }
 
 fn initialize_sweep_components_system(
@@ -113,27 +153,19 @@ fn initialize_sweep_components_system(
     }
 }
 
-#[derive(Named, Debug, H5Type, Clone, Deref, From)]
-#[name = "rtype_error"]
-#[repr(transparent)]
-struct RTypeError(Dimensionless);
-
-#[derive(Named, Debug, H5Type, Clone, Deref, From)]
-#[name = "rtype_radius"]
-#[repr(transparent)]
-struct RTypeRadius(Length);
-
 fn print_ionization_system(
     ionization: Query<&IonizedHydrogenFraction>,
     parameters: Res<Parameters>,
     time: Res<raxiom::simulation_plugin::Time>,
     mut radius_writer: EventWriter<RTypeRadius>,
     mut error_writer: EventWriter<RTypeError>,
+    mut comm: Communicator<RTypeVolume>,
 ) {
     let mut volume = Volume::zero();
     for frac in ionization.iter() {
         volume += **frac * parameters.cell_size.powi::<3>();
     }
+    let volume: Volume = comm.all_gather_sum(&RTypeVolume(volume));
     let recombination_time = Time::megayears(122.4);
     let stroemgren_radius = Length::kiloparsec(6.79);
     let radius = (volume / (4.0 * PI / 3.0)).cbrt();
