@@ -53,8 +53,12 @@ impl<T: TimeSeries> RaxiomPlugin for TimeSeriesPlugin<T> {
                 .after(make_output_dirs_system)
                 .after(setup_time_series_output_system),
         )
-        .add_system_to_stage(OutputStages::Output, output_time_series_system::<T>)
-        .add_event::<T>();
+        .add_system_to_stage(OutputStages::Output, output_time_series_system::<T>);
+    }
+
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        // Add this here too, so we can request this even on systems running on non-main ranks without the crash.
+        sim.add_event::<T>();
     }
 }
 
@@ -88,7 +92,6 @@ pub fn output_time_series_system<T: TimeSeries>(
 ) where
     T: TimeSeries,
 {
-    let event = event_reader.iter().next().unwrap();
     let path = get_time_series_filename::<T>(&parameters);
     let file = File::open_rw(path).expect("Failed to open time series output file");
     let time_dataset = file
@@ -97,8 +100,10 @@ pub fn output_time_series_system<T: TimeSeries>(
     let value_dataset = file
         .dataset(T::name())
         .expect("Value dataset not available in file");
-    append_value_to_dataset(&time_dataset, *time);
-    append_value_to_dataset(&value_dataset, event.clone());
+    for event in event_reader.iter() {
+        append_value_to_dataset(&time_dataset, *time);
+        append_value_to_dataset(&value_dataset, event.clone());
+    }
 }
 
 fn append_value_to_dataset<T: ToDataset>(dataset: &Dataset, value: T) {
