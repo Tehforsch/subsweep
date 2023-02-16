@@ -9,7 +9,6 @@ use bevy::prelude::DerefMut;
 use lazy_static::lazy_static;
 use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;
-use mpi::point_to_point::Status;
 use mpi::request::Request;
 use mpi::request::Scope;
 use mpi::request::WaitGuard;
@@ -98,23 +97,11 @@ impl<S> MpiWorld<S>
 where
     S: Equivalence,
 {
-    pub fn blocking_send_vec(&mut self, rank: Rank, data: &[S]) {
-        let num = data.len();
-        let process = self.world.process_at_rank(rank);
-        process.send_with_tag(&num, self.tag);
-        if num > 0 {
-            process.send_with_tag(data, self.tag);
-        }
-    }
-
     pub fn receive_vec(&mut self, rank: Rank) -> Vec<S> {
         let process = self.world.process_at_rank(rank);
-        let (num_received, _): (usize, Status) = process.receive_with_tag(self.tag);
-        if num_received > 0 {
-            let (data, _) = process.receive_vec_with_tag(self.tag);
-            return data;
-        }
-        vec![]
+        let result = process.matched_probe_with_tag(self.tag);
+        let (data, _) = result.matched_receive_vec();
+        data
     }
 
     pub fn try_receive_vec(&mut self, rank: Rank) -> Option<Vec<S>> {
@@ -126,15 +113,9 @@ where
         })
     }
 
-    #[must_use]
-    pub fn immediate_send_vec_unchecked<'a, Sc: Scope<'a>>(
-        &mut self,
-        scope: Sc,
-        rank: Rank,
-        data: &'a [S],
-    ) -> Option<Request<'a, [S], Sc>> {
+    pub fn blocking_send_vec(&mut self, rank: Rank, data: &[S]) {
         let process = self.world.process_at_rank(rank);
-        Some(process.immediate_send_with_tag(scope, data, self.tag))
+        process.send_with_tag(data, self.tag);
     }
 
     #[must_use]
@@ -144,14 +125,8 @@ where
         rank: Rank,
         data: &'a [S],
     ) -> Option<Request<'a, [S], Sc>> {
-        let num = data.len();
         let process = self.world.process_at_rank(rank);
-        process.buffered_send_with_tag(&num, self.tag);
-        if num > 0 {
-            Some(process.immediate_send_with_tag(scope, data, self.tag))
-        } else {
-            None
-        }
+        Some(process.immediate_send_with_tag(scope, data, self.tag))
     }
 
     #[must_use]

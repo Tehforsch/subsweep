@@ -73,7 +73,7 @@ impl<'comm> SweepCommunicator<'comm> {
             if self.requests[*rank].is_none() {
                 self.send_buffers[*rank].append(data);
                 self.requests[*rank] = scope(|scope| {
-                    let scoped_request = self.communicator.immediate_send_vec_unchecked(
+                    let scoped_request = self.communicator.immediate_send_vec(
                         scope,
                         *rank,
                         &self.send_buffers[*rank][..],
