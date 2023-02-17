@@ -3,6 +3,8 @@ mod face;
 mod indexed_arena;
 mod tetra;
 
+use std::iter;
+
 use bevy::utils::StableHashMap;
 pub use delaunay::DelaunayTriangulation;
 use derive_more::From;
@@ -12,11 +14,6 @@ use generational_arena::Index;
 use self::face::Face;
 use self::indexed_arena::IndexedArena;
 use self::tetra::Tetra;
-use crate::grid::Cell;
-use crate::grid::Neighbour;
-use crate::prelude::ParticleId;
-use crate::units::VecDimensionless;
-use crate::units::VecLength;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct TetraIndex(Index);
@@ -24,62 +21,68 @@ pub struct TetraIndex(Index);
 pub struct FaceIndex(Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
 pub struct PointIndex(Index);
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
-pub struct CellIndex(Index);
+
+pub type CellIndex = usize;
 
 #[cfg(feature = "2d")]
 pub type Point = glam::DVec2;
 #[cfg(feature = "3d")]
 pub type Point = glam::DVec3;
 
-fn point_to_length(p: Point) -> VecLength {
-    VecLength::new_unchecked(p)
-}
-
-fn point_to_dimensionless(p: Point) -> VecDimensionless {
-    VecDimensionless::new_unchecked(p)
-}
-
 type TetraList = IndexedArena<TetraIndex, Tetra>;
 type FaceList = IndexedArena<FaceIndex, Face>;
 type PointList = IndexedArena<PointIndex, Point>;
-type CellList = IndexedArena<CellIndex, Cell>;
 
-struct VoronoiGrid {
-    cells: CellList,
+pub struct VoronoiGrid {
+    pub cells: Vec<Cell>,
+}
+
+pub struct Cell {
+    pub points: Vec<Point>,
+    pub connected_cells: Vec<CellIndex>,
 }
 
 impl From<DelaunayTriangulation> for VoronoiGrid {
     fn from(t: DelaunayTriangulation) -> Self {
-        let mut map: StableHashMap<PointIndex, usize> = StableHashMap::default();
+        let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
+        let point_to_tetra_map = point_to_tetra_map(&t);
         let mut cells = vec![];
         for (i, (point_index, _)) in t.points.iter().enumerate() {
-            cells.push(Cell {
-                neighbours: vec![],
-                size: todo!(),
-            });
             map.insert(point_index, i);
         }
-        for (_, face) in t.faces.iter() {
-            let i1 = map[&face.p1];
-            let i2 = map[&face.p2];
-            let normal =
-                point_to_dimensionless((t.points[face.p1] - t.points[face.p2]).normalize());
-            let face12 = crate::grid::Face {
-                area: todo!(),
-                normal,
-            };
-            let face21 = crate::grid::Face {
-                area: todo!(),
-                normal: -normal,
-            };
-            cells[i1]
-                .neighbours
-                .push((face12, Neighbour::Local(ParticleId(i2))));
-            cells[i2]
-                .neighbours
-                .push((face21, Neighbour::Local(ParticleId(i1))));
+        for (point_index, _) in t.points.iter() {
+            let mut points = vec![];
+            let mut connected_cells = vec![];
+            let tetras = &point_to_tetra_map[&point_index];
+            for tetra in tetras.iter() {
+                points.push(
+                    t.get_tetra_data(&t.tetras[*tetra])
+                        .get_center_of_circumcircle(),
+                );
+            }
+            for (t1, t2) in tetras
+                .iter()
+                .zip(tetras[1..].iter().chain(iter::once(&tetras[0])))
+            {
+                let common_face = t.tetras[*t1].get_common_face_with(&t.tetras[*t2]);
+                let other_point = t.faces[common_face].get_other_point(point_index);
+                connected_cells.push(map[&other_point]);
+            }
+            cells.push(Cell {
+                points,
+                connected_cells,
+            });
         }
-        todo!()
+        VoronoiGrid { cells }
     }
+}
+
+fn point_to_tetra_map(t: &DelaunayTriangulation) -> StableHashMap<PointIndex, Vec<TetraIndex>> {
+    let mut map: StableHashMap<_, _> = t.points.iter().map(|(i, _)| (i, vec![])).collect();
+    for (tetra_index, tetra) in t.tetras.iter() {
+        map.get_mut(&tetra.p1).unwrap().push(tetra_index);
+        map.get_mut(&tetra.p2).unwrap().push(tetra_index);
+        map.get_mut(&tetra.p3).unwrap().push(tetra_index);
+    }
+    map
 }

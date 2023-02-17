@@ -75,7 +75,7 @@ impl DelaunayTriangulation {
         constructor
     }
 
-    fn get_tetra_data(&self, tetra: &Tetra) -> TetraData {
+    pub(super) fn get_tetra_data(&self, tetra: &Tetra) -> TetraData {
         TetraData {
             p1: self.points[tetra.p1],
             p2: self.points[tetra.p2],

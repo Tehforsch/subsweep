@@ -75,6 +75,25 @@ impl Triangle {
     pub fn iter_faces_mut(&mut self) -> impl Iterator<Item = &mut TetraFace> {
         ([&mut self.f1, &mut self.f2, &mut self.f3]).into_iter()
     }
+
+    pub fn get_common_face_with(&self, other: &Triangle) -> FaceIndex {
+        [
+            (self.f1, other.f1),
+            (self.f1, other.f2),
+            (self.f1, other.f3),
+            (self.f2, other.f1),
+            (self.f2, other.f2),
+            (self.f2, other.f3),
+            (self.f3, other.f1),
+            (self.f3, other.f2),
+            (self.f3, other.f3),
+        ]
+        .iter()
+        .find(|(fa, fb)| fa.face == fb.face)
+        .map(|(fa, _)| fa)
+        .unwrap()
+        .face
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -136,6 +155,23 @@ impl TriangleData {
             1.0, self.p3.x, self.p3.y,
         );
         det > 0.0
+    }
+
+    pub fn get_center_of_circumcircle(&self) -> Point {
+        let a = self.p1;
+        let b = self.p2;
+        let c = self.p3;
+        let d = 2.0 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+        Point {
+            x: 1.0 / d
+                   * ((a.x.powi(2) + a.y.powi(2)) * (b.y - c.y)
+                    + (b.x.powi(2) + b.y.powi(2)) * (c.y - a.y)
+                    + (c.x.powi(2) + c.y.powi(2)) * (a.y - b.y)),
+            y: 1.0 / d
+                   * ((a.x.powi(2) + a.y.powi(2)) * (c.x - b.x)
+                    + (b.x.powi(2) + b.y.powi(2)) * (a.x - c.x)
+                    + (c.x.powi(2) + c.y.powi(2)) * (b.x - a.x)),
+        }
     }
 }
 
