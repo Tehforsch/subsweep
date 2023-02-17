@@ -10,6 +10,7 @@ pub use delaunay::DelaunayTriangulation;
 use derive_more::From;
 use derive_more::Into;
 use generational_arena::Index;
+use ordered_float::OrderedFloat;
 
 use self::face::Face;
 use self::indexed_arena::IndexedArena;
@@ -38,8 +39,17 @@ pub struct VoronoiGrid {
 }
 
 pub struct Cell {
+    pub delaunay_point: PointIndex,
     pub points: Vec<Point>,
     pub connected_cells: Vec<CellIndex>,
+}
+
+impl Cell {
+    pub fn point_windows(&self) -> impl Iterator<Item = (&Point, &Point)> {
+        self.points
+            .iter()
+            .zip(self.points[1..].iter().chain(iter::once(&self.points[0])))
+    }
 }
 
 impl From<DelaunayTriangulation> for VoronoiGrid {
@@ -65,10 +75,15 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
                 .zip(tetras[1..].iter().chain(iter::once(&tetras[0])))
             {
                 let common_face = t.tetras[*t1].get_common_face_with(&t.tetras[*t2]);
-                let other_point = t.faces[common_face].get_other_point(point_index);
-                connected_cells.push(map[&other_point]);
+                if let Some(common_face) = common_face {
+                    let other_point = t.faces[common_face].get_other_point(point_index);
+                    connected_cells.push(map[&other_point]);
+                } else {
+                    todo!()
+                }
             }
             cells.push(Cell {
+                delaunay_point: point_index,
                 points,
                 connected_cells,
             });
@@ -77,12 +92,28 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
     }
 }
 
-fn point_to_tetra_map(t: &DelaunayTriangulation) -> StableHashMap<PointIndex, Vec<TetraIndex>> {
-    let mut map: StableHashMap<_, _> = t.points.iter().map(|(i, _)| (i, vec![])).collect();
-    for (tetra_index, tetra) in t.tetras.iter() {
+fn point_to_tetra_map(
+    triangulation: &DelaunayTriangulation,
+) -> StableHashMap<PointIndex, Vec<TetraIndex>> {
+    let mut map: StableHashMap<_, _> = triangulation
+        .points
+        .iter()
+        .map(|(i, _)| (i, vec![]))
+        .collect();
+    for (tetra_index, tetra) in triangulation.tetras.iter() {
         map.get_mut(&tetra.p1).unwrap().push(tetra_index);
         map.get_mut(&tetra.p2).unwrap().push(tetra_index);
         map.get_mut(&tetra.p3).unwrap().push(tetra_index);
+    }
+    for (point_index, tetras) in map.iter_mut() {
+        let point = triangulation.points[*point_index];
+        tetras.sort_by_key(|t| {
+            let p = triangulation
+                .get_tetra_data(&triangulation.tetras[*t])
+                .get_center_of_circumcircle();
+            let vec = p - point;
+            OrderedFloat(vec.x.atan2(vec.y))
+        });
     }
     map
 }

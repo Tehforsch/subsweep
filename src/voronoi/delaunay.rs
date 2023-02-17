@@ -13,12 +13,13 @@ use super::PointList;
 use super::TetraIndex;
 use super::TetraList;
 
+#[derive(Clone)]
 pub struct FlipCheckData {
     tetra: TetraIndex,
     face: FaceIndex,
 }
 
-#[derive(Resource)]
+#[derive(Resource, Clone)]
 pub struct DelaunayTriangulation {
     pub tetras: TetraList,
     pub faces: FaceList,

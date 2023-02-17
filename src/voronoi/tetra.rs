@@ -5,6 +5,7 @@ use super::TetraIndex;
 use crate::prelude::Float;
 
 #[cfg(not(feature = "2d"))]
+#[derive(Clone)]
 pub struct Tetra {
     pub p1: PointIndex,
     pub p2: PointIndex,
@@ -13,6 +14,7 @@ pub struct Tetra {
 }
 
 #[cfg(not(feature = "2d"))]
+#[derive(Clone)]
 pub struct TetraData {
     pub p1: Point,
     pub p2: Point,
@@ -25,7 +27,7 @@ pub type Tetra = Triangle;
 #[cfg(feature = "2d")]
 pub type TetraData = TriangleData;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Triangle {
     pub p1: PointIndex,
     pub p2: PointIndex,
@@ -76,7 +78,7 @@ impl Triangle {
         ([&mut self.f1, &mut self.f2, &mut self.f3]).into_iter()
     }
 
-    pub fn get_common_face_with(&self, other: &Triangle) -> FaceIndex {
+    pub fn get_common_face_with(&self, other: &Triangle) -> Option<FaceIndex> {
         [
             (self.f1, other.f1),
             (self.f1, other.f2),
@@ -90,9 +92,7 @@ impl Triangle {
         ]
         .iter()
         .find(|(fa, fb)| fa.face == fb.face)
-        .map(|(fa, _)| fa)
-        .unwrap()
-        .face
+        .map(|(fa, _)| fa.face)
     }
 }
 
@@ -164,11 +164,11 @@ impl TriangleData {
         let d = 2.0 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
         Point {
             x: 1.0 / d
-                   * ((a.x.powi(2) + a.y.powi(2)) * (b.y - c.y)
+                * ((a.x.powi(2) + a.y.powi(2)) * (b.y - c.y)
                     + (b.x.powi(2) + b.y.powi(2)) * (c.y - a.y)
                     + (c.x.powi(2) + c.y.powi(2)) * (a.y - b.y)),
             y: 1.0 / d
-                   * ((a.x.powi(2) + a.y.powi(2)) * (c.x - b.x)
+                * ((a.x.powi(2) + a.y.powi(2)) * (c.x - b.x)
                     + (b.x.powi(2) + b.y.powi(2)) * (a.x - c.x)
                     + (c.x.powi(2) + c.y.powi(2)) * (b.x - a.x)),
         }

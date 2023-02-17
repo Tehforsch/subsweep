@@ -6,6 +6,7 @@ use generational_arena::Index;
 /// This simply adds a layer of type safety around the arena, making sure
 /// we cannot accidentally confuse indices into the different arenas in the
 /// triangulations (i.e. use a face index for the tetra arena).
+#[derive(Clone)]
 pub struct IndexedArena<Id: Into<Index> + From<Index>, T> {
     _marker: PhantomData<Id>,
     arena: Arena<T>,

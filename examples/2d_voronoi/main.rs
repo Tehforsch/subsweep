@@ -11,6 +11,8 @@ use raxiom::prelude::*;
 use raxiom::units::VecLength;
 use raxiom::voronoi::DelaunayTriangulation;
 use raxiom::voronoi::TetraIndex;
+use raxiom::voronoi::VoronoiGrid;
+use vis::DrawPolygon;
 use vis::DrawTriangle;
 
 use crate::camera::setup_camera_system;
@@ -34,6 +36,9 @@ struct VisTriangle {
 }
 
 #[derive(Component, Debug)]
+struct VisPolygon;
+
+#[derive(Component, Debug)]
 struct VisCircle;
 
 #[derive(Debug)]
@@ -53,14 +58,14 @@ fn main() {
 }
 
 fn add_points_system(mut commands: Commands) {
-    let n_x = 3;
-    let n_y = 3;
+    let n_x = 8;
+    let n_y = 8;
     for i in 0..n_x {
         for j in 0..n_y {
             commands.spawn((
                 LocalParticle,
                 Position(VecLength::meters(
-                    (i as f64 - n_x as f64 / 2.0 + j as f64 * 0.6122) * 0.1,
+                    (i as f64 - n_x as f64 / 2.0 + (j as f64 * 0.6122 * i as f64 * 0.02)) * 0.1,
                     (j as f64 - n_y as f64 / 2.0 - i as f64 * 0.71123) as f64 * 0.1,
                 )),
             ));
@@ -72,6 +77,7 @@ fn show_voronoi_system(
     mut commands: Commands,
     particles: Particles<&Position>,
     triangles: Query<(Entity, &VisTriangle)>,
+    polys: Query<(Entity, &VisPolygon)>,
     circles: Query<(Entity, &VisCircle)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -82,6 +88,9 @@ fn show_voronoi_system(
         return;
     }
     for (e, _) in triangles.iter() {
+        commands.entity(e).despawn();
+    }
+    for (e, _) in polys.iter() {
         commands.entity(e).despawn();
     }
     for (e, _) in circles.iter() {
@@ -98,6 +107,24 @@ fn show_voronoi_system(
             .map(|x| x.value_unchecked())
             .collect::<Vec<_>>(),
     );
+    let grid = VoronoiGrid::from(triangulation.clone());
+    for cell in grid.cells.iter() {
+        for vp in cell.points.iter() {
+            commands.spawn((
+                VisCircle,
+                ColorMesh2dBundle {
+                    mesh: meshes.add(shape::Circle::new(0.005).into()).into(),
+                    material: colors.green.clone(),
+                    transform: Transform::from_translation(Vec3::new(
+                        vp.x as f32,
+                        vp.y as f32,
+                        LOW_LAYER,
+                    )),
+                    ..default()
+                },
+            ));
+        }
+    }
     for p in particles.iter() {
         commands.spawn((
             VisCircle,
@@ -126,6 +153,18 @@ fn show_voronoi_system(
                 ..default()
             })
             .insert(VisTriangle { index });
+    }
+    for cell in grid.cells.iter() {
+        let poly = DrawPolygon {
+            points: cell.points.clone(),
+        };
+        commands
+            .spawn(ColorMesh2dBundle {
+                mesh: meshes.add(poly.get_mesh()).into(),
+                material: colors.red.clone(),
+                ..default()
+            })
+            .insert(VisPolygon);
     }
     commands.insert_resource(triangulation);
     commands.insert_resource(colors);
