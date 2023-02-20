@@ -3,6 +3,7 @@ mod face;
 mod indexed_arena;
 mod tetra;
 
+use std::f64::consts::PI;
 use std::iter;
 
 use bevy::prelude::Resource;
@@ -17,6 +18,12 @@ use self::face::Face;
 use self::indexed_arena::IndexedArena;
 use self::tetra::sign;
 use self::tetra::Tetra;
+use crate::grid::Neighbour;
+use crate::prelude::Float;
+use crate::prelude::ParticleId;
+use crate::units::Length;
+use crate::units::VecDimensionless;
+use crate::units::Volume;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct TetraIndex(Index);
@@ -73,6 +80,32 @@ impl Cell {
 
         !(has_negative && has_positive)
     }
+
+    pub fn iter_neighbours_and_faces(&self) -> impl Iterator<Item = (usize, Float, Point)> + '_ {
+        self.connected_cells
+            .iter()
+            .zip(self.point_windows())
+            .map(|(c, (p1, p2))| (*c, p1.distance(*p2), (*p2 - *p1).normalize()))
+            .filter(|_| !self.is_boundary) // For now: return an empty iterator if this is a boundary cell
+    }
+
+    #[cfg(feature = "3d")]
+    pub fn size(&self) -> Float {
+        (3.0 * self.volume() / (4.0 * PI)).cbrt()
+    }
+
+    #[cfg(feature = "2d")]
+    pub fn size(&self) -> Float {
+        (self.volume() / PI).sqrt()
+    }
+
+    #[cfg(feature = "2d")]
+    pub fn volume(&self) -> Float {
+        0.5 * self
+            .point_windows()
+            .map(|(p1, p2)| p1.x * p2.y - p2.x * p1.y)
+            .sum::<Float>()
+    }
 }
 
 impl From<DelaunayTriangulation> for VoronoiGrid {
@@ -111,6 +144,33 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
             });
         }
         VoronoiGrid { cells }
+    }
+}
+
+impl From<VoronoiGrid> for Vec<crate::grid::Cell> {
+    fn from(t: VoronoiGrid) -> Self {
+        t.cells.into_iter().map(|cell| cell.into()).collect()
+    }
+}
+
+impl From<Cell> for crate::grid::Cell {
+    fn from(cell: Cell) -> Self {
+        crate::grid::Cell {
+            neighbours: cell
+                .iter_neighbours_and_faces()
+                .map(|(neigh, area, normal)| {
+                    (
+                        crate::grid::Face {
+                            area: Length::new_unchecked(area),
+                            normal: VecDimensionless::new_unchecked(normal),
+                        },
+                        Neighbour::Local(ParticleId(neigh)),
+                    )
+                })
+                .collect(),
+            size: Length::new_unchecked(cell.size()),
+            volume: Volume::new_unchecked(cell.volume()),
+        }
     }
 }
 

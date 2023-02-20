@@ -8,6 +8,7 @@ use super::Neighbour;
 use super::RemoteNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
+use crate::config::NUM_DIMENSIONS;
 use crate::hydrodynamics::HaloParticle;
 use crate::parameters::SimulationBox;
 use crate::particle::ParticleId;
@@ -195,6 +196,7 @@ impl GridConstructor {
             let cell = Cell {
                 neighbours,
                 size: self.cell_size,
+                volume: self.cell_size.powi::<{ NUM_DIMENSIONS as i32 }>(),
             };
             self.cells.insert(integer_pos, cell);
         }

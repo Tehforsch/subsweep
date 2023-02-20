@@ -47,22 +47,12 @@ pub struct RemoteNeighbour {
 pub struct Cell {
     pub neighbours: Vec<(Face, Neighbour)>,
     pub size: Length,
+    pub volume: Volume,
 }
 
 impl Cell {
     pub fn iter_faces(&self) -> impl Iterator<Item = &Face> + '_ {
         self.neighbours.iter().map(|(face, _)| face)
-    }
-
-    pub fn volume(&self) -> Volume {
-        #[cfg(feature = "2d")]
-        {
-            self.size.powi::<2>()
-        }
-        #[cfg(not(feature = "2d"))]
-        {
-            self.size.powi::<3>()
-        }
     }
 
     pub fn iter_downwind_faces<'a>(

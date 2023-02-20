@@ -353,7 +353,7 @@ impl<'a> Sweep<'a> {
                 ionized_hydrogen_fraction: site.ionized_hydrogen_fraction,
                 timestep,
                 density: site.density,
-                volume: cell.volume(),
+                volume: cell.volume,
                 length: cell.size,
                 flux,
             }
