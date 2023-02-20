@@ -15,6 +15,7 @@ use ordered_float::OrderedFloat;
 
 use self::face::Face;
 use self::indexed_arena::IndexedArena;
+use self::tetra::sign;
 use self::tetra::Tetra;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
@@ -47,11 +48,30 @@ pub struct Cell {
     pub is_boundary: bool,
 }
 
+/// Like slice.windows but including (t.last(), t.first()) as a last item.
+/// Returns an empty iterator on a slice with one or zero elements.
+fn periodic_windows<T>(v: &[T]) -> impl Iterator<Item = (&T, &T)> {
+    v.iter()
+        .zip(v[1..].iter().chain(iter::once(&v[0])))
+        .filter(|_| v.len() > 1)
+}
+
 impl Cell {
     pub fn point_windows(&self) -> impl Iterator<Item = (&Point, &Point)> {
-        self.points
-            .iter()
-            .zip(self.points[1..].iter().chain(iter::once(&self.points[0])))
+        periodic_windows(&self.points)
+    }
+
+    pub fn contains(&self, point: Point) -> bool {
+        let has_negative = self
+            .point_windows()
+            .map(|(p1, p2)| sign(point, *p1, *p2))
+            .any(|s| s < 0.0);
+        let has_positive = self
+            .point_windows()
+            .map(|(p1, p2)| sign(point, *p1, *p2))
+            .any(|s| s > 0.0);
+
+        !(has_negative && has_positive)
     }
 }
 
@@ -74,10 +94,7 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
                 );
             }
             let mut is_boundary = false;
-            for (t1, t2) in tetras
-                .iter()
-                .zip(tetras[1..].iter().chain(iter::once(&tetras[0])))
-            {
+            for (t1, t2) in periodic_windows(tetras) {
                 let common_face = t.tetras[*t1].get_common_face_with(&t.tetras[*t2]);
                 if let Some(common_face) = common_face {
                     let other_point = t.faces[common_face].get_other_point(point_index);
@@ -121,4 +138,40 @@ fn point_to_tetra_map(
         });
     }
     map
+}
+
+#[cfg(test)]
+mod tests {
+    use ordered_float::OrderedFloat;
+
+    use super::delaunay::tests::perform_check_on_each_level_of_construction;
+    use super::Cell;
+    use super::Point;
+    use super::VoronoiGrid;
+
+    #[test]
+    fn voronoi_property() {
+        perform_check_on_each_level_of_construction(|triangulation, _| {
+            let grid = VoronoiGrid::from(triangulation.clone());
+            for (i, j) in (0..10).zip(0..10) {
+                let lookup_point = Point::new(0.1 * i as f64, 0.1 * j as f64);
+                let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
+                let closest_cell = grid
+                    .cells
+                    .iter()
+                    .min_by_key(|cell| {
+                        let p = triangulation.points[cell.delaunay_point];
+                        OrderedFloat(p.distance_squared(lookup_point))
+                    })
+                    .unwrap();
+                if let Some(containing_cell) = containing_cell {
+                    assert_eq!(containing_cell.delaunay_point, closest_cell.delaunay_point);
+                }
+            }
+        });
+    }
+
+    fn get_containing_voronoi_cell(grid: &VoronoiGrid, point: Point) -> Option<&Cell> {
+        grid.cells.iter().find(|cell| cell.contains(point))
+    }
 }

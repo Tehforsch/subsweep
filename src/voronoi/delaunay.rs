@@ -361,7 +361,7 @@ fn get_min_and_max(points: &[Point]) -> Option<(Point, Point)> {
 
 #[cfg(feature = "2d")]
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::super::face::Face;
     use super::super::tetra::Tetra;
     use super::super::tetra::TetraFace;
@@ -371,7 +371,9 @@ mod tests {
     use super::super::TetraList;
     use super::DelaunayTriangulation;
 
-    fn perform_check_on_each_level_of_construction(check: fn(&DelaunayTriangulation, usize) -> ()) {
+    pub fn perform_check_on_each_level_of_construction(
+        check: fn(&DelaunayTriangulation, usize) -> (),
+    ) {
         let mut triangulation = get_basic_triangle();
         let points = [
             Point::new(0.5, 0.5),
