@@ -5,6 +5,7 @@ mod tetra;
 
 use std::iter;
 
+use bevy::prelude::Resource;
 use bevy::utils::StableHashMap;
 pub use delaunay::DelaunayTriangulation;
 use derive_more::From;
@@ -34,6 +35,7 @@ type TetraList = IndexedArena<TetraIndex, Tetra>;
 type FaceList = IndexedArena<FaceIndex, Face>;
 type PointList = IndexedArena<PointIndex, Point>;
 
+#[derive(Resource)]
 pub struct VoronoiGrid {
     pub cells: Vec<Cell>,
 }
@@ -42,6 +44,7 @@ pub struct Cell {
     pub delaunay_point: PointIndex,
     pub points: Vec<Point>,
     pub connected_cells: Vec<CellIndex>,
+    pub is_boundary: bool,
 }
 
 impl Cell {
@@ -70,6 +73,7 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
                         .get_center_of_circumcircle(),
                 );
             }
+            let mut is_boundary = false;
             for (t1, t2) in tetras
                 .iter()
                 .zip(tetras[1..].iter().chain(iter::once(&tetras[0])))
@@ -79,13 +83,14 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
                     let other_point = t.faces[common_face].get_other_point(point_index);
                     connected_cells.push(map[&other_point]);
                 } else {
-                    todo!()
+                    is_boundary = true;
                 }
             }
             cells.push(Cell {
                 delaunay_point: point_index,
                 points,
                 connected_cells,
+                is_boundary,
             });
         }
         VoronoiGrid { cells }

@@ -6,6 +6,7 @@ mod vis;
 
 use bevy::prelude::*;
 use glam::DVec2;
+use ordered_float::OrderedFloat;
 use raxiom::components::Position;
 use raxiom::prelude::*;
 use raxiom::units::VecLength;
@@ -22,6 +23,7 @@ use crate::camera::MousePosition;
 const HIGHLIGHT_LAYER: f32 = -0.1;
 const INTERMEDIATE_LAYER: f32 = -0.5;
 const LOW_LAYER: f32 = -2.0;
+const VISUALIZE_DELAUNAY: bool = false;
 
 #[derive(Resource)]
 struct Colors {
@@ -36,7 +38,9 @@ struct VisTriangle {
 }
 
 #[derive(Component, Debug)]
-struct VisPolygon;
+struct VisPolygon {
+    index: usize,
+}
 
 #[derive(Component, Debug)]
 struct VisCircle;
@@ -50,6 +54,7 @@ fn main() {
         .add_startup_system(setup_camera_system)
         .add_system_to_stage(CoreStage::PreUpdate, show_voronoi_system)
         .add_system(highlight_triangle_system)
+        .add_system(highlight_cell_system)
         .add_system(track_mouse_world_position_system)
         .add_system(spawn_points_system)
         .add_plugins(DefaultPlugins)
@@ -140,21 +145,23 @@ fn show_voronoi_system(
             },
         ));
     }
-    for (index, t) in triangulation.tetras.iter() {
-        let triangle = DrawTriangle {
-            p1: triangulation.points[t.p1],
-            p2: triangulation.points[t.p2],
-            p3: triangulation.points[t.p3],
-        };
-        commands
-            .spawn(ColorMesh2dBundle {
-                mesh: meshes.add(triangle.get_mesh()).into(),
-                material: colors.red.clone(),
-                ..default()
-            })
-            .insert(VisTriangle { index });
+    if VISUALIZE_DELAUNAY {
+        for (index, t) in triangulation.tetras.iter() {
+            let triangle = DrawTriangle {
+                p1: triangulation.points[t.p1],
+                p2: triangulation.points[t.p2],
+                p3: triangulation.points[t.p3],
+            };
+            commands
+                .spawn(ColorMesh2dBundle {
+                    mesh: meshes.add(triangle.get_mesh()).into(),
+                    material: colors.red.clone(),
+                    ..default()
+                })
+                .insert(VisTriangle { index });
+        }
     }
-    for cell in grid.cells.iter() {
+    for (i, cell) in grid.cells.iter().enumerate() {
         let poly = DrawPolygon {
             points: cell.points.clone(),
         };
@@ -164,9 +171,10 @@ fn show_voronoi_system(
                 material: colors.red.clone(),
                 ..default()
             })
-            .insert(VisPolygon);
+            .insert(VisPolygon { index: i });
     }
     commands.insert_resource(triangulation);
+    commands.insert_resource(grid);
     commands.insert_resource(colors);
 }
 
@@ -176,6 +184,9 @@ fn highlight_triangle_system(
     colors: Res<Colors>,
     mouse_pos: Res<MousePosition>,
 ) {
+    if !VISUALIZE_DELAUNAY {
+        return;
+    }
     let index =
         triangulation.find_containing_tetra(DVec2::new(mouse_pos.0.x as f64, mouse_pos.0.y as f64));
     for (triangle, mut color, mut transform) in particles.iter_mut() {
@@ -197,6 +208,39 @@ fn highlight_triangle_system(
                 };
             }
         }
+    }
+}
+
+fn highlight_cell_system(
+    mut particles: Query<(&VisPolygon, &mut Handle<ColorMaterial>, &mut Transform)>,
+    grid: Res<VoronoiGrid>,
+    triangulation: Res<DelaunayTriangulation>,
+    colors: Res<Colors>,
+    mouse_pos: Res<MousePosition>,
+) {
+    let mouse_pos = DVec2::new(mouse_pos.0.x as f64, mouse_pos.0.y as f64);
+    let index = particles
+        .iter()
+        .min_by_key(|(poly, _, _)| {
+            OrderedFloat(
+                (mouse_pos - triangulation.points[grid.cells[poly.index].delaunay_point]).length(),
+            )
+        })
+        .unwrap()
+        .0
+        .index;
+    let cell = &grid.cells[index];
+    for (polygon, mut color, mut transform) in particles.iter_mut() {
+        if polygon.index == index {
+            *color = colors.red.clone();
+            transform.translation.z = HIGHLIGHT_LAYER;
+        } else if cell.connected_cells.contains(&polygon.index) {
+            *color = colors.green.clone();
+            transform.translation.z = INTERMEDIATE_LAYER;
+        } else {
+            *color = colors.blue.clone();
+            transform.translation.z = LOW_LAYER;
+        };
     }
 }
 
