@@ -3,3 +3,4 @@ output/*
 input/*
 Cargo.lock
 parameters/parameters.yml
+data/*
