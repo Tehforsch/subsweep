@@ -31,6 +31,7 @@ use crate::io::input::ComponentInput;
 use crate::io::input::DatasetInputPlugin;
 use crate::io::output::OutputPlugin;
 use crate::io::to_dataset::ToDataset;
+use crate::io::DatasetDescriptor;
 use crate::memory::ComponentMemoryUsagePlugin;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
@@ -343,16 +344,20 @@ impl Simulation {
         self.get_resource::<T>().unwrap()
     }
 
-    pub fn add_component<T>(&mut self, input: ComponentInput) -> &mut Self
+    pub fn add_component<T>(
+        &mut self,
+        input: ComponentInput,
+        output_descriptor: DatasetDescriptor,
+    ) -> &mut Self
     where
-        T: Equivalence + ToDataset + Component,
+        T: Equivalence + Named + ToDataset + Component,
         <T as Equivalence>::Out: MatchesRaw,
     {
         self.add_component_no_io::<T>();
-        self.add_plugin(OutputPlugin::<T>::default());
+        self.add_plugin(OutputPlugin::<T>::from_descriptor(output_descriptor));
         match input {
-            ComponentInput::Required => {
-                self.add_plugin(DatasetInputPlugin::<T>::default());
+            ComponentInput::Required(descriptor) => {
+                self.add_plugin(DatasetInputPlugin::<T>::from_descriptor(descriptor));
             }
             ComponentInput::Derived => {}
         }
@@ -361,18 +366,24 @@ impl Simulation {
 
     pub fn add_required_component<T>(&mut self) -> &mut Self
     where
-        T: Equivalence + ToDataset + Component,
+        T: Equivalence + ToDataset + Component + Named,
         <T as Equivalence>::Out: MatchesRaw,
     {
-        self.add_component::<T>(ComponentInput::Required)
+        self.add_component::<T>(
+            ComponentInput::Required(DatasetDescriptor::default_for::<T>()),
+            DatasetDescriptor::default_for::<T>(),
+        )
     }
 
     pub fn add_derived_component<T>(&mut self) -> &mut Self
     where
-        T: Equivalence + ToDataset + Component,
+        T: Equivalence + ToDataset + Component + Named,
         <T as Equivalence>::Out: MatchesRaw,
     {
-        self.add_component::<T>(ComponentInput::Derived)
+        self.add_component::<T>(
+            ComponentInput::Derived,
+            DatasetDescriptor::default_for::<T>(),
+        )
     }
 
     pub fn add_component_no_io<T>(&mut self) -> &mut Self

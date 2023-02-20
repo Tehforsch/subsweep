@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use bevy::ecs::schedule::SystemDescriptor;
 use bevy::prelude::*;
 
@@ -11,6 +9,8 @@ use super::timer::Timer;
 use super::write_used_parameters_system;
 use super::OutputFile;
 use super::OutputStages;
+use crate::io::DatasetDescriptor;
+use crate::io::OutputDatasetDescriptor;
 use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
@@ -24,13 +24,21 @@ struct OutputSystemLabel;
 
 #[derive(Named)]
 pub struct OutputPlugin<T> {
-    _marker: PhantomData<T>,
+    descriptor: OutputDatasetDescriptor<T>,
 }
 
-impl<T> Default for OutputPlugin<T> {
+impl<T: Named> Default for OutputPlugin<T> {
     fn default() -> Self {
         Self {
-            _marker: PhantomData::default(),
+            descriptor: OutputDatasetDescriptor::<T>::new(DatasetDescriptor::default_for::<T>()),
+        }
+    }
+}
+
+impl<T> OutputPlugin<T> {
+    pub fn from_descriptor(descriptor: DatasetDescriptor) -> Self {
+        Self {
+            descriptor: OutputDatasetDescriptor::<T>::new(descriptor),
         }
     }
 }
@@ -55,6 +63,7 @@ where
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<OutputParameters>()
             .insert_resource(OutputFile::default())
+            .insert_resource(self.descriptor.clone())
             .add_startup_system(Timer::initialize_system)
             .add_system_to_stage(
                 OutputStages::Output,

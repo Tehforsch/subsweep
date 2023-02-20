@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests;
 
-use std::marker::PhantomData;
 use std::path::PathBuf;
 
 use bevy::prelude::*;
@@ -15,19 +14,21 @@ use super::to_dataset::LENGTH_IDENTIFIER;
 use super::to_dataset::MASS_IDENTIFIER;
 use super::to_dataset::TEMPERATURE_IDENTIFIER;
 use super::to_dataset::TIME_IDENTIFIER;
+use super::DatasetDescriptor;
+use super::InputDatasetDescriptor;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::io::to_dataset::SCALE_FACTOR_IDENTIFIER;
-use crate::named::Named;
 use crate::prelude::LocalParticle;
+use crate::prelude::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units::Dimension;
 
 /// Determines how a component is input into the simulation.
 pub enum ComponentInput {
-    /// The component needs to be present when the initial conditions are read.
-    Required,
+    /// The component needs to be present in the given dataset when the initial conditions are read.
+    Required(DatasetDescriptor),
     /// The component does not need to be present and will be inserted
     /// by a startup system.
     Derived,
@@ -51,13 +52,13 @@ struct SpawnedEntities(Vec<Entity>);
 
 #[derive(Named)]
 pub struct DatasetInputPlugin<T> {
-    _marker: PhantomData<T>,
+    descriptor: InputDatasetDescriptor<T>,
 }
 
-impl<T> Default for DatasetInputPlugin<T> {
-    fn default() -> Self {
+impl<T> DatasetInputPlugin<T> {
+    pub fn from_descriptor(descriptor: DatasetDescriptor) -> Self {
         Self {
-            _marker: PhantomData::default(),
+            descriptor: InputDatasetDescriptor::<T>::new(descriptor),
         }
     }
 }
@@ -66,7 +67,7 @@ impl<T> Default for DatasetInputPlugin<T> {
 struct ReadDatasetLabel;
 
 #[derive(Default, Deref, DerefMut, Resource)]
-pub struct RegisteredDatasets(Vec<&'static str>);
+pub struct RegisteredDatasets(Vec<String>);
 
 impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetInputPlugin<T> {
     fn allow_adding_twice(&self) -> bool {
@@ -92,15 +93,16 @@ impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetI
 
     fn build_everywhere(&self, sim: &mut Simulation) {
         let mut registered_datasets = sim.get_resource_or_insert_with(RegisteredDatasets::default);
-        registered_datasets.push(T::name());
-        sim.add_startup_system(
-            read_dataset_system::<T>
-                .after(open_file_system)
-                .after(spawn_entities_system)
-                .before(close_file_system)
-                .label(ReadDatasetLabel)
-                .ambiguous_with(ReadDatasetLabel),
-        );
+        registered_datasets.push(self.descriptor.dataset_name().into());
+        sim.insert_resource(self.descriptor.clone())
+            .add_startup_system(
+                read_dataset_system::<T>
+                    .after(open_file_system)
+                    .after(spawn_entities_system)
+                    .before(close_file_system)
+                    .label(ReadDatasetLabel)
+                    .ambiguous_with(ReadDatasetLabel),
+            );
     }
 }
 
@@ -145,7 +147,7 @@ fn spawn_entities_system(
     if datasets.len() == 0 {
         return;
     }
-    let example_dataset = datasets[0];
+    let example_dataset = &datasets[0];
     let get_num_entities = |dataset_name: &str| {
         files
             .iter()
@@ -168,14 +170,15 @@ fn spawn_entities_system(
 }
 
 fn read_dataset_system<T: ToDataset + Component>(
+    descriptor: Res<InputDatasetDescriptor<T>>,
     mut commands: Commands,
     files: Res<InputFiles>,
     spawned_entities: Res<SpawnedEntities>,
 ) {
-    let name = T::name();
+    let name = descriptor.dataset_name();
     let data = files.iter().map(|file| {
         let set = file
-            .dataset(name)
+            .dataset(&name)
             .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
         let data = set
             .read_1d::<T>()

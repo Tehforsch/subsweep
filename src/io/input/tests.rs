@@ -12,6 +12,9 @@ use super::InputParameters;
 use super::SpawnedEntities;
 use crate::components::Mass;
 use crate::io::to_dataset::ToDataset;
+use crate::io::DatasetDescriptor;
+use crate::io::InputDatasetDescriptor;
+use crate::prelude::Named;
 use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
 use crate::test_utils::assert_is_close;
@@ -49,7 +52,7 @@ fn panic_on_dimension_mismatch() {
     run_system_on_world(&mut world, check_value_system);
 }
 
-fn read_dataset_from_file<T: ToDataset + Component>(world: &mut World, file: &Path) {
+fn read_dataset_from_file<T: ToDataset + Component + Named>(world: &mut World, file: &Path) {
     let entity = world.spawn_empty().id();
     world.insert_resource(SpawnedEntities(vec![entity]));
     world.insert_resource(InputFiles(vec![]));
@@ -58,6 +61,9 @@ fn read_dataset_from_file<T: ToDataset + Component>(world: &mut World, file: &Pa
     world.insert_resource(InputParameters {
         paths: vec![file.into()],
     });
+    world.insert_resource(InputDatasetDescriptor::<T>::new(
+        DatasetDescriptor::default_for::<T>(),
+    ));
     run_system_on_world(world, open_file_system);
     run_system_on_world(world, read_dataset_system::<T>);
     run_system_on_world(world, close_file_system);

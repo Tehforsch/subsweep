@@ -13,6 +13,8 @@ use super::output::make_output_dirs_system;
 use super::output::OutputStages;
 use super::to_dataset::create_empty_dataset;
 use super::to_dataset::ToDataset;
+use super::DatasetDescriptor;
+use super::OutputDatasetDescriptor;
 use crate::named::Named;
 use crate::parameters::OutputParameters;
 use crate::simulation::RaxiomPlugin;
@@ -72,33 +74,36 @@ fn setup_time_series_output_system(parameters: Res<OutputParameters>) {
     make_time_series_dir(&time_series_dir);
 }
 
-fn initialize_output_files_system<T: TimeSeries>(parameters: Res<OutputParameters>)
-where
+fn initialize_output_files_system<T: TimeSeries>(
+    parameters: Res<OutputParameters>,
+    descriptor: Res<OutputDatasetDescriptor<T>>,
+) where
     T: TimeSeries,
 {
-    let filename = &format!("{}.hdf5", T::name(),);
+    let filename = &format!("{}.hdf5", descriptor.dataset_name());
     let time_series_dir = parameters.time_series_dir();
     let file = File::create(time_series_dir.join(filename))
         .expect("Failed to open time series output file");
     // Initialize empty datasets
-    create_empty_dataset::<Time>(&file);
-    create_empty_dataset::<T>(&file);
+    create_empty_dataset::<Time>(&file, &DatasetDescriptor::default_for::<Time>());
+    create_empty_dataset::<T>(&file, &descriptor);
 }
 
 pub fn output_time_series_system<T: TimeSeries>(
     mut event_reader: EventReader<T>,
     time: Res<Time>,
     parameters: Res<OutputParameters>,
+    descriptor: Res<OutputDatasetDescriptor<T>>,
 ) where
     T: TimeSeries,
 {
-    let path = get_time_series_filename::<T>(&parameters);
+    let path = get_time_series_filename::<T>(&parameters, &descriptor);
     let file = File::open_rw(path).expect("Failed to open time series output file");
     let time_dataset = file
         .dataset(TIME_DATASET_IDENTIFIER)
         .expect("Time dataset not available in file");
     let value_dataset = file
-        .dataset(T::name())
+        .dataset(descriptor.dataset_name())
         .expect("Value dataset not available in file");
     for event in event_reader.iter() {
         append_value_to_dataset(&time_dataset, *time);
@@ -117,7 +122,10 @@ fn append_value_to_dataset<T: ToDataset>(dataset: &Dataset, value: T) {
         .expect("Failed to write time to dataset");
 }
 
-fn get_time_series_filename<T: TimeSeries>(parameters: &OutputParameters) -> PathBuf {
+fn get_time_series_filename<T: TimeSeries>(
+    parameters: &OutputParameters,
+    descriptor: &OutputDatasetDescriptor<T>,
+) -> PathBuf {
     let time_series_dir = parameters.time_series_dir();
-    time_series_dir.join(format!("{}.hdf5", T::name()))
+    time_series_dir.join(format!("{}.hdf5", descriptor.dataset_name()))
 }

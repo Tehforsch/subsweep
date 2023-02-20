@@ -9,6 +9,8 @@ use hdf5::SimpleExtents;
 
 use super::output::plugin::IntoOutputSystem;
 use super::output::OutputFile;
+use super::DatasetDescriptor;
+use super::OutputDatasetDescriptor;
 use crate::named::Named;
 use crate::prelude::Particles;
 use crate::units::Dimension;
@@ -24,7 +26,7 @@ pub const AMOUNT_IDENTIFIER: &str = "scaling_amount";
 #[derive(SystemLabel)]
 struct DatasetSystemAmbiguityLabel;
 
-pub trait ToDataset: Clone + H5Type + Named + Sync + Send + 'static {
+pub trait ToDataset: Clone + H5Type + Sync + Send + 'static {
     fn dimension() -> Dimension;
     fn convert_base_units(self, factor: f64) -> Self;
 }
@@ -60,26 +62,30 @@ impl<T: ToDataset + Component> IntoOutputSystem for T {
     }
 }
 
-fn write_dataset_system<T: Component + ToDataset>(query: Particles<&T>, file: ResMut<OutputFile>) {
+fn write_dataset_system<T: Component + ToDataset>(
+    query: Particles<&T>,
+    file: ResMut<OutputFile>,
+    descriptor: Res<OutputDatasetDescriptor<T>>,
+) {
     let data: Vec<T> = query.iter().cloned().collect();
-    write_dataset(data, file.f.as_ref().unwrap());
+    write_dataset(data, file.f.as_ref().unwrap(), &descriptor);
 }
 
-pub fn create_empty_dataset<T: ToDataset>(file: &File) {
+pub fn create_empty_dataset<T: ToDataset>(file: &File, descriptor: &DatasetDescriptor) {
     let dataset = file
         .new_dataset::<T>()
         .shape(SimpleExtents::resizable([0]))
-        .create(T::name())
+        .create(descriptor.dataset_name())
         .expect("Failed to write dataset");
 
     add_dimension_attrs::<T>(&dataset);
 }
 
-pub fn write_dataset<T: ToDataset>(data: Vec<T>, file: &File) {
+pub fn write_dataset<T: ToDataset>(data: Vec<T>, file: &File, descriptor: &DatasetDescriptor) {
     let dataset = file
         .new_dataset_builder()
         .with_data(&data)
-        .create(T::name())
+        .create(descriptor.dataset_name())
         .expect("Failed to write dataset");
     add_dimension_attrs::<T>(&dataset);
 }

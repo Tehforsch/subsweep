@@ -77,6 +77,10 @@ impl RaxiomPlugin for SweepPlugin {
         .add_required_component::<IonizedHydrogenFraction>()
         .add_required_component::<Source>()
         .add_derived_component::<components::Flux>()
+        .add_startup_system_to_stage(
+            SimulationStartupStages::InsertDerivedComponents,
+            initialize_timestep_levels_system,
+        )
         .add_system_to_stage(SimulationStages::ForceCalculation, sweep_system)
         .add_system_to_stage(
             SimulationStages::ForceCalculation,
@@ -486,6 +490,18 @@ pub fn initialize_sweep_components_system(
         ));
     }
     for entity in halo_particles.iter() {
+        commands
+            .entity(entity)
+            .insert((TimestepLevel(sweep_parameters.num_timestep_levels - 1),));
+    }
+}
+
+pub fn initialize_timestep_levels_system(
+    mut commands: Commands,
+    particles: Query<Entity, Or<(With<LocalParticle>, With<HaloParticle>)>>,
+    sweep_parameters: Res<SweepParameters>,
+) {
+    for entity in particles.iter() {
         commands
             .entity(entity)
             .insert((TimestepLevel(sweep_parameters.num_timestep_levels - 1),));
