@@ -19,6 +19,7 @@ use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::VecLength;
+use raxiom::voronoi::DelaunayTriangulation;
 use unit_reader::ArepoUnitReader;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
@@ -49,7 +50,7 @@ fn main() {
     sim.add_parameter_type::<Parameters>()
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
-            insert_components_from_snapshot_system,
+            insert_missing_components_system,
         )
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
@@ -78,7 +79,7 @@ fn main() {
         .run();
 }
 
-fn insert_components_from_snapshot_system(
+fn insert_missing_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
@@ -90,6 +91,17 @@ fn insert_components_from_snapshot_system(
                 parameters.initial_fraction_ionized_hydrogen,
             ),));
     }
+
+    // let triangulation = DelaunayTriangulation::construct(
+    //     &particles
+    //         .into_iter()
+    //         .map(|(entity, pos)| pos.value_unchecked())
+    //         .collect::<Vec<_>>(),
+    // );
+    // let cells: Vec<Cell> = triangulation.into();
+    // for cell in cells {
+    //     commands.
+    // }
 }
 
 fn initialize_source_system(

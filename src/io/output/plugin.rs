@@ -43,7 +43,7 @@ impl<T> OutputPlugin<T> {
     }
 }
 
-impl<T> RaxiomPlugin for OutputPlugin<T>
+impl<T: 'static> RaxiomPlugin for OutputPlugin<T>
 where
     T: IntoOutputSystem + Named,
 {
@@ -63,7 +63,6 @@ where
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<OutputParameters>()
             .insert_resource(OutputFile::default())
-            .insert_non_send_resource(self.descriptor.clone())
             .add_startup_system(Timer::initialize_system)
             .add_system_to_stage(
                 OutputStages::Output,
@@ -84,6 +83,9 @@ where
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.insert_non_send_resource::<OutputDatasetDescriptor<T>>(
+            OutputDatasetDescriptor::<T>::new(self.descriptor.descriptor.clone()),
+        );
         if OutputParameters::is_desired_field::<T>(sim) {
             sim.add_system_to_stage(
                 OutputStages::Output,

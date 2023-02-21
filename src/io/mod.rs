@@ -48,7 +48,7 @@ pub enum DatasetShape<T> {
     TwoDimensional(fn(&[Float]) -> T),
 }
 
-#[derive(Resource, Clone)]
+#[derive(Clone)]
 pub struct InputDatasetDescriptor<T> {
     pub descriptor: DatasetDescriptor,
     pub shape: DatasetShape<T>,
@@ -77,7 +77,7 @@ impl<T> std::ops::Deref for InputDatasetDescriptor<T> {
     }
 }
 
-#[derive(Resource, Clone)]
+#[derive(Clone)]
 pub struct OutputDatasetDescriptor<T> {
     _marker: PhantomData<T>,
     descriptor: DatasetDescriptor,

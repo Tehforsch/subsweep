@@ -36,9 +36,13 @@ impl UnitReader for ArepoUnitReader {
             h, 0,
             "Tried to read dataset with h_scaling != 0. Cosmological units not implemented yet."
         );
-        let length = length + velocity;
+        let mut length = length + velocity;
         let time = -velocity;
 
+        println!("FAKING UNITS FOR TEMPORARY TEST");
+        if length == -3 {
+            length = -2;
+        }
         Dimension {
             length,
             mass,
