@@ -63,7 +63,7 @@ where
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<OutputParameters>()
             .insert_resource(OutputFile::default())
-            .insert_resource(self.descriptor.clone())
+            .insert_non_send_resource(self.descriptor.clone())
             .add_startup_system(Timer::initialize_system)
             .add_system_to_stage(
                 OutputStages::Output,

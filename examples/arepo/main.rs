@@ -1,7 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-use std::path::PathBuf;
+mod unit_reader;
 
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
@@ -19,6 +19,7 @@ use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::VecLength;
+use unit_reader::ArepoUnitReader;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
 struct DistanceToSourceData {
@@ -58,17 +59,19 @@ fn main() {
             InputDatasetDescriptor::<Position>::new(
                 DatasetDescriptor {
                     dataset_name: "PartType0/Coordinates".into(),
+                    unit_reader: Box::new(ArepoUnitReader),
                 },
                 DatasetShape::TwoDimensional(read_vec),
             ),
         ))
         .add_plugin(DatasetInputPlugin::<Density>::from_descriptor(
-            InputDatasetDescriptor::<Density>::new(
-                DatasetDescriptor {
+            InputDatasetDescriptor::<Density> {
+                descriptor: DatasetDescriptor {
                     dataset_name: "PartType0/Density".into(),
+                    unit_reader: Box::new(ArepoUnitReader),
                 },
-                DatasetShape::OneDimensional,
-            ),
+                ..default()
+            },
         ))
         .add_plugin(CommunicationPlugin::<DistanceToSourceData>::default())
         .add_plugin(SweepPlugin)
@@ -80,7 +83,7 @@ fn insert_components_from_snapshot_system(
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
 ) {
-    for (entity, pos) in particles.iter() {
+    for (entity, _) in particles.iter() {
         commands
             .entity(entity)
             .insert((components::IonizedHydrogenFraction(

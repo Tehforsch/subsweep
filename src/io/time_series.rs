@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use bevy::prelude::EventReader;
 use bevy::prelude::IntoSystemDescriptor;
+use bevy::prelude::NonSend;
 use bevy::prelude::Res;
 use hdf5::Dataset;
 use hdf5::File;
@@ -76,7 +77,7 @@ fn setup_time_series_output_system(parameters: Res<OutputParameters>) {
 
 fn initialize_output_files_system<T: TimeSeries>(
     parameters: Res<OutputParameters>,
-    descriptor: Res<OutputDatasetDescriptor<T>>,
+    descriptor: NonSend<OutputDatasetDescriptor<T>>,
 ) where
     T: TimeSeries,
 {
@@ -93,7 +94,7 @@ pub fn output_time_series_system<T: TimeSeries>(
     mut event_reader: EventReader<T>,
     time: Res<Time>,
     parameters: Res<OutputParameters>,
-    descriptor: Res<OutputDatasetDescriptor<T>>,
+    descriptor: NonSend<OutputDatasetDescriptor<T>>,
 ) where
     T: TimeSeries,
 {

@@ -10,32 +10,25 @@ use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use bevy::prelude::Entity;
 use bevy::prelude::IntoSystemDescriptor;
+use bevy::prelude::NonSend;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 use bevy::prelude::Resource;
 use bevy::prelude::SystemLabel;
 use bevy::utils::HashMap;
 use derive_custom::raxiom_parameters;
-use hdf5::Dataset;
 use hdf5::File;
 
 use super::to_dataset::ToDataset;
-use super::to_dataset::AMOUNT_IDENTIFIER;
-use super::to_dataset::LENGTH_IDENTIFIER;
-use super::to_dataset::MASS_IDENTIFIER;
-use super::to_dataset::TEMPERATURE_IDENTIFIER;
-use super::to_dataset::TIME_IDENTIFIER;
 use super::InputDatasetDescriptor;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
-use crate::io::to_dataset::SCALE_FACTOR_IDENTIFIER;
 use crate::io::DatasetShape;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::prelude::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::units::Dimension;
 
 /// Determines how a component is input into the simulation.
 pub enum ComponentInput<T> {
@@ -118,7 +111,7 @@ impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
                 name: self.descriptor.dataset_name().into(),
             },
         );
-        sim.insert_resource(self.descriptor.clone())
+        sim.insert_non_send_resource(self.descriptor.clone())
             .add_startup_system(
                 read_dataset_system::<T>
                     .after(open_file_system)
@@ -194,7 +187,7 @@ fn spawn_entities_system(
 }
 
 fn read_dataset_system<T: ToDataset + Component>(
-    descriptor: Res<InputDatasetDescriptor<T>>,
+    descriptor: NonSend<InputDatasetDescriptor<T>>,
     mut commands: Commands,
     files: Res<InputFiles>,
     spawned_entities: Res<SpawnedEntities>,
@@ -217,13 +210,9 @@ fn read_dataset_system<T: ToDataset + Component>(
                     .collect()
             }
         };
-        let conversion_factor: f64 = set
-            .attr(SCALE_FACTOR_IDENTIFIER)
-            .expect("No scale factor in dataset")
-            .read_scalar()
-            .unwrap();
+        let conversion_factor = descriptor.read_scale_factor(&set);
         assert_eq!(
-            read_dimension(&set),
+            descriptor.read_dimension(&set),
             T::dimension(),
             "Mismatch in dimension while reading dataset {name}.",
         );
@@ -237,30 +226,5 @@ fn read_dataset_system<T: ToDataset + Component>(
         commands
             .entity(*entity)
             .insert(item.convert_base_units(factor_written / factor_read));
-    }
-}
-
-fn read_dimension(dataset: &Dataset) -> Dimension {
-    let read_attr = |ident, error_message| {
-        dataset
-            .attr(ident)
-            .expect(error_message)
-            .read_scalar()
-            .unwrap()
-    };
-    let length: i32 = read_attr(LENGTH_IDENTIFIER, "No length scale factor in dataset");
-    let mass: i32 = read_attr(MASS_IDENTIFIER, "No mass scale factor in dataset");
-    let time: i32 = read_attr(TIME_IDENTIFIER, "No time scale factor in dataset");
-    let temperature: i32 = read_attr(
-        TEMPERATURE_IDENTIFIER,
-        "No temperature scale factor in dataset",
-    );
-    let amount: i32 = read_attr(AMOUNT_IDENTIFIER, "No amount scale factor in dataset");
-    Dimension {
-        length,
-        mass,
-        time,
-        temperature,
-        amount,
     }
 }

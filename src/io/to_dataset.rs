@@ -65,7 +65,7 @@ impl<T: ToDataset + Component> IntoOutputSystem for T {
 fn write_dataset_system<T: Component + ToDataset>(
     query: Particles<&T>,
     file: ResMut<OutputFile>,
-    descriptor: Res<OutputDatasetDescriptor<T>>,
+    descriptor: NonSend<OutputDatasetDescriptor<T>>,
 ) {
     let data: Vec<T> = query.iter().cloned().collect();
     write_dataset(data, file.f.as_ref().unwrap(), &descriptor);
