@@ -3,7 +3,18 @@ mod tests;
 
 use std::path::PathBuf;
 
-use bevy::prelude::*;
+use bevy::prelude::info;
+use bevy::prelude::Commands;
+use bevy::prelude::Component;
+use bevy::prelude::Deref;
+use bevy::prelude::DerefMut;
+use bevy::prelude::Entity;
+use bevy::prelude::IntoSystemDescriptor;
+use bevy::prelude::Res;
+use bevy::prelude::ResMut;
+use bevy::prelude::Resource;
+use bevy::prelude::SystemLabel;
+use bevy::utils::HashMap;
 use derive_custom::raxiom_parameters;
 use hdf5::Dataset;
 use hdf5::File;
@@ -14,11 +25,12 @@ use super::to_dataset::LENGTH_IDENTIFIER;
 use super::to_dataset::MASS_IDENTIFIER;
 use super::to_dataset::TEMPERATURE_IDENTIFIER;
 use super::to_dataset::TIME_IDENTIFIER;
-use super::DatasetDescriptor;
 use super::InputDatasetDescriptor;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::io::to_dataset::SCALE_FACTOR_IDENTIFIER;
+use crate::io::DatasetShape;
+use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::prelude::Named;
 use crate::simulation::RaxiomPlugin;
@@ -26,9 +38,9 @@ use crate::simulation::Simulation;
 use crate::units::Dimension;
 
 /// Determines how a component is input into the simulation.
-pub enum ComponentInput {
+pub enum ComponentInput<T> {
     /// The component needs to be present in the given dataset when the initial conditions are read.
-    Required(DatasetDescriptor),
+    Required(InputDatasetDescriptor<T>),
     /// The component does not need to be present and will be inserted
     /// by a startup system.
     Derived,
@@ -56,9 +68,9 @@ pub struct DatasetInputPlugin<T> {
 }
 
 impl<T> DatasetInputPlugin<T> {
-    pub fn from_descriptor(descriptor: DatasetDescriptor) -> Self {
+    pub fn from_descriptor(descriptor: InputDatasetDescriptor<T>) -> Self {
         Self {
-            descriptor: InputDatasetDescriptor::<T>::new(descriptor),
+            descriptor: descriptor,
         }
     }
 }
@@ -67,9 +79,16 @@ impl<T> DatasetInputPlugin<T> {
 struct ReadDatasetLabel;
 
 #[derive(Default, Deref, DerefMut, Resource)]
-pub struct RegisteredDatasets(Vec<String>);
+pub struct RegisteredDatasets(HashMap<String, RegisteredDataset>);
 
-impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetInputPlugin<T> {
+#[derive(Default, Resource)]
+pub struct RegisteredDataset {
+    name: String,
+}
+
+impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
+    for DatasetInputPlugin<T>
+{
     fn allow_adding_twice(&self) -> bool {
         true
     }
@@ -93,7 +112,12 @@ impl<T: ToDataset + Component + Sync + Send + 'static> RaxiomPlugin for DatasetI
 
     fn build_everywhere(&self, sim: &mut Simulation) {
         let mut registered_datasets = sim.get_resource_or_insert_with(RegisteredDatasets::default);
-        registered_datasets.push(self.descriptor.dataset_name().into());
+        registered_datasets.insert(
+            T::name().into(),
+            RegisteredDataset {
+                name: self.descriptor.dataset_name().into(),
+            },
+        );
         sim.insert_resource(self.descriptor.clone())
             .add_startup_system(
                 read_dataset_system::<T>
@@ -147,19 +171,19 @@ fn spawn_entities_system(
     if datasets.len() == 0 {
         return;
     }
-    let example_dataset = &datasets[0];
+    let (_, example_dataset) = &datasets.iter().next().unwrap();
     let get_num_entities = |dataset_name: &str| {
         files
             .iter()
             .map(|f| f.dataset(dataset_name).unwrap().shape()[0])
             .sum::<usize>()
     };
-    let num_entities = get_num_entities(example_dataset);
-    for dataset in datasets.iter() {
-        let num_entities_this_dataset = get_num_entities(dataset);
+    let num_entities = get_num_entities(&example_dataset.name);
+    for (_, dataset) in datasets.iter() {
+        let num_entities_this_dataset = get_num_entities(&dataset.name);
         if num_entities_this_dataset != num_entities {
             panic!(
-                "Different lengths of datasets: {example_dataset} ({num_entities}) and {dataset} ({num_entities_this_dataset})",
+                "Different lengths of datasets: {} ({num_entities}) and {} ({num_entities_this_dataset})", &example_dataset.name, &dataset.name
             );
         }
     }
@@ -180,9 +204,19 @@ fn read_dataset_system<T: ToDataset + Component>(
         let set = file
             .dataset(&name)
             .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
-        let data = set
-            .read_1d::<T>()
-            .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}"));
+        let data = match descriptor.shape {
+            DatasetShape::OneDimensional => set
+                .read_1d::<T>()
+                .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}")),
+            DatasetShape::TwoDimensional(constructor) => {
+                let d = set
+                    .read_2d::<Float>()
+                    .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}"));
+                d.outer_iter()
+                    .map(|row| constructor(row.as_slice().unwrap()))
+                    .collect()
+            }
+        };
         let conversion_factor: f64 = set
             .attr(SCALE_FACTOR_IDENTIFIER)
             .expect("No scale factor in dataset")

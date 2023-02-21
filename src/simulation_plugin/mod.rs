@@ -14,7 +14,6 @@ pub use self::parameters::TimestepParameters;
 pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
-use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Velocity;
 use crate::io::output::Attribute;
@@ -55,8 +54,6 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_parameter_type::<TimestepParameters>()
             .add_parameter_type::<SimulationBox>()
             .add_required_component::<Position>()
-            .add_required_component::<Mass>()
-            .add_required_component::<Velocity>()
             .add_plugin(ParticlePlugin)
             .add_plugin(OutputPlugin::<Attribute<Time>>::default())
             .add_plugin(CommunicationPlugin::<ShouldExit>::default())

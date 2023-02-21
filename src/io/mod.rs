@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use bevy::prelude::Resource;
 
+use crate::prelude::Float;
 use crate::prelude::Named;
 
 pub mod input;
@@ -9,9 +10,15 @@ pub mod output;
 pub mod time_series;
 pub mod to_dataset;
 
-#[derive(Resource, Clone)]
+#[derive(Resource, Clone, Debug)]
 pub struct DatasetDescriptor {
     pub dataset_name: String,
+}
+
+#[derive(Resource, Clone)]
+pub enum DatasetShape<T> {
+    OneDimensional,
+    TwoDimensional(fn(&[Float]) -> T),
 }
 
 impl DatasetDescriptor {
@@ -30,12 +37,14 @@ impl DatasetDescriptor {
 pub struct InputDatasetDescriptor<T> {
     _marker: PhantomData<T>,
     descriptor: DatasetDescriptor,
+    pub shape: DatasetShape<T>,
 }
 
 impl<T> InputDatasetDescriptor<T> {
-    fn new(descriptor: DatasetDescriptor) -> Self {
+    pub fn new(descriptor: DatasetDescriptor, shape: DatasetShape<T>) -> Self {
         Self {
             descriptor,
+            shape,
             _marker: PhantomData,
         }
     }

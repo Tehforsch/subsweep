@@ -192,6 +192,8 @@ impl RaxiomPlugin for HydrodynamicsPlugin {
                 SimulationStartupStages::InsertDerivedComponents,
                 insert_pressure_and_density_system,
             )
+            .add_required_component::<Velocity>()
+            .add_required_component::<Mass>()
             .add_derived_component::<components::Pressure>()
             .add_derived_component::<components::SmoothingLength>()
             .add_derived_component::<components::InternalEnergy>()

@@ -74,8 +74,8 @@ impl RaxiomPlugin for SweepPlugin {
             SimulationStartupStages::InsertComponents,
             initialize_directions_system,
         )
-        .add_required_component::<IonizedHydrogenFraction>()
-        .add_required_component::<Source>()
+        .add_derived_component::<IonizedHydrogenFraction>()
+        .add_derived_component::<Source>()
         .add_derived_component::<components::Flux>()
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,

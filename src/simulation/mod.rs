@@ -32,6 +32,8 @@ use crate::io::input::DatasetInputPlugin;
 use crate::io::output::OutputPlugin;
 use crate::io::to_dataset::ToDataset;
 use crate::io::DatasetDescriptor;
+use crate::io::DatasetShape;
+use crate::io::InputDatasetDescriptor;
 use crate::memory::ComponentMemoryUsagePlugin;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
@@ -346,7 +348,7 @@ impl Simulation {
 
     pub fn add_component<T>(
         &mut self,
-        input: ComponentInput,
+        input: ComponentInput<T>,
         output_descriptor: DatasetDescriptor,
     ) -> &mut Self
     where
@@ -370,7 +372,10 @@ impl Simulation {
         <T as Equivalence>::Out: MatchesRaw,
     {
         self.add_component::<T>(
-            ComponentInput::Required(DatasetDescriptor::default_for::<T>()),
+            ComponentInput::Required(InputDatasetDescriptor::new(
+                DatasetDescriptor::default_for::<T>(),
+                DatasetShape::OneDimensional,
+            )),
             DatasetDescriptor::default_for::<T>(),
         )
     }

@@ -6,6 +6,8 @@ use super::GravityCalculationReply;
 use super::GravityCalculationRequest;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Identified;
+use crate::components::Mass;
+use crate::components::Velocity;
 use crate::domain::communicate_mass_moments_system;
 use crate::domain::construct_quad_tree_system;
 use crate::named::Named;
@@ -34,6 +36,8 @@ impl RaxiomPlugin for GravityPlugin {
                     .after(communicate_mass_moments_system)
                     .before(integrate_motion_system),
             )
+            .add_required_component::<Velocity>()
+            .add_required_component::<Mass>()
             .add_plugin(CommunicationPlugin::<Identified<GravityCalculationRequest>>::exchange())
             .add_plugin(CommunicationPlugin::<Identified<GravityCalculationReply>>::exchange());
     }

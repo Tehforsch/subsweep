@@ -1,0 +1,29 @@
+box_size: 12.8 kpc
+timestep:
+  max_timestep: 1e1 Myr
+postprocess:
+  initial_fraction_ionized_hydrogen: 0.00
+  source_strength: 1e49  photons s^-1
+sweep:
+  directions: 84
+  num_timestep_levels: 1
+  significant_flux_treshold: 1e20 photons s^-1
+visualization:
+  show_particles: true
+  slice:
+    - z
+    - 0.2 kpc
+  color_map:
+    type: timestep_level
+output:
+  fields:
+    - ionized_hydrogen_fraction
+    - position
+    - time
+  time_between_snapshots: 10 Myr
+  handle_existing_output: delete
+simulation:
+  final_time: 10 Myr
+input:
+  paths:
+    - data/ics_16.hdf5

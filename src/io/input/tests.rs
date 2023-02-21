@@ -13,6 +13,7 @@ use super::SpawnedEntities;
 use crate::components::Mass;
 use crate::io::to_dataset::ToDataset;
 use crate::io::DatasetDescriptor;
+use crate::io::DatasetShape;
 use crate::io::InputDatasetDescriptor;
 use crate::prelude::Named;
 use crate::prelude::WorldRank;
@@ -63,6 +64,7 @@ fn read_dataset_from_file<T: ToDataset + Component + Named>(world: &mut World, f
     });
     world.insert_resource(InputDatasetDescriptor::<T>::new(
         DatasetDescriptor::default_for::<T>(),
+        DatasetShape::OneDimensional,
     ));
     run_system_on_world(world, open_file_system);
     run_system_on_world(world, read_dataset_system::<T>);
