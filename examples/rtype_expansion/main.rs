@@ -27,6 +27,7 @@ use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
+use raxiom::units::VecLength;
 use raxiom::units::Volume;
 use raxiom::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use raxiom::units::PROTON_MASS;
@@ -57,6 +58,7 @@ struct Parameters {
     number_density: NumberDensity,
     initial_fraction_ionized_hydrogen: Dimensionless,
     source_strength: PhotonFlux,
+    source_pos: VecLength,
 }
 
 fn main() {
@@ -109,14 +111,13 @@ fn initialize_source_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
-    box_size: Res<SimulationBox>,
     mut comm: Communicator<DistanceToSourceData>,
     world_rank: Res<WorldRank>,
 ) {
-    let (closest_entity_to_center, distance) = particles
+    let (closest_entity_to_pos, distance) = particles
         .iter()
         .map(|(entity, pos)| {
-            let dist = **pos - box_size.center();
+            let dist = **pos - parameters.source_pos;
             (entity, OrderedFloat(dist.length().value_unchecked()))
         })
         .min_by_key(|(_, dist)| *dist)
@@ -130,7 +131,7 @@ fn initialize_source_system(
         .rank;
     if **world_rank == rank_with_min_distance {
         commands
-            .entity(closest_entity_to_center)
+            .entity(closest_entity_to_pos)
             .insert(components::Source(parameters.source_strength));
     }
 }
