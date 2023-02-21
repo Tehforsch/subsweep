@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::utils::HashMap;
+use derive_custom::raxiom_parameters;
 
 use super::cell::Face;
 use super::cell::FaceArea;
@@ -8,6 +9,7 @@ use super::Neighbour;
 use super::RemoteNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
+use crate::config::NUM_DIMENSIONS;
 use crate::hydrodynamics::HaloParticle;
 use crate::parameters::SimulationBox;
 use crate::particle::ParticleId;
@@ -17,6 +19,72 @@ use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
 use crate::units::Length;
 use crate::units::VecLength;
+use crate::units::Volume;
+
+#[raxiom_parameters]
+#[derive(Copy)]
+#[serde(untagged)]
+pub enum NumCellsSpec {
+    CellSize(Length),
+    NumCellsX(usize),
+}
+
+impl NumCellsSpec {
+    fn num_cells(&self, box_size: &SimulationBox) -> IntegerPosition {
+        match self {
+            NumCellsSpec::CellSize(cell_size) => {
+                IntegerPosition::from_position_and_side_length(box_size.side_lengths(), *cell_size)
+            }
+            NumCellsSpec::NumCellsX(num_cells_x) => IntegerPosition {
+                x: *num_cells_x as i32,
+                y: 1,
+                #[cfg(not(feature = "2d"))]
+                z: 1,
+            },
+        }
+    }
+
+    fn cell_size(&self, box_size: &SimulationBox) -> Length {
+        match self {
+            NumCellsSpec::CellSize(cell_size) => *cell_size,
+            NumCellsSpec::NumCellsX(num_cells_x) => {
+                box_size.side_lengths().x() / *num_cells_x as f64
+            }
+        }
+    }
+
+    fn face_area(&self, box_size: &SimulationBox) -> FaceArea {
+        match self {
+            NumCellsSpec::CellSize(cell_size) => {
+                #[cfg(feature = "2d")]
+                {
+                    *cell_size
+                }
+                #[cfg(not(feature = "2d"))]
+                {
+                    cell_size.powi::<2>()
+                }
+            }
+            NumCellsSpec::NumCellsX(_) => {
+                #[cfg(feature = "2d")]
+                {
+                    box_size.side_lengths().y()
+                }
+                #[cfg(not(feature = "2d"))]
+                {
+                    box_size.side_lengths().y() * box_size.side_lengths().z()
+                }
+            }
+        }
+    }
+
+    fn volume(&self, box_size: &SimulationBox) -> Volume {
+        match self {
+            NumCellsSpec::CellSize(cell_size) => cell_size.powi::<{ NUM_DIMENSIONS as i32 }>(),
+            NumCellsSpec::NumCellsX(num_cells_x) => box_size.volume() / *num_cells_x as f64,
+        }
+    }
+}
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub struct IntegerPosition {
@@ -126,8 +194,7 @@ struct GridConstructor {
     cells: HashMap<IntegerPosition, Cell>,
     ids: HashMap<IntegerPosition, ParticleId>,
     box_size: SimulationBox,
-    cell_size: Length,
-    num_cells: IntegerPosition,
+    resolution: NumCellsSpec,
     rank_function: Box<dyn Fn(VecLength) -> Rank>,
     rank: Rank,
 }
@@ -136,18 +203,15 @@ impl GridConstructor {
     fn construct(
         commands: Commands,
         box_size: SimulationBox,
-        cell_size: Length,
+        cell_size: NumCellsSpec,
         rank_function: Box<dyn Fn(VecLength) -> Rank>,
         rank: Rank,
     ) {
-        let num_cells =
-            IntegerPosition::from_position_and_side_length(box_size.side_lengths(), cell_size);
         let mut constructor = Self {
             cells: HashMap::default(),
             ids: HashMap::default(),
             box_size,
-            cell_size,
-            num_cells,
+            resolution: cell_size,
             rank_function,
             rank,
         };
@@ -162,6 +226,22 @@ impl GridConstructor {
         constructor.spawn_local_cells(commands);
     }
 
+    fn num_cells(&self) -> IntegerPosition {
+        self.resolution.num_cells(&self.box_size)
+    }
+
+    fn volume(&self) -> Volume {
+        self.resolution.volume(&self.box_size)
+    }
+
+    fn face_area(&self) -> FaceArea {
+        self.resolution.face_area(&self.box_size)
+    }
+
+    fn cell_size(&self) -> Length {
+        self.resolution.cell_size(&self.box_size)
+    }
+
     fn construct_neighbours(&mut self) {
         for integer_pos in self.get_all_integer_positions() {
             let pos = self.to_pos(integer_pos);
@@ -172,10 +252,10 @@ impl GridConstructor {
                     let neighbour_pos = self.to_pos(neighbour);
                     let neighbour_rank = self.get_rank(neighbour);
                     let face = Face {
-                        area: get_area(self.cell_size),
+                        area: self.face_area(),
                         normal: (neighbour_pos - pos).normalize(),
                     };
-                    if neighbour.contained(&self.num_cells) {
+                    if neighbour.contained(&self.num_cells()) {
                         if rank == neighbour_rank {
                             (face, Neighbour::Local(self.ids[&neighbour]))
                         } else {
@@ -194,18 +274,19 @@ impl GridConstructor {
                 .collect();
             let cell = Cell {
                 neighbours,
-                size: self.cell_size,
+                size: self.cell_size(),
+                volume: self.volume(),
             };
             self.cells.insert(integer_pos, cell);
         }
     }
 
     fn get_all_integer_positions(&self) -> Vec<IntegerPosition> {
-        self.num_cells.iter_all_contained().collect()
+        self.num_cells().iter_all_contained().collect()
     }
 
     fn to_pos(&self, integer_pos: IntegerPosition) -> VecLength {
-        integer_pos.to_pos(self.box_size.side_lengths(), &self.num_cells)
+        integer_pos.to_pos(self.box_size.side_lengths(), &self.num_cells())
     }
 
     fn get_rank(&self, pos: IntegerPosition) -> Rank {
@@ -237,7 +318,7 @@ impl GridConstructor {
 pub fn init_cartesian_grid_system(
     commands: Commands,
     box_size: Res<SimulationBox>,
-    cell_size: Length,
+    cell_size: NumCellsSpec,
     world_size: Res<WorldSize>,
     world_rank: Res<WorldRank>,
 ) {
@@ -255,15 +336,4 @@ pub fn init_cartesian_grid_system(
         Box::new(rank_function),
         **world_rank,
     );
-}
-
-fn get_area(cell_size: Length) -> FaceArea {
-    #[cfg(feature = "2d")]
-    {
-        cell_size
-    }
-    #[cfg(not(feature = "2d"))]
-    {
-        cell_size * cell_size
-    }
 }

@@ -2,6 +2,7 @@ mod cartesian;
 mod cell;
 
 pub use cartesian::init_cartesian_grid_system;
+pub use cartesian::NumCellsSpec;
 pub use cell::Cell;
 pub use cell::FaceArea;
 pub use cell::Neighbour;

@@ -14,6 +14,8 @@ use raxiom::components;
 use raxiom::components::IonizedHydrogenFraction;
 use raxiom::components::Position;
 use raxiom::grid::init_cartesian_grid_system;
+use raxiom::grid::Cell;
+use raxiom::grid::NumCellsSpec;
 use raxiom::hydrodynamics::HaloParticle;
 use raxiom::io::time_series::TimeSeriesPlugin;
 use raxiom::prelude::*;
@@ -50,7 +52,7 @@ struct DistanceToSourceData {
 
 #[raxiom_parameters("rtype")]
 struct Parameters {
-    cell_size: Length,
+    resolution: NumCellsSpec,
     number_density: NumberDensity,
     initial_fraction_ionized_hydrogen: Dimensionless,
     source_strength: PhotonFlux,
@@ -76,7 +78,7 @@ fn main() {
             init_cartesian_grid_system(
                 commands,
                 box_size,
-                parameters.cell_size,
+                parameters.resolution,
                 world_size,
                 world_rank,
             )
@@ -154,16 +156,15 @@ fn initialize_sweep_components_system(
 }
 
 fn print_ionization_system(
-    ionization: Query<&IonizedHydrogenFraction>,
-    parameters: Res<Parameters>,
+    ionization: Query<(&Cell, &IonizedHydrogenFraction)>,
     time: Res<raxiom::simulation_plugin::Time>,
     mut radius_writer: EventWriter<RTypeRadius>,
     mut error_writer: EventWriter<RTypeError>,
     mut comm: Communicator<RTypeVolume>,
 ) {
     let mut volume = Volume::zero();
-    for frac in ionization.iter() {
-        volume += **frac * parameters.cell_size.powi::<3>();
+    for (cell, frac) in ionization.iter() {
+        volume += **frac * cell.volume();
     }
     let volume: Volume = comm.all_gather_sum(&RTypeVolume(volume));
     let recombination_time = Time::megayears(122.4);

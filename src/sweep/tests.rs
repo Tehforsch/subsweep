@@ -3,6 +3,7 @@ use bevy::prelude::Res;
 
 use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::grid::init_cartesian_grid_system;
+use crate::grid::NumCellsSpec;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
 use crate::parameters::SweepParameters;
@@ -42,7 +43,13 @@ fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation, num_cells:
                   box_size: Res<SimulationBox>,
                   world_size: Res<WorldSize>,
                   world_rank: Res<WorldRank>| {
-                init_cartesian_grid_system(commands, box_size, cell_size, world_size, world_rank)
+                init_cartesian_grid_system(
+                    commands,
+                    box_size,
+                    NumCellsSpec::CellSize(cell_size),
+                    world_size,
+                    world_rank,
+                )
             },
         )
         .add_startup_system_to_stage(
