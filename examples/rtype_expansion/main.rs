@@ -22,12 +22,13 @@ use raxiom::prelude::*;
 use raxiom::simulation_plugin::time_system;
 use raxiom::sweep::timestep_level::TimestepLevel;
 use raxiom::sweep::SweepParameters;
+use raxiom::units::Amount;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
-use raxiom::units::Time;
 use raxiom::units::Volume;
+use raxiom::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use raxiom::units::PROTON_MASS;
 
 #[derive(Named, Debug, H5Type, Clone, Deref, From)]
@@ -161,15 +162,20 @@ fn print_ionization_system(
     mut radius_writer: EventWriter<RTypeRadius>,
     mut error_writer: EventWriter<RTypeError>,
     mut comm: Communicator<RTypeVolume>,
+    parameters: Res<Parameters>,
 ) {
     let mut volume = Volume::zero();
     for (cell, frac) in ionization.iter() {
         volume += **frac * cell.volume();
     }
     let volume: Volume = comm.all_gather_sum(&RTypeVolume(volume));
-    let recombination_time = Time::megayears(122.4);
-    let stroemgren_radius = Length::kiloparsec(6.79);
-    let radius = (volume / (4.0 * PI / 3.0)).cbrt();
+    let rate = parameters.source_strength / Amount::one_unchecked();
+    let stroemgren_radius = (3.0 * rate
+        / (4.0 * PI * CASE_B_RECOMBINATION_RATE_HYDROGEN * parameters.number_density.powi::<2>()))
+    .cbrt();
+    let recombination_time =
+        (CASE_B_RECOMBINATION_RATE_HYDROGEN * parameters.number_density).powi::<-1>();
+    let radius: Length = (volume / (4.0 * PI / 3.0)).cbrt();
     let analytical = (1.0 - (-**time / recombination_time).exp()).cbrt() * stroemgren_radius;
     let error = (radius - analytical).abs() / (radius.max(analytical));
     info!(

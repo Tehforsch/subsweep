@@ -65,7 +65,7 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_system_to_stage(SimulationStages::Integration, integrate_motion_system)
             .add_system_to_stage(
                 SimulationStages::Integration,
-                show_time_system.before(time_system),
+                show_time_system.after(time_system),
             )
             .add_system_to_stage(
                 SimulationStages::Integration,
