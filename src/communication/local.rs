@@ -1,3 +1,4 @@
+use core::iter::Sum;
 use std::marker::PhantomData;
 use std::mem;
 use std::ptr;
@@ -140,6 +141,13 @@ impl<T> SizedCommunicator for LocalCommunicator<T> {
 }
 
 impl<T: Clone + Sync + Send> LocalCommunicator<T> {
+    pub fn all_gather_sum<S>(&mut self, send: &T) -> S
+    where
+        S: Sum<S> + From<T>,
+    {
+        self.all_gather(send).into_iter().map(|t| S::from(t)).sum()
+    }
+
     pub fn all_gather(&mut self, data: &T) -> Vec<T> {
         self.all_gather_vec(&[data.clone()])
             .drain_all()
