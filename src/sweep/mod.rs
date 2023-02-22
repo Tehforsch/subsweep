@@ -419,7 +419,7 @@ pub fn sweep_system(
         let new_fraction = site.ionized_hydrogen_fraction;
         let change_timescale =
             (**fraction / ((**fraction - new_fraction) / timestep.max_timestep)).abs();
-        let desired_timestep = change_timescale * 0.01;
+        let desired_timestep = change_timescale * sweep_parameters.timestep_safety_factor;
         let mut desired_level = TimestepLevel::from_max_timestep_and_desired_timestep(
             sweep_parameters.num_timestep_levels,
             timestep.max_timestep,

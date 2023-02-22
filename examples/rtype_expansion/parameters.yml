@@ -1,6 +1,6 @@
 box_size: 12.8 kpc
 timestep:
-  max_timestep: 1e-1 Myr
+  max_timestep: 1e-2 Myr
 rtype:
   resolution: 100000
   number_density: 1e-3 cm^-3
@@ -10,8 +10,9 @@ rtype:
 sweep:
   directions:
     - (1.0 0.0 0.0)
-  num_timestep_levels: 2
-  significant_flux_treshold: 1e20 photons s^-1
+  num_timestep_levels: 4
+  significant_flux_treshold: 1e40 photons s^-1
+  timestep_safety_factor: 0.001
 visualization:
   show_particles: true
   slice:
@@ -24,7 +25,8 @@ output:
     - ionized_hydrogen_fraction
     - position
     - time
-  time_between_snapshots: 1 Myr
+  time_between_snapshots: 0.5 Myr
   handle_existing_output: delete
+  output_dir: output
 simulation:
   final_time: 10 Myr
