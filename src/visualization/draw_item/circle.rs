@@ -6,7 +6,7 @@ use super::Pixels;
 use crate::units::VecLength;
 use crate::visualization::color::RColor;
 
-pub static CIRCLE_RADIUS: f64 = 10.0;
+pub static CIRCLE_RADIUS: f64 = 5.0;
 
 #[derive(Equivalence, Component, Clone, Debug)]
 pub struct DrawCircle {

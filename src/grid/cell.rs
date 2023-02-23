@@ -43,7 +43,7 @@ pub struct RemoteNeighbour {
     pub rank: Rank,
 }
 
-#[derive(Component, Clone)]
+#[derive(Debug, Component, Clone)]
 pub struct Cell {
     pub neighbours: Vec<(Face, Neighbour)>,
     pub size: Length,

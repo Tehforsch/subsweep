@@ -46,6 +46,7 @@ pub struct VoronoiGrid {
 
 pub struct Cell {
     pub delaunay_point: PointIndex,
+    pub center: Point,
     pub index: CellIndex,
     pub points: Vec<Point>,
     pub connected_cells: Vec<CellIndex>,
@@ -78,11 +79,20 @@ impl Cell {
         !(has_negative && has_positive)
     }
 
-    pub fn iter_neighbours_and_faces(&self) -> impl Iterator<Item = (usize, Float, Point)> + '_ {
+    pub fn iter_neighbours_and_faces<'a>(
+        &'a self,
+        grid: &'a VoronoiGrid,
+    ) -> impl Iterator<Item = (usize, Float, Point)> + 'a {
         self.connected_cells
             .iter()
             .zip(self.point_windows())
-            .map(|(c, (p1, p2))| (*c, p1.distance(*p2), (*p2 - *p1).normalize()))
+            .map(|(c, (p1, p2))| {
+                let face_area = p1.distance(*p2);
+                let center_this_cell = self.center;
+                let center_other_cell = grid.cells[*c].center;
+                let normal = (center_other_cell - center_this_cell).normalize();
+                (*c, face_area, normal)
+            })
             .filter(|_| !self.is_boundary) // For now: return an empty iterator if this is a boundary cell
     }
 
@@ -102,6 +112,7 @@ impl Cell {
             .point_windows()
             .map(|(p1, p2)| p1.x * p2.y - p2.x * p1.y)
             .sum::<Float>()
+            .abs()
     }
 }
 
@@ -134,6 +145,7 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
                 }
             }
             cells.push(Cell {
+                center: t.points[point_index],
                 index: map[&point_index],
                 delaunay_point: point_index,
                 points,
