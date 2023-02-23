@@ -14,6 +14,7 @@ pub mod timestep_level;
 
 use bevy::prelude::*;
 use bevy::utils::StableHashMap;
+use derive_more::Into;
 use mpi::traits::Equivalence;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
@@ -53,6 +54,9 @@ use crate::units::PROTON_MASS;
 
 pub type SweepCommunicator<'a> = self::communicator::SweepCommunicator<'a>;
 
+#[derive(Equivalence, Clone, Into)]
+pub struct CellCount(usize);
+
 type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
 type Queue<T> = Vec<T>;
 
@@ -88,6 +92,7 @@ impl RaxiomPlugin for SweepPlugin {
         )
         .add_parameter_type::<SweepParameters>()
         .add_plugin(CommunicationPlugin::<FluxData>::default())
+        .add_plugin(CommunicationPlugin::<CellCount>::default())
         .add_plugin(CommunicationPlugin::<TimestepLevelData>::exchange());
     }
 }
@@ -105,6 +110,8 @@ struct Sweep<'a> {
     current_level: TimestepLevel,
     flux_treshold: PhotonFlux,
     communicator: SweepCommunicator<'a>,
+    count_communicator: Communicator<'a, CellCount>,
+    num_timestep_levels: usize,
 }
 
 impl<'a> Sweep<'a> {
@@ -118,6 +125,7 @@ impl<'a> Sweep<'a> {
         world_size: usize,
         world_rank: Rank,
         communicator: SweepCommunicator,
+        count_communicator: Communicator<CellCount>,
     ) -> Sites {
         for level in levels.values() {
             assert!(level.0 < parameters.num_timestep_levels);
@@ -135,15 +143,33 @@ impl<'a> Sweep<'a> {
             current_level: TimestepLevel(0),
             flux_treshold: parameters.significant_flux_treshold,
             communicator,
+            count_communicator,
+            num_timestep_levels: parameters.num_timestep_levels,
         };
-        for i in 0..(2usize.pow(parameters.num_timestep_levels as u32 - 1)) {
-            solver.current_level = TimestepLevel::lowest_active_from_iteration(
-                parameters.num_timestep_levels,
-                i as u32,
-            );
-            solver.single_sweep();
-        }
+        solver.run_sweeps();
         solver.sites
+    }
+
+    pub fn run_sweeps(&mut self) {
+        self.print_cell_counts();
+        for i in 0..(2usize.pow(self.num_timestep_levels as u32 - 1)) {
+            self.current_level =
+                TimestepLevel::lowest_active_from_iteration(self.num_timestep_levels, i as u32);
+            self.single_sweep();
+        }
+    }
+
+    fn count_cells_global(&mut self, level: usize) -> usize {
+        let local_count = self.cells.enumerate_active(TimestepLevel(level)).count();
+        self.count_communicator
+            .all_gather_sum(&CellCount(local_count))
+    }
+
+    pub fn print_cell_counts(&mut self) {
+        for level in 0..self.num_timestep_levels {
+            let global_count = self.count_cells_global(level);
+            info!("Sweep: {:>10} cells at level {:>2}", global_count, level,);
+        }
     }
 
     pub fn init_counts(&mut self) {
@@ -212,13 +238,6 @@ impl<'a> Sweep<'a> {
     }
 
     fn single_sweep(&mut self) {
-        info!(
-            "{:indent$}Sweeping {} cells at level {:?}",
-            "",
-            self.cells.enumerate_active(self.current_level).count(),
-            self.current_level.0,
-            indent = self.current_level.0 * 2,
-        );
         self.init_counts();
         self.to_solve = self.get_initial_tasks();
         self.solve();
@@ -382,6 +401,7 @@ pub fn sweep_system(
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
     mut comm: Communicator<FluxData>,
+    count_comm: Communicator<CellCount>,
 ) {
     let cells: StableHashMap<_, _> = cells_query
         .iter()
@@ -417,13 +437,14 @@ pub fn sweep_system(
         **world_size,
         **world_rank,
         SweepCommunicator::new(&mut comm),
+        count_comm,
     );
     for (entity, id, _, mut fraction, _) in sites_query.iter_mut() {
         let site = sites.get(*id);
         let new_fraction = site.ionized_hydrogen_fraction;
         let change_timescale =
             (**fraction / ((**fraction - new_fraction) / timestep.max_timestep)).abs();
-        let desired_timestep = change_timescale * 0.01;
+        let desired_timestep = change_timescale * sweep_parameters.timestep_safety_factor;
         let mut desired_level = TimestepLevel::from_max_timestep_and_desired_timestep(
             sweep_parameters.num_timestep_levels,
             timestep.max_timestep,

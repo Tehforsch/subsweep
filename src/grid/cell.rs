@@ -55,6 +55,10 @@ impl Cell {
         self.neighbours.iter().map(|(face, _)| face)
     }
 
+    pub fn volume(&self) -> Volume {
+        self.volume
+    }
+
     pub fn iter_downwind_faces<'a>(
         &'a self,
         direction: &'a VecDimensionless,

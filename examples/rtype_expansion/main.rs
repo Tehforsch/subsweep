@@ -14,18 +14,22 @@ use raxiom::components;
 use raxiom::components::IonizedHydrogenFraction;
 use raxiom::components::Position;
 use raxiom::grid::init_cartesian_grid_system;
+use raxiom::grid::Cell;
+use raxiom::grid::NumCellsSpec;
 use raxiom::hydrodynamics::HaloParticle;
 use raxiom::io::time_series::TimeSeriesPlugin;
 use raxiom::prelude::*;
 use raxiom::simulation_plugin::time_system;
 use raxiom::sweep::timestep_level::TimestepLevel;
 use raxiom::sweep::SweepParameters;
+use raxiom::units::Amount;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
-use raxiom::units::Time;
+use raxiom::units::VecLength;
 use raxiom::units::Volume;
+use raxiom::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use raxiom::units::PROTON_MASS;
 
 #[derive(Named, Debug, H5Type, Clone, Deref, From)]
@@ -50,10 +54,11 @@ struct DistanceToSourceData {
 
 #[raxiom_parameters("rtype")]
 struct Parameters {
-    cell_size: Length,
+    resolution: NumCellsSpec,
     number_density: NumberDensity,
     initial_fraction_ionized_hydrogen: Dimensionless,
     source_strength: PhotonFlux,
+    source_pos: VecLength,
 }
 
 fn main() {
@@ -76,7 +81,7 @@ fn main() {
             init_cartesian_grid_system(
                 commands,
                 box_size,
-                parameters.cell_size,
+                parameters.resolution,
                 world_size,
                 world_rank,
             )
@@ -106,14 +111,13 @@ fn initialize_source_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
-    box_size: Res<SimulationBox>,
     mut comm: Communicator<DistanceToSourceData>,
     world_rank: Res<WorldRank>,
 ) {
-    let (closest_entity_to_center, distance) = particles
+    let (closest_entity_to_pos, distance) = particles
         .iter()
         .map(|(entity, pos)| {
-            let dist = **pos - box_size.center();
+            let dist = **pos - parameters.source_pos;
             (entity, OrderedFloat(dist.length().value_unchecked()))
         })
         .min_by_key(|(_, dist)| *dist)
@@ -127,7 +131,7 @@ fn initialize_source_system(
         .rank;
     if **world_rank == rank_with_min_distance {
         commands
-            .entity(closest_entity_to_center)
+            .entity(closest_entity_to_pos)
             .insert(components::Source(parameters.source_strength));
     }
 }
@@ -154,21 +158,25 @@ fn initialize_sweep_components_system(
 }
 
 fn print_ionization_system(
-    ionization: Query<&IonizedHydrogenFraction>,
-    parameters: Res<Parameters>,
+    ionization: Query<(&Cell, &IonizedHydrogenFraction)>,
     time: Res<raxiom::simulation_plugin::Time>,
     mut radius_writer: EventWriter<RTypeRadius>,
     mut error_writer: EventWriter<RTypeError>,
     mut comm: Communicator<RTypeVolume>,
+    parameters: Res<Parameters>,
 ) {
     let mut volume = Volume::zero();
-    for frac in ionization.iter() {
-        volume += **frac * parameters.cell_size.powi::<3>();
+    for (cell, frac) in ionization.iter() {
+        volume += **frac * cell.volume();
     }
     let volume: Volume = comm.all_gather_sum(&RTypeVolume(volume));
-    let recombination_time = Time::megayears(122.4);
-    let stroemgren_radius = Length::kiloparsec(6.79);
-    let radius = (volume / (4.0 * PI / 3.0)).cbrt();
+    let rate = parameters.source_strength / Amount::one_unchecked();
+    let stroemgren_radius = (3.0 * rate
+        / (4.0 * PI * CASE_B_RECOMBINATION_RATE_HYDROGEN * parameters.number_density.powi::<2>()))
+    .cbrt();
+    let recombination_time =
+        (CASE_B_RECOMBINATION_RATE_HYDROGEN * parameters.number_density).powi::<-1>();
+    let radius: Length = (volume / (4.0 * PI / 3.0)).cbrt();
     let analytical = (1.0 - (-**time / recombination_time).exp()).cbrt() * stroemgren_radius;
     let error = (radius - analytical).abs() / (radius.max(analytical));
     info!(
