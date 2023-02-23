@@ -14,10 +14,14 @@ pub struct ArepoUnitReader;
 
 impl UnitReader for ArepoUnitReader {
     fn read_scale_factor(&self, set: &Dataset) -> f64 {
-        set.attr(SCALE_FACTOR_IDENTIFIER)
+        let dimension = self.read_dimension(set);
+        let cgs_to_si = 0.01f64.powi(dimension.length);
+        let cgs: f64 = set
+            .attr(SCALE_FACTOR_IDENTIFIER)
             .expect("No scale factor in dataset")
             .read_scalar()
-            .unwrap()
+            .unwrap();
+        cgs_to_si * cgs
     }
 
     fn read_dimension(&self, set: &Dataset) -> Dimension {
