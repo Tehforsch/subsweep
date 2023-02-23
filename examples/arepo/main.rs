@@ -82,8 +82,18 @@ fn main() {
 fn insert_missing_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
+    mut dens: Particles<(&Position, &mut Density)>,
     parameters: Res<Parameters>,
+    simulation_box: Res<SimulationBox>,
 ) {
+    for (pos, mut dens) in dens.iter_mut() {
+        let fac = ((**pos - simulation_box.center() + simulation_box.side_lengths() / 2.0)
+            / simulation_box.side_lengths().x())
+        .value();
+        if (fac - MVec::new(0.3, 0.3)).length() < 0.1 {
+            *dens = components::Density(units::Density::kilogram_per_square_meter(1e-9));
+        }
+    }
     for (entity, _) in particles.iter() {
         commands
             .entity(entity)
