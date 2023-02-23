@@ -36,7 +36,7 @@ pub fn construct_grid_from_iter(
                 let id = ParticleId(voronoi_cell.index);
                 let grid_cell = crate::grid::Cell {
                     neighbours: voronoi_cell
-                        .iter_neighbours_and_faces()
+                        .iter_neighbours_and_faces(&grid)
                         .map(|(neigh, area, normal)| {
                             let face = crate::grid::Face {
                                 area: Length::new_unchecked(area),
@@ -56,4 +56,31 @@ pub fn construct_grid_from_iter(
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use bevy::prelude::Entity;
+
+    use super::construct_grid_from_iter;
+    use crate::voronoi::Point;
+
+    #[test]
+    fn construct_small_grid() {
+        let points = [
+            Point::new(0.25, 0.25),
+            Point::new(0.5, 0.5),
+            Point::new(0.5, 0.25),
+            Point::new(0.125, 0.5),
+            Point::new(0.5, 0.125),
+            Point::new(0.8, 0.1),
+            Point::new(0.1, 0.8),
+        ];
+        construct_grid_from_iter(
+            points
+                .into_iter()
+                .enumerate()
+                .map(|(i, p)| (Entity::from_raw(i as u32), p)),
+        );
+    }
 }

@@ -34,8 +34,6 @@ impl DelaunayTriangulation {
         let p1 = points.insert(initial_tetra_data.p1);
         let p2 = points.insert(initial_tetra_data.p2);
         let p3 = points.insert(initial_tetra_data.p3);
-        #[cfg(not(feature = "2d"))]
-        let p4 = points.insert(initial_tetra_data.p4);
         let mut faces = FaceList::new();
         let f1 = TetraFace {
             face: faces.insert(Face { p1: p2, p2: p3 }),
@@ -57,8 +55,6 @@ impl DelaunayTriangulation {
             f1,
             f2,
             f3,
-            #[cfg(not(feature = "2d"))]
-            p4,
         });
         DelaunayTriangulation {
             tetras,
@@ -333,6 +329,10 @@ impl DelaunayTriangulation {
 #[cfg(feature = "2d")]
 fn get_all_encompassing_tetra(points: &[Point]) -> TetraData {
     let (min, max) = get_min_and_max(points).unwrap();
+    assert!(
+        (max - min).min_element() > 0.0,
+        "Could not construct encompassing tetra for points (zero extent along one axis)"
+    );
     // An overshooting factor for numerical safety
     let alpha = 1.00;
     let p1 = min - (max - min) * alpha;
