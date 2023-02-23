@@ -1,6 +1,6 @@
 box_size: 12.8 kpc
 timestep:
-  max_timestep: 1e1 Myr
+  max_timestep: 1e-1 Myr
 postprocess:
   initial_fraction_ionized_hydrogen: 0.00
   source_strength: 1e49  photons s^-1

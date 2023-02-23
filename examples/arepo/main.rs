@@ -19,7 +19,7 @@ use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::VecLength;
-use raxiom::voronoi::DelaunayTriangulation;
+use raxiom::voronoi::constructor::construct_grid_from_iter;
 use unit_reader::ArepoUnitReader;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
@@ -42,7 +42,7 @@ fn main() {
     let mut sim = SimulationBuilder::new();
     let mut sim = sim
         .parameters_from_relative_path(file!(), "parameters.yml")
-        .headless(false)
+        .headless(true)
         .write_output(true)
         .read_initial_conditions(true)
         .update_from_command_line_options()
@@ -92,16 +92,14 @@ fn insert_missing_components_system(
             ),));
     }
 
-    // let triangulation = DelaunayTriangulation::construct(
-    //     &particles
-    //         .into_iter()
-    //         .map(|(entity, pos)| pos.value_unchecked())
-    //         .collect::<Vec<_>>(),
-    // );
-    // let cells: Vec<Cell> = triangulation.into();
-    // for cell in cells {
-    //     commands.
-    // }
+    let cells = construct_grid_from_iter(
+        particles
+            .into_iter()
+            .map(|(entity, pos)| (entity, pos.value_unchecked())),
+    );
+    for (entity, id, cell) in cells.into_iter() {
+        commands.entity(entity).insert((id, cell));
+    }
 }
 
 fn initialize_source_system(

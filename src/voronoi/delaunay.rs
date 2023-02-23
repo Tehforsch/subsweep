@@ -68,12 +68,17 @@ impl DelaunayTriangulation {
         }
     }
 
-    pub fn construct(points: &[Point]) -> Self {
-        let mut constructor = DelaunayTriangulation::all_encompassing(points);
-        for p in points {
-            constructor.insert(*p);
-        }
-        constructor
+    pub fn construct(points: &[Point]) -> (DelaunayTriangulation, Vec<PointIndex>) {
+        let mut triangulation = DelaunayTriangulation::all_encompassing(points);
+        let indices = points.iter().map(|p| triangulation.insert(*p)).collect();
+        (triangulation, indices)
+    }
+
+    pub fn construct_from_iter(
+        iter: impl Iterator<Item = Point>,
+    ) -> (DelaunayTriangulation, Vec<PointIndex>) {
+        let positions: Vec<_> = iter.collect();
+        Self::construct(&positions)
     }
 
     pub(super) fn get_tetra_data(&self, tetra: &Tetra) -> TetraData {
@@ -94,7 +99,7 @@ impl DelaunayTriangulation {
             .map(|(index, _)| index)
     }
 
-    pub fn insert(&mut self, point: Point) {
+    pub fn insert(&mut self, point: Point) -> PointIndex {
         let t = self
             .find_containing_tetra(point)
             .expect("No tetra containing the point {point:?} found");
@@ -103,6 +108,7 @@ impl DelaunayTriangulation {
         while let Some(check) = self.to_check.pop() {
             self.flip_check(check);
         }
+        new_point_index
     }
 
     fn set_opposing_in_existing_tetra(

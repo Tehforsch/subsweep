@@ -80,7 +80,7 @@ fn add_points_system(mut commands: Commands) {
 
 fn show_voronoi_system(
     mut commands: Commands,
-    particles: Particles<&Position>,
+    particles: Particles<(Entity, &Position)>,
     triangles: Query<(Entity, &VisTriangle)>,
     polys: Query<(Entity, &VisPolygon)>,
     circles: Query<(Entity, &VisCircle)>,
@@ -106,11 +106,8 @@ fn show_voronoi_system(
         red: materials.add(ColorMaterial::from(Color::RED)),
         green: materials.add(ColorMaterial::from(Color::GREEN)),
     };
-    let triangulation = DelaunayTriangulation::construct(
-        &particles
-            .into_iter()
-            .map(|x| x.value_unchecked())
-            .collect::<Vec<_>>(),
+    let (triangulation, _) = DelaunayTriangulation::construct_from_iter(
+        particles.into_iter().map(|(_, pos)| pos.value_unchecked()),
     );
     let grid = VoronoiGrid::from(triangulation.clone());
     for cell in grid.cells.iter() {
@@ -130,7 +127,7 @@ fn show_voronoi_system(
             ));
         }
     }
-    for p in particles.iter() {
+    for (_, p) in particles.iter() {
         commands.spawn((
             VisCircle,
             ColorMesh2dBundle {

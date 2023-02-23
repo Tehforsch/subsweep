@@ -1,3 +1,4 @@
+use bevy::prelude::error;
 use hdf5::Dataset;
 use raxiom::io::UnitReader;
 use raxiom::units::Dimension;
@@ -43,7 +44,7 @@ impl UnitReader for ArepoUnitReader {
         let mut length = length + velocity;
         let time = -velocity;
 
-        println!("FAKING UNITS FOR TEMPORARY TEST");
+        error!("FAKING UNITS FOR TEMPORARY TEST");
         if length == -3 {
             length = -2;
         }

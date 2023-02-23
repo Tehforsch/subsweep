@@ -1,3 +1,4 @@
+pub mod constructor;
 mod delaunay;
 mod face;
 mod indexed_arena;
@@ -18,12 +19,7 @@ use self::face::Face;
 use self::indexed_arena::IndexedArena;
 use self::tetra::sign;
 use self::tetra::Tetra;
-use crate::grid::Neighbour;
 use crate::prelude::Float;
-use crate::prelude::ParticleId;
-use crate::units::Length;
-use crate::units::VecDimensionless;
-use crate::units::Volume;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct TetraIndex(Index);
@@ -50,6 +46,7 @@ pub struct VoronoiGrid {
 
 pub struct Cell {
     pub delaunay_point: PointIndex,
+    pub index: CellIndex,
     pub points: Vec<Point>,
     pub connected_cells: Vec<CellIndex>,
     pub is_boundary: bool,
@@ -137,6 +134,7 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
                 }
             }
             cells.push(Cell {
+                index: map[&point_index],
                 delaunay_point: point_index,
                 points,
                 connected_cells,
@@ -144,33 +142,6 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
             });
         }
         VoronoiGrid { cells }
-    }
-}
-
-impl From<VoronoiGrid> for Vec<crate::grid::Cell> {
-    fn from(t: VoronoiGrid) -> Self {
-        t.cells.into_iter().map(|cell| cell.into()).collect()
-    }
-}
-
-impl From<Cell> for crate::grid::Cell {
-    fn from(cell: Cell) -> Self {
-        crate::grid::Cell {
-            neighbours: cell
-                .iter_neighbours_and_faces()
-                .map(|(neigh, area, normal)| {
-                    (
-                        crate::grid::Face {
-                            area: Length::new_unchecked(area),
-                            normal: VecDimensionless::new_unchecked(normal),
-                        },
-                        Neighbour::Local(ParticleId(neigh)),
-                    )
-                })
-                .collect(),
-            size: Length::new_unchecked(cell.size()),
-            volume: Volume::new_unchecked(cell.volume()),
-        }
     }
 }
 
