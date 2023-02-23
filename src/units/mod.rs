@@ -137,20 +137,32 @@ unit_system!(
 
 #[cfg(feature = "2d")]
 mod reexport {
+    use super::Dimension;
+    use super::DENSITY2D;
+    use super::PRESSURE2D;
+
     pub type Density = super::Density2D;
     pub type NumberDensity = super::NumberDensity2D;
     pub type Pressure = super::Pressure2D;
     pub type Volume = super::Volume2D;
     pub type CrossSection = super::CrossSection2D;
+    pub const PRESSURE: Dimension = PRESSURE2D;
+    pub const DENSITY: Dimension = DENSITY2D;
 }
 
 #[cfg(not(feature = "2d"))]
 mod reexport {
+    use super::Dimension;
+    use super::DENSITY3D;
+    use super::PRESSURE3D;
+
     pub type Density = super::Density3D;
     pub type NumberDensity = super::NumberDensity3D;
     pub type Pressure = super::Pressure3D;
     pub type Volume = super::Volume3D;
     pub type CrossSection = super::CrossSection3D;
+    pub const PRESSURE: Dimension = PRESSURE3D;
+    pub const DENSITY: Dimension = DENSITY3D;
 }
 
 pub use reexport::*;
