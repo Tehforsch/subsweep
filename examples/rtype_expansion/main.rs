@@ -65,7 +65,7 @@ fn main() {
     let mut sim = SimulationBuilder::new();
     let mut sim = sim
         .parameters_from_relative_path(file!(), "parameters.yml")
-        .headless(false)
+        .headless(true)
         .write_output(true)
         .read_initial_conditions(false)
         .update_from_command_line_options()

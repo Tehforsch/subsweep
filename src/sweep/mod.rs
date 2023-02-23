@@ -165,8 +165,8 @@ impl<'a> Sweep<'a> {
         for level in 0..self.num_timestep_levels {
             let global_count = self.count_cells_global(level);
             info!(
-                "Sweep: {:>10} cells at level {:>2}",
-                global_count, level,
+                "Sweep: {:>10} cells at level {:>2} (delta_t={:?})",
+                global_count, level, TimestepLevel(level).to_timestep(self.max_timestep)
             );
         }
     }
