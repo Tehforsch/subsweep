@@ -31,6 +31,19 @@ impl RColor {
     pub fn reds(v: Float) -> Self {
         Self::rgb(v.clamp(0.0, 1.0) as f32, 0.0, 0.0)
     }
+
+    pub fn greens(v: Float) -> Self {
+        Self::rgb(0.0, v.clamp(0.0, 1.0) as f32, 0.0)
+    }
+
+    pub fn blues(v: Float) -> Self {
+        Self::rgb(0.0, 0.0, v.clamp(0.0, 1.0) as f32)
+    }
+
+    pub fn greys(v: Float) -> Self {
+        let x = v.clamp(0.0, 1.0) as f32;
+        Self::rgb(x, x, x)
+    }
 }
 
 impl From<RColor> for Color {

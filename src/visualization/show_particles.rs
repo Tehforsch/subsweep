@@ -34,7 +34,6 @@ use crate::units::DENSITY;
 use crate::units::DIMENSIONLESS;
 use crate::units::MASS;
 use crate::units::PRESSURE;
-use crate::units::TEMPERATURE;
 
 // The molecular weight that this plugin just blindly assumes.
 const MOLECULAR_WEIGHT: Float = 4.0;
@@ -47,43 +46,41 @@ pub enum Scale<const D: Dimension> {
     Explicit(Quantity<Float, D>),
 }
 
-impl<const D: Dimension> Scale<D> {
-    fn to_value<'a>(&self, values: impl Iterator<Item = Quantity<Float, D>>) -> Quantity<Float, D> {
-        match self {
-            Scale::Auto => values
-                .max_by_key(|x| OrderedFloat(x.value_unchecked()))
-                .unwrap_or(Quantity::<Float, D>::zero()),
-            Scale::Explicit(value) => *value,
-        }
-    }
+fn get_scale<const D: Dimension>(
+    values: impl Iterator<Item = Quantity<Float, D>>,
+) -> Quantity<Float, D> {
+    values
+        .max_by_key(|x| OrderedFloat(x.value_unchecked()))
+        .unwrap_or(Quantity::<Float, D>::zero())
 }
 
 /// Which quantity is shown via the particle color.
-#[derive(Default)]
+#[derive(Default, Copy, PartialEq, Eq)]
 #[raxiom_parameters]
 #[serde(tag = "type")]
 pub enum ColorMap {
-    /// Show the rank to which the particle belongs (default).
     #[default]
     Rank,
-    /// Show the particle temperature (only available if hydrodynamics
-    /// is enabled)
-    Temperature {
-        scale: Scale<TEMPERATURE>,
-    },
-    Density {
-        scale: Scale<DENSITY>,
-    },
-    Pressure {
-        scale: Scale<PRESSURE>,
-    },
-    Mass {
-        scale: Scale<MASS>,
-    },
-    IonizedHydrogenFraction {
-        scale: Scale<DIMENSIONLESS>,
-    },
-    TimestepLevel {},
+    Density,
+    Temperature,
+    Pressure,
+    Mass,
+    IonizedHydrogenFraction,
+    TimestepLevel,
+}
+
+impl ColorMap {
+    fn map(&self) -> &dyn Fn(f64) -> RColor {
+        match self {
+            ColorMap::Rank => &RColor::reds,
+            ColorMap::Density => &RColor::blues,
+            ColorMap::Temperature => &RColor::reds,
+            ColorMap::Pressure => &RColor::blues,
+            ColorMap::Mass => &RColor::reds,
+            ColorMap::IonizedHydrogenFraction => &RColor::greens,
+            ColorMap::TimestepLevel => &RColor::greys,
+        }
+    }
 }
 
 #[derive(Named)]
@@ -107,20 +104,21 @@ impl RaxiomPlugin for ShowParticlesPlugin {
                     .with_system(
                         color_particles_by_temperature_system.ambiguous_with(ColorParticlesLabel),
                     )
-                    .with_system(color_particles_by_mass_system.ambiguous_with(ColorParticlesLabel))
-                    .with_system(
-                        color_particles_by_ionized_hydrogen_fraction_system
-                            .ambiguous_with(ColorParticlesLabel),
-                    )
                     .with_system(
                         color_particles_by_timestep_level_system
                             .ambiguous_with(ColorParticlesLabel),
                     )
-                    .with_system(
-                        color_particles_by_pressure_system.ambiguous_with(ColorParticlesLabel),
+                    .with_system(color_particles_by_quantity_system::<Mass, { ColorMap::Mass }, MASS>
+                            .ambiguous_with(ColorParticlesLabel),
                     )
-                    .with_system(
-                        color_particles_by_density_system.ambiguous_with(ColorParticlesLabel),
+                    .with_system(color_particles_by_quantity_system::<Density, { ColorMap::Density }, DENSITY>
+                            .ambiguous_with(ColorParticlesLabel),
+                    )
+                    .with_system(color_particles_by_quantity_system::<Pressure, { ColorMap::Pressure }, PRESSURE>
+                            .ambiguous_with(ColorParticlesLabel),
+                    )
+                    .with_system(color_particles_by_quantity_system::<IonizedHydrogenFraction, { ColorMap::IonizedHydrogenFraction }, DIMENSIONLESS>
+                            .ambiguous_with(ColorParticlesLabel),
                     )
                     .with_system(change_color_map_system)
                     .label(ColorParticlesLabel),
@@ -136,6 +134,7 @@ impl RaxiomPlugin for ShowParticlesPlugin {
 fn get_temperature(e: EnergyPerMass) -> Temperature {
     e.to_temperature(Dimensionless::dimensionless(MOLECULAR_WEIGHT))
 }
+
 fn temperature_color_map(e: EnergyPerMass, scale: Temperature) -> RColor {
     RColor::reds((e.to_temperature(Dimensionless::dimensionless(MOLECULAR_WEIGHT)) / scale).value())
 }
@@ -144,62 +143,14 @@ fn color_particles_by_temperature_system(
     visualization_parameters: Res<VisualizationParameters>,
     mut particles: Particles<(&mut DrawCircle, &InternalEnergy, &Mass)>,
 ) {
-    if let ColorMap::Temperature { ref scale } = visualization_parameters.color_map {
-        let scale = scale.to_value(
+    if let ColorMap::Temperature = visualization_parameters.color_map {
+        let scale = get_scale(
             particles
                 .iter()
                 .map(|(_, internal_energy, mass)| get_temperature(**internal_energy / **mass)),
         );
         for (mut circle, internal_energy, mass) in particles.iter_mut() {
             circle.color = temperature_color_map(**internal_energy / **mass, scale);
-        }
-    }
-}
-
-fn color_particles_by_density_system(
-    visualization_parameters: Res<VisualizationParameters>,
-    mut particles: Particles<(&mut DrawCircle, &Density)>,
-) {
-    if let ColorMap::Density { ref scale } = visualization_parameters.color_map {
-        let scale = scale.to_value(particles.iter().map(|(_, density)| **density));
-        for (mut circle, density) in particles.iter_mut() {
-            circle.color = RColor::reds((**density / scale).value());
-        }
-    }
-}
-
-fn color_particles_by_pressure_system(
-    visualization_parameters: Res<VisualizationParameters>,
-    mut particles: Particles<(&mut DrawCircle, &Pressure)>,
-) {
-    if let ColorMap::Pressure { ref scale } = visualization_parameters.color_map {
-        let scale = scale.to_value(particles.iter().map(|(_, pressure)| **pressure));
-        for (mut circle, pressure) in particles.iter_mut() {
-            circle.color = RColor::reds((**pressure / scale).value());
-        }
-    }
-}
-
-fn color_particles_by_mass_system(
-    visualization_parameters: Res<VisualizationParameters>,
-    mut particles: Particles<(&mut DrawCircle, &Mass)>,
-) {
-    if let ColorMap::Mass { ref scale } = visualization_parameters.color_map {
-        let scale = scale.to_value(particles.iter().map(|(_, mass)| **mass));
-        for (mut circle, mass) in particles.iter_mut() {
-            circle.color = RColor::reds((**mass / scale).value());
-        }
-    }
-}
-
-fn color_particles_by_ionized_hydrogen_fraction_system(
-    visualization_parameters: Res<VisualizationParameters>,
-    mut particles: Particles<(&mut DrawCircle, &IonizedHydrogenFraction)>,
-) {
-    if let ColorMap::IonizedHydrogenFraction { ref scale } = visualization_parameters.color_map {
-        let scale = scale.to_value(particles.iter().map(|(_, fraction)| **fraction));
-        for (mut circle, fraction) in particles.iter_mut() {
-            circle.color = RColor::reds((**fraction / scale).value());
         }
     }
 }
@@ -248,15 +199,28 @@ fn change_color_map_system(
     input: Res<Input<KeyCode>>,
 ) {
     for key in input.get_just_pressed() {
-        match key {
-            KeyCode::I => {
-                parameters.color_map = ColorMap::IonizedHydrogenFraction { scale: Scale::Auto }
-            }
-            KeyCode::M => parameters.color_map = ColorMap::Mass { scale: Scale::Auto },
-            KeyCode::D => parameters.color_map = ColorMap::Density { scale: Scale::Auto },
-            KeyCode::L => parameters.color_map = ColorMap::TimestepLevel {},
-            KeyCode::T => parameters.color_map = ColorMap::Temperature { scale: Scale::Auto },
-            _ => {}
+        parameters.color_map = match key {
+            KeyCode::I => ColorMap::IonizedHydrogenFraction,
+            KeyCode::M => ColorMap::Mass,
+            KeyCode::D => ColorMap::Density,
+            KeyCode::L => ColorMap::TimestepLevel,
+            KeyCode::T => ColorMap::Temperature,
+            _ => parameters.color_map,
+        }
+    }
+}
+
+fn color_particles_by_quantity_system<C, const CO: ColorMap, const D: Dimension>(
+    visualization_parameters: Res<VisualizationParameters>,
+    mut particles: Particles<(&mut DrawCircle, &C)>,
+) where
+    C: Component + std::ops::Deref<Target = Quantity<Float, D>>,
+{
+    if CO == visualization_parameters.color_map {
+        let scale: Quantity<Float, D> = get_scale(particles.iter().map(|(_, value)| **value));
+        let map = CO.map();
+        for (mut circle, value) in particles.iter_mut() {
+            circle.color = map(value.value_unchecked() / scale.value_unchecked());
         }
     }
 }
