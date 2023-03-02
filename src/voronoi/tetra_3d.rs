@@ -37,6 +37,10 @@ impl Tetra3d {
 }
 
 impl Tetra3dData {
+    pub fn all_encompassing(points: &[Point]) -> Tetra3dData {
+        todo!()
+    }
+
     pub fn contains(&self, _point: Point) -> bool {
         todo!()
     }

@@ -36,6 +36,20 @@ pub struct Tetra2dData {
 }
 
 impl Tetra2dData {
+    pub fn all_encompassing(points: &[Point]) -> Self {
+        let (min, max) = get_min_and_max(points).unwrap();
+        assert!(
+            (max - min).min_element() > 0.0,
+            "Could not construct encompassing tetra for points (zero extent along one axis)"
+        );
+        // An overshooting factor for numerical safety
+        let alpha = 1.00;
+        let p1 = min - (max - min) * alpha;
+        let p2 = Point::new(min.x, max.y + (max.y - min.y) * (1.0 + alpha));
+        let p3 = Point::new(max.x + (max.x - min.x) * (1.0 + alpha), min.y);
+        Self { p1, p2, p3 }
+    }
+
     pub fn contains(&self, point: Point) -> bool {
         let d1 = sign(point, self.p1, self.p2);
         let d2 = sign(point, self.p2, self.p3);
@@ -106,4 +120,28 @@ pub fn determinant(
         - a13 * a22 * a31
         - a12 * a21 * a33
         - a11 * a23 * a32
+}
+
+fn get_min_and_max(points: &[Point]) -> Option<(Point, Point)> {
+    let mut min = None;
+    let mut max = None;
+    let update_min = |min: &mut Option<Point>, pos: Point| {
+        if let Some(ref mut min) = min {
+            *min = min.min(pos);
+        } else {
+            *min = Some(pos);
+        }
+    };
+    let update_max = |max: &mut Option<Point>, pos: Point| {
+        if let Some(ref mut max) = max {
+            *max = max.max(pos);
+        } else {
+            *max = Some(pos);
+        }
+    };
+    for p in points {
+        update_min(&mut min, *p);
+        update_max(&mut max, *p);
+    }
+    Some((min?, max?))
 }
