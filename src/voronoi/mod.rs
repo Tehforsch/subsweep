@@ -3,6 +3,9 @@ mod delaunay;
 mod face;
 mod indexed_arena;
 mod tetra;
+#[cfg(feature = "2d")]
+mod tetra_2d;
+mod utils;
 
 use std::f64::consts::PI;
 use std::iter;
@@ -17,8 +20,8 @@ use ordered_float::OrderedFloat;
 
 use self::face::Face;
 use self::indexed_arena::IndexedArena;
-use self::tetra::sign;
 use self::tetra::Tetra;
+use self::utils::sign;
 use crate::prelude::Float;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
