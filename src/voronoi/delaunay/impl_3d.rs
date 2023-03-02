@@ -16,29 +16,28 @@ impl DelaunayTriangulation {
         }
     }
 
-    fn insert_positively_oriented_tetra(
+    fn _insert_positively_oriented_tetra(
         &mut self,
-        p1: PointIndex,
-        p2: PointIndex,
-        p3: PointIndex,
-        p4: PointIndex,
-        f1: TetraFace,
-        f2: TetraFace,
-        f3: TetraFace,
-        f4: TetraFace,
+        _p1: PointIndex,
+        _p2: PointIndex,
+        _p3: PointIndex,
+        _p4: PointIndex,
+        _f1: TetraFace,
+        _f2: TetraFace,
+        _f3: TetraFace,
+        _f4: TetraFace,
     ) -> TetraIndex {
         todo!()
     }
 
-    pub(super) fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
+    pub(super) fn split(&mut self, _old_tetra_index: TetraIndex, _point: PointIndex) {
         todo!()
     }
 
-    pub(super) fn flip(&mut self, check: FlipCheckData) {
+    pub(super) fn flip(&mut self, _check: FlipCheckData) {
         todo!()
     }
 
-    #[cfg(feature = "3d")]
     pub fn insert_basic_tetra(&mut self, _tetra: TetraData) {
         todo!()
     }

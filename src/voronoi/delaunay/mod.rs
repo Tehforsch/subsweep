@@ -180,12 +180,23 @@ pub(super) mod tests {
         check(&triangulation, points.len());
     }
 
+    #[cfg(feature = "2d")]
     #[test]
     fn correct_number_of_objects() {
         perform_check_on_each_level_of_construction(|triangulation, num_points_inserted| {
             assert_eq!(triangulation.points.len(), 3 + num_points_inserted);
             assert_eq!(triangulation.tetras.len(), 1 + 2 * num_points_inserted);
             assert_eq!(triangulation.faces.len(), 3 + 3 * num_points_inserted);
+        });
+    }
+
+    #[cfg(feature = "3d")]
+    #[test]
+    fn correct_number_of_objects() {
+        perform_check_on_each_level_of_construction(|triangulation, num_points_inserted| {
+            assert_eq!(triangulation.points.len(), 4 + num_points_inserted);
+            assert_eq!(triangulation.tetras.len(), 1 + 3 * num_points_inserted);
+            assert_eq!(triangulation.faces.len(), 4 + 4 * num_points_inserted);
         });
     }
 

@@ -37,7 +37,7 @@ impl Tetra3d {
 }
 
 impl Tetra3dData {
-    pub fn all_encompassing(points: &[Point]) -> Tetra3dData {
+    pub fn all_encompassing(_points: &[Point]) -> Tetra3dData {
         todo!()
     }
 
