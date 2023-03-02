@@ -11,6 +11,10 @@ pub struct Tetra {
     pub p2: PointIndex,
     pub p3: PointIndex,
     pub p4: PointIndex,
+    pub f1: TetraFace,
+    pub f2: TetraFace,
+    pub f3: TetraFace,
+    pub f4: TetraFace,
 }
 
 #[cfg(not(feature = "2d"))]
@@ -37,7 +41,7 @@ pub struct Triangle {
     pub f3: TetraFace,
 }
 
-impl Triangle {
+impl Tetra {
     pub fn find_face(&self, face: FaceIndex) -> &TetraFace {
         self.iter_faces().find(|f| f.face == face).unwrap()
     }
@@ -47,52 +51,60 @@ impl Triangle {
     }
 
     pub fn find_face_opposite(&self, p: PointIndex) -> &TetraFace {
-        if p == self.p1 {
-            &self.f1
-        } else if p == self.p2 {
-            &self.f2
-        } else if p == self.p3 {
-            &self.f3
-        } else {
-            panic!("find_face_opposite called with point that is not part of the tetra.");
-        }
+        self.iter_points()
+            .zip(self.iter_faces())
+            .find(|(point, _)| **point == p)
+            .map(|(_, face)| face)
+            .unwrap_or_else(|| {
+                panic!("find_face_opposite called with point that is not part of the tetra.");
+            })
     }
 
     pub fn find_point_opposite(&self, f: FaceIndex) -> PointIndex {
-        if f == self.f1.face {
-            self.p1
-        } else if f == self.f2.face {
-            self.p2
-        } else if f == self.f3.face {
-            self.p3
-        } else {
-            panic!("find_point_opposite called with face that is not part of the tetra.");
-        }
+        self.iter_faces()
+            .zip(self.iter_points())
+            .find(|(face, _)| face.face == f)
+            .map(|(_, point)| *point)
+            .unwrap_or_else(|| {
+                panic!("find_point_opposite called with face that is not part of the tetra.");
+            })
     }
 
+    pub fn get_common_face_with(&self, other: &Tetra) -> Option<FaceIndex> {
+        self.iter_faces()
+            .flat_map(move |f_self| other.iter_faces().map(move |f_other| (f_self, f_other)))
+            .find(|(fa, fb)| fa.face == fb.face)
+            .map(|(fa, _)| fa.face)
+    }
+}
+
+#[cfg(feature = "2d")]
+impl Triangle {
     pub fn iter_faces(&self) -> impl Iterator<Item = &TetraFace> {
         ([&self.f1, &self.f2, &self.f3]).into_iter()
+    }
+
+    pub fn iter_points(&self) -> impl Iterator<Item = &PointIndex> {
+        ([&self.p1, &self.p2, &self.p3]).into_iter()
     }
 
     pub fn iter_faces_mut(&mut self) -> impl Iterator<Item = &mut TetraFace> {
         ([&mut self.f1, &mut self.f2, &mut self.f3]).into_iter()
     }
+}
 
-    pub fn get_common_face_with(&self, other: &Triangle) -> Option<FaceIndex> {
-        [
-            (self.f1, other.f1),
-            (self.f1, other.f2),
-            (self.f1, other.f3),
-            (self.f2, other.f1),
-            (self.f2, other.f2),
-            (self.f2, other.f3),
-            (self.f3, other.f1),
-            (self.f3, other.f2),
-            (self.f3, other.f3),
-        ]
-        .iter()
-        .find(|(fa, fb)| fa.face == fb.face)
-        .map(|(fa, _)| fa.face)
+#[cfg(feature = "3d")]
+impl Tetra {
+    pub fn iter_faces(&self) -> impl Iterator<Item = &TetraFace> {
+        ([&self.f1, &self.f2, &self.f3, &self.f4]).into_iter()
+    }
+
+    pub fn iter_points(&self) -> impl Iterator<Item = &PointIndex> {
+        ([&self.p1, &self.p2, &self.p3, &self.p4]).into_iter()
+    }
+
+    pub fn iter_faces_mut(&mut self) -> impl Iterator<Item = &mut TetraFace> {
+        ([&mut self.f1, &mut self.f2, &mut self.f3, &mut self.f4]).into_iter()
     }
 }
 
@@ -119,6 +131,7 @@ pub fn sign(p1: Point, p2: Point, p3: Point) -> Float {
     (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
 }
 
+#[cfg(feature = "2d")]
 impl TriangleData {
     pub fn contains(&self, point: Point) -> bool {
         let d1 = sign(point, self.p1, self.p2);
@@ -175,6 +188,26 @@ impl TriangleData {
     }
 }
 
+#[cfg(feature = "3d")]
+impl TetraData {
+    pub fn contains(&self, _point: Point) -> bool {
+        todo!()
+    }
+
+    pub fn circumcircle_contains(&self, _point: Point) -> bool {
+        todo!()
+    }
+
+    pub fn _is_positively_oriented(&self) -> bool {
+        todo!()
+    }
+
+    pub fn get_center_of_circumcircle(&self) -> Point {
+        todo!()
+    }
+}
+
+#[cfg(feature = "2d")]
 fn determinant(
     a11: Float,
     a12: Float,

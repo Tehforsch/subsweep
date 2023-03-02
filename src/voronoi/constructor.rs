@@ -6,6 +6,7 @@ use super::Point;
 use super::PointIndex;
 use super::VoronoiGrid;
 use crate::grid::Cell;
+use crate::grid::FaceArea;
 use crate::grid::Neighbour;
 use crate::prelude::ParticleId;
 use crate::units::Length;
@@ -39,7 +40,7 @@ pub fn construct_grid_from_iter(
                         .iter_neighbours_and_faces(&grid)
                         .map(|(neigh, area, normal)| {
                             let face = crate::grid::Face {
-                                area: Length::new_unchecked(area),
+                                area: FaceArea::new_unchecked(area),
                                 normal: VecDimensionless::new_unchecked(normal),
                             };
                             if grid.cells[neigh].is_boundary {
@@ -65,9 +66,9 @@ mod tests {
     use super::construct_grid_from_iter;
     use crate::voronoi::Point;
 
-    #[test]
-    fn construct_small_grid() {
-        let points = [
+    #[cfg(feature = "2d")]
+    fn get_points_for_small_grid() -> Vec<Point> {
+        vec![
             Point::new(0.25, 0.25),
             Point::new(0.5, 0.5),
             Point::new(0.5, 0.25),
@@ -75,12 +76,21 @@ mod tests {
             Point::new(0.5, 0.125),
             Point::new(0.8, 0.1),
             Point::new(0.1, 0.8),
-        ];
+        ]
+    }
+
+    #[cfg(feature = "3d")]
+    fn get_points_for_small_grid() -> Vec<Point> {
+        todo!()
+    }
+
+    #[test]
+    fn construct_small_grid() {
         construct_grid_from_iter(
-            points
+            get_points_for_small_grid()
                 .into_iter()
                 .enumerate()
-                .map(|(i, p)| (Entity::from_raw(i as u32), p)),
+                .map(move |(i, p)| (Entity::from_raw(i as u32), p.clone())),
         );
     }
 }

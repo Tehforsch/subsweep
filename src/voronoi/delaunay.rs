@@ -30,38 +30,7 @@ pub struct DelaunayTriangulation {
 impl DelaunayTriangulation {
     pub fn all_encompassing(points: &[Point]) -> DelaunayTriangulation {
         let initial_tetra_data = get_all_encompassing_tetra(points);
-        let mut points = PointList::new();
-        let p1 = points.insert(initial_tetra_data.p1);
-        let p2 = points.insert(initial_tetra_data.p2);
-        let p3 = points.insert(initial_tetra_data.p3);
-        let mut faces = FaceList::new();
-        let f1 = TetraFace {
-            face: faces.insert(Face { p1: p2, p2: p3 }),
-            opposing: None,
-        };
-        let f2 = TetraFace {
-            face: faces.insert(Face { p1: p3, p2: p1 }),
-            opposing: None,
-        };
-        let f3 = TetraFace {
-            face: faces.insert(Face { p1: p1, p2: p2 }),
-            opposing: None,
-        };
-        let mut tetras = TetraList::new();
-        tetras.insert(Tetra {
-            p1,
-            p2,
-            p3,
-            f1,
-            f2,
-            f3,
-        });
-        DelaunayTriangulation {
-            tetras,
-            faces: faces,
-            to_check: vec![],
-            points,
-        }
+        DelaunayTriangulation::from_basic_triangle(initial_tetra_data)
     }
 
     pub fn construct(points: &[Point]) -> (DelaunayTriangulation, Vec<PointIndex>) {
@@ -82,6 +51,8 @@ impl DelaunayTriangulation {
             p1: self.points[tetra.p1],
             p2: self.points[tetra.p2],
             p3: self.points[tetra.p3],
+            #[cfg(feature = "3d")]
+            p4: self.points[tetra.p4],
         }
     }
 
@@ -135,6 +106,7 @@ impl DelaunayTriangulation {
         self.tetras[new_tetra].find_face_mut(face).opposing = Some(ConnectionData { tetra, point });
     }
 
+    #[cfg(feature = "2d")]
     fn insert_positively_oriented_tetra(
         &mut self,
         p1: PointIndex,
@@ -177,6 +149,22 @@ impl DelaunayTriangulation {
         self.tetras.insert(tetra)
     }
 
+    #[cfg(feature = "3d")]
+    fn insert_positively_oriented_tetra(
+        &mut self,
+        p1: PointIndex,
+        p2: PointIndex,
+        p3: PointIndex,
+        p4: PointIndex,
+        f1: TetraFace,
+        f2: TetraFace,
+        f3: TetraFace,
+        f4: TetraFace,
+    ) -> TetraIndex {
+        todo!()
+    }
+
+    #[cfg(feature = "2d")]
     fn make_tetra(
         &mut self,
         p: PointIndex,
@@ -205,6 +193,12 @@ impl DelaunayTriangulation {
         )
     }
 
+    #[cfg(feature = "3d")]
+    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
+        todo!()
+    }
+
+    #[cfg(feature = "2d")]
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
         let f1 = self.faces.insert(Face {
@@ -251,6 +245,12 @@ impl DelaunayTriangulation {
         other_point_contained
     }
 
+    #[cfg(feature = "3d")]
+    fn flip(&mut self, check: FlipCheckData) {
+        todo!()
+    }
+
+    #[cfg(feature = "2d")]
     fn flip(&mut self, check: FlipCheckData) {
         let old_tetra = self.tetras.remove(check.tetra).unwrap();
         let old_face = self.faces.remove(check.face).unwrap();
@@ -324,6 +324,61 @@ impl DelaunayTriangulation {
             self.flip(to_check);
         }
     }
+
+    fn from_basic_triangle(tetra: TetraData) -> DelaunayTriangulation {
+        let mut points = PointList::new();
+        let mut faces = FaceList::new();
+        let mut tetras = TetraList::new();
+        insert_basic_triangle(tetra, &mut points, &mut faces, &mut tetras);
+        DelaunayTriangulation {
+            tetras: tetras,
+            faces: faces,
+            points: points,
+            to_check: vec![],
+        }
+    }
+}
+
+#[cfg(feature = "2d")]
+fn insert_basic_triangle(
+    tetra: TetraData,
+    points: &mut PointList,
+    faces: &mut FaceList,
+    tetras: &mut TetraList,
+) {
+    let p1 = points.insert(tetra.p1);
+    let p2 = points.insert(tetra.p2);
+    let p3 = points.insert(tetra.p3);
+    let f1 = faces.insert(Face { p1: p2, p2: p3 });
+    let f2 = faces.insert(Face { p1: p3, p2: p1 });
+    let f3 = faces.insert(Face { p1: p1, p2: p2 });
+    tetras.insert(Tetra {
+        p1,
+        p2,
+        p3,
+        f1: TetraFace {
+            face: f1,
+            opposing: None,
+        },
+        f2: TetraFace {
+            face: f2,
+            opposing: None,
+        },
+        f3: TetraFace {
+            face: f3,
+            opposing: None,
+        },
+    });
+}
+
+#[cfg(feature = "3d")]
+fn insert_basic_triangle(
+    _tetra: TetraData,
+    _points: &mut PointList,
+    _faces: &mut FaceList,
+    _tetras: &mut TetraList,
+) {
+    todo!()
 }
 
 #[cfg(feature = "2d")]
@@ -339,6 +394,11 @@ fn get_all_encompassing_tetra(points: &[Point]) -> TetraData {
     let p2 = Point::new(min.x, max.y + (max.y - min.y) * (1.0 + alpha));
     let p3 = Point::new(max.x + (max.x - min.x) * (1.0 + alpha), min.y);
     TetraData { p1, p2, p3 }
+}
+
+#[cfg(feature = "3d")]
+fn get_all_encompassing_tetra(points: &[Point]) -> TetraData {
+    todo!()
 }
 
 fn get_min_and_max(points: &[Point]) -> Option<(Point, Point)> {
@@ -365,23 +425,16 @@ fn get_min_and_max(points: &[Point]) -> Option<(Point, Point)> {
     Some((min?, max?))
 }
 
-#[cfg(feature = "2d")]
 #[cfg(test)]
 pub(super) mod tests {
-    use super::super::face::Face;
-    use super::super::tetra::Tetra;
-    use super::super::tetra::TetraFace;
-    use super::super::FaceList;
     use super::super::Point;
-    use super::super::PointList;
-    use super::super::TetraList;
     use super::DelaunayTriangulation;
+    use crate::config::NUM_DIMENSIONS;
+    use crate::voronoi::tetra::TetraData;
 
-    pub fn perform_check_on_each_level_of_construction(
-        check: fn(&DelaunayTriangulation, usize) -> (),
-    ) {
-        let mut triangulation = get_basic_triangle();
-        let points = [
+    #[cfg(feature = "2d")]
+    fn get_example_point_set() -> Vec<Point> {
+        vec![
             Point::new(0.5, 0.5),
             Point::new(0.25, 0.5),
             Point::new(0.5, 0.25),
@@ -389,48 +442,38 @@ pub(super) mod tests {
             Point::new(0.5, 0.125),
             Point::new(0.8, 0.1),
             Point::new(0.1, 0.8),
-        ];
+        ]
+    }
+
+    #[cfg(feature = "2d")]
+    fn basic_tetra() -> TetraData {
+        TetraData {
+            p1: Point::new(0.0, 0.0),
+            p2: Point::new(2.0, 0.0),
+            p3: Point::new(0.0, 2.0),
+        }
+    }
+
+    #[cfg(feature = "3d")]
+    fn basic_tetra() -> TetraData {
+        todo!()
+    }
+
+    #[cfg(feature = "3d")]
+    fn get_example_point_set() -> &'static [Point] {
+        todo!()
+    }
+
+    pub fn perform_check_on_each_level_of_construction(
+        check: fn(&DelaunayTriangulation, usize) -> (),
+    ) {
+        let mut triangulation = DelaunayTriangulation::from_basic_triangle(basic_tetra());
+        let points = get_example_point_set();
         for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);
             triangulation.insert(*point);
         }
         check(&triangulation, points.len());
-    }
-
-    fn get_basic_triangle() -> DelaunayTriangulation {
-        let mut points = PointList::new();
-        let mut faces = FaceList::new();
-        let mut tetras = TetraList::new();
-        let p1 = points.insert(Point::new(0.0, 0.0));
-        let p2 = points.insert(Point::new(2.0, 0.0));
-        let p3 = points.insert(Point::new(0.0, 2.0));
-        let f1 = faces.insert(Face { p1: p2, p2: p3 });
-        let f2 = faces.insert(Face { p1: p3, p2: p1 });
-        let f3 = faces.insert(Face { p1: p1, p2: p2 });
-        tetras.insert(Tetra {
-            p1,
-            p2,
-            p3,
-            f1: TetraFace {
-                face: f1,
-                opposing: None,
-            },
-            f2: TetraFace {
-                face: f2,
-                opposing: None,
-            },
-            f3: TetraFace {
-                face: f3,
-                opposing: None,
-            },
-        });
-
-        DelaunayTriangulation {
-            tetras: tetras,
-            faces: faces,
-            points: points,
-            to_check: vec![],
-        }
     }
 
     #[test]
@@ -447,12 +490,12 @@ pub(super) mod tests {
         perform_check_on_each_level_of_construction(|triangulation, num_points_inserted| {
             if num_points_inserted == 1 {
                 // After the first insertion, we know that each tetra
-                // should contain two faces which have an opposing
+                // should contain NUM_DIM faces which have an opposing
                 // face (the `inner` ones).
                 for (_, tetra) in triangulation.tetras.iter() {
                     assert_eq!(
                         tetra.iter_faces().filter_map(|face| face.opposing).count(),
-                        2
+                        NUM_DIMENSIONS
                     );
                 }
             }

@@ -96,11 +96,6 @@ impl Cell {
             .filter(|_| !self.is_boundary) // For now: return an empty iterator if this is a boundary cell
     }
 
-    #[cfg(feature = "3d")]
-    pub fn size(&self) -> Float {
-        (3.0 * self.volume() / (4.0 * PI)).cbrt()
-    }
-
     #[cfg(feature = "2d")]
     pub fn size(&self) -> Float {
         (self.volume() / PI).sqrt()
@@ -113,6 +108,16 @@ impl Cell {
             .map(|(p1, p2)| p1.x * p2.y - p2.x * p1.y)
             .sum::<Float>()
             .abs()
+    }
+
+    #[cfg(feature = "3d")]
+    pub fn size(&self) -> Float {
+        (3.0 * self.volume() / (4.0 * PI)).cbrt()
+    }
+
+    #[cfg(feature = "3d")]
+    pub fn volume(&self) -> Float {
+        todo!()
     }
 }
 
@@ -192,12 +197,22 @@ mod tests {
     use super::Point;
     use super::VoronoiGrid;
 
+    #[cfg(feature = "2d")]
+    fn get_lookup_points() -> impl Iterator<Item = Point> {
+        ((0..10).zip(0..10)).map(|(i, j)| Point::new(0.1 * i as f64, 0.1 * j as f64))
+    }
+
+    #[cfg(feature = "3d")]
+    fn get_lookup_points() -> impl Iterator<Item = Point> {
+        ((0..10).zip(0..10).zip(0..10))
+            .map(|((i, j), k)| Point::new(0.1 * i as f64, 0.1 * j as f64, 0.1 * k as f64))
+    }
+
     #[test]
     fn voronoi_property() {
         perform_check_on_each_level_of_construction(|triangulation, _| {
             let grid = VoronoiGrid::from(triangulation.clone());
-            for (i, j) in (0..10).zip(0..10) {
-                let lookup_point = Point::new(0.1 * i as f64, 0.1 * j as f64);
+            for lookup_point in get_lookup_points() {
                 let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
                 let closest_cell = grid
                     .cells
