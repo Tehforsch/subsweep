@@ -1,8 +1,6 @@
 use super::FaceIndex;
-use super::Point;
 use super::PointIndex;
 use super::TetraIndex;
-use crate::prelude::Float;
 
 #[cfg(not(feature = "2d"))]
 #[derive(Clone)]
@@ -27,9 +25,9 @@ pub struct TetraData {
 }
 
 #[cfg(feature = "2d")]
-pub type Tetra = super::tetra_2d::Triangle;
+pub type Tetra = super::tetra_2d::Tetra2d;
 #[cfg(feature = "2d")]
-pub type TetraData = super::tetra_2d::TriangleData;
+pub type TetraData = super::tetra_2d::Tetra2dData;
 
 impl Tetra {
     pub fn find_face(&self, face: FaceIndex) -> &TetraFace {

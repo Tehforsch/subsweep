@@ -30,7 +30,7 @@ pub struct DelaunayTriangulation {
 impl DelaunayTriangulation {
     pub fn all_encompassing(points: &[Point]) -> DelaunayTriangulation {
         let initial_tetra_data = get_all_encompassing_tetra(points);
-        DelaunayTriangulation::from_basic_triangle(initial_tetra_data)
+        DelaunayTriangulation::from_basic_tetra(initial_tetra_data)
     }
 
     pub fn construct(points: &[Point]) -> (DelaunayTriangulation, Vec<PointIndex>) {
@@ -325,11 +325,11 @@ impl DelaunayTriangulation {
         }
     }
 
-    fn from_basic_triangle(tetra: TetraData) -> DelaunayTriangulation {
+    fn from_basic_tetra(tetra: TetraData) -> DelaunayTriangulation {
         let mut points = PointList::new();
         let mut faces = FaceList::new();
         let mut tetras = TetraList::new();
-        insert_basic_triangle(tetra, &mut points, &mut faces, &mut tetras);
+        insert_basic_tetra(tetra, &mut points, &mut faces, &mut tetras);
         DelaunayTriangulation {
             tetras: tetras,
             faces: faces,
@@ -340,7 +340,7 @@ impl DelaunayTriangulation {
 }
 
 #[cfg(feature = "2d")]
-fn insert_basic_triangle(
+fn insert_basic_tetra(
     tetra: TetraData,
     points: &mut PointList,
     faces: &mut FaceList,
@@ -372,7 +372,7 @@ fn insert_basic_triangle(
 }
 
 #[cfg(feature = "3d")]
-fn insert_basic_triangle(
+fn insert_basic_tetra(
     _tetra: TetraData,
     _points: &mut PointList,
     _faces: &mut FaceList,
@@ -467,7 +467,7 @@ pub(super) mod tests {
     pub fn perform_check_on_each_level_of_construction(
         check: fn(&DelaunayTriangulation, usize) -> (),
     ) {
-        let mut triangulation = DelaunayTriangulation::from_basic_triangle(basic_tetra());
+        let mut triangulation = DelaunayTriangulation::from_basic_tetra(basic_tetra());
         let points = get_example_point_set();
         for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);

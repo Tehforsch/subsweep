@@ -5,7 +5,7 @@ use crate::prelude::Float;
 use crate::voronoi::sign;
 
 #[derive(Clone, Debug)]
-pub struct Triangle {
+pub struct Tetra2d {
     pub p1: PointIndex,
     pub p2: PointIndex,
     pub p3: PointIndex,
@@ -14,7 +14,7 @@ pub struct Triangle {
     pub f3: TetraFace,
 }
 
-impl Triangle {
+impl Tetra2d {
     pub fn iter_faces(&self) -> impl Iterator<Item = &TetraFace> {
         ([&self.f1, &self.f2, &self.f3]).into_iter()
     }
@@ -29,13 +29,13 @@ impl Triangle {
 }
 
 #[derive(Debug)]
-pub struct TriangleData {
+pub struct Tetra2dData {
     pub p1: Point,
     pub p2: Point,
     pub p3: Point,
 }
 
-impl TriangleData {
+impl Tetra2dData {
     pub fn contains(&self, point: Point) -> bool {
         let d1 = sign(point, self.p1, self.p2);
         let d2 = sign(point, self.p2, self.p3);
