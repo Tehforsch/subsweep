@@ -200,22 +200,22 @@ impl DelaunayTriangulation {
         let f1 = self.faces.insert(Face { p1: p2, p2: p3 });
         let f2 = self.faces.insert(Face { p1: p3, p2: p1 });
         let f3 = self.faces.insert(Face { p1: p1, p2: p2 });
-        self.tetras.insert(Tetra {
+        self.insert_positively_oriented_tetra(
             p1,
             p2,
             p3,
-            f1: TetraFace {
+            TetraFace {
                 face: f1,
                 opposing: None,
             },
-            f2: TetraFace {
+            TetraFace {
                 face: f2,
                 opposing: None,
             },
-            f3: TetraFace {
+            TetraFace {
                 face: f3,
                 opposing: None,
             },
-        });
+        );
     }
 }

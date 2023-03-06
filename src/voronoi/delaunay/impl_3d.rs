@@ -180,7 +180,7 @@ impl DelaunayTriangulation {
             old_tetra.f4,
         );
         // self.set_opposing_in_new_tetra(t1, f3, t2, old_tetra.p1);
-        todo!();
+        // todo!();
         // self.set_opposing_in_existing_tetra(old_tetra.f1, t1, point, old_tetra_index);
         // todo!()
         for (tetra, face) in [
@@ -200,7 +200,52 @@ impl DelaunayTriangulation {
         todo!()
     }
 
-    pub fn insert_basic_tetra(&mut self, _tetra: TetraData) {
-        todo!()
+    pub fn insert_basic_tetra(&mut self, tetra: TetraData) {
+        let p1 = self.points.insert(tetra.p1);
+        let p2 = self.points.insert(tetra.p2);
+        let p3 = self.points.insert(tetra.p3);
+        let p4 = self.points.insert(tetra.p4);
+        let f1 = self.faces.insert(Face {
+            p1: p2,
+            p2: p3,
+            p3: p4,
+        });
+        let f2 = self.faces.insert(Face {
+            p1: p1,
+            p2: p3,
+            p3: p4,
+        });
+        let f3 = self.faces.insert(Face {
+            p1: p1,
+            p2: p2,
+            p3: p4,
+        });
+        let f4 = self.faces.insert(Face {
+            p1: p1,
+            p2: p2,
+            p3: p3,
+        });
+        self.insert_positively_oriented_tetra(
+            p1,
+            p2,
+            p3,
+            p4,
+            TetraFace {
+                face: f1,
+                opposing: None,
+            },
+            TetraFace {
+                face: f2,
+                opposing: None,
+            },
+            TetraFace {
+                face: f3,
+                opposing: None,
+            },
+            TetraFace {
+                face: f4,
+                opposing: None,
+            },
+        );
     }
 }
