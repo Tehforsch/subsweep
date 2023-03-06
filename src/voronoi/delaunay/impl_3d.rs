@@ -195,8 +195,10 @@ impl DelaunayTriangulation {
         self.set_opposing_in_new_tetra(t4, f2, t2, old_tetra.p4);
         self.set_opposing_in_new_tetra(t4, f1, t3, old_tetra.p4);
 
-        // self.set_opposing_in_existing_tetra(old_tetra.f1, t1, point, old_tetra_index);
-        todo!();
+        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f1, t1, point);
+        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f2, t2, point);
+        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f3, t3, point);
+        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f4, t4, point);
 
         for (tetra, face) in [
             (t1, old_tetra.f1),
