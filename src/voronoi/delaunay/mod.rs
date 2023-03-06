@@ -269,9 +269,11 @@ pub(super) mod tests {
             for (_, tetra) in triangulation.tetras.iter() {
                 for face in tetra.iter_faces() {
                     let face = &triangulation.faces[face.face];
-                    for p in [face.p1, face.p2] {
-                        assert!(tetra.p1 == p || tetra.p2 == p || tetra.p3 == p);
-                    }
+                    let num_shared_points = tetra
+                        .iter_points()
+                        .filter(|p| face.contains_point(**p))
+                        .count();
+                    assert_eq!(num_shared_points, NUM_DIMENSIONS);
                 }
             }
         });
