@@ -73,15 +73,15 @@ impl DelaunayTriangulation {
 
     fn set_opposing_in_existing_tetra(
         &mut self,
-        face: TetraFace,
+        old_tetra: TetraIndex,
+        shared_face: TetraFace,
         new_tetra: TetraIndex,
         new_point: PointIndex,
-        old_tetra_index: TetraIndex,
     ) {
-        if let Some(opposing) = face.opposing {
+        if let Some(opposing) = shared_face.opposing {
             let existing_tetra = &mut self.tetras[opposing.tetra];
-            let corresponding_face = existing_tetra.find_face_mut(face.face);
-            assert!(corresponding_face.opposing.unwrap().tetra == old_tetra_index);
+            let corresponding_face = existing_tetra.find_face_mut(shared_face.face);
+            assert!(corresponding_face.opposing.unwrap().tetra == old_tetra);
             corresponding_face.opposing = Some(ConnectionData {
                 tetra: new_tetra,
                 point: new_point,
