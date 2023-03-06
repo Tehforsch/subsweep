@@ -59,6 +59,7 @@ impl DelaunayTriangulation {
                 f3,
             }
         };
+        debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
         self.tetras.insert(tetra)
     }
 

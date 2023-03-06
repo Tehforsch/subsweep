@@ -160,12 +160,25 @@ pub(super) mod tests {
 
     #[cfg(feature = "3d")]
     fn basic_tetra() -> TetraData {
-        todo!()
+        TetraData {
+            p1: Point::new(0.0, 0.0, 0.0),
+            p2: Point::new(2.0, 0.0, 0.0),
+            p3: Point::new(0.0, 2.0, 0.0),
+            p4: Point::new(0.0, 0.0, 2.0),
+        }
     }
 
     #[cfg(feature = "3d")]
-    fn get_example_point_set() -> &'static [Point] {
-        todo!()
+    fn get_example_point_set() -> Vec<Point> {
+        vec![
+            Point::new(0.5, 0.5, 0.5),
+            Point::new(0.25, 0.5, 0.3),
+            Point::new(0.5, 0.25, 0.4),
+            Point::new(0.125, 0.5, 0.2),
+            Point::new(0.5, 0.125, 0.35),
+            Point::new(0.8, 0.1, 0.23),
+            Point::new(0.1, 0.8, 0.7),
+        ]
     }
 
     pub fn perform_check_on_each_level_of_construction(

@@ -20,14 +20,37 @@ impl DelaunayTriangulation {
 
     fn make_tetra(
         &mut self,
-        p: PointIndex,
         p_a: PointIndex,
         p_b: PointIndex,
-        f1: FaceIndex,
-        f2: FaceIndex,
+        p_c: PointIndex,
+        p: PointIndex,
+        f_a: FaceIndex,
+        f_b: FaceIndex,
+        f_c: FaceIndex,
         old_face: TetraFace,
     ) -> TetraIndex {
-        todo!()
+        // Leave opposing data of the newly created faces
+        // uninitialized for now, since we do not know the indices of
+        // the other tetras before we have inserted them.
+        self.insert_positively_oriented_tetra(
+            p_a,
+            p_b,
+            p_c,
+            p,
+            TetraFace {
+                face: f_a,
+                opposing: None,
+            },
+            TetraFace {
+                face: f_b,
+                opposing: None,
+            },
+            TetraFace {
+                face: f_c,
+                opposing: None,
+            },
+            old_face,
+        )
     }
 
     fn insert_positively_oriented_tetra(
@@ -80,6 +103,7 @@ impl DelaunayTriangulation {
                 f4,
             }
         };
+        debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
         self.tetras.insert(tetra)
     }
 
@@ -115,19 +139,56 @@ impl DelaunayTriangulation {
             p2: old_tetra.p3,
             p3: old_tetra.p4,
         });
-        let t1 = self.make_tetra(point, old_tetra.p2, old_tetra.p3, f3, f2, old_tetra.f1);
-        let t2 = self.make_tetra(point, old_tetra.p3, old_tetra.p1, f1, f3, old_tetra.f2);
-        let t3 = self.make_tetra(point, old_tetra.p1, old_tetra.p2, f2, f1, old_tetra.f3);
-        self.set_opposing_in_new_tetra(t1, f3, t2, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t1, f2, t3, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t2, f3, t1, old_tetra.p2);
-        self.set_opposing_in_new_tetra(t2, f1, t3, old_tetra.p2);
-        self.set_opposing_in_new_tetra(t3, f1, t2, old_tetra.p3);
-        self.set_opposing_in_new_tetra(t3, f2, t1, old_tetra.p3);
-        self.set_opposing_in_existing_tetra(old_tetra.f1, t1, point, old_tetra_index);
-        self.set_opposing_in_existing_tetra(old_tetra.f2, t2, point, old_tetra_index);
-        self.set_opposing_in_existing_tetra(old_tetra.f3, t3, point, old_tetra_index);
-        for (tetra, face) in [(t1, old_tetra.f1), (t2, old_tetra.f2), (t3, old_tetra.f3)] {
+        let t1 = self.make_tetra(
+            old_tetra.p2,
+            old_tetra.p3,
+            old_tetra.p4,
+            point,
+            f6,
+            f5,
+            f4,
+            old_tetra.f1,
+        );
+        let t2 = self.make_tetra(
+            old_tetra.p1,
+            old_tetra.p3,
+            old_tetra.p4,
+            point,
+            f6,
+            f3,
+            f2,
+            old_tetra.f2,
+        );
+        let t3 = self.make_tetra(
+            old_tetra.p1,
+            old_tetra.p2,
+            old_tetra.p4,
+            point,
+            f5,
+            f3,
+            f1,
+            old_tetra.f3,
+        );
+        let t4 = self.make_tetra(
+            old_tetra.p1,
+            old_tetra.p2,
+            old_tetra.p3,
+            point,
+            f4,
+            f2,
+            f1,
+            old_tetra.f4,
+        );
+        // self.set_opposing_in_new_tetra(t1, f3, t2, old_tetra.p1);
+        todo!();
+        // self.set_opposing_in_existing_tetra(old_tetra.f1, t1, point, old_tetra_index);
+        // todo!()
+        for (tetra, face) in [
+            (t1, old_tetra.f1),
+            (t2, old_tetra.f2),
+            (t3, old_tetra.f3),
+            (t4, old_tetra.f4),
+        ] {
             self.to_check.push(FlipCheckData {
                 tetra,
                 face: face.face,
