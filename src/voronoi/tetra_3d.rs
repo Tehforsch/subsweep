@@ -1,8 +1,8 @@
 use super::math::determinant4x4;
+use super::math::determinant5x5;
 use super::tetra::TetraFace;
 use super::Point;
 use super::PointIndex;
-use crate::prelude::Float;
 
 #[derive(Clone)]
 pub struct Tetra3d {
@@ -50,19 +50,32 @@ impl Tetra3dData {
             && points_are_on_same_side_of_triangle(point, self.p4, (self.p1, self.p2, self.p3))
     }
 
-    pub fn circumcircle_contains(&self, _point: Point) -> bool {
-        todo!()
+    #[rustfmt::skip]
+    pub fn circumcircle_contains(&self, point: Point) -> bool {
+        // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
+        debug_assert!(self.is_positively_oriented());
+        let a = self.p1;
+        let b = self.p2;
+        let c = self.p3;
+        let d = self.p4;
+        let e = point;
+        determinant5x5(
+            1.0, a.x, a.y, a.z, a.x.powi(2) + a.y.powi(2) + a.z.powi(2),
+            1.0, b.x, b.y, b.z, b.x.powi(2) + b.y.powi(2) + b.z.powi(2),
+            1.0, c.x, c.y, c.z, c.x.powi(2) + c.y.powi(2) + c.z.powi(2),
+            1.0, d.x, d.y, d.z, d.x.powi(2) + d.y.powi(2) + d.z.powi(2),
+            1.0, e.x, e.y, e.z, e.x.powi(2) + e.y.powi(2) + e.z.powi(2),
+        ) < 0.0
     }
 
+    #[rustfmt::skip]
     pub fn is_positively_oriented(&self) -> bool {
-        #[rustfmt::skip]
-        let det = determinant4x4(
+        determinant4x4(
             1.0, self.p1.x, self.p1.y, self.p1.z,
             1.0, self.p2.x, self.p2.y, self.p2.z,
             1.0, self.p3.x, self.p3.y, self.p3.z,
             1.0, self.p4.x, self.p4.y, self.p4.z,
-        );
-        det > 0.0
+        ) > 0.0
     }
 
     pub fn get_center_of_circumcircle(&self) -> Point {

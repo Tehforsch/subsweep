@@ -61,30 +61,28 @@ impl Tetra2dData {
         !(has_neg && has_pos)
     }
 
+    #[rustfmt::skip]
     pub fn circumcircle_contains(&self, point: Point) -> bool {
         // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
-        // assert!(self.is_positively_oriented());
+        debug_assert!(self.is_positively_oriented());
         let a = self.p1;
         let b = self.p2;
         let c = self.p3;
         let d = point;
-        #[rustfmt::skip]
-        let det = determinant3x3(
+        determinant3x3(
             b.x - a.x, b.y - a.y, (b.x - a.x).powi(2) + (b.y - a.y).powi(2),
             c.x - a.x, c.y - a.y, (c.x - a.x).powi(2) + (c.y - a.y).powi(2),
             d.x - a.x, d.y - a.y, (d.x - a.x).powi(2) + (d.y - a.y).powi(2)
-        );
-        det < 0.0
+        ) < 0.0
     }
 
+    #[rustfmt::skip]
     pub fn is_positively_oriented(&self) -> bool {
-        #[rustfmt::skip]
-        let det = determinant3x3(
+        determinant3x3(
             1.0, self.p1.x, self.p1.y,
             1.0, self.p2.x, self.p2.y,
             1.0, self.p3.x, self.p3.y,
-        );
-        det > 0.0
+        ) > 0.0
     }
 
     pub fn get_center_of_circumcircle(&self) -> Point {
