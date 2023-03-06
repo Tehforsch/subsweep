@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::prelude::*;
 
+use crate::prelude::Float;
 use crate::prelude::Simulation;
 use crate::units::Dimension;
 use crate::units::Quantity;
@@ -31,6 +32,10 @@ pub fn assert_is_close<const U: Dimension>(x: Quantity<f64, U>, y: Quantity<f64,
         x.value_unchecked(),
         y.value_unchecked()
     )
+}
+
+pub fn assert_float_is_close(x: Float, y: Float) {
+    assert!((x - y).abs() < f64::EPSILON, "{} {}", x, y)
 }
 
 #[cfg(not(feature = "2d"))]

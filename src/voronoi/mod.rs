@@ -2,6 +2,7 @@ pub mod constructor;
 mod delaunay;
 mod face;
 mod indexed_arena;
+pub mod math;
 mod tetra;
 #[cfg(feature = "2d")]
 mod tetra_2d;
@@ -127,6 +128,7 @@ impl Cell {
 }
 
 impl From<DelaunayTriangulation> for VoronoiGrid {
+    #[cfg(feature = "2d")]
     fn from(t: DelaunayTriangulation) -> Self {
         let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
         let point_to_tetra_map = point_to_tetra_map(&t);
@@ -164,6 +166,11 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
             });
         }
         VoronoiGrid { cells }
+    }
+
+    #[cfg(feature = "3d")]
+    fn from(t: DelaunayTriangulation) -> Self {
+        todo!()
     }
 }
 

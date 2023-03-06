@@ -1,8 +1,8 @@
 use super::tetra::TetraFace;
 use super::Point;
 use super::PointIndex;
-use crate::prelude::Float;
 use crate::voronoi::sign;
+use super::math::determinant3x3;
 
 #[derive(Clone, Debug)]
 pub struct Tetra2d {
@@ -69,7 +69,7 @@ impl Tetra2dData {
         let c = self.p3;
         let d = point;
         #[rustfmt::skip]
-        let det = determinant(
+        let det = determinant3x3(
             b.x - a.x, b.y - a.y, (b.x - a.x).powi(2) + (b.y - a.y).powi(2),
             c.x - a.x, c.y - a.y, (c.x - a.x).powi(2) + (c.y - a.y).powi(2),
             d.x - a.x, d.y - a.y, (d.x - a.x).powi(2) + (d.y - a.y).powi(2)
@@ -79,7 +79,7 @@ impl Tetra2dData {
 
     pub fn is_positively_oriented(&self) -> bool {
         #[rustfmt::skip]
-        let det = determinant(
+        let det = determinant3x3(
             1.0, self.p1.x, self.p1.y,
             1.0, self.p2.x, self.p2.y,
             1.0, self.p3.x, self.p3.y,
@@ -103,23 +103,6 @@ impl Tetra2dData {
                     + (c.x.powi(2) + c.y.powi(2)) * (b.x - a.x)),
         }
     }
-}
-
-pub fn determinant(
-    a11: Float,
-    a12: Float,
-    a13: Float,
-    a21: Float,
-    a22: Float,
-    a23: Float,
-    a31: Float,
-    a32: Float,
-    a33: Float,
-) -> Float {
-    a11 * a22 * a33 + a12 * a23 * a31 + a13 * a21 * a32
-        - a13 * a22 * a31
-        - a12 * a21 * a33
-        - a11 * a23 * a32
 }
 
 fn get_min_and_max(points: &[Point]) -> Option<(Point, Point)> {

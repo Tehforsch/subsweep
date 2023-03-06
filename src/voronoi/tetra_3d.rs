@@ -1,6 +1,8 @@
+use super::math::determinant4x4;
 use super::tetra::TetraFace;
 use super::Point;
 use super::PointIndex;
+use crate::prelude::Float;
 
 #[derive(Clone)]
 pub struct Tetra3d {
@@ -49,8 +51,15 @@ impl Tetra3dData {
         todo!()
     }
 
-    pub fn _is_positively_oriented(&self) -> bool {
-        todo!()
+    pub fn is_positively_oriented(&self) -> bool {
+        #[rustfmt::skip]
+        let det = determinant4x4(
+            1.0, self.p1.x, self.p1.y, self.p1.z,
+            1.0, self.p2.x, self.p2.y, self.p2.z,
+            1.0, self.p3.x, self.p3.y, self.p3.z,
+            1.0, self.p4.x, self.p4.y, self.p4.z,
+        );
+        det > 0.0
     }
 
     pub fn get_center_of_circumcircle(&self) -> Point {

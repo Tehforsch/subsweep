@@ -4,8 +4,11 @@ use super::PointIndex;
 pub struct Face {
     pub p1: PointIndex,
     pub p2: PointIndex,
+    #[cfg(feature = "3d")]
+    pub p3: PointIndex,
 }
 
+#[cfg(feature = "2d")]
 impl Face {
     pub fn contains_point(&self, point: PointIndex) -> bool {
         self.p1 == point || self.p2 == point
@@ -19,5 +22,12 @@ impl Face {
         } else {
             panic!("Point not in face: {:?}", point)
         }
+    }
+}
+
+#[cfg(feature = "3d")]
+impl Face {
+    pub fn contains_point(&self, point: PointIndex) -> bool {
+        self.p1 == point || self.p2 == point || self.p3 == point
     }
 }
