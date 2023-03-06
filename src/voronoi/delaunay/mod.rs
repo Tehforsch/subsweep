@@ -209,7 +209,7 @@ pub(super) mod tests {
         perform_check_on_each_level_of_construction(|triangulation, num_points_inserted| {
             assert_eq!(triangulation.points.len(), 4 + num_points_inserted);
             assert_eq!(triangulation.tetras.len(), 1 + 3 * num_points_inserted);
-            assert_eq!(triangulation.faces.len(), 4 + 4 * num_points_inserted);
+            assert_eq!(triangulation.faces.len(), 4 + 6 * num_points_inserted);
         });
     }
 

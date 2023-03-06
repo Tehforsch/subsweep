@@ -43,8 +43,11 @@ impl Tetra3dData {
         todo!()
     }
 
-    pub fn contains(&self, _point: Point) -> bool {
-        todo!()
+    pub fn contains(&self, point: Point) -> bool {
+        points_are_on_same_side_of_triangle(point, self.p1, (self.p2, self.p3, self.p4))
+            && points_are_on_same_side_of_triangle(point, self.p2, (self.p1, self.p3, self.p4))
+            && points_are_on_same_side_of_triangle(point, self.p3, (self.p1, self.p2, self.p4))
+            && points_are_on_same_side_of_triangle(point, self.p4, (self.p1, self.p2, self.p3))
     }
 
     pub fn circumcircle_contains(&self, _point: Point) -> bool {
@@ -65,4 +68,16 @@ impl Tetra3dData {
     pub fn get_center_of_circumcircle(&self) -> Point {
         todo!()
     }
+}
+
+fn points_are_on_same_side_of_triangle(
+    p1: Point,
+    p2: Point,
+    triangle: (Point, Point, Point),
+) -> bool {
+    let (p_a, p_b, p_c) = triangle;
+    let normal = (p_b - p_a).cross(p_c - p_a);
+    let dot_1_sign = (p1 - p_a).dot(normal).signum();
+    let dot_2_sign = (p2 - p_a).dot(normal).signum();
+    (dot_1_sign * dot_2_sign) >= 0.0
 }
