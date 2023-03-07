@@ -2,9 +2,11 @@ use super::DelaunayTriangulation;
 use super::FlipCheckData;
 use crate::voronoi::face::Face;
 use crate::voronoi::face::FaceData;
+use crate::voronoi::face::IntersectionType;
 use crate::voronoi::tetra::Tetra;
 use crate::voronoi::tetra::TetraData;
 use crate::voronoi::tetra::TetraFace;
+use crate::voronoi::utils::periodic_windows;
 use crate::voronoi::FaceIndex;
 use crate::voronoi::PointIndex;
 use crate::voronoi::TetraIndex;
@@ -236,15 +238,58 @@ impl DelaunayTriangulation {
         let opposing = t1.find_face(check.face).opposing.clone().unwrap();
         let t2 = &self.tetras[opposing.tetra];
         // Obtain the two points opposite of the shared face
-        let p1 = self.points[t1.find_point_opposite(check.face)];
-        let p2 = self.points[t2.find_point_opposite(check.face)];
+        let p1 = t1.find_point_opposite(check.face);
+        let p2 = t2.find_point_opposite(check.face);
         let intersection_type = self
             .get_face_data(shared_face)
-            .get_line_intersection_type(p1, p2);
-        todo!()
+            .get_line_intersection_type(self.points[p1], self.points[p2]);
+        match intersection_type {
+            IntersectionType::Inside => {
+                self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face);
+            }
+            IntersectionType::OutsideOneEdge => {
+                todo!()
+                // self.three_to_two_flip(check.tetra, opposing.tetra, check.face);
+            }
+            IntersectionType::OutsideTwoEdges => {}
+        }
+    }
+
+    fn two_to_three_flip(
+        &mut self,
+        t1: TetraIndex,
+        t2: TetraIndex,
+        p1: PointIndex,
+        p2: PointIndex,
+        shared_face: FaceIndex,
+    ) {
+        let t1 = self.tetras.remove(t1).unwrap();
+        let t2 = self.tetras.remove(t2).unwrap();
+        let shared_face = self.faces.remove(shared_face).unwrap();
+        let points = [shared_face.p1, shared_face.p2, shared_face.p3];
+        let new_faces: Vec<_> = points
+            .iter()
+            .map(|p| self.faces.insert(Face { p1, p2, p3: *p }))
+            .collect();
+        for ((f_a, f_b), (p_a, p_b)) in periodic_windows(&new_faces).zip(periodic_windows(&points))
+        {
+            todo!()
+            // let f1 =
+            // self.insert_positively_oriented_tetra(
+            //     p1,
+            //     p2,
+            //     p_a,
+            //     p_b,
+            //     todo!(),
+            //     todo!(),
+            //     f_a,
+            //     f_b,
+            // );
+        }
     }
 
     pub fn insert_basic_tetra(&mut self, tetra: TetraData) {
+        debug_assert_eq!(self.tetras.len(), 0);
         let p1 = self.points.insert(tetra.p1);
         let p2 = self.points.insert(tetra.p2);
         let p3 = self.points.insert(tetra.p3);

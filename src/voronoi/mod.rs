@@ -11,7 +11,6 @@ mod tetra_3d;
 mod utils;
 
 use std::f64::consts::PI;
-use std::iter;
 
 use bevy::prelude::Resource;
 use bevy::utils::StableHashMap;
@@ -24,6 +23,7 @@ use ordered_float::OrderedFloat;
 use self::face::Face;
 use self::indexed_arena::IndexedArena;
 use self::tetra::Tetra;
+use self::utils::periodic_windows;
 use crate::prelude::Float;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
@@ -56,14 +56,6 @@ pub struct Cell {
     pub points: Vec<Point>,
     pub connected_cells: Vec<CellIndex>,
     pub is_boundary: bool,
-}
-
-/// Like slice.windows but including (t.last(), t.first()) as a last item.
-/// Returns an empty iterator on a slice with one or zero elements.
-fn periodic_windows<T>(v: &[T]) -> impl Iterator<Item = (&T, &T)> {
-    v.iter()
-        .zip(v[1..].iter().chain(iter::once(&v[0])))
-        .filter(|_| v.len() > 1)
 }
 
 impl Cell {

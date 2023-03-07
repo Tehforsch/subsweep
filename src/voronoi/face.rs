@@ -32,6 +32,14 @@ impl Face {
     pub fn contains_point(&self, point: PointIndex) -> bool {
         self.p1 == point || self.p2 == point || self.p3 == point
     }
+
+    pub fn iter_points(&self) -> impl Iterator<Item = PointIndex> {
+        [self.p1, self.p2, self.p3].into_iter()
+    }
+
+    pub fn get_other_point(&self, p_a: PointIndex, p_b: PointIndex) -> PointIndex {
+        self.iter_points().find(|p| *p != p_a && *p != p_b).unwrap()
+    }
 }
 
 #[cfg(feature = "3d")]
@@ -43,7 +51,7 @@ pub struct FaceData {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntersectionType {
-    Contained,
+    Inside,
     OutsideOneEdge,
     OutsideTwoEdges,
 }
@@ -74,7 +82,7 @@ impl FaceData {
             .filter(|x| *x)
             .count();
         match count {
-            0 => IntersectionType::Contained,
+            0 => IntersectionType::Inside,
             1 => IntersectionType::OutsideOneEdge,
             2 => IntersectionType::OutsideTwoEdges,
             _ => panic!("Possibly degenerate case of point lying on one of the edges."),
@@ -101,7 +109,7 @@ mod tests {
         let q1 = Point::new(0.5, 0.5, -1.0);
         let q2 = Point::new(0.5, 0.5, 1.0);
         let type_ = face.get_line_intersection_type(q1, q2);
-        assert_eq!(type_, IntersectionType::Contained);
+        assert_eq!(type_, IntersectionType::Inside);
         let q1 = Point::new(-0.1, 0.5, -1.0);
         let q2 = Point::new(-0.1, 0.5, 1.0);
         let type_ = face.get_line_intersection_type(q1, q2);
