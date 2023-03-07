@@ -1,6 +1,7 @@
 use super::DelaunayTriangulation;
 use super::FlipCheckData;
 use crate::voronoi::face::Face;
+use crate::voronoi::face::FaceData;
 use crate::voronoi::tetra::Tetra;
 use crate::voronoi::tetra::TetraData;
 use crate::voronoi::tetra::TetraFace;
@@ -15,6 +16,14 @@ impl DelaunayTriangulation {
             p2: self.points[tetra.p2],
             p3: self.points[tetra.p3],
             p4: self.points[tetra.p4],
+        }
+    }
+
+    pub fn get_face_data(&self, face: &Face) -> FaceData {
+        FaceData {
+            p1: self.points[face.p1],
+            p2: self.points[face.p2],
+            p3: self.points[face.p3],
         }
     }
 
@@ -213,7 +222,25 @@ impl DelaunayTriangulation {
         }
     }
 
-    pub(super) fn flip(&mut self, _check: FlipCheckData) {
+    pub(super) fn flip(&mut self, check: FlipCheckData) {
+        // Two tetrahedra are flagged for flipping. There are three possible cases here, depending on the
+        // intersection of the shared face (triangle) and the line between the two points opposite of the shared face.
+        // 1. If the intersection point lies inside the triangle, we do a 2-to-3-flip, in which the two tetrahedra are replaced by three
+        // 2. If the intersection point lies outside one of the edges, we take into account the neighbouring tetrahedron
+        //    along that edge and do a 3-to-2 flip in which the three tetrahedra are converted to two.
+        // 3. If the intersection point lies outside two edges, the flip can be skipped. This seems like magic
+        //    but it can be shown that flipping the remaining violating edges will restore delaunayhood.
+        // For more information see Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
+        let t1 = &self.tetras[check.tetra];
+        let shared_face = &self.faces[check.face];
+        let opposing = t1.find_face(check.face).opposing.clone().unwrap();
+        let t2 = &self.tetras[opposing.tetra];
+        // Obtain the two points opposite of the shared face
+        let p1 = self.points[t1.find_point_opposite(check.face)];
+        let p2 = self.points[t2.find_point_opposite(check.face)];
+        let intersection_type = self
+            .get_face_data(shared_face)
+            .get_line_intersection_type(p1, p2);
         todo!()
     }
 

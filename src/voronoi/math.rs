@@ -1,4 +1,56 @@
+use ordered_float::OrderedFloat;
+
 use crate::prelude::Float;
+
+// MxN matrix: This type is just here for clarity, because the
+// internal storage is reversed, such that the order of indices is
+// as it would be in math, i.e. Matrix<M, N> has M rows and N columns.
+type Matrix<const M: usize, const N: usize> = [[Float; N]; M];
+
+fn swap_rows<const M: usize, const N: usize>(a: &mut Matrix<M, N>, r1: usize, r2: usize) {
+    for column in 0..N {
+        let temp = a[r1][column];
+        a[r1][column] = a[r2][column];
+        a[r2][column] = temp;
+    }
+}
+
+pub fn solve_system_of_equations<const M: usize>(mut a: Matrix<M, { M + 1 }>) -> [Float; M] {
+    let n = M + 1;
+    let mut h = 0;
+    let mut k = 0;
+    while h < M && k < n {
+        let i_max = (h..M).max_by_key(|i| OrderedFloat(a[*i][k].abs())).unwrap();
+        if a[i_max][k] == 0.0 {
+            k = k + 1;
+        } else {
+            swap_rows(&mut a, h, i_max);
+            for i in h + 1..M {
+                let f = a[i][k] / a[h][k];
+                a[i][k] = 0.0;
+                for j in (k + 1)..n {
+                    a[i][j] = a[i][j] - a[h][j] * f;
+                }
+            }
+            h = h + 1;
+            k = k + 1;
+        }
+    }
+    backward_substitution(a)
+}
+
+pub fn backward_substitution<const M: usize>(a: Matrix<M, { M + 1 }>) -> [Float; M] {
+    let mut result = [0.0; M];
+    for i in (0..M).rev() {
+        debug_assert!(a[i][i].abs() > 0.0);
+        result[i] = a[i][M];
+        for j in (i + 1)..M {
+            result[i] -= a[i][j] * result[j];
+        }
+        result[i] /= a[i][i];
+    }
+    result
+}
 
 #[rustfmt::skip]
 pub fn determinant3x3(
@@ -138,5 +190,46 @@ mod tests {
             ),
             -9947.0,
         );
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn solve_system_of_equations() {
+        let res = super::solve_system_of_equations(
+            [
+                [2.0, 0.0, 0.0, 2.0],
+                [0.0, 3.0, 0.0, 3.0],
+                [0.0, 0.0, 4.0, 4.0],
+            ]);
+        assert_float_is_close(res[0], 1.0);
+        assert_float_is_close(res[1], 1.0);
+        assert_float_is_close(res[2], 1.0);
+        let res = super::solve_system_of_equations(
+            [
+                [1.0, 0.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0, 1.0],
+                [0.0, 1.0, 0.0, 1.0],
+            ]);
+        assert_float_is_close(res[0], 1.0);
+        assert_float_is_close(res[1], 1.0);
+        assert_float_is_close(res[2], 1.0);
+        let res = super::solve_system_of_equations(
+            [
+                [2.0, 0.0, 0.0, 9.0],
+                [0.0, 0.0, 3.0, -5.0],
+                [0.0, 9.0, 0.0, -18.0],
+            ]);
+        assert_float_is_close(res[0], 4.5);
+        assert_float_is_close(res[1], -2.0);
+        assert_float_is_close(res[2], -5.0 / 3.0);
+        let res = super::solve_system_of_equations(
+            [
+                [1.0, 2.0, 4.0, 5.0],
+                [5.0, 6.0, 7.0, 10.0],
+                [8.0, 9.0, 10.0, 15.0]
+            ]);
+        assert_float_is_close(res[0], 5.0 / 3.0);
+        assert_float_is_close(res[1], -5.0 / 3.0);
+        assert_float_is_close(res[2], 5.0 / 3.0);
     }
 }

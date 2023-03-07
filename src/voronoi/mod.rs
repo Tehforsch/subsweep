@@ -24,7 +24,6 @@ use ordered_float::OrderedFloat;
 use self::face::Face;
 use self::indexed_arena::IndexedArena;
 use self::tetra::Tetra;
-use self::utils::sign;
 use crate::prelude::Float;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
@@ -72,17 +71,19 @@ impl Cell {
         periodic_windows(&self.points)
     }
 
-    pub fn contains(&self, point: Point) -> bool {
-        let has_negative = self
-            .point_windows()
-            .map(|(p1, p2)| sign(point, *p1, *p2))
-            .any(|s| s < 0.0);
-        let has_positive = self
-            .point_windows()
-            .map(|(p1, p2)| sign(point, *p1, *p2))
-            .any(|s| s > 0.0);
+    pub fn contains(&self, _point: Point) -> bool {
+        todo!()
+        // The following works in 2d but makes possibly no sense in 3d
+        // let has_negative = self
+        //     .point_windows()
+        //     .map(|(p1, p2)| sign(point, *p1, *p2))
+        //     .any(|s| s < 0.0);
+        // let has_positive = self
+        //     .point_windows()
+        //     .map(|(p1, p2)| sign(point, *p1, *p2))
+        //     .any(|s| s > 0.0);
 
-        !(has_negative && has_positive)
+        // !(has_negative && has_positive)
     }
 
     pub fn iter_neighbours_and_faces<'a>(
