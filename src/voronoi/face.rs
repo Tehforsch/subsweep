@@ -40,6 +40,22 @@ impl Face {
     pub fn get_other_point(&self, p_a: PointIndex, p_b: PointIndex) -> PointIndex {
         self.iter_points().find(|p| *p != p_a && *p != p_b).unwrap()
     }
+
+    pub fn get_point_opposite(&self, edge_identifier: EdgeIdentifier) -> PointIndex {
+        match edge_identifier {
+            EdgeIdentifier::One => self.p1,
+            EdgeIdentifier::Two => self.p2,
+            EdgeIdentifier::Three => self.p3,
+        }
+    }
+
+    pub fn get_points_of(&self, edge_identifier: EdgeIdentifier) -> (PointIndex, PointIndex) {
+        match edge_identifier {
+            EdgeIdentifier::One => (self.p2, self.p3),
+            EdgeIdentifier::Two => (self.p3, self.p1),
+            EdgeIdentifier::Three => (self.p1, self.p2),
+        }
+    }
 }
 
 #[cfg(feature = "3d")]
