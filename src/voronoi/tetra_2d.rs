@@ -2,7 +2,7 @@ use super::math::determinant3x3;
 use super::tetra::TetraFace;
 use super::Point;
 use super::PointIndex;
-use crate::voronoi::sign;
+use crate::voronoi::utils::sign;
 
 #[derive(Clone, Debug)]
 pub struct Tetra2d {

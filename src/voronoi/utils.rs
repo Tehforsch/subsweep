@@ -1,9 +1,7 @@
 use std::iter;
 
 #[cfg(feature = "2d")]
-pub fn sign(p1: Point, p2: Point, p3: Point) -> Float {
-    use super::Point;
-    use crate::prelude::Float;
+pub fn sign(p1: super::Point, p2: super::Point, p3: super::Point) -> crate::prelude::Float {
     (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
 }
 
@@ -17,6 +15,7 @@ pub fn periodic_windows<T>(v: &[T]) -> impl Iterator<Item = (&T, &T)> {
 
 /// A tuple version of slice.windows but including (t.last(), t.first()) as a last item.
 /// Returns an empty iterator on a slice with fewer than three elements.
+#[cfg(feature = "3d")]
 pub fn periodic_windows_3<T>(v: &[T]) -> impl Iterator<Item = (&T, &T, &T)> {
     v.iter()
         .zip(v[1..].iter().chain(iter::once(&v[0])))
@@ -48,6 +47,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "3d")]
     fn periodic_windows_3() {
         let s = vec![0, 1, 2, 3, 4, 5, 6, 7];
         let mut w = super::periodic_windows_3(&s);

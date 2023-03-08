@@ -1,13 +1,20 @@
 pub mod constructor;
 mod delaunay;
-mod face;
 mod indexed_arena;
 pub mod math;
+
 mod tetra;
 #[cfg(feature = "2d")]
 mod tetra_2d;
 #[cfg(feature = "3d")]
 mod tetra_3d;
+
+mod face;
+#[cfg(feature = "2d")]
+mod face_2d;
+#[cfg(feature = "3d")]
+mod face_3d;
+
 mod utils;
 
 use std::f64::consts::PI;
