@@ -3,10 +3,11 @@ use super::FlipCheckData;
 use crate::voronoi::face::Face;
 use crate::voronoi::face::FaceData;
 use crate::voronoi::face::IntersectionType;
+use crate::voronoi::tetra::ConnectionData;
 use crate::voronoi::tetra::Tetra;
 use crate::voronoi::tetra::TetraData;
 use crate::voronoi::tetra::TetraFace;
-use crate::voronoi::utils::periodic_windows;
+use crate::voronoi::utils::periodic_windows_3;
 use crate::voronoi::FaceIndex;
 use crate::voronoi::PointIndex;
 use crate::voronoi::TetraIndex;
@@ -257,34 +258,60 @@ impl DelaunayTriangulation {
 
     fn two_to_three_flip(
         &mut self,
-        t1: TetraIndex,
-        t2: TetraIndex,
+        t1_index: TetraIndex,
+        t2_index: TetraIndex,
         p1: PointIndex,
         p2: PointIndex,
         shared_face: FaceIndex,
     ) {
-        let t1 = self.tetras.remove(t1).unwrap();
-        let t2 = self.tetras.remove(t2).unwrap();
+        let t1 = self.tetras.remove(t1_index).unwrap();
+        let t2 = self.tetras.remove(t2_index).unwrap();
         let shared_face = self.faces.remove(shared_face).unwrap();
         let points = [shared_face.p1, shared_face.p2, shared_face.p3];
         let new_faces: Vec<_> = points
-            .iter()
-            .map(|p| self.faces.insert(Face { p1, p2, p3: *p }))
+            .into_iter()
+            .map(|p| {
+                let new_face = self.faces.insert(Face { p1, p2, p3: p });
+                (new_face, p)
+            })
             .collect();
-        for ((f_a, f_b), (p_a, p_b)) in periodic_windows(&new_faces).zip(periodic_windows(&points))
+        let new_tetras: Vec<_> = periodic_windows_3(&new_faces)
+            .map(|((fa, pa), (fb, pb), (_, other_point))| {
+                let f1 = t1.find_face_opposite(*other_point).clone();
+                let f2 = t2.find_face_opposite(*other_point).clone();
+                let t = self.insert_positively_oriented_tetra(
+                    p1,
+                    p2,
+                    *pa,
+                    *pb,
+                    f2,
+                    f1,
+                    // Leave opposing uninitialized for now
+                    TetraFace {
+                        face: *fb,
+                        opposing: None,
+                    },
+                    TetraFace {
+                        face: *fa,
+                        opposing: None,
+                    },
+                );
+                // Update the outdated connections in existing tetras
+                self.set_opposing_in_existing_tetra(t1_index, f1, t, *other_point);
+                self.set_opposing_in_existing_tetra(t2_index, f2, t, *other_point);
+                (t, *fa, *fb, *pa, *pb)
+            })
+            .collect();
+        // Set the connections between the newly created tetras
+        for ((t_left, _, f_left, _, p_left), (t, _, _, _, _), (t_right, f_right, _, p_right, _)) in
+            periodic_windows_3(&new_tetras)
         {
-            todo!()
-            // let f1 =
-            // self.insert_positively_oriented_tetra(
-            //     p1,
-            //     p2,
-            //     p_a,
-            //     p_b,
-            //     todo!(),
-            //     todo!(),
-            //     f_a,
-            //     f_b,
-            // );
+            for (tetra, face, point) in [(t_left, f_left, p_left), (t_right, f_right, p_right)] {
+                self.tetras[*t].find_face_mut(*face).opposing = Some(ConnectionData {
+                    tetra: *tetra,
+                    point: *point,
+                });
+            }
         }
     }
 

@@ -4,7 +4,7 @@ use super::tetra::TetraFace;
 use super::Point;
 use super::PointIndex;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Tetra3d {
     pub p1: PointIndex,
     pub p2: PointIndex,
