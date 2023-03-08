@@ -187,11 +187,6 @@ impl DelaunayTriangulation {
         self.set_opposing_in_new_tetra(t4, f2, t2, old_tetra.p4);
         self.set_opposing_in_new_tetra(t4, f1, t3, old_tetra.p4);
 
-        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f1, t1, point);
-        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f2, t2, point);
-        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f3, t3, point);
-        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f4, t4, point);
-
         for (tetra, face) in [
             (t1, old_tetra.f1),
             (t2, old_tetra.f2),
@@ -298,9 +293,6 @@ impl DelaunayTriangulation {
                         opposing: None,
                     },
                 });
-                // Update the outdated connections in existing tetras
-                self.set_opposing_in_existing_tetra(t1_index, f1, t, *other_point);
-                self.set_opposing_in_existing_tetra(t2_index, f2, t, *other_point);
                 (t, *fa, *fb, *pa, *pb)
             })
             .collect();
@@ -362,9 +354,6 @@ impl DelaunayTriangulation {
                             opposing: None,
                         },
                     });
-                    self.set_opposing_in_existing_tetra(t1_index, f2, new_tetra, p2);
-                    self.set_opposing_in_existing_tetra(t2_index, f1, new_tetra, p1);
-                    self.set_opposing_in_existing_tetra(t3_index, f3, new_tetra, p3);
 
                     (
                         new_tetra,

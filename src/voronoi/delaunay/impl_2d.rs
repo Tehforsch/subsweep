@@ -97,9 +97,6 @@ impl DelaunayTriangulation {
         self.set_opposing_in_new_tetra(t2, f1, t3, old_tetra.p2);
         self.set_opposing_in_new_tetra(t3, f1, t2, old_tetra.p3);
         self.set_opposing_in_new_tetra(t3, f2, t1, old_tetra.p3);
-        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f1, t1, point);
-        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f2, t2, point);
-        self.set_opposing_in_existing_tetra(old_tetra_index, old_tetra.f3, t3, point);
         for (tetra, face) in [(t1, old_tetra.f1), (t2, old_tetra.f2), (t3, old_tetra.f3)] {
             self.to_check.push(FlipCheckData {
                 tetra,
@@ -160,10 +157,6 @@ impl DelaunayTriangulation {
             tetra: t1,
             point: old_face.p1,
         });
-        self.set_opposing_in_existing_tetra(opposing.tetra, f1_a, t1, check_point);
-        self.set_opposing_in_existing_tetra(check.tetra, f1_b, t1, opposing_point);
-        self.set_opposing_in_existing_tetra(opposing.tetra, f2_a, t2, check_point);
-        self.set_opposing_in_existing_tetra(check.tetra, f2_b, t2, opposing_point);
         // Now that we have flipped this edge, we have to check the remaining edges
         // in the opposing tetra as well
         self.to_check.push(FlipCheckData {

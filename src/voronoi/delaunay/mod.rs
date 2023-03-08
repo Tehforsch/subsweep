@@ -8,7 +8,6 @@ use bevy::prelude::Resource;
 use super::tetra::ConnectionData;
 use super::tetra::Tetra;
 use super::tetra::TetraData;
-use super::tetra::TetraFace;
 use super::FaceIndex;
 use super::FaceList;
 use super::Point;
@@ -72,28 +71,34 @@ impl DelaunayTriangulation {
         new_point_index
     }
 
+    fn update_connections_in_existing_tetra(&mut self, tetra_index: TetraIndex) {
+        let tetra = &self.tetras[tetra_index];
+        let new_connections: Vec<_> = tetra
+            .iter_faces_and_points()
+            .filter_map(|(face, point)| {
+                face.opposing.map(|opposing| {
+                    (
+                        opposing.tetra,
+                        face.face,
+                        ConnectionData {
+                            tetra: tetra_index,
+                            point: *point,
+                        },
+                    )
+                })
+            })
+            .collect();
+        for (tetra, face, connection) in new_connections.into_iter() {
+            self.tetras[tetra].find_face_mut(face).opposing = Some(connection);
+        }
+    }
+
     pub fn insert_positively_oriented_tetra(&mut self, tetra: Tetra) -> TetraIndex {
         let tetra = self.make_positively_oriented_tetra(tetra);
         debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
-        self.tetras.insert(tetra)
-    }
-
-    fn set_opposing_in_existing_tetra(
-        &mut self,
-        old_tetra: TetraIndex,
-        shared_face: TetraFace,
-        new_tetra: TetraIndex,
-        new_point: PointIndex,
-    ) {
-        if let Some(opposing) = shared_face.opposing {
-            let existing_tetra = &mut self.tetras[opposing.tetra];
-            let corresponding_face = existing_tetra.find_face_mut(shared_face.face);
-            assert!(corresponding_face.opposing.unwrap().tetra == old_tetra);
-            corresponding_face.opposing = Some(ConnectionData {
-                tetra: new_tetra,
-                point: new_point,
-            });
-        }
+        let tetra_index = self.tetras.insert(tetra);
+        self.update_connections_in_existing_tetra(tetra_index);
+        tetra_index
     }
 
     fn set_opposing_in_new_tetra(

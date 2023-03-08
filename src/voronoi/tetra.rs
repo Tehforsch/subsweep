@@ -13,6 +13,10 @@ pub type Tetra = super::tetra_3d::Tetra3d;
 pub type TetraData = super::tetra_3d::Tetra3dData;
 
 impl Tetra {
+    pub fn iter_faces_and_points(&self) -> impl Iterator<Item = (&TetraFace, &PointIndex)> {
+        self.iter_faces().zip(self.iter_points())
+    }
+
     pub fn find_face(&self, face: FaceIndex) -> &TetraFace {
         self.iter_faces().find(|f| f.face == face).unwrap()
     }
