@@ -207,9 +207,9 @@ pub(super) mod tests {
     #[test]
     fn correct_number_of_objects() {
         perform_check_on_each_level_of_construction(|triangulation, num_points_inserted| {
+            // In 3d we don't know how many faces there should be at any given level
+            // because of 2-to-3 flips and 3-to-2 flips
             assert_eq!(triangulation.points.len(), 4 + num_points_inserted);
-            assert_eq!(triangulation.tetras.len(), 1 + 3 * num_points_inserted);
-            assert_eq!(triangulation.faces.len(), 4 + 6 * num_points_inserted);
         });
     }
 
