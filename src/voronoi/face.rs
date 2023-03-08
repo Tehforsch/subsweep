@@ -52,8 +52,15 @@ pub struct FaceData {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntersectionType {
     Inside,
-    OutsideOneEdge,
-    OutsideTwoEdges,
+    OutsideOneEdge(EdgeIdentifier),
+    OutsideTwoEdges(EdgeIdentifier, EdgeIdentifier),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EdgeIdentifier {
+    One,
+    Two,
+    Three,
 }
 
 #[cfg(feature = "3d")]
@@ -77,14 +84,19 @@ impl FaceData {
     }
 
     fn get_intersection_type(&self, r: Float, s: Float) -> IntersectionType {
-        let count = [(r < 0.0), (s < 0.0), (r + s) > 1.0]
-            .into_iter()
-            .filter(|x| *x)
-            .count();
-        match count {
+        let identifiers = [
+            (r < 0.0, EdgeIdentifier::Two),
+            (s < 0.0, EdgeIdentifier::Three),
+            (r + s > 1.0, EdgeIdentifier::One),
+        ]
+        .into_iter()
+        .filter(|(state, _)| *state)
+        .map(|(_, id)| id)
+        .collect::<Vec<_>>();
+        match identifiers.len() {
             0 => IntersectionType::Inside,
-            1 => IntersectionType::OutsideOneEdge,
-            2 => IntersectionType::OutsideTwoEdges,
+            1 => IntersectionType::OutsideOneEdge(identifiers[0]),
+            2 => IntersectionType::OutsideTwoEdges(identifiers[0], identifiers[1]),
             _ => panic!("Possibly degenerate case of point lying on one of the edges."),
         }
     }
@@ -93,6 +105,7 @@ impl FaceData {
 #[cfg(all(test, feature = "3d"))]
 mod tests {
     use super::FaceData;
+    use crate::voronoi::face::EdgeIdentifier;
     use crate::voronoi::face::IntersectionType;
     use crate::voronoi::Point;
 
@@ -106,17 +119,32 @@ mod tests {
     #[test]
     fn get_intersection_type() {
         let face = triangle();
-        let q1 = Point::new(0.5, 0.5, -1.0);
-        let q2 = Point::new(0.5, 0.5, 1.0);
-        let type_ = face.get_line_intersection_type(q1, q2);
-        assert_eq!(type_, IntersectionType::Inside);
-        let q1 = Point::new(-0.1, 0.5, -1.0);
-        let q2 = Point::new(-0.1, 0.5, 1.0);
-        let type_ = face.get_line_intersection_type(q1, q2);
-        assert_eq!(type_, IntersectionType::OutsideOneEdge);
-        let q1 = Point::new(-0.1, -0.1, -1.0);
-        let q2 = Point::new(-0.1, -0.1, 1.0);
-        let type_ = face.get_line_intersection_type(q1, q2);
-        assert_eq!(type_, IntersectionType::OutsideTwoEdges);
+        let check_two_d_point = |x, y, intersection_type| {
+            let q1 = Point::new(x, y, -1.0);
+            let q2 = Point::new(x, y, 1.0);
+            let type_ = face.get_line_intersection_type(q1, q2);
+            assert_eq!(type_, intersection_type);
+        };
+        check_two_d_point(0.3, 0.3, IntersectionType::Inside);
+        check_two_d_point(
+            -0.1,
+            0.3,
+            IntersectionType::OutsideOneEdge(EdgeIdentifier::Two),
+        );
+        check_two_d_point(
+            0.3,
+            -0.1,
+            IntersectionType::OutsideOneEdge(EdgeIdentifier::Three),
+        );
+        check_two_d_point(
+            0.6,
+            0.6,
+            IntersectionType::OutsideOneEdge(EdgeIdentifier::One),
+        );
+        check_two_d_point(
+            -0.1,
+            -0.1,
+            IntersectionType::OutsideTwoEdges(EdgeIdentifier::Two, EdgeIdentifier::Three),
+        );
     }
 }

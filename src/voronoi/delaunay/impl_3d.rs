@@ -248,11 +248,11 @@ impl DelaunayTriangulation {
             IntersectionType::Inside => {
                 self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face);
             }
-            IntersectionType::OutsideOneEdge => {
+            IntersectionType::OutsideOneEdge(edge) => {
                 todo!()
                 // self.three_to_two_flip(check.tetra, opposing.tetra, check.face);
             }
-            IntersectionType::OutsideTwoEdges => {}
+            IntersectionType::OutsideTwoEdges(_, _) => {}
         }
     }
 
