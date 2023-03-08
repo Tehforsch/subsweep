@@ -45,79 +45,58 @@ impl DelaunayTriangulation {
         // Leave opposing data of the newly created faces
         // uninitialized for now, since we do not know the indices of
         // the other tetras before we have inserted them.
-        self.insert_positively_oriented_tetra(
-            p_a,
-            p_b,
-            p_c,
-            p,
-            TetraFace {
+        self.insert_positively_oriented_tetra(Tetra {
+            p1: p_a,
+            p2: p_b,
+            p3: p_c,
+            p4: p,
+            f1: TetraFace {
                 face: f_a,
                 opposing: None,
             },
-            TetraFace {
+            f2: TetraFace {
                 face: f_b,
                 opposing: None,
             },
-            TetraFace {
+            f3: TetraFace {
                 face: f_c,
                 opposing: None,
             },
-            old_face,
-        )
+            f4: old_face,
+        })
     }
 
-    fn insert_positively_oriented_tetra(
-        &mut self,
-        p1: PointIndex,
-        p2: PointIndex,
-        p3: PointIndex,
-        p4: PointIndex,
-        f1: TetraFace,
-        f2: TetraFace,
-        f3: TetraFace,
-        f4: TetraFace,
-    ) -> TetraIndex {
+    pub(super) fn make_positively_oriented_tetra(&self, tetra: Tetra) -> Tetra {
         let tetra_data = TetraData {
-            p1: self.points[p1],
-            p2: self.points[p2],
-            p3: self.points[p3],
-            p4: self.points[p4],
+            p1: self.points[tetra.p1],
+            p2: self.points[tetra.p2],
+            p3: self.points[tetra.p3],
+            p4: self.points[tetra.p4],
         };
         for (f, (pa, pb, pc)) in [
-            (f1.face, (p2, p3, p4)),
-            (f2.face, (p1, p3, p4)),
-            (f3.face, (p1, p2, p4)),
-            (f4.face, (p1, p2, p3)),
+            (tetra.f1.face, (tetra.p2, tetra.p3, tetra.p4)),
+            (tetra.f2.face, (tetra.p1, tetra.p3, tetra.p4)),
+            (tetra.f3.face, (tetra.p1, tetra.p2, tetra.p4)),
+            (tetra.f4.face, (tetra.p1, tetra.p2, tetra.p3)),
         ] {
             debug_assert!(self.faces[f].contains_point(pa));
             debug_assert!(self.faces[f].contains_point(pb));
             debug_assert!(self.faces[f].contains_point(pc));
         }
-        let tetra = if tetra_data.is_positively_oriented() {
-            Tetra {
-                p1,
-                p2,
-                p3,
-                p4,
-                f1,
-                f2,
-                f3,
-                f4,
-            }
+        if tetra_data.is_positively_oriented() {
+            tetra
         } else {
             Tetra {
-                p1: p2,
-                p2: p1,
-                p3,
-                p4,
-                f1: f2,
-                f2: f1,
-                f3,
-                f4,
+                p1: tetra.p2,
+                p2: tetra.p1,
+                p3: tetra.p3,
+                p4: tetra.p4,
+                f1: tetra.f2,
+                f2: tetra.f1,
+                f3: tetra.f3,
+                f4: tetra.f4,
             }
-        };
-        debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
-        self.tetras.insert(tetra)
+        }
     }
 
     pub(super) fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
@@ -302,23 +281,23 @@ impl DelaunayTriangulation {
             .map(|((fa, pa), (fb, pb), (_, other_point))| {
                 let f1 = t1.find_face_opposite(*other_point).clone();
                 let f2 = t2.find_face_opposite(*other_point).clone();
-                let t = self.insert_positively_oriented_tetra(
+                let t = self.insert_positively_oriented_tetra(Tetra {
                     p1,
                     p2,
-                    *pa,
-                    *pb,
-                    f2,
-                    f1,
+                    p3: *pa,
+                    p4: *pb,
+                    f1: f2,
+                    f2: f1,
                     // Leave opposing uninitialized for now
-                    TetraFace {
+                    f3: TetraFace {
                         face: *fb,
                         opposing: None,
                     },
-                    TetraFace {
+                    f4: TetraFace {
                         face: *fa,
                         opposing: None,
                     },
-                );
+                });
                 // Update the outdated connections in existing tetras
                 self.set_opposing_in_existing_tetra(t1_index, f1, t, *other_point);
                 self.set_opposing_in_existing_tetra(t2_index, f2, t, *other_point);
@@ -370,19 +349,19 @@ impl DelaunayTriangulation {
                     let f1 = t2.find_face_opposite(*pb).clone();
                     let f2 = t1.find_face_opposite(*pb).clone();
                     let f3 = t3.find_face_opposite(*pb).clone();
-                    let new_tetra = self.insert_positively_oriented_tetra(
+                    let new_tetra = self.insert_positively_oriented_tetra(Tetra {
                         p1,
                         p2,
                         p3,
-                        *pa,
+                        p4: *pa,
                         f1,
                         f2,
                         f3,
-                        TetraFace {
+                        f4: TetraFace {
                             face: new_face,
                             opposing: None,
                         },
-                    );
+                    });
                     self.set_opposing_in_existing_tetra(t1_index, f2, new_tetra, p2);
                     self.set_opposing_in_existing_tetra(t2_index, f1, new_tetra, p1);
                     self.set_opposing_in_existing_tetra(t3_index, f3, new_tetra, p3);
@@ -432,27 +411,27 @@ impl DelaunayTriangulation {
             p2: p2,
             p3: p3,
         });
-        self.insert_positively_oriented_tetra(
+        self.insert_positively_oriented_tetra(Tetra {
             p1,
             p2,
             p3,
             p4,
-            TetraFace {
+            f1: TetraFace {
                 face: f1,
                 opposing: None,
             },
-            TetraFace {
+            f2: TetraFace {
                 face: f2,
                 opposing: None,
             },
-            TetraFace {
+            f3: TetraFace {
                 face: f3,
                 opposing: None,
             },
-            TetraFace {
+            f4: TetraFace {
                 face: f4,
                 opposing: None,
             },
-        );
+        });
     }
 }

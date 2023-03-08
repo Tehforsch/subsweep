@@ -6,6 +6,7 @@ mod impl_3d;
 use bevy::prelude::Resource;
 
 use super::tetra::ConnectionData;
+use super::tetra::Tetra;
 use super::tetra::TetraData;
 use super::tetra::TetraFace;
 use super::FaceIndex;
@@ -69,6 +70,12 @@ impl DelaunayTriangulation {
             self.flip_check(check);
         }
         new_point_index
+    }
+
+    pub fn insert_positively_oriented_tetra(&mut self, tetra: Tetra) -> TetraIndex {
+        let tetra = self.make_positively_oriented_tetra(tetra);
+        debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
+        self.tetras.insert(tetra)
     }
 
     fn set_opposing_in_existing_tetra(
