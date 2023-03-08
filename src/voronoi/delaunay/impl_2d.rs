@@ -46,7 +46,7 @@ impl DelaunayTriangulation {
         }
     }
 
-    fn make_tetra(
+    fn insert_split_tetra(
         &mut self,
         p_a: PointIndex,
         p_b: PointIndex,
@@ -88,9 +88,9 @@ impl DelaunayTriangulation {
             p1: point,
             p2: old_tetra.p3,
         });
-        let t1 = self.make_tetra(old_tetra.p2, old_tetra.p3, point, f3, f2, old_tetra.f1);
-        let t2 = self.make_tetra(old_tetra.p3, old_tetra.p1, point, f1, f3, old_tetra.f2);
-        let t3 = self.make_tetra(old_tetra.p1, old_tetra.p2, point, f2, f1, old_tetra.f3);
+        let t1 = self.insert_split_tetra(old_tetra.p2, old_tetra.p3, point, f3, f2, old_tetra.f1);
+        let t2 = self.insert_split_tetra(old_tetra.p3, old_tetra.p1, point, f1, f3, old_tetra.f2);
+        let t3 = self.insert_split_tetra(old_tetra.p1, old_tetra.p2, point, f2, f1, old_tetra.f3);
         self.set_opposing_in_new_tetra(t1, f3, t2, old_tetra.p1);
         self.set_opposing_in_new_tetra(t1, f2, t3, old_tetra.p1);
         self.set_opposing_in_new_tetra(t2, f3, t1, old_tetra.p2);

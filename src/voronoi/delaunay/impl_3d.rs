@@ -31,7 +31,40 @@ impl DelaunayTriangulation {
         }
     }
 
-    fn make_tetra(
+    pub(super) fn make_positively_oriented_tetra(&self, tetra: Tetra) -> Tetra {
+        let tetra_data = TetraData {
+            p1: self.points[tetra.p1],
+            p2: self.points[tetra.p2],
+            p3: self.points[tetra.p3],
+            p4: self.points[tetra.p4],
+        };
+        for (f, (pa, pb, pc)) in [
+            (tetra.f1.face, (tetra.p2, tetra.p3, tetra.p4)),
+            (tetra.f2.face, (tetra.p1, tetra.p3, tetra.p4)),
+            (tetra.f3.face, (tetra.p1, tetra.p2, tetra.p4)),
+            (tetra.f4.face, (tetra.p1, tetra.p2, tetra.p3)),
+        ] {
+            debug_assert!(self.faces[f].contains_point(pa));
+            debug_assert!(self.faces[f].contains_point(pb));
+            debug_assert!(self.faces[f].contains_point(pc));
+        }
+        if tetra_data.is_positively_oriented() {
+            tetra
+        } else {
+            Tetra {
+                p1: tetra.p2,
+                p2: tetra.p1,
+                p3: tetra.p3,
+                p4: tetra.p4,
+                f1: tetra.f2,
+                f2: tetra.f1,
+                f3: tetra.f3,
+                f4: tetra.f4,
+            }
+        }
+    }
+
+    fn insert_split_tetra(
         &mut self,
         p_a: PointIndex,
         p_b: PointIndex,
@@ -66,39 +99,6 @@ impl DelaunayTriangulation {
         })
     }
 
-    pub(super) fn make_positively_oriented_tetra(&self, tetra: Tetra) -> Tetra {
-        let tetra_data = TetraData {
-            p1: self.points[tetra.p1],
-            p2: self.points[tetra.p2],
-            p3: self.points[tetra.p3],
-            p4: self.points[tetra.p4],
-        };
-        for (f, (pa, pb, pc)) in [
-            (tetra.f1.face, (tetra.p2, tetra.p3, tetra.p4)),
-            (tetra.f2.face, (tetra.p1, tetra.p3, tetra.p4)),
-            (tetra.f3.face, (tetra.p1, tetra.p2, tetra.p4)),
-            (tetra.f4.face, (tetra.p1, tetra.p2, tetra.p3)),
-        ] {
-            debug_assert!(self.faces[f].contains_point(pa));
-            debug_assert!(self.faces[f].contains_point(pb));
-            debug_assert!(self.faces[f].contains_point(pc));
-        }
-        if tetra_data.is_positively_oriented() {
-            tetra
-        } else {
-            Tetra {
-                p1: tetra.p2,
-                p2: tetra.p1,
-                p3: tetra.p3,
-                p4: tetra.p4,
-                f1: tetra.f2,
-                f2: tetra.f1,
-                f3: tetra.f3,
-                f4: tetra.f4,
-            }
-        }
-    }
-
     pub(super) fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
         let f1 = self.faces.insert(Face {
@@ -131,7 +131,7 @@ impl DelaunayTriangulation {
             p2: old_tetra.p3,
             p3: old_tetra.p4,
         });
-        let t1 = self.make_tetra(
+        let t1 = self.insert_split_tetra(
             old_tetra.p2,
             old_tetra.p3,
             old_tetra.p4,
@@ -141,7 +141,7 @@ impl DelaunayTriangulation {
             f4,
             old_tetra.f1,
         );
-        let t2 = self.make_tetra(
+        let t2 = self.insert_split_tetra(
             old_tetra.p1,
             old_tetra.p3,
             old_tetra.p4,
@@ -151,7 +151,7 @@ impl DelaunayTriangulation {
             f2,
             old_tetra.f2,
         );
-        let t3 = self.make_tetra(
+        let t3 = self.insert_split_tetra(
             old_tetra.p1,
             old_tetra.p2,
             old_tetra.p4,
@@ -161,7 +161,7 @@ impl DelaunayTriangulation {
             f1,
             old_tetra.f3,
         );
-        let t4 = self.make_tetra(
+        let t4 = self.insert_split_tetra(
             old_tetra.p1,
             old_tetra.p2,
             old_tetra.p3,
