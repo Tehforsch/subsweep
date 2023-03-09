@@ -171,7 +171,7 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
     }
 
     #[cfg(feature = "3d")]
-    fn from(t: DelaunayTriangulation) -> Self {
+    fn from(_t: DelaunayTriangulation) -> Self {
         todo!()
     }
 }

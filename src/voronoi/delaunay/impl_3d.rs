@@ -9,7 +9,6 @@ use crate::voronoi::tetra::TetraData;
 use crate::voronoi::tetra::TetraFace;
 use crate::voronoi::utils::periodic_windows;
 use crate::voronoi::utils::periodic_windows_3;
-use crate::voronoi::visualizer::Visualizer;
 use crate::voronoi::FaceIndex;
 use crate::voronoi::PointIndex;
 use crate::voronoi::TetraIndex;
@@ -232,7 +231,6 @@ impl DelaunayTriangulation {
                     .opposing
                     .unwrap()
                     .tetra;
-                self.visualize();
                 debug_assert_eq!(
                     t2.find_face_opposite(opposite_point)
                         .opposing
@@ -424,12 +422,5 @@ impl DelaunayTriangulation {
                 opposing: None,
             },
         });
-    }
-
-    fn visualize(&self) {
-        let mut vis = Visualizer::default();
-        for (_, tetra) in self.tetras.iter() {
-            self.get_tetra_data(tetra).visualize(&mut vis);
-        }
     }
 }

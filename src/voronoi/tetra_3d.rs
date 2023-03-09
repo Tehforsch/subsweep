@@ -3,8 +3,6 @@ use super::math::determinant5x5;
 use super::precision_error::is_positive;
 use super::precision_error::PrecisionError;
 use super::tetra::TetraFace;
-use super::utils::periodic_windows_3;
-use super::visualizer::Visualizer;
 use super::Point;
 use super::PointIndex;
 use crate::voronoi::precision_error::is_negative;
@@ -89,17 +87,6 @@ impl Tetra3dData {
 
     pub fn get_center_of_circumcircle(&self) -> Point {
         todo!()
-    }
-
-    pub fn visualize(&self, visualizer: &mut Visualizer) {
-        let points = [self.p1, self.p2, self.p3, self.p4];
-        let point_names: Vec<_> = points
-            .into_iter()
-            .map(|p| visualizer.add_statement(format!("({}, {}, {})", p.x, p.y, p.z)))
-            .collect();
-        for (p1, p2, p3) in periodic_windows_3(&point_names) {
-            visualizer.add_statement(format!("Polygon({}, {}, {})", p1, p2, p3));
-        }
     }
 }
 

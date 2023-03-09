@@ -31,7 +31,7 @@ impl Tetra2d {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Tetra2dData {
     pub p1: Point,
     pub p2: Point,
