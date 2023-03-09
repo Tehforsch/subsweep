@@ -9,6 +9,7 @@ use crate::voronoi::tetra::TetraData;
 use crate::voronoi::tetra::TetraFace;
 use crate::voronoi::utils::periodic_windows;
 use crate::voronoi::utils::periodic_windows_3;
+use crate::voronoi::visualizer::Visualizer;
 use crate::voronoi::FaceIndex;
 use crate::voronoi::PointIndex;
 use crate::voronoi::TetraIndex;
@@ -422,5 +423,11 @@ impl DelaunayTriangulation {
                 opposing: None,
             },
         });
+    }
+
+    fn visualize(&self) {
+        for (_, tetra) in self.tetras.iter() {
+            self.get_tetra_data(tetra).visualize(Visualizer::default());
+        }
     }
 }
