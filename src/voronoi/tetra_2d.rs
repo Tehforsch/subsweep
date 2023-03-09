@@ -53,15 +53,28 @@ impl Tetra2dData {
         Self { p1, p2, p3 }
     }
 
-    pub fn contains(&self, point: Point) -> Result<bool, PrecisionError> {
-        let d1 = sign(point, self.p1, self.p2);
-        let d2 = sign(point, self.p2, self.p3);
-        let d3 = sign(point, self.p3, self.p1);
-
-        let has_neg = is_negative(d1)? || is_negative(d2)? || is_negative(d3)?;
-        let has_pos = is_positive(d1)? || is_positive(d2)? || is_positive(d3)?;
-
-        Ok(!(has_neg && has_pos))
+    pub fn contains(&self, p: Point) -> Result<bool, PrecisionError> {
+        use super::math::solve_system_of_equations;
+        // We solve
+        // p = p1 + r (p2 - p1) + s (p3 - p1)
+        // where r and s are the coordinates of the point in the (two-dimensional) vector space
+        // spanned by the (linearly independent) vectors given by (p2 - p1) and (p3 - p1).
+        let a = self.p2 - self.p1;
+        let b = self.p3 - self.p1;
+        let c = p - self.p1;
+        let [r, s] = solve_system_of_equations([[a.x, b.x, c.x], [a.y, b.y, c.y]]);
+        let values = [r, s, 1.0 - (r + s)];
+        let is_definitely_outside = values
+            .iter()
+            .any(|value| is_negative(*value).unwrap_or(false));
+        if is_definitely_outside {
+            Ok(false)
+        } else {
+            for value in values {
+                PrecisionError::check(value)?;
+            }
+            Ok(true)
+        }
     }
 
     #[rustfmt::skip]
@@ -128,4 +141,34 @@ fn get_min_and_max(points: &[Point]) -> Option<(Point, Point)> {
         update_max(&mut max, *p);
     }
     Some((min?, max?))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::voronoi::precision_error::PrecisionError;
+    use crate::voronoi::tetra_2d::Tetra2dData;
+    use crate::voronoi::Point;
+
+    #[test]
+    fn contains() {
+        let triangle = Tetra2dData {
+            p1: Point::new(2.0, 2.0),
+            p2: Point::new(4.0, 2.0),
+            p3: Point::new(2.0, 6.0),
+        };
+        assert_eq!(triangle.contains(Point::new(3.0, 3.0)), Ok(true));
+
+        assert_eq!(triangle.contains(Point::new(1.0, 1.0)), Ok(false));
+        assert_eq!(triangle.contains(Point::new(2.0, 9.0)), Ok(false));
+        assert_eq!(triangle.contains(Point::new(9.0, 2.0)), Ok(false));
+        assert_eq!(triangle.contains(Point::new(-1.0, 2.0)), Ok(false));
+
+        assert_eq!(triangle.contains(Point::new(2.0, 2.0)), Err(PrecisionError));
+        assert_eq!(triangle.contains(Point::new(4.0, 2.0)), Err(PrecisionError));
+        assert_eq!(triangle.contains(Point::new(2.0, 6.0)), Err(PrecisionError));
+
+        assert_eq!(triangle.contains(Point::new(3.0, 2.0)), Err(PrecisionError));
+        assert_eq!(triangle.contains(Point::new(2.0, 4.0)), Err(PrecisionError));
+        assert_eq!(triangle.contains(Point::new(3.0, 4.0)), Err(PrecisionError));
+    }
 }
