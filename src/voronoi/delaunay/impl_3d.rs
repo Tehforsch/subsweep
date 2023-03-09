@@ -1,5 +1,5 @@
-use super::tetra::ConnectionData;
-use super::tetra::FaceInfo;
+use super::face_info::ConnectionData;
+use super::face_info::FaceInfo;
 use super::tetra::Tetra;
 use super::tetra::TetraData;
 use super::DelaunayTriangulation;

@@ -1,3 +1,4 @@
+pub(crate) mod face_info;
 #[cfg(feature = "2d")]
 mod impl_2d;
 #[cfg(feature = "3d")]
@@ -9,7 +10,7 @@ use derive_more::From;
 use derive_more::Into;
 use generational_arena::Index;
 
-use self::tetra::ConnectionData;
+use self::face_info::ConnectionData;
 use self::tetra::Tetra;
 use self::tetra::TetraData;
 use super::face::Face;

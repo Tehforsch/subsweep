@@ -1,4 +1,4 @@
-use super::super::delaunay::tetra::FaceInfo;
+use super::super::delaunay::face_info::FaceInfo;
 use super::Point3d;
 use crate::voronoi::math::determinant4x4;
 use crate::voronoi::math::determinant5x5;

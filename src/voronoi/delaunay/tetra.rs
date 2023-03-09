@@ -1,6 +1,6 @@
+use super::face_info::FaceInfo;
 use super::FaceIndex;
 use super::PointIndex;
-use super::TetraIndex;
 
 #[cfg(feature = "2d")]
 pub type Tetra = super::super::primitives::triangle::TriangleWithFaces;
@@ -54,16 +54,4 @@ impl Tetra {
     pub fn contains_point(&self, p1: PointIndex) -> bool {
         self.iter_points().any(|p| *p == p1)
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct FaceInfo {
-    pub face: FaceIndex,
-    pub opposing: Option<ConnectionData>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ConnectionData {
-    pub tetra: TetraIndex,
-    pub point: PointIndex,
 }

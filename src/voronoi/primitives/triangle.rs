@@ -1,7 +1,7 @@
 use super::Float;
 use super::Point2d;
 use super::Point3d;
-use crate::voronoi::delaunay::tetra::FaceInfo;
+use crate::voronoi::delaunay::face_info::FaceInfo;
 use crate::voronoi::math::determinant3x3;
 use crate::voronoi::math::solve_system_of_equations;
 use crate::voronoi::precision_error::is_negative;
@@ -240,7 +240,6 @@ mod tests {
     use crate::voronoi::precision_error::PrecisionError;
     use crate::voronoi::primitives::Point2d;
     use crate::voronoi::primitives::Point3d;
-    use crate::voronoi::Point;
 
     fn triangle() -> TriangleData<Point3d> {
         let p1 = Point3d::new(0.0, 0.0, 0.0);
