@@ -3,9 +3,9 @@ use super::PointIndex;
 use super::TetraIndex;
 
 #[cfg(feature = "2d")]
-pub type Tetra = super::tetra_2d::Tetra2d;
+pub type Tetra = super::primitives::triangle::TriangleWithFaces;
 #[cfg(feature = "2d")]
-pub type TetraData = super::tetra_2d::Tetra2dData;
+pub type TetraData = super::primitives::triangle::TriangleData<super::primitives::Point2d>;
 
 #[cfg(feature = "3d")]
 pub type Tetra = super::tetra_3d::Tetra3d;

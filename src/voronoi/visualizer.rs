@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use super::primitives::triangle::TriangleData;
+use super::primitives::Point2d;
+use super::primitives::Point3d;
 use super::DelaunayTriangulation;
-use super::Point;
 
 pub type Statement = String;
 pub type Name = String;
@@ -56,8 +58,7 @@ pub trait Visualizable {
     fn get_statements(&self, vis: &mut Visualizer) -> Vec<Statement>;
 }
 
-#[cfg(feature = "2d")]
-impl Visualizable for super::tetra_2d::Tetra2dData {
+impl Visualizable for TriangleData<Point2d> {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         use super::utils::periodic_windows;
         let points = [self.p1, self.p2, self.p3];
@@ -95,15 +96,13 @@ impl Visualizable for DelaunayTriangulation {
     }
 }
 
-#[cfg(feature = "3d")]
-impl Visualizable for Point {
+impl Visualizable for Point3d {
     fn get_statements(&self, _visualizer: &mut Visualizer) -> Vec<String> {
         vec![format!("({}, {}, {})", self.x, self.y, self.z)]
     }
 }
 
-#[cfg(feature = "2d")]
-impl Visualizable for Point {
+impl Visualizable for Point2d {
     fn get_statements(&self, _visualizer: &mut Visualizer) -> Vec<String> {
         vec![format!("({}, {})", self.x, self.y)]
     }

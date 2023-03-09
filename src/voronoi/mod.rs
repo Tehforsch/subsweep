@@ -8,8 +8,6 @@ mod visualizer;
 mod primitives;
 
 mod tetra;
-#[cfg(feature = "2d")]
-mod tetra_2d;
 #[cfg(feature = "3d")]
 mod tetra_3d;
 
