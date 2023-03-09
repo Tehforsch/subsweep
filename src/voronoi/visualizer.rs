@@ -72,8 +72,7 @@ impl Visualizable for TriangleData<Point2d> {
     }
 }
 
-#[cfg(feature = "3d")]
-impl Visualizable for super::tetra_3d::Tetra3dData {
+impl Visualizable for super::primitives::tetrahedron::TetrahedronData {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         use super::utils::periodic_windows_3;
         let points = [self.p1, self.p2, self.p3, self.p4];

@@ -8,9 +8,9 @@ pub type Tetra = super::primitives::triangle::TriangleWithFaces;
 pub type TetraData = super::primitives::triangle::TriangleData<super::primitives::Point2d>;
 
 #[cfg(feature = "3d")]
-pub type Tetra = super::tetra_3d::Tetra3d;
+pub type Tetra = super::primitives::tetrahedron::Tetrahedron;
 #[cfg(feature = "3d")]
-pub type TetraData = super::tetra_3d::Tetra3dData;
+pub type TetraData = super::primitives::tetrahedron::TetrahedronData;
 
 impl Tetra {
     pub fn iter_faces_and_points(&self) -> impl Iterator<Item = (&TetraFace, &PointIndex)> {

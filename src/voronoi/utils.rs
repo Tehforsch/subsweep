@@ -10,7 +10,6 @@ pub fn periodic_windows<T>(v: &[T]) -> impl Iterator<Item = (&T, &T)> {
 
 /// A tuple version of slice.windows but including (t.last(), t.first()) as a last item.
 /// Returns an empty iterator on a slice with fewer than three elements.
-#[cfg(feature = "3d")]
 pub fn periodic_windows_3<T>(v: &[T]) -> impl Iterator<Item = (&T, &T, &T)> {
     v.iter()
         .zip(v[1..].iter().chain(iter::once(&v[0])))
@@ -42,7 +41,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "3d")]
     fn periodic_windows_3() {
         let s = vec![0, 1, 2, 3, 4, 5, 6, 7];
         let mut w = super::periodic_windows_3(&s);
