@@ -90,7 +90,7 @@ impl Tetra3dData {
         todo!()
     }
 
-    pub fn visualize(&self, mut visualizer: Visualizer) {
+    pub fn visualize(&self, visualizer: &mut Visualizer) {
         let points = [self.p1, self.p2, self.p3, self.p4];
         let point_names: Vec<_> = points
             .into_iter()

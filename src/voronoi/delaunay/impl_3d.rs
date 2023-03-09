@@ -426,8 +426,9 @@ impl DelaunayTriangulation {
     }
 
     fn visualize(&self) {
+        let mut vis = Visualizer::default();
         for (_, tetra) in self.tetras.iter() {
-            self.get_tetra_data(tetra).visualize(Visualizer::default());
+            self.get_tetra_data(tetra).visualize(&mut vis);
         }
     }
 }
