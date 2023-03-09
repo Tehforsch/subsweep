@@ -4,7 +4,7 @@ use crate::voronoi::math::determinant5x5;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::tetra::TetraFace;
+use crate::voronoi::tetra::FaceInfo;
 use crate::voronoi::PointIndex;
 
 #[derive(Clone, Debug)]
@@ -13,10 +13,10 @@ pub struct Tetrahedron {
     pub p2: PointIndex,
     pub p3: PointIndex,
     pub p4: PointIndex,
-    pub f1: TetraFace,
-    pub f2: TetraFace,
-    pub f3: TetraFace,
-    pub f4: TetraFace,
+    pub f1: FaceInfo,
+    pub f2: FaceInfo,
+    pub f3: FaceInfo,
+    pub f4: FaceInfo,
 }
 
 #[derive(Clone, Debug)]
@@ -28,7 +28,7 @@ pub struct TetrahedronData {
 }
 
 impl Tetrahedron {
-    pub fn iter_faces(&self) -> impl Iterator<Item = &TetraFace> {
+    pub fn iter_faces(&self) -> impl Iterator<Item = &FaceInfo> {
         ([&self.f1, &self.f2, &self.f3, &self.f4]).into_iter()
     }
 
@@ -36,7 +36,7 @@ impl Tetrahedron {
         ([&self.p1, &self.p2, &self.p3, &self.p4]).into_iter()
     }
 
-    pub fn iter_faces_mut(&mut self) -> impl Iterator<Item = &mut TetraFace> {
+    pub fn iter_faces_mut(&mut self) -> impl Iterator<Item = &mut FaceInfo> {
         ([&mut self.f1, &mut self.f2, &mut self.f3, &mut self.f4]).into_iter()
     }
 }

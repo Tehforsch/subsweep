@@ -13,19 +13,19 @@ pub type Tetra = super::primitives::tetrahedron::Tetrahedron;
 pub type TetraData = super::primitives::tetrahedron::TetrahedronData;
 
 impl Tetra {
-    pub fn iter_faces_and_points(&self) -> impl Iterator<Item = (&TetraFace, &PointIndex)> {
+    pub fn iter_faces_and_points(&self) -> impl Iterator<Item = (&FaceInfo, &PointIndex)> {
         self.iter_faces().zip(self.iter_points())
     }
 
-    pub fn find_face(&self, face: FaceIndex) -> &TetraFace {
+    pub fn find_face(&self, face: FaceIndex) -> &FaceInfo {
         self.iter_faces().find(|f| f.face == face).unwrap()
     }
 
-    pub fn find_face_mut(&mut self, face: FaceIndex) -> &mut TetraFace {
+    pub fn find_face_mut(&mut self, face: FaceIndex) -> &mut FaceInfo {
         self.iter_faces_mut().find(|f| f.face == face).unwrap()
     }
 
-    pub fn find_face_opposite(&self, p: PointIndex) -> &TetraFace {
+    pub fn find_face_opposite(&self, p: PointIndex) -> &FaceInfo {
         self.iter_faces_and_points()
             .find(|(_, point)| **point == p)
             .map(|(face, _)| face)
@@ -56,7 +56,7 @@ impl Tetra {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct TetraFace {
+pub struct FaceInfo {
     pub face: FaceIndex,
     pub opposing: Option<ConnectionData>,
 }

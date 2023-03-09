@@ -1,9 +1,9 @@
 use super::DelaunayTriangulation;
 use crate::voronoi::delaunay::FlipCheckData;
 use crate::voronoi::tetra::ConnectionData;
+use crate::voronoi::tetra::FaceInfo;
 use crate::voronoi::tetra::Tetra;
 use crate::voronoi::tetra::TetraData;
-use crate::voronoi::tetra::TetraFace;
 use crate::voronoi::Face;
 use crate::voronoi::FaceIndex;
 use crate::voronoi::PointIndex;
@@ -53,7 +53,7 @@ impl DelaunayTriangulation {
         p: PointIndex,
         f_a: FaceIndex,
         f_b: FaceIndex,
-        old_face: TetraFace,
+        old_face: FaceInfo,
     ) -> TetraIndex {
         // Leave opposing data of the newly created faces
         // uninitialized for now, since we do not know the indices of
@@ -62,11 +62,11 @@ impl DelaunayTriangulation {
             p1: p_a,
             p2: p_b,
             p3: p,
-            f1: TetraFace {
+            f1: FaceInfo {
                 face: f_a,
                 opposing: None,
             },
-            f2: TetraFace {
+            f2: FaceInfo {
                 face: f_b,
                 opposing: None,
             },
@@ -129,7 +129,7 @@ impl DelaunayTriangulation {
             p2: check_point,
             p3: opposing_point,
             // Leave uninitialized for now
-            f1: TetraFace {
+            f1: FaceInfo {
                 face: new_face,
                 opposing: None,
             },
@@ -141,7 +141,7 @@ impl DelaunayTriangulation {
             p2: check_point,
             p3: opposing_point,
             // Leave uninitialized for now
-            f1: TetraFace {
+            f1: FaceInfo {
                 face: new_face,
                 opposing: None,
             },
@@ -180,15 +180,15 @@ impl DelaunayTriangulation {
             p1,
             p2,
             p3,
-            f1: TetraFace {
+            f1: FaceInfo {
                 face: f1,
                 opposing: None,
             },
-            f2: TetraFace {
+            f2: FaceInfo {
                 face: f2,
                 opposing: None,
             },
-            f3: TetraFace {
+            f3: FaceInfo {
                 face: f3,
                 opposing: None,
             },

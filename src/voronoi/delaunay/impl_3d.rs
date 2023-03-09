@@ -4,9 +4,9 @@ use crate::voronoi::face::Face;
 use crate::voronoi::face::FaceData;
 use crate::voronoi::primitives::triangle::IntersectionType;
 use crate::voronoi::tetra::ConnectionData;
+use crate::voronoi::tetra::FaceInfo;
 use crate::voronoi::tetra::Tetra;
 use crate::voronoi::tetra::TetraData;
-use crate::voronoi::tetra::TetraFace;
 use crate::voronoi::utils::periodic_windows;
 use crate::voronoi::utils::periodic_windows_3;
 use crate::voronoi::FaceIndex;
@@ -73,7 +73,7 @@ impl DelaunayTriangulation {
         f_a: FaceIndex,
         f_b: FaceIndex,
         f_c: FaceIndex,
-        old_face: TetraFace,
+        old_face: FaceInfo,
     ) -> TetraIndex {
         // Leave opposing data of the newly created faces
         // uninitialized for now, since we do not know the indices of
@@ -83,15 +83,15 @@ impl DelaunayTriangulation {
             p2: p_b,
             p3: p_c,
             p4: p,
-            f1: TetraFace {
+            f1: FaceInfo {
                 face: f_a,
                 opposing: None,
             },
-            f2: TetraFace {
+            f2: FaceInfo {
                 face: f_b,
                 opposing: None,
             },
-            f3: TetraFace {
+            f3: FaceInfo {
                 face: f_c,
                 opposing: None,
             },
@@ -284,11 +284,11 @@ impl DelaunayTriangulation {
                     f1: f2,
                     f2: f1,
                     // Leave opposing uninitialized for now
-                    f3: TetraFace {
+                    f3: FaceInfo {
                         face: *fb,
                         opposing: None,
                     },
-                    f4: TetraFace {
+                    f4: FaceInfo {
                         face: *fa,
                         opposing: None,
                     },
@@ -349,7 +349,7 @@ impl DelaunayTriangulation {
                         f1,
                         f2,
                         f3,
-                        f4: TetraFace {
+                        f4: FaceInfo {
                             face: new_face,
                             opposing: None,
                         },
@@ -405,19 +405,19 @@ impl DelaunayTriangulation {
             p2,
             p3,
             p4,
-            f1: TetraFace {
+            f1: FaceInfo {
                 face: f1,
                 opposing: None,
             },
-            f2: TetraFace {
+            f2: FaceInfo {
                 face: f2,
                 opposing: None,
             },
-            f3: TetraFace {
+            f3: FaceInfo {
                 face: f3,
                 opposing: None,
             },
-            f4: TetraFace {
+            f4: FaceInfo {
                 face: f4,
                 opposing: None,
             },
