@@ -14,10 +14,6 @@ mod tetra_2d;
 mod tetra_3d;
 
 mod face;
-#[cfg(feature = "2d")]
-mod face_2d;
-#[cfg(feature = "3d")]
-mod face_3d;
 
 mod utils;
 

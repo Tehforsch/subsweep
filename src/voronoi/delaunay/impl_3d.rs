@@ -2,7 +2,7 @@ use super::DelaunayTriangulation;
 use super::FlipCheckData;
 use crate::voronoi::face::Face;
 use crate::voronoi::face::FaceData;
-use crate::voronoi::face_3d::IntersectionType;
+use crate::voronoi::primitives::triangle::IntersectionType;
 use crate::voronoi::tetra::ConnectionData;
 use crate::voronoi::tetra::Tetra;
 use crate::voronoi::tetra::TetraData;
