@@ -3,14 +3,15 @@ use super::PointIndex;
 use super::TetraIndex;
 
 #[cfg(feature = "2d")]
-pub type Tetra = super::primitives::triangle::TriangleWithFaces;
+pub type Tetra = super::super::primitives::triangle::TriangleWithFaces;
 #[cfg(feature = "2d")]
-pub type TetraData = super::primitives::triangle::TriangleData<super::primitives::Point2d>;
+pub type TetraData =
+    super::super::primitives::triangle::TriangleData<super::super::primitives::Point2d>;
 
 #[cfg(feature = "3d")]
-pub type Tetra = super::primitives::tetrahedron::Tetrahedron;
+pub type Tetra = super::super::primitives::tetrahedron::Tetrahedron;
 #[cfg(feature = "3d")]
-pub type TetraData = super::primitives::tetrahedron::TetrahedronData;
+pub type TetraData = super::super::primitives::tetrahedron::TetrahedronData;
 
 impl Tetra {
     pub fn iter_faces_and_points(&self) -> impl Iterator<Item = (&FaceInfo, &PointIndex)> {

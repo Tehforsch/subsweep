@@ -1,10 +1,10 @@
+use super::super::delaunay::tetra::FaceInfo;
 use super::Point3d;
 use crate::voronoi::math::determinant4x4;
 use crate::voronoi::math::determinant5x5;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::tetra::FaceInfo;
 use crate::voronoi::PointIndex;
 
 #[derive(Clone, Debug)]

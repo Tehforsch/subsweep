@@ -2,19 +2,30 @@
 mod impl_2d;
 #[cfg(feature = "3d")]
 mod impl_3d;
+pub mod tetra;
 
 use bevy::prelude::Resource;
+use derive_more::From;
+use derive_more::Into;
+use generational_arena::Index;
 
-use super::tetra::ConnectionData;
-use super::tetra::Tetra;
-use super::tetra::TetraData;
-use super::FaceIndex;
-use super::FaceList;
+use self::tetra::ConnectionData;
+use self::tetra::Tetra;
+use self::tetra::TetraData;
+use super::face::Face;
+use super::indexed_arena::IndexedArena;
 use super::Point;
-use super::PointIndex;
-use super::PointList;
-use super::TetraIndex;
-use super::TetraList;
+
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
+pub struct TetraIndex(Index);
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
+pub struct FaceIndex(Index);
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
+pub struct PointIndex(Index);
+
+type TetraList = IndexedArena<TetraIndex, Tetra>;
+type FaceList = IndexedArena<FaceIndex, Face>;
+type PointList = IndexedArena<PointIndex, Point>;
 
 #[derive(Clone)]
 pub struct FlipCheckData {
@@ -154,7 +165,7 @@ pub(super) mod tests {
     use super::super::Point;
     use super::DelaunayTriangulation;
     use crate::config::NUM_DIMENSIONS;
-    use crate::voronoi::tetra::TetraData;
+    use crate::voronoi::delaunay::tetra::TetraData;
 
     #[cfg(feature = "2d")]
     fn get_example_point_set() -> Vec<Point> {

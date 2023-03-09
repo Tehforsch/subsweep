@@ -1,13 +1,13 @@
+use super::tetra::ConnectionData;
+use super::tetra::FaceInfo;
+use super::tetra::Tetra;
+use super::tetra::TetraData;
 use super::DelaunayTriangulation;
+use super::Face;
+use super::FaceIndex;
+use super::PointIndex;
+use super::TetraIndex;
 use crate::voronoi::delaunay::FlipCheckData;
-use crate::voronoi::tetra::ConnectionData;
-use crate::voronoi::tetra::FaceInfo;
-use crate::voronoi::tetra::Tetra;
-use crate::voronoi::tetra::TetraData;
-use crate::voronoi::Face;
-use crate::voronoi::FaceIndex;
-use crate::voronoi::PointIndex;
-use crate::voronoi::TetraIndex;
 
 impl DelaunayTriangulation {
     pub fn get_tetra_data(&self, tetra: &Tetra) -> TetraData {

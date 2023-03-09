@@ -1,13 +1,11 @@
 pub mod constructor;
-mod delaunay;
+pub mod delaunay;
 mod indexed_arena;
 pub mod math;
 mod precision_error;
 mod visualizer;
 
 mod primitives;
-
-mod tetra;
 
 mod face;
 
@@ -18,23 +16,14 @@ use std::f64::consts::PI;
 use bevy::prelude::Resource;
 use bevy::utils::StableHashMap;
 pub use delaunay::DelaunayTriangulation;
-use derive_more::From;
-use derive_more::Into;
 use generational_arena::Index;
 use ordered_float::OrderedFloat;
 
-use self::face::Face;
+use self::delaunay::PointIndex;
+use self::delaunay::TetraIndex;
 use self::indexed_arena::IndexedArena;
-use self::tetra::Tetra;
 use self::utils::periodic_windows;
 use crate::prelude::Float;
-
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
-pub struct TetraIndex(Index);
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
-pub struct FaceIndex(Index);
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
-pub struct PointIndex(Index);
 
 pub type CellIndex = usize;
 
@@ -42,10 +31,6 @@ pub type CellIndex = usize;
 pub type Point = glam::DVec2;
 #[cfg(feature = "3d")]
 pub type Point = glam::DVec3;
-
-type TetraList = IndexedArena<TetraIndex, Tetra>;
-type FaceList = IndexedArena<FaceIndex, Face>;
-type PointList = IndexedArena<PointIndex, Point>;
 
 #[derive(Resource)]
 pub struct VoronoiGrid {

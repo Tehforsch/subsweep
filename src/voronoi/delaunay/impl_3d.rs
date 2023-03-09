@@ -1,17 +1,17 @@
+use super::tetra::ConnectionData;
+use super::tetra::FaceInfo;
+use super::tetra::Tetra;
+use super::tetra::TetraData;
 use super::DelaunayTriangulation;
+use super::FaceIndex;
 use super::FlipCheckData;
+use super::PointIndex;
+use super::TetraIndex;
 use crate::voronoi::face::Face;
 use crate::voronoi::face::FaceData;
 use crate::voronoi::primitives::triangle::IntersectionType;
-use crate::voronoi::tetra::ConnectionData;
-use crate::voronoi::tetra::FaceInfo;
-use crate::voronoi::tetra::Tetra;
-use crate::voronoi::tetra::TetraData;
 use crate::voronoi::utils::periodic_windows;
 use crate::voronoi::utils::periodic_windows_3;
-use crate::voronoi::FaceIndex;
-use crate::voronoi::PointIndex;
-use crate::voronoi::TetraIndex;
 
 impl DelaunayTriangulation {
     pub fn get_tetra_data(&self, tetra: &Tetra) -> TetraData {

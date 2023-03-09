@@ -1,12 +1,12 @@
 use super::Float;
 use super::Point2d;
 use super::Point3d;
+use crate::voronoi::delaunay::tetra::FaceInfo;
 use crate::voronoi::math::determinant3x3;
 use crate::voronoi::math::solve_system_of_equations;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::tetra::FaceInfo;
 use crate::voronoi::PointIndex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
