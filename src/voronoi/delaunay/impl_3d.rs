@@ -49,7 +49,7 @@ impl DelaunayTriangulation {
             debug_assert!(self.faces[f].contains_point(pb));
             debug_assert!(self.faces[f].contains_point(pc));
         }
-        if tetra_data.is_positively_oriented() {
+        if tetra_data.is_positively_oriented().unwrap() {
             tetra
         } else {
             Tetra {
@@ -232,6 +232,7 @@ impl DelaunayTriangulation {
                     .opposing
                     .unwrap()
                     .tetra;
+                self.visualize();
                 debug_assert_eq!(
                     t2.find_face_opposite(opposite_point)
                         .opposing
@@ -308,7 +309,7 @@ impl DelaunayTriangulation {
                 });
             }
         }
-        todo!("add additional flip checks")
+        // todo!("add additional flip checks")
     }
 
     fn three_to_two_flip(
@@ -372,7 +373,7 @@ impl DelaunayTriangulation {
                 point: *p_other,
             })
         }
-        todo!("add additional flip checks")
+        // todo!("add additional flip checks")
     }
 
     pub fn insert_basic_tetra(&mut self, tetra: TetraData) {

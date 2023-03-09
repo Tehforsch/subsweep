@@ -1,12 +1,13 @@
 use super::math::determinant4x4;
 use super::math::determinant5x5;
+use super::precision_error::is_positive;
+use super::precision_error::PrecisionError;
 use super::tetra::TetraFace;
 use super::utils::periodic_windows_3;
 use super::visualizer::Visualizer;
 use super::Point;
 use super::PointIndex;
-
-pub const EPSILON: f64 = 1e-20;
+use crate::voronoi::precision_error::is_negative;
 
 #[derive(Clone, Debug)]
 pub struct Tetra3d {
@@ -47,43 +48,43 @@ impl Tetra3dData {
         todo!()
     }
 
-    pub fn contains(&self, point: Point) -> bool {
-        points_are_on_same_side_of_triangle(point, self.p1, (self.p2, self.p3, self.p4))
-            && points_are_on_same_side_of_triangle(point, self.p2, (self.p1, self.p3, self.p4))
-            && points_are_on_same_side_of_triangle(point, self.p3, (self.p1, self.p2, self.p4))
-            && points_are_on_same_side_of_triangle(point, self.p4, (self.p1, self.p2, self.p3))
+    #[rustfmt::skip]
+    pub fn contains(&self, point: Point) -> Result<bool, PrecisionError> {
+        Ok(
+               points_are_on_same_side_of_triangle(point, self.p1, (self.p2, self.p3, self.p4))?
+            && points_are_on_same_side_of_triangle(point, self.p2, (self.p1, self.p3, self.p4))?
+            && points_are_on_same_side_of_triangle(point, self.p3, (self.p1, self.p2, self.p4))?
+            && points_are_on_same_side_of_triangle(point, self.p4, (self.p1, self.p2, self.p3))?,
+        )
     }
 
     #[rustfmt::skip]
-    pub fn circumcircle_contains(&self, point: Point) -> bool {
+    pub fn circumcircle_contains(&self, point: Point) -> Result<bool, PrecisionError> {
         // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
-        debug_assert!(self.is_positively_oriented());
+        debug_assert!(self.is_positively_oriented().unwrap());
         let a = self.p1;
         let b = self.p2;
         let c = self.p3;
         let d = self.p4;
         let e = point;
-        determinant5x5(
+        is_negative(determinant5x5(
             1.0, a.x, a.y, a.z, a.x.powi(2) + a.y.powi(2) + a.z.powi(2),
             1.0, b.x, b.y, b.z, b.x.powi(2) + b.y.powi(2) + b.z.powi(2),
             1.0, c.x, c.y, c.z, c.x.powi(2) + c.y.powi(2) + c.z.powi(2),
             1.0, d.x, d.y, d.z, d.x.powi(2) + d.y.powi(2) + d.z.powi(2),
             1.0, e.x, e.y, e.z, e.x.powi(2) + e.y.powi(2) + e.z.powi(2),
-        ) < 0.0
+        ))
     }
 
     #[rustfmt::skip]
-    pub fn is_positively_oriented(&self) -> bool {
+    pub fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
         let determinant = determinant4x4(
             1.0, self.p1.x, self.p1.y, self.p1.z,
             1.0, self.p2.x, self.p2.y, self.p2.z,
             1.0, self.p3.x, self.p3.y, self.p3.z,
             1.0, self.p4.x, self.p4.y, self.p4.z,
         );
-        if determinant.abs() < EPSILON {
-            panic!("Degeneracy - Empty tetrahedron: {:?}", self);
-        }
-        determinant > 0.0
+        is_positive(determinant)
     }
 
     pub fn get_center_of_circumcircle(&self) -> Point {
@@ -106,10 +107,10 @@ fn points_are_on_same_side_of_triangle(
     p1: Point,
     p2: Point,
     triangle: (Point, Point, Point),
-) -> bool {
+) -> Result<bool, PrecisionError> {
     let (p_a, p_b, p_c) = triangle;
     let normal = (p_b - p_a).cross(p_c - p_a);
     let dot_1_sign = (p1 - p_a).dot(normal).signum();
     let dot_2_sign = (p2 - p_a).dot(normal).signum();
-    (dot_1_sign * dot_2_sign) >= 0.0
+    is_positive(dot_1_sign * dot_2_sign)
 }

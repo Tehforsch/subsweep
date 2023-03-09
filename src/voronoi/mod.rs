@@ -2,6 +2,7 @@ pub mod constructor;
 mod delaunay;
 mod indexed_arena;
 pub mod math;
+mod precision_error;
 mod visualizer;
 
 mod tetra;

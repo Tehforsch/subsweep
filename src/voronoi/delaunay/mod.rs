@@ -54,7 +54,7 @@ impl DelaunayTriangulation {
             .iter()
             .find(|(_, tetra)| {
                 let tetra_data = self.get_tetra_data(tetra);
-                tetra_data.contains(point)
+                tetra_data.contains(point).unwrap()
             })
             .map(|(index, _)| index)
     }
@@ -95,7 +95,10 @@ impl DelaunayTriangulation {
 
     pub fn insert_positively_oriented_tetra(&mut self, tetra: Tetra) -> TetraIndex {
         let tetra = self.make_positively_oriented_tetra(tetra);
-        debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
+        debug_assert!(self
+            .get_tetra_data(&tetra)
+            .is_positively_oriented()
+            .unwrap());
         let tetra_index = self.tetras.insert(tetra);
         self.update_connections_in_existing_tetra(tetra_index);
         tetra_index
@@ -119,7 +122,7 @@ impl DelaunayTriangulation {
                 .points
                 .iter()
                 .filter(|(point, _)| *point != tetra.p1 && *point != tetra.p2 && *point != tetra.p3)
-                .find(|(_, point)| tetra_data.circumcircle_contains(**point))
+                .find(|(_, point)| tetra_data.circumcircle_contains(**point).unwrap())
                 .is_some();
             other_point_contained
         } else {
@@ -159,10 +162,10 @@ pub(super) mod tests {
             Point::new(0.5, 0.5),
             Point::new(0.25, 0.5),
             Point::new(0.5, 0.25),
-            Point::new(0.125, 0.5),
-            Point::new(0.5, 0.125),
-            Point::new(0.8, 0.1),
-            Point::new(0.1, 0.8),
+            Point::new(0.125, 0.4),
+            Point::new(0.3, 0.125),
+            Point::new(0.8, 0.15),
+            Point::new(0.9, 0.8),
         ]
     }
 

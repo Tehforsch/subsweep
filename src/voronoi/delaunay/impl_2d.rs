@@ -32,7 +32,7 @@ impl DelaunayTriangulation {
         debug_assert!(self.faces[tetra.f2.face].contains_point(tetra.p3));
         debug_assert!(self.faces[tetra.f3.face].contains_point(tetra.p1));
         debug_assert!(self.faces[tetra.f3.face].contains_point(tetra.p2));
-        if tetra_data.is_positively_oriented() {
+        if tetra_data.is_positively_oriented().unwrap() {
             tetra
         } else {
             Tetra {
