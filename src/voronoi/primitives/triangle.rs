@@ -1,6 +1,10 @@
 use super::Float;
 use super::Point2d;
 use super::Point3d;
+use crate::voronoi::delaunay::dimension::DimensionFace;
+use crate::voronoi::delaunay::dimension::DimensionFaceData;
+use crate::voronoi::delaunay::dimension::DimensionTetra;
+use crate::voronoi::delaunay::dimension::DimensionTetraData;
 use crate::voronoi::delaunay::face_info::FaceInfo;
 use crate::voronoi::math::determinant3x3;
 use crate::voronoi::math::solve_system_of_equations;
@@ -8,6 +12,8 @@ use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::PointIndex;
+use crate::voronoi::ThreeD;
+use crate::voronoi::TwoD;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntersectionType {
@@ -30,17 +36,16 @@ pub struct Triangle {
     pub p3: PointIndex,
 }
 
+impl DimensionFace for Triangle {
+    type Dimension = ThreeD;
+    fn points(&self) -> Box<dyn Iterator<Item = PointIndex>> {
+        Box::new([self.p1, self.p2, self.p3].into_iter())
+    }
+}
+
 impl Triangle {
-    pub fn contains_point(&self, point: PointIndex) -> bool {
-        self.p1 == point || self.p2 == point || self.p3 == point
-    }
-
-    pub fn iter_points(&self) -> impl Iterator<Item = PointIndex> {
-        [self.p1, self.p2, self.p3].into_iter()
-    }
-
     pub fn get_other_point(&self, p_a: PointIndex, p_b: PointIndex) -> PointIndex {
-        self.iter_points().find(|p| *p != p_a && *p != p_b).unwrap()
+        self.points().find(|p| *p != p_a && *p != p_b).unwrap()
     }
 
     pub fn get_point_opposite(&self, edge_identifier: EdgeIdentifier) -> PointIndex {
@@ -70,28 +75,62 @@ pub struct TriangleWithFaces {
     pub f3: FaceInfo,
 }
 
-impl TriangleWithFaces {
-    pub fn iter_faces(&self) -> impl Iterator<Item = &FaceInfo> {
-        ([&self.f1, &self.f2, &self.f3]).into_iter()
+impl DimensionTetra for TriangleWithFaces {
+    type Dimension = TwoD;
+
+    fn faces(&self) -> Box<dyn Iterator<Item = &FaceInfo> + '_> {
+        Box::new([&self.f1, &self.f2, &self.f3].into_iter())
     }
 
-    pub fn iter_points(&self) -> impl Iterator<Item = &PointIndex> {
-        ([&self.p1, &self.p2, &self.p3]).into_iter()
+    fn faces_mut(&mut self) -> Box<dyn Iterator<Item = &mut FaceInfo> + '_> {
+        Box::new([&mut self.f1, &mut self.f2, &mut self.f3].into_iter())
     }
 
-    pub fn iter_faces_mut(&mut self) -> impl Iterator<Item = &mut FaceInfo> {
-        ([&mut self.f1, &mut self.f2, &mut self.f3]).into_iter()
+    fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_> {
+        Box::new([self.p1, self.p2, self.p3].into_iter())
     }
 }
 
+#[derive(Clone)]
 pub struct TriangleData<P> {
     pub p1: P,
     pub p2: P,
     pub p3: P,
 }
 
-impl TriangleData<Point2d> {
-    pub fn all_encompassing(points: &[Point2d]) -> Self {
+impl FromIterator<Point3d> for TriangleData<Point3d> {
+    fn from_iter<T: IntoIterator<Item = Point3d>>(points: T) -> Self {
+        let mut points = points.into_iter();
+        let result = Self {
+            p1: points.next().unwrap(),
+            p2: points.next().unwrap(),
+            p3: points.next().unwrap(),
+        };
+        assert_eq!(points.next(), None);
+        result
+    }
+}
+
+impl DimensionFaceData for TriangleData<Point3d> {
+    type Dimension = ThreeD;
+}
+
+impl FromIterator<Point2d> for TriangleData<Point2d> {
+    fn from_iter<T: IntoIterator<Item = Point2d>>(points: T) -> Self {
+        let mut points = points.into_iter();
+        let result = Self {
+            p1: points.next().unwrap(),
+            p2: points.next().unwrap(),
+            p3: points.next().unwrap(),
+        };
+        assert_eq!(points.next(), None);
+        result
+    }
+}
+
+impl DimensionTetraData for TriangleData<Point2d> {
+    type Dimension = TwoD;
+    fn all_encompassing(points: &[Point2d]) -> Self {
         let (min, max) = get_min_and_max(points).unwrap();
         assert!(
             (max - min).min_element() > 0.0,
@@ -105,7 +144,7 @@ impl TriangleData<Point2d> {
         Self { p1, p2, p3 }
     }
 
-    pub fn contains(&self, p: Point2d) -> Result<bool, PrecisionError> {
+    fn contains(&self, p: Point2d) -> Result<bool, PrecisionError> {
         // We solve
         // p = p1 + r (p2 - p1) + s (p3 - p1)
         // where r and s are the coordinates of the point in the (two-dimensional) vector space
@@ -129,7 +168,7 @@ impl TriangleData<Point2d> {
     }
 
     #[rustfmt::skip]
-    pub fn circumcircle_contains(&self, point: Point2d) -> Result<bool, PrecisionError> {
+    fn circumcircle_contains(&self, point: Point2d) -> Result<bool, PrecisionError> {
         // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
         debug_assert!(self.is_positively_oriented().unwrap());
         let a = self.p1;
@@ -144,7 +183,7 @@ impl TriangleData<Point2d> {
     }
 
     #[rustfmt::skip]
-    pub fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
+    fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
         is_positive(determinant3x3(
             1.0, self.p1.x, self.p1.y,
             1.0, self.p2.x, self.p2.y,
@@ -152,7 +191,7 @@ impl TriangleData<Point2d> {
         ))
     }
 
-    pub fn get_center_of_circumcircle(&self) -> Point2d {
+    fn get_center_of_circumcircle(&self) -> Point2d {
         let a = self.p1;
         let b = self.p2;
         let c = self.p3;
@@ -237,6 +276,7 @@ mod tests {
     use super::EdgeIdentifier;
     use super::IntersectionType;
     use super::TriangleData;
+    use crate::voronoi::delaunay::dimension::DimensionTetraData;
     use crate::voronoi::precision_error::PrecisionError;
     use crate::voronoi::primitives::Point2d;
     use crate::voronoi::primitives::Point3d;

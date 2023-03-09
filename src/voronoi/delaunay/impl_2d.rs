@@ -1,51 +1,38 @@
+use super::dimension::Dimension;
+use super::dimension::DimensionTetra;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
-use super::tetra::Tetra;
-use super::tetra::TetraData;
+use super::Delaunay;
 use super::DelaunayTriangulation;
-use super::Face;
 use super::FaceIndex;
 use super::PointIndex;
 use super::TetraIndex;
+use crate::voronoi::delaunay::dimension::DimensionFace;
+use crate::voronoi::delaunay::dimension::DimensionTetraData;
 use crate::voronoi::delaunay::FlipCheckData;
+use crate::voronoi::primitives::line::Line;
+use crate::voronoi::primitives::line::LineData;
+use crate::voronoi::primitives::triangle::TriangleData;
+use crate::voronoi::primitives::triangle::TriangleWithFaces;
+use crate::voronoi::primitives::Point2d;
+use crate::voronoi::TwoD;
 
-impl DelaunayTriangulation {
-    pub fn get_tetra_data(&self, tetra: &Tetra) -> TetraData {
-        TetraData {
-            p1: self.points[tetra.p1],
-            p2: self.points[tetra.p2],
-            p3: self.points[tetra.p3],
-            #[cfg(feature = "3d")]
-            p4: self.points[tetra.p4],
-        }
-    }
+type Point = Point2d;
+type Face = Line;
+// not needed for two d
+type FaceData = LineData<Point2d>;
+type Tetra = TriangleWithFaces;
+type TetraData = TriangleData<Point2d>;
 
-    pub(super) fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
-        let tetra_data = TetraData {
-            p1: self.points[tetra.p1],
-            p2: self.points[tetra.p2],
-            p3: self.points[tetra.p3],
-        };
-        debug_assert!(self.faces[tetra.f1.face].contains_point(tetra.p2));
-        debug_assert!(self.faces[tetra.f1.face].contains_point(tetra.p3));
-        debug_assert!(self.faces[tetra.f2.face].contains_point(tetra.p1));
-        debug_assert!(self.faces[tetra.f2.face].contains_point(tetra.p3));
-        debug_assert!(self.faces[tetra.f3.face].contains_point(tetra.p1));
-        debug_assert!(self.faces[tetra.f3.face].contains_point(tetra.p2));
-        if tetra_data.is_positively_oriented().unwrap() {
-            tetra
-        } else {
-            Tetra {
-                p1: tetra.p2,
-                p2: tetra.p1,
-                p3: tetra.p3,
-                f1: tetra.f2,
-                f2: tetra.f1,
-                f3: tetra.f3,
-            }
-        }
-    }
+impl Dimension for TwoD {
+    type Point = Point;
+    type Face = Face;
+    type FaceData = FaceData;
+    type Tetra = Tetra;
+    type TetraData = TetraData;
+}
 
+impl DelaunayTriangulation<TwoD> {
     fn insert_split_tetra(
         &mut self,
         p_a: PointIndex,
@@ -73,8 +60,36 @@ impl DelaunayTriangulation {
             f3: old_face,
         })
     }
+}
 
-    pub(super) fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
+impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
+    fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
+        let tetra_data = TetraData {
+            p1: self.points[tetra.p1],
+            p2: self.points[tetra.p2],
+            p3: self.points[tetra.p3],
+        };
+        debug_assert!(self.faces[tetra.f1.face].contains_point(tetra.p2));
+        debug_assert!(self.faces[tetra.f1.face].contains_point(tetra.p3));
+        debug_assert!(self.faces[tetra.f2.face].contains_point(tetra.p1));
+        debug_assert!(self.faces[tetra.f2.face].contains_point(tetra.p3));
+        debug_assert!(self.faces[tetra.f3.face].contains_point(tetra.p1));
+        debug_assert!(self.faces[tetra.f3.face].contains_point(tetra.p2));
+        if tetra_data.is_positively_oriented().unwrap() {
+            tetra
+        } else {
+            Tetra {
+                p1: tetra.p2,
+                p2: tetra.p1,
+                p3: tetra.p3,
+                f1: tetra.f2,
+                f2: tetra.f1,
+                f3: tetra.f3,
+            }
+        }
+    }
+
+    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
         let f1 = self.faces.insert(Face {
             p1: point,
@@ -105,7 +120,7 @@ impl DelaunayTriangulation {
         }
     }
 
-    pub(super) fn flip(&mut self, check: FlipCheckData) {
+    fn flip(&mut self, check: FlipCheckData) {
         let old_tetra = self.tetras.remove(check.tetra).unwrap();
         let old_face = self.faces.remove(check.face).unwrap();
         // I am not sure whether unwrapping here is correct -
@@ -169,7 +184,7 @@ impl DelaunayTriangulation {
         });
     }
 
-    pub fn insert_basic_tetra(&mut self, tetra: TetraData) {
+    fn insert_basic_tetra(&mut self, tetra: TetraData) {
         let p1 = self.points.insert(tetra.p1);
         let p2 = self.points.insert(tetra.p2);
         let p3 = self.points.insert(tetra.p3);

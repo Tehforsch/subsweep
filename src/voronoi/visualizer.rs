@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use super::delaunay::dimension::Dimension;
+use super::delaunay::Delaunay;
 use super::primitives::triangle::TriangleData;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
@@ -86,7 +88,12 @@ impl Visualizable for super::primitives::tetrahedron::TetrahedronData {
     }
 }
 
-impl Visualizable for DelaunayTriangulation {
+impl<D> Visualizable for DelaunayTriangulation<D>
+where
+    D: Dimension,
+    DelaunayTriangulation<D>: Delaunay<D>,
+    <D as Dimension>::TetraData: Visualizable,
+{
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<String> {
         self.tetras
             .iter()

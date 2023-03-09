@@ -1,11 +1,14 @@
 use super::super::delaunay::face_info::FaceInfo;
 use super::Point3d;
+use crate::voronoi::delaunay::dimension::DimensionTetra;
+use crate::voronoi::delaunay::dimension::DimensionTetraData;
 use crate::voronoi::math::determinant4x4;
 use crate::voronoi::math::determinant5x5;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::PointIndex;
+use crate::voronoi::ThreeD;
 
 #[derive(Clone, Debug)]
 pub struct Tetrahedron {
@@ -27,27 +30,45 @@ pub struct TetrahedronData {
     pub p4: Point3d,
 }
 
-impl Tetrahedron {
-    pub fn iter_faces(&self) -> impl Iterator<Item = &FaceInfo> {
-        ([&self.f1, &self.f2, &self.f3, &self.f4]).into_iter()
+impl DimensionTetra for Tetrahedron {
+    type Dimension = ThreeD;
+
+    fn faces(&self) -> Box<dyn Iterator<Item = &FaceInfo> + '_> {
+        Box::new([&self.f1, &self.f2, &self.f3, &self.f4].into_iter())
     }
 
-    pub fn iter_points(&self) -> impl Iterator<Item = &PointIndex> {
-        ([&self.p1, &self.p2, &self.p3, &self.p4]).into_iter()
+    fn faces_mut(&mut self) -> Box<dyn Iterator<Item = &mut FaceInfo> + '_> {
+        Box::new([&mut self.f1, &mut self.f2, &mut self.f3, &mut self.f4].into_iter())
     }
 
-    pub fn iter_faces_mut(&mut self) -> impl Iterator<Item = &mut FaceInfo> {
-        ([&mut self.f1, &mut self.f2, &mut self.f3, &mut self.f4]).into_iter()
+    fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_> {
+        Box::new([self.p1, self.p2, self.p3, self.p4].into_iter())
     }
 }
 
-impl TetrahedronData {
-    pub fn all_encompassing(_points: &[Point3d]) -> TetrahedronData {
+impl FromIterator<Point3d> for TetrahedronData {
+    fn from_iter<T: IntoIterator<Item = Point3d>>(points: T) -> Self {
+        let mut points = points.into_iter();
+        let result = Self {
+            p1: points.next().unwrap(),
+            p2: points.next().unwrap(),
+            p3: points.next().unwrap(),
+            p4: points.next().unwrap(),
+        };
+        assert_eq!(points.next(), None);
+        result
+    }
+}
+
+impl DimensionTetraData for TetrahedronData {
+    type Dimension = ThreeD;
+
+    fn all_encompassing(_points: &[Point3d]) -> TetrahedronData {
         todo!()
     }
 
     #[rustfmt::skip]
-    pub fn contains(&self, point: Point3d) -> Result<bool, PrecisionError> {
+    fn contains(&self, point: Point3d) -> Result<bool, PrecisionError> {
         Ok(
                points_are_on_same_side_of_triangle(point, self.p1, (self.p2, self.p3, self.p4))?
             && points_are_on_same_side_of_triangle(point, self.p2, (self.p1, self.p3, self.p4))?
@@ -57,7 +78,7 @@ impl TetrahedronData {
     }
 
     #[rustfmt::skip]
-    pub fn circumcircle_contains(&self, point: Point3d) -> Result<bool, PrecisionError> {
+    fn circumcircle_contains(&self, point: Point3d) -> Result<bool, PrecisionError> {
         // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
         debug_assert!(self.is_positively_oriented().unwrap());
         let a = self.p1;
@@ -75,7 +96,7 @@ impl TetrahedronData {
     }
 
     #[rustfmt::skip]
-    pub fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
+    fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
         let determinant = determinant4x4(
             1.0, self.p1.x, self.p1.y, self.p1.z,
             1.0, self.p2.x, self.p2.y, self.p2.z,
@@ -85,7 +106,7 @@ impl TetrahedronData {
         is_positive(determinant)
     }
 
-    pub fn get_center_of_circumcircle(&self) -> Point3d {
+    fn get_center_of_circumcircle(&self) -> Point3d {
         todo!()
     }
 }
