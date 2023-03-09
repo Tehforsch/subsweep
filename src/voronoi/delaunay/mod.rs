@@ -112,15 +112,20 @@ impl DelaunayTriangulation {
     }
 
     fn circumcircle_contains_other_points(&self, tetra: TetraIndex) -> bool {
-        let tetra = &self.tetras[tetra];
-        let tetra_data = self.get_tetra_data(tetra);
-        let other_point_contained = self
-            .points
-            .iter()
-            .filter(|(point, _)| *point != tetra.p1 && *point != tetra.p2 && *point != tetra.p3)
-            .find(|(_, point)| tetra_data.circumcircle_contains(**point))
-            .is_some();
-        other_point_contained
+        let tetra = self.tetras.get(tetra);
+        if let Some(tetra) = tetra {
+            let tetra_data = self.get_tetra_data(tetra);
+            let other_point_contained = self
+                .points
+                .iter()
+                .filter(|(point, _)| *point != tetra.p1 && *point != tetra.p2 && *point != tetra.p3)
+                .find(|(_, point)| tetra_data.circumcircle_contains(**point))
+                .is_some();
+            other_point_contained
+        } else {
+            // If the tetra has been deleted by now: Skip this check
+            false
+        }
     }
 
     fn flip_check(&mut self, to_check: FlipCheckData) {

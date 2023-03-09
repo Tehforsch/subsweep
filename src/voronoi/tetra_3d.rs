@@ -4,6 +4,8 @@ use super::tetra::TetraFace;
 use super::Point;
 use super::PointIndex;
 
+pub const EPSILON: f64 = 1e-20;
+
 #[derive(Clone, Debug)]
 pub struct Tetra3d {
     pub p1: PointIndex,
@@ -16,7 +18,7 @@ pub struct Tetra3d {
     pub f4: TetraFace,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Tetra3dData {
     pub p1: Point,
     pub p2: Point,
@@ -70,12 +72,16 @@ impl Tetra3dData {
 
     #[rustfmt::skip]
     pub fn is_positively_oriented(&self) -> bool {
-        determinant4x4(
+        let determinant = determinant4x4(
             1.0, self.p1.x, self.p1.y, self.p1.z,
             1.0, self.p2.x, self.p2.y, self.p2.z,
             1.0, self.p3.x, self.p3.y, self.p3.z,
             1.0, self.p4.x, self.p4.y, self.p4.z,
-        ) > 0.0
+        );
+        if determinant.abs() < EPSILON {
+            panic!("Degeneracy - Empty tetrahedron: {:?}", self);
+        }
+        determinant > 0.0
     }
 
     pub fn get_center_of_circumcircle(&self) -> Point {

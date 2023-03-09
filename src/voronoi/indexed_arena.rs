@@ -20,6 +20,10 @@ impl<Id: Into<Index> + From<Index>, T> IndexedArena<Id, T> {
         }
     }
 
+    pub fn get(&self, id: Id) -> Option<&T> {
+        self.arena.get(id.into())
+    }
+
     pub fn insert(&mut self, t: T) -> Id {
         self.arena.insert(t).into()
     }

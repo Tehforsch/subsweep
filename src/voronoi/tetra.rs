@@ -26,18 +26,16 @@ impl Tetra {
     }
 
     pub fn find_face_opposite(&self, p: PointIndex) -> &TetraFace {
-        self.iter_points()
-            .zip(self.iter_faces())
-            .find(|(point, _)| **point == p)
-            .map(|(_, face)| face)
+        self.iter_faces_and_points()
+            .find(|(_, point)| **point == p)
+            .map(|(face, _)| face)
             .unwrap_or_else(|| {
                 panic!("find_face_opposite called with point that is not part of the tetra.");
             })
     }
 
     pub fn find_point_opposite(&self, f: FaceIndex) -> PointIndex {
-        self.iter_faces()
-            .zip(self.iter_points())
+        self.iter_faces_and_points()
             .find(|(face, _)| face.face == f)
             .map(|(_, point)| *point)
             .unwrap_or_else(|| {
