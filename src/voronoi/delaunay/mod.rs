@@ -189,9 +189,9 @@ pub(super) mod tests {
     fn get_example_point_set() -> Vec<Point> {
         vec![
             Point::new(0.5, 0.5, 0.5),
-            Point::new(0.25, 0.5, 0.3),
+            Point::new(0.25, 0.55, 0.3),
             Point::new(0.5, 0.25, 0.4),
-            Point::new(0.125, 0.5, 0.2),
+            Point::new(0.125, 0.53, 0.2),
             Point::new(0.5, 0.125, 0.35),
             Point::new(0.8, 0.1, 0.23),
             Point::new(0.1, 0.8, 0.7),
