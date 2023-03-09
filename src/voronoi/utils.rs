@@ -1,10 +1,5 @@
 use std::iter;
 
-#[cfg(feature = "2d")]
-pub fn sign(p1: super::Point, p2: super::Point, p3: super::Point) -> crate::prelude::Float {
-    (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
-}
-
 /// A tuple version of slice.windows but including (t.last(), t.first()) as a last item.
 /// Returns an empty iterator on a slice with one or zero elements.
 pub fn periodic_windows<T>(v: &[T]) -> impl Iterator<Item = (&T, &T)> {

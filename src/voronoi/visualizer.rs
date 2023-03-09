@@ -32,7 +32,6 @@ impl Visualizer {
             .into_iter()
             .map(|statement| self.add_statement(statement))
             .collect();
-        self.dump();
         res
     }
 
@@ -44,6 +43,12 @@ impl Visualizer {
             .map(|statement| format!("\"{} = {}\"", &self.statement_names[statement], &statement))
             .collect();
         println!("Execute({{ {} }})", statements.join(", "));
+    }
+}
+
+impl Drop for Visualizer {
+    fn drop(&mut self) {
+        self.dump();
     }
 }
 

@@ -49,6 +49,10 @@ impl Tetra {
             .find(|(fa, fb)| fa.face == fb.face)
             .map(|(fa, _)| fa.face)
     }
+
+    pub fn contains_point(&self, p1: PointIndex) -> bool {
+        self.iter_points().any(|p| *p == p1)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

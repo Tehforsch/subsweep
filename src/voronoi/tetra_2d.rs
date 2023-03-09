@@ -5,7 +5,6 @@ use super::PointIndex;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::utils::sign;
 
 #[derive(Clone, Debug)]
 pub struct Tetra2d {

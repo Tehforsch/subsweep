@@ -176,6 +176,7 @@ impl From<DelaunayTriangulation> for VoronoiGrid {
     }
 }
 
+#[allow(unused)]
 fn point_to_tetra_map(
     triangulation: &DelaunayTriangulation,
 ) -> StableHashMap<PointIndex, Vec<TetraIndex>> {

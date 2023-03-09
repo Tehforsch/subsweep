@@ -121,7 +121,7 @@ impl DelaunayTriangulation {
             let other_point_contained = self
                 .points
                 .iter()
-                .filter(|(point, _)| *point != tetra.p1 && *point != tetra.p2 && *point != tetra.p3)
+                .filter(|(point, _)| !tetra.contains_point(*point))
                 .find(|(_, point)| tetra_data.circumcircle_contains(**point).unwrap())
                 .is_some();
             other_point_contained
