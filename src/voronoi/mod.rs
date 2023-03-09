@@ -5,6 +5,8 @@ pub mod math;
 mod precision_error;
 mod visualizer;
 
+mod primitives;
+
 mod tetra;
 #[cfg(feature = "2d")]
 mod tetra_2d;
