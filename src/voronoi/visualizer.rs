@@ -108,3 +108,15 @@ impl Visualizable for Point {
         vec![format!("({}, {})", self.x, self.y)]
     }
 }
+
+/// Debug print the expression only on MPI rank 0
+#[macro_export]
+macro_rules! vis {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut temp_vis = crate::voronoi::visualizer::Visualizer::default();
+            $(
+                temp_vis.add($x);
+            )*
+        }
+    };}
