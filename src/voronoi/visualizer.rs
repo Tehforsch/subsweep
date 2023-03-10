@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
+use super::delaunay::TetraIndex;
 use super::primitives::triangle::TriangleData;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
@@ -122,6 +123,19 @@ where
             .iter()
             .flat_map(|(_, tetra)| self.get_tetra_data(tetra).get_statements(visualizer))
             .collect()
+    }
+}
+
+impl<D> Visualizable for (&DelaunayTriangulation<D>, TetraIndex)
+where
+    D: Dimension,
+    DelaunayTriangulation<D>: Delaunay<D>,
+    <D as Dimension>::TetraData: Visualizable,
+{
+    fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
+        self.0
+            .get_tetra_data(&self.0.tetras[self.1])
+            .get_statements(visualizer)
     }
 }
 

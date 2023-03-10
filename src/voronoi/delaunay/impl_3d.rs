@@ -570,4 +570,55 @@ mod tests {
         assert_eq!(triangulation.points.len(), 5);
         assert_eq!(triangulation.faces.len(), 9);
     }
+
+    #[test]
+    fn three_to_two_flip() {
+        let mut point_list = PointList::<ThreeD>::new();
+        let points = [
+            Point3d::new(-0.3, -0.3, -1.0),
+            Point3d::new(-1.0, -1.0, 0.0),
+            Point3d::new(-1.0, 1.0, 0.0),
+            Point3d::new(1.0, -1.0, 0.0),
+            Point3d::new(-0.3, -0.3, 1.0),
+        ];
+        let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
+
+        let mut triangulation = DelaunayTriangulation::<ThreeD> {
+            tetras: TetraList::<ThreeD>::new(),
+            faces: FaceList::<ThreeD>::new(),
+            points: point_list,
+            to_check: vec![],
+        };
+        let t1 = insert_tetra_with_neighbours(
+            &mut triangulation,
+            &[],
+            points[0],
+            points[4],
+            points[1],
+            points[2],
+        );
+        let t2 = insert_tetra_with_neighbours(
+            &mut triangulation,
+            &[(t1, points[1])],
+            points[0],
+            points[4],
+            points[2],
+            points[3],
+        );
+        let t3 = insert_tetra_with_neighbours(
+            &mut triangulation,
+            &[(t1, points[2]), (t2, points[2])],
+            points[0],
+            points[4],
+            points[3],
+            points[1],
+        );
+        triangulation.three_to_two_flip(
+            t1, t2, t3, points[1], points[3], points[2], points[0], points[4],
+        );
+
+        assert_eq!(triangulation.tetras.len(), 2);
+        assert_eq!(triangulation.points.len(), 5);
+        assert_eq!(triangulation.faces.len(), 7);
+    }
 }
