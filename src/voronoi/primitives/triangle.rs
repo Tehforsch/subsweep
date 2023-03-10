@@ -44,10 +44,6 @@ impl DimensionFace for Triangle {
 }
 
 impl Triangle {
-    pub fn get_other_point(&self, p_a: PointIndex, p_b: PointIndex) -> PointIndex {
-        self.points().find(|p| *p != p_a && *p != p_b).unwrap()
-    }
-
     pub fn get_point_opposite(&self, edge_identifier: EdgeIdentifier) -> PointIndex {
         match edge_identifier {
             EdgeIdentifier::One => self.p1,

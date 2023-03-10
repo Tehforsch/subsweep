@@ -2,9 +2,10 @@ use super::face_info::FaceInfo;
 use super::FaceIndex;
 use super::PointIndex;
 use crate::voronoi::precision_error::PrecisionError;
+use crate::voronoi::primitives::Vector;
 
 pub trait Dimension {
-    type Point: Clone + Copy;
+    type Point: Clone + Copy + Vector;
     type Face: Clone + DimensionFace<Dimension = Self>;
     type FaceData: Clone + DimensionFaceData<Dimension = Self>;
     type Tetra: Clone + DimensionTetra<Dimension = Self>;
@@ -52,6 +53,12 @@ pub trait DimensionTetra {
 
     fn contains_point(&self, p1: PointIndex) -> bool {
         self.points().any(|p| p == p1)
+    }
+
+    fn get_common_face_with(&self, other: &Self) -> Option<FaceIndex> {
+        self.faces()
+            .find(|f| other.faces().any(|f2| f.face == f2.face))
+            .map(|face| face.face)
     }
 }
 

@@ -328,18 +328,10 @@ pub(super) mod tests {
                     Point3d::new(x, y, z)
                 })
                 .collect()
-            // vec![
-            //     Point3d::new(0.5, 0.5, 0.5),
-            //     Point3d::new(0.25, 0.55, 0.3),
-            //     Point3d::new(0.5, 0.25, 0.4),
-            //     Point3d::new(0.125, 0.53, 0.2),
-            //     Point3d::new(0.8, 0.1, 0.23),
-            //     Point3d::new(0.1, 0.8, 0.7),
-            // ]
         }
     }
 
-    fn perform_check_on_each_level_of_construction<D>(
+    pub fn perform_check_on_each_level_of_construction<D>(
         check: fn(&DelaunayTriangulation<D>, usize) -> (),
     ) where
         D: Dimension + TestableDimension,

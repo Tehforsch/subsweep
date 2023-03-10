@@ -16,9 +16,14 @@ use bevy::utils::StableHashMap;
 pub use delaunay::DelaunayTriangulation;
 use ordered_float::OrderedFloat;
 
+use self::delaunay::dimension::Dimension;
+use self::delaunay::dimension::DimensionFace;
+use self::delaunay::dimension::DimensionTetra;
 use self::delaunay::dimension::DimensionTetraData;
+use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
 use self::delaunay::TetraIndex;
+use self::primitives::Vector;
 use self::utils::periodic_windows;
 use crate::prelude::Float;
 
@@ -26,32 +31,33 @@ pub type CellIndex = usize;
 
 pub struct TwoD;
 pub struct ThreeD;
-
 #[cfg(feature = "2d")]
-pub type Point = glam::DVec2;
+pub type ActiveDimension = TwoD;
 #[cfg(feature = "3d")]
-pub type Point = glam::DVec3;
+pub type ActiveDimension = ThreeD;
+
+type Point<D> = <D as Dimension>::Point;
 
 #[derive(Resource)]
-pub struct VoronoiGrid {
-    pub cells: Vec<Cell>,
+pub struct VoronoiGrid<D: Dimension> {
+    pub cells: Vec<Cell<D>>,
 }
 
-pub struct Cell {
+pub struct Cell<D: Dimension> {
     pub delaunay_point: PointIndex,
-    pub center: Point,
+    pub center: Point<D>,
     pub index: CellIndex,
-    pub points: Vec<Point>,
+    pub points: Vec<Point<D>>,
     pub connected_cells: Vec<CellIndex>,
     pub is_boundary: bool,
 }
 
-impl Cell {
-    pub fn point_windows(&self) -> impl Iterator<Item = (&Point, &Point)> {
+impl<D: Dimension> Cell<D> {
+    pub fn point_windows(&self) -> impl Iterator<Item = (&Point<D>, &Point<D>)> {
         periodic_windows(&self.points)
     }
 
-    pub fn contains(&self, _point: Point) -> bool {
+    pub fn contains(&self, _point: Point<D>) -> bool {
         todo!()
         // The following works in 2d but makes possibly no sense in 3d
         // let has_negative = self
@@ -68,8 +74,8 @@ impl Cell {
 
     pub fn iter_neighbours_and_faces<'a>(
         &'a self,
-        grid: &'a VoronoiGrid,
-    ) -> impl Iterator<Item = (usize, Float, Point)> + 'a {
+        grid: &'a VoronoiGrid<D>,
+    ) -> impl Iterator<Item = (usize, Float, Point<D>)> + 'a {
         self.connected_cells
             .iter()
             .zip(self.point_windows())
@@ -108,66 +114,68 @@ impl Cell {
     }
 }
 
-impl From<DelaunayTriangulation<TwoD>> for VoronoiGrid {
-    fn from(t: DelaunayTriangulation<TwoD>) -> Self {
-        todo!()
-        // let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
-        // let point_to_tetra_map = point_to_tetra_map(&t);
-        // let mut cells = vec![];
-        // for (i, (point_index, _)) in t.points.iter().enumerate() {
-        //     map.insert(point_index, i);
-        // }
-        // for (point_index, _) in t.points.iter() {
-        //     let mut points = vec![];
-        //     let mut connected_cells = vec![];
-        //     let tetras = &point_to_tetra_map[&point_index];
-        //     for tetra in tetras.iter() {
-        //         points.push(
-        //             t.get_tetra_data(&t.tetras[*tetra])
-        //                 .get_center_of_circumcircle(),
-        //         );
-        //     }
-        //     let mut is_boundary = false;
-        //     for (t1, t2) in periodic_windows(tetras) {
-        //         let common_face = t.tetras[*t1].get_common_face_with(&t.tetras[*t2]);
-        //         if let Some(common_face) = common_face {
-        //             let other_point = t.faces[common_face].get_other_point(point_index);
-        //             connected_cells.push(map[&other_point]);
-        //         } else {
-        //             is_boundary = true;
-        //         }
-        //     }
-        //     cells.push(Cell {
-        //         center: t.points[point_index],
-        //         index: map[&point_index],
-        //         delaunay_point: point_index,
-        //         points,
-        //         connected_cells,
-        //         is_boundary,
-        //     });
-        // }
-        // VoronoiGrid { cells }
+impl<D> From<&DelaunayTriangulation<D>> for VoronoiGrid<D>
+where
+    D: Dimension,
+    DelaunayTriangulation<D>: Delaunay<D>,
+{
+    fn from(t: &DelaunayTriangulation<D>) -> Self {
+        let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
+        let point_to_tetra_map = point_to_tetra_map(t);
+        let mut cells = vec![];
+        for (i, (point_index, _)) in t.points.iter().enumerate() {
+            map.insert(point_index, i);
+        }
+        for (point_index, _) in t.points.iter() {
+            let mut points = vec![];
+            let mut connected_cells = vec![];
+            let tetras = &point_to_tetra_map[&point_index];
+            for tetra in tetras.iter() {
+                points.push(
+                    t.get_tetra_data(&t.tetras[*tetra])
+                        .get_center_of_circumcircle(),
+                );
+            }
+            let mut is_boundary = false;
+            for (t1, t2) in periodic_windows(tetras) {
+                let common_face = t.tetras[*t1].get_common_face_with(&t.tetras[*t2]);
+                if let Some(common_face) = common_face {
+                    todo!()
+                    // let other_point = t.faces[common_face].get_other_point(point_index);
+                    // connected_cells.push(map[&other_point]);
+                } else {
+                    is_boundary = true;
+                }
+            }
+            cells.push(Cell {
+                center: t.points[point_index],
+                index: map[&point_index],
+                delaunay_point: point_index,
+                points,
+                connected_cells,
+                is_boundary,
+            });
+        }
+        VoronoiGrid { cells }
     }
 }
 
-impl From<DelaunayTriangulation<ThreeD>> for VoronoiGrid {
-    fn from(_t: DelaunayTriangulation<ThreeD>) -> Self {
-        todo!()
-    }
-}
-
-fn point_to_tetra_map(
-    triangulation: &DelaunayTriangulation<TwoD>,
-) -> StableHashMap<PointIndex, Vec<TetraIndex>> {
+fn point_to_tetra_map<D: Dimension>(
+    triangulation: &DelaunayTriangulation<D>,
+) -> StableHashMap<PointIndex, Vec<TetraIndex>>
+where
+    D: Dimension,
+    DelaunayTriangulation<D>: Delaunay<D>,
+{
     let mut map: StableHashMap<_, _> = triangulation
         .points
         .iter()
         .map(|(i, _)| (i, vec![]))
         .collect();
     for (tetra_index, tetra) in triangulation.tetras.iter() {
-        map.get_mut(&tetra.p1).unwrap().push(tetra_index);
-        map.get_mut(&tetra.p2).unwrap().push(tetra_index);
-        map.get_mut(&tetra.p3).unwrap().push(tetra_index);
+        for p in tetra.points() {
+            map.get_mut(&p).unwrap().push(tetra_index);
+        }
     }
     for (point_index, tetras) in map.iter_mut() {
         let point = triangulation.points[*point_index];
@@ -175,56 +183,86 @@ fn point_to_tetra_map(
             let p = triangulation
                 .get_tetra_data(&triangulation.tetras[*t])
                 .get_center_of_circumcircle();
-            let vec = p - point;
-            OrderedFloat(vec.x.atan2(vec.y))
+            todo!()
+            // let vec = p - point;
+            // OrderedFloat(vec.x.atan2(vec.y))
         });
     }
     map
 }
 
 #[cfg(test)]
+#[generic_tests::define]
 mod tests {
-    // use ordered_float::OrderedFloat;
+    use ordered_float::OrderedFloat;
 
-    // use super::delaunay::tests::perform_check_on_each_level_of_construction;
-    // use super::Cell;
-    // use super::Point;
-    // use super::VoronoiGrid;
+    use super::delaunay::dimension::Dimension;
+    use super::delaunay::tests::perform_check_on_each_level_of_construction;
+    use super::delaunay::tests::TestableDimension;
+    use super::delaunay::Delaunay;
+    use super::delaunay::DelaunayTriangulation;
+    use super::primitives::Point2d;
+    use super::primitives::Point3d;
+    use super::Cell;
+    use super::ThreeD;
+    use super::TwoD;
+    use super::VoronoiGrid;
+    use crate::voronoi::primitives::point::Vector;
 
-    // #[cfg(feature = "2d")]
-    // fn get_lookup_points() -> impl Iterator<Item = Point> {
-    //     ((0..10).zip(0..10)).map(|(i, j)| Point::new(0.1 * i as f64, 0.1 * j as f64))
-    // }
+    #[instantiate_tests(<TwoD>)]
+    mod two_d {}
 
-    // #[cfg(feature = "3d")]
-    // fn get_lookup_points() -> impl Iterator<Item = Point> {
-    //     ((0..10).zip(0..10).zip(0..10))
-    //         .map(|((i, j), k)| Point::new(0.1 * i as f64, 0.1 * j as f64, 0.1 * k as f64))
-    // }
+    #[instantiate_tests(<ThreeD>)]
+    mod three_d {}
 
-    #[test]
-    fn voronoi_property() {
-        todo!()
-        // perfor_check_on_each_level_of_construction(|triangulation, _| {
-        //     let grid = VoronoiGrid::from(triangulation.clone());
-        //     for lookup_point in get_lookup_points() {
-        //         let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
-        //         let closest_cell = grid
-        //             .cells
-        //             .iter()
-        //             .min_by_key(|cell| {
-        //                 let p = triangulation.points[cell.delaunay_point];
-        //                 OrderedFloat(p.distance_squared(lookup_point))
-        //             })
-        //             .unwrap();
-        //         if let Some(containing_cell) = containing_cell {
-        //             assert_eq!(containing_cell.delaunay_point, closest_cell.delaunay_point);
-        //         }
-        //     }
-        // });
+    trait VoronoiTestDimension: Dimension {
+        fn get_lookup_points() -> Vec<Self::Point>;
     }
 
-    // fn get_containing_voronoi_cell(grid: &VoronoiGrid, point: Point) -> Option<&Cell> {
-    //     grid.cells.iter().find(|cell| cell.contains(point))
-    // }
+    impl VoronoiTestDimension for TwoD {
+        fn get_lookup_points() -> Vec<Point2d> {
+            ((0..10).zip(0..10))
+                .map(|(i, j)| Point2d::new(0.1 * i as f64, 0.1 * j as f64))
+                .collect()
+        }
+    }
+
+    impl VoronoiTestDimension for ThreeD {
+        fn get_lookup_points() -> Vec<Point3d> {
+            ((0..10).zip(0..10).zip(0..10))
+                .map(|((i, j), k)| Point3d::new(0.1 * i as f64, 0.1 * j as f64, 0.1 * k as f64))
+                .collect()
+        }
+    }
+
+    #[test]
+    fn voronoi_property<D: VoronoiTestDimension + TestableDimension>()
+    where
+        DelaunayTriangulation<D>: Delaunay<D>,
+    {
+        perform_check_on_each_level_of_construction(|triangulation, _| {
+            let grid: VoronoiGrid<D> = triangulation.into();
+            for lookup_point in D::get_lookup_points() {
+                let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
+                let closest_cell = grid
+                    .cells
+                    .iter()
+                    .min_by_key(|cell| {
+                        let p: D::Point = triangulation.points[cell.delaunay_point];
+                        OrderedFloat(p.distance_squared(lookup_point))
+                    })
+                    .unwrap();
+                if let Some(containing_cell) = containing_cell {
+                    assert_eq!(containing_cell.delaunay_point, closest_cell.delaunay_point);
+                }
+            }
+        });
+    }
+
+    fn get_containing_voronoi_cell<D: VoronoiTestDimension>(
+        grid: &VoronoiGrid<D>,
+        point: D::Point,
+    ) -> Option<&Cell<D>> {
+        grid.cells.iter().find(|cell| cell.contains(point))
+    }
 }
