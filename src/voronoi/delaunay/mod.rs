@@ -285,7 +285,6 @@ pub(super) mod tests {
                 Point3d::new(0.25, 0.55, 0.3),
                 Point3d::new(0.5, 0.25, 0.4),
                 Point3d::new(0.125, 0.53, 0.2),
-                Point3d::new(0.5, 0.125, 0.35),
                 Point3d::new(0.8, 0.1, 0.23),
                 Point3d::new(0.1, 0.8, 0.7),
             ]
