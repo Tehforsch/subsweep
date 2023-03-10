@@ -451,6 +451,7 @@ mod tests {
     use crate::voronoi::delaunay::dimension::DimensionTetra;
     use crate::voronoi::delaunay::face_info::ConnectionData;
     use crate::voronoi::delaunay::face_info::FaceInfo;
+    use crate::voronoi::delaunay::tests::check_opposing_faces_are_symmetric;
     use crate::voronoi::delaunay::FaceList;
     use crate::voronoi::delaunay::PointIndex;
     use crate::voronoi::delaunay::PointList;
@@ -569,6 +570,7 @@ mod tests {
         assert_eq!(triangulation.tetras.len(), 3);
         assert_eq!(triangulation.points.len(), 5);
         assert_eq!(triangulation.faces.len(), 9);
+        sanity_checks(&triangulation);
     }
 
     #[test]
@@ -620,5 +622,10 @@ mod tests {
         assert_eq!(triangulation.tetras.len(), 2);
         assert_eq!(triangulation.points.len(), 5);
         assert_eq!(triangulation.faces.len(), 7);
+        sanity_checks(&triangulation);
+    }
+
+    fn sanity_checks(t: &DelaunayTriangulation<ThreeD>) {
+        check_opposing_faces_are_symmetric(t);
     }
 }

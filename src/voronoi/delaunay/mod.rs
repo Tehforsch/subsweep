@@ -201,7 +201,7 @@ pub(super) mod tests {
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
 
-    trait TestableDimension: Dimension {
+    pub trait TestableDimension: Dimension {
         fn num() -> usize;
         fn get_example_point_set() -> Vec<Self::Point>;
         fn basic_tetra() -> Self::TetraData;
@@ -341,7 +341,7 @@ pub(super) mod tests {
         perform_check_on_each_level_of_construction::<D>(|triangulation, num_points_inserted| {
             if num_points_inserted == 1 {
                 // After the first insertion, we know that each tetra
-                // should contain NUM_DIM faces which have an opposing
+                // should contain d faces which have an opposing
                 // face (the `inner` ones).
                 for (_, tetra) in triangulation.tetras.iter() {
                     assert_eq!(
@@ -353,6 +353,27 @@ pub(super) mod tests {
         });
     }
 
+    pub fn check_opposing_faces_are_symmetric<D>(triangulation: &DelaunayTriangulation<D>)
+    where
+        D: Dimension,
+        DelaunayTriangulation<D>: Delaunay<D>,
+    {
+        for (i, t) in triangulation.tetras.iter() {
+            for (face, opposing) in t
+                .faces()
+                .filter_map(|face| face.opposing.map(|opp| (face, opp)))
+            {
+                let opposing_tetra = &triangulation.tetras[opposing.tetra];
+                assert!(opposing_tetra
+                    .faces()
+                    .filter_map(|face| face.opposing.map(|opp| (face, opp)))
+                    .any(|(opposing_face, opposing_opposing)| {
+                        opposing_opposing.tetra == i && face.face == opposing_face.face
+                    }));
+            }
+        }
+    }
+
     #[test]
     fn opposing_faces_are_symmetric<D>()
     where
@@ -360,20 +381,7 @@ pub(super) mod tests {
         DelaunayTriangulation<D>: Delaunay<D>,
     {
         perform_check_on_each_level_of_construction::<D>(|triangulation, _| {
-            for (i, t) in triangulation.tetras.iter() {
-                for (face, opposing) in t
-                    .faces()
-                    .filter_map(|face| face.opposing.map(|opp| (face, opp)))
-                {
-                    let opposing_tetra = &triangulation.tetras[opposing.tetra];
-                    assert!(opposing_tetra
-                        .faces()
-                        .filter_map(|face| face.opposing.map(|opp| (face, opp)))
-                        .any(|(opposing_face, opposing_opposing)| {
-                            opposing_opposing.tetra == i && face.face == opposing_face.face
-                        }));
-                }
-            }
+            check_opposing_faces_are_symmetric(triangulation)
         });
     }
 
@@ -394,6 +402,20 @@ pub(super) mod tests {
         });
     }
 
+    pub fn check_faces_share_points_with_tetra<D>(triangulation: &DelaunayTriangulation<D>)
+    where
+        D: Dimension + TestableDimension,
+        DelaunayTriangulation<D>: Delaunay<D>,
+    {
+        for (_, tetra) in triangulation.tetras.iter() {
+            for face in tetra.faces() {
+                let face = &triangulation.faces[face.face];
+                let num_shared_points = tetra.points().filter(|p| face.contains_point(*p)).count();
+                assert_eq!(num_shared_points, D::num());
+            }
+        }
+    }
+
     #[test]
     fn faces_share_points_with_tetra<D>()
     where
@@ -401,14 +423,7 @@ pub(super) mod tests {
         DelaunayTriangulation<D>: Delaunay<D>,
     {
         perform_check_on_each_level_of_construction::<D>(|triangulation, _| {
-            for (_, tetra) in triangulation.tetras.iter() {
-                for face in tetra.faces() {
-                    let face = &triangulation.faces[face.face];
-                    let num_shared_points =
-                        tetra.points().filter(|p| face.contains_point(*p)).count();
-                    assert_eq!(num_shared_points, D::num());
-                }
-            }
+            check_faces_share_points_with_tetra(triangulation);
         });
     }
 
