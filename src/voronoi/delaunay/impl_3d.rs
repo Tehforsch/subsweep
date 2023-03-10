@@ -11,6 +11,7 @@ use super::FaceIndex;
 use super::FlipCheckData;
 use super::PointIndex;
 use super::TetraIndex;
+use super::TetrasRequiringCheck;
 use crate::voronoi::delaunay::dimension::DimensionFace;
 use crate::voronoi::primitives::tetrahedron::Tetrahedron;
 use crate::voronoi::primitives::tetrahedron::TetrahedronData;
@@ -78,7 +79,7 @@ impl DelaunayTriangulation<ThreeD> {
         p1: PointIndex,
         p2: PointIndex,
         shared_face: FaceIndex,
-    ) {
+    ) -> TetrasRequiringCheck {
         let t1 = self.tetras.remove(t1_index).unwrap();
         let t2 = self.tetras.remove(t2_index).unwrap();
         let shared_face = self.faces.remove(shared_face).unwrap();
@@ -125,12 +126,7 @@ impl DelaunayTriangulation<ThreeD> {
                 });
             }
         }
-        for ((tetra, _, _, _, _), (_, _)) in new_tetras.iter().zip(new_faces.iter()) {
-            self.to_check.push(FlipCheckData {
-                tetra: *tetra,
-                face: self.tetras[*tetra].find_face_opposite(p1).face,
-            });
-        }
+        [new_tetras[0].0, new_tetras[1].0, new_tetras[2].0].into()
     }
 
     fn three_to_two_flip(
@@ -143,7 +139,7 @@ impl DelaunayTriangulation<ThreeD> {
         p3: PointIndex,
         shared_edge_p1: PointIndex,
         shared_edge_p2: PointIndex,
-    ) {
+    ) -> TetrasRequiringCheck {
         let t1 = self.tetras.remove(t1_index).unwrap();
         let t2 = self.tetras.remove(t2_index).unwrap();
         let t3 = self.tetras.remove(t3_index).unwrap();
@@ -177,12 +173,6 @@ impl DelaunayTriangulation<ThreeD> {
                             opposing: None,
                         },
                     });
-
-                    let face_to_check = self.tetras[new_tetra].find_face_opposite(p1);
-                    self.to_check.push(FlipCheckData {
-                        tetra: new_tetra,
-                        face: face_to_check.face,
-                    });
                     (
                         new_tetra,
                         // Remember these to make the initialization of the connection data easier afterwards
@@ -199,6 +189,11 @@ impl DelaunayTriangulation<ThreeD> {
                 point: *p_other,
             })
         }
+        [
+            new_tetras_with_uninitialized_faces[0].0,
+            new_tetras_with_uninitialized_faces[1].0,
+        ]
+        .into()
     }
 }
 
@@ -236,7 +231,7 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
         }
     }
 
-    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
+    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> Vec<TetraIndex> {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
         let f1 = self.faces.insert(Face {
             p1: point,
@@ -324,20 +319,10 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
         self.set_opposing_in_new_tetra(t4, f2, t2, old_tetra.p4);
         self.set_opposing_in_new_tetra(t4, f1, t3, old_tetra.p4);
 
-        for (tetra, face) in [
-            (t1, old_tetra.f1),
-            (t2, old_tetra.f2),
-            (t3, old_tetra.f3),
-            (t4, old_tetra.f4),
-        ] {
-            self.to_check.push(FlipCheckData {
-                tetra,
-                face: face.face,
-            });
-        }
+        [t1, t2, t3, t4].into()
     }
 
-    fn flip(&mut self, check: FlipCheckData) {
+    fn flip(&mut self, check: FlipCheckData) -> TetrasRequiringCheck {
         // Two tetrahedra are flagged for flipping. There are three possible cases here, depending on the
         // intersection of the shared face (triangle) and the line between the two points opposite of the shared face.
         // 1. If the intersection point lies inside the triangle, we do a 2-to-3-flip, in which the two tetrahedra are replaced by three
@@ -361,7 +346,7 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
             });
         match intersection_type {
             IntersectionType::Inside => {
-                self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face);
+                self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face)
             }
             IntersectionType::OutsideOneEdge(edge) => {
                 let opposite_point = shared_face.get_point_opposite(edge);
@@ -387,13 +372,14 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
                         opposite_point,
                         shared_face_p1,
                         shared_face_p2,
-                    );
+                    )
                 } else {
+                    [].into()
                     // This is not documented in Springel 2009, but the Arepo code
                     // does nothing here.
                 }
             }
-            IntersectionType::OutsideTwoEdges(_, _) => {}
+            IntersectionType::OutsideTwoEdges(_, _) => [].into(),
         }
     }
 
@@ -563,7 +549,6 @@ mod tests {
             tetras: TetraList::<ThreeD>::new(),
             faces: FaceList::<ThreeD>::new(),
             points: point_list,
-            to_check: vec![],
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,
@@ -605,7 +590,6 @@ mod tests {
             tetras: TetraList::<ThreeD>::new(),
             faces: FaceList::<ThreeD>::new(),
             points: point_list,
-            to_check: vec![],
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,

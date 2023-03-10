@@ -7,6 +7,7 @@ use super::DelaunayTriangulation;
 use super::FaceIndex;
 use super::PointIndex;
 use super::TetraIndex;
+use super::TetrasRequiringCheck;
 use crate::voronoi::delaunay::dimension::DimensionFace;
 use crate::voronoi::delaunay::dimension::DimensionTetraData;
 use crate::voronoi::delaunay::FlipCheckData;
@@ -89,7 +90,7 @@ impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
         }
     }
 
-    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) {
+    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> TetrasRequiringCheck {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
         let f1 = self.faces.insert(Face {
             p1: point,
@@ -112,15 +113,10 @@ impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
         self.set_opposing_in_new_tetra(t2, f1, t3, old_tetra.p2);
         self.set_opposing_in_new_tetra(t3, f1, t2, old_tetra.p3);
         self.set_opposing_in_new_tetra(t3, f2, t1, old_tetra.p3);
-        for (tetra, face) in [(t1, old_tetra.f1), (t2, old_tetra.f2), (t3, old_tetra.f3)] {
-            self.to_check.push(FlipCheckData {
-                tetra,
-                face: face.face,
-            });
-        }
+        [t1, t2, t3].into()
     }
 
-    fn flip(&mut self, check: FlipCheckData) {
+    fn flip(&mut self, check: FlipCheckData) -> TetrasRequiringCheck {
         let old_tetra = self.tetras.remove(check.tetra).unwrap();
         let old_face = self.faces.remove(check.face).unwrap();
         // I am not sure whether unwrapping here is correct -
@@ -172,16 +168,7 @@ impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
             tetra: t1,
             point: old_face.p1,
         });
-        // Now that we have flipped this edge, we have to check the remaining edges
-        // in the opposing tetra as well
-        self.to_check.push(FlipCheckData {
-            tetra: t1,
-            face: f1_a.face,
-        });
-        self.to_check.push(FlipCheckData {
-            tetra: t2,
-            face: f2_a.face,
-        });
+        [t1, t2].into()
     }
 
     fn insert_basic_tetra(&mut self, tetra: TetraData) {

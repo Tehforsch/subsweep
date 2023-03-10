@@ -33,10 +33,31 @@ type TetraList<D> = IndexedArena<TetraIndex, Tetra<D>>;
 type FaceList<D> = IndexedArena<FaceIndex, Face<D>>;
 type PointList<D> = IndexedArena<PointIndex, Point<D>>;
 
+type TetrasRequiringCheck = Vec<TetraIndex>;
+
 #[derive(Clone)]
 pub struct FlipCheckData {
     tetra: TetraIndex,
     face: FaceIndex,
+}
+
+// The magic of this is that the point involved in the check
+// is always the newly inserted point. This data structure makes
+// this explicit.
+#[derive(Clone)]
+struct FlipCheckStack {
+    point: PointIndex,
+    stack: Vec<TetraIndex>,
+}
+
+impl FlipCheckStack {
+    fn pop(&mut self) -> Option<TetraIndex> {
+        self.stack.pop()
+    }
+
+    fn extend(&mut self, t: Vec<TetraIndex>) {
+        self.stack.extend(t);
+    }
 }
 
 #[derive(Resource, Clone)]
@@ -44,13 +65,12 @@ pub struct DelaunayTriangulation<D: Dimension> {
     pub tetras: TetraList<D>,
     pub faces: FaceList<D>,
     pub points: PointList<D>,
-    pub to_check: Vec<FlipCheckData>,
 }
 
 pub trait Delaunay<D: Dimension> {
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> Tetra<D>;
-    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex);
-    fn flip(&mut self, check: FlipCheckData);
+    fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> TetrasRequiringCheck;
+    fn flip(&mut self, check: FlipCheckData) -> TetrasRequiringCheck;
     fn insert_basic_tetra(&mut self, tetra: TetraData<D>);
 }
 
@@ -79,7 +99,6 @@ where
             tetras: TetraList::<D>::new(),
             faces: FaceList::<D>::new(),
             points: PointList::<D>::new(),
-            to_check: vec![],
         };
         triangulation.insert_basic_tetra(tetra);
         triangulation
@@ -110,11 +129,28 @@ where
             .find_containing_tetra(point)
             .expect("No tetra containing the point {point:?} found");
         let new_point_index = self.points.insert(point);
-        self.split(t, new_point_index);
-        while let Some(check) = self.to_check.pop() {
-            self.flip_check(check);
-        }
+        let new_tetras = self.split(t, new_point_index);
+        self.perform_flip_checks(new_point_index, new_tetras);
         new_point_index
+    }
+
+    fn perform_flip_checks(&mut self, new_point_index: PointIndex, tetras: TetrasRequiringCheck) {
+        let mut stack = FlipCheckStack {
+            point: new_point_index,
+            stack: tetras,
+        };
+        while let Some(tetra) = stack.pop() {
+            if !self.tetras.contains(tetra) {
+                // In 3-to-2 flips, tetras are removed that might still be on the stack.
+                // In this case we can just ignore this check.
+                continue;
+            }
+            let check = FlipCheckData {
+                tetra,
+                face: self.tetras[tetra].find_face_opposite(stack.point).face,
+            };
+            self.flip_check(&mut stack, check);
+        }
     }
 
     fn update_connections_in_existing_tetra(&mut self, tetra_index: TetraIndex) {
@@ -177,12 +213,10 @@ where
         }
     }
 
-    fn flip_check(&mut self, to_check: FlipCheckData) {
-        if !self.tetras.contains(to_check.tetra) {
-            return;
-        }
+    fn flip_check(&mut self, stack: &mut FlipCheckStack, to_check: FlipCheckData) {
         if self.circumcircle_contains_other_points(to_check.tetra) {
-            self.flip(to_check);
+            let new_tetras_to_check = self.flip(to_check);
+            stack.extend(new_tetras_to_check);
         }
     }
 }
