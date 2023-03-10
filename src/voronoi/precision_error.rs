@@ -1,4 +1,4 @@
-pub const EPSILON: f64 = 1e-20;
+pub const EPSILON: f64 = 1e-10;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PrecisionError;

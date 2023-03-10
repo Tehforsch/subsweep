@@ -98,7 +98,9 @@ where
             .iter()
             .find(|(_, tetra)| {
                 let tetra_data = self.get_tetra_data(tetra);
-                tetra_data.contains(point).unwrap_or_else(|_| todo!("Point wants to be inserted onto an edge."))
+                tetra_data
+                    .contains(point)
+                    .unwrap_or_else(|_| todo!("Point wants to be inserted onto an edge."))
             })
             .map(|(index, _)| index)
     }

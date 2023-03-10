@@ -234,7 +234,11 @@ fn get_min_and_max(points: &[Point2d]) -> Option<(Point2d, Point2d)> {
 }
 
 impl TriangleData<Point3d> {
-    pub fn get_line_intersection_type(&self, q1: Point3d, q2: Point3d) -> IntersectionType {
+    pub fn get_line_intersection_type(
+        &self,
+        q1: Point3d,
+        q2: Point3d,
+    ) -> Result<IntersectionType, PrecisionError> {
         // We solve the line-triangle intersection equation
         // p1 + r (p2 - p1) + s (p3 - p1) = q1 + t (q2 - q1)
         // for r, s, and t.
@@ -252,22 +256,26 @@ impl TriangleData<Point3d> {
         self.get_intersection_type(r, s)
     }
 
-    fn get_intersection_type(&self, r: Float, s: Float) -> IntersectionType {
+    fn get_intersection_type(
+        &self,
+        r: Float,
+        s: Float,
+    ) -> Result<IntersectionType, PrecisionError> {
         let identifiers = [
-            (r < 0.0, EdgeIdentifier::Two),
-            (s < 0.0, EdgeIdentifier::Three),
-            (r + s > 1.0, EdgeIdentifier::One),
+            (is_negative(r)?, EdgeIdentifier::Two),
+            (is_negative(s)?, EdgeIdentifier::Three),
+            (is_negative(1.0 - (r + s))?, EdgeIdentifier::One),
         ]
         .into_iter()
         .filter(|(state, _)| *state)
         .map(|(_, id)| id)
         .collect::<Vec<_>>();
-        match identifiers.len() {
+        Ok(match identifiers.len() {
             0 => IntersectionType::Inside,
             1 => IntersectionType::OutsideOneEdge(identifiers[0]),
             2 => IntersectionType::OutsideTwoEdges(identifiers[0], identifiers[1]),
             _ => panic!("Possibly degenerate case of point lying on one of the edges."),
-        }
+        })
     }
 }
 
@@ -297,26 +305,29 @@ mod tests {
             let type_ = face.get_line_intersection_type(q1, q2);
             assert_eq!(type_, intersection_type);
         };
-        check_two_d_point(0.3, 0.3, IntersectionType::Inside);
+        check_two_d_point(0.3, 0.3, Ok(IntersectionType::Inside));
         check_two_d_point(
             -0.1,
             0.3,
-            IntersectionType::OutsideOneEdge(EdgeIdentifier::Two),
+            Ok(IntersectionType::OutsideOneEdge(EdgeIdentifier::Two)),
         );
         check_two_d_point(
             0.3,
             -0.1,
-            IntersectionType::OutsideOneEdge(EdgeIdentifier::Three),
+            Ok(IntersectionType::OutsideOneEdge(EdgeIdentifier::Three)),
         );
         check_two_d_point(
             0.6,
             0.6,
-            IntersectionType::OutsideOneEdge(EdgeIdentifier::One),
+            Ok(IntersectionType::OutsideOneEdge(EdgeIdentifier::One)),
         );
         check_two_d_point(
             -0.1,
             -0.1,
-            IntersectionType::OutsideTwoEdges(EdgeIdentifier::Two, EdgeIdentifier::Three),
+            Ok(IntersectionType::OutsideTwoEdges(
+                EdgeIdentifier::Two,
+                EdgeIdentifier::Three,
+            )),
         );
     }
 

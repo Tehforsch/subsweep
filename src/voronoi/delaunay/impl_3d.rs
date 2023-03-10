@@ -346,7 +346,10 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
         let p2 = t2.find_point_opposite(check.face);
         let intersection_type = self
             .get_face_data(shared_face)
-            .get_line_intersection_type(self.points[p1], self.points[p2]);
+            .get_line_intersection_type(self.points[p1], self.points[p2])
+            .unwrap_or_else(|_| {
+                todo!("Handle case of degenerate intersection type (4-to-4 flip?)")
+            });
         match intersection_type {
             IntersectionType::Inside => {
                 self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face);
@@ -359,23 +362,27 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
                     .opposing
                     .unwrap()
                     .tetra;
-                debug_assert_eq!(
-                    t2.find_face_opposite(opposite_point)
-                        .opposing
-                        .unwrap()
-                        .tetra,
-                    t3
-                );
-                self.three_to_two_flip(
-                    check.tetra,
-                    opposing.tetra,
-                    t3,
-                    p1,
-                    p2,
-                    opposite_point,
-                    shared_face_p1,
-                    shared_face_p2,
-                );
+                if t2
+                    .find_face_opposite(opposite_point)
+                    .opposing
+                    .unwrap()
+                    .tetra
+                    == t3
+                {
+                    self.three_to_two_flip(
+                        check.tetra,
+                        opposing.tetra,
+                        t3,
+                        p1,
+                        p2,
+                        opposite_point,
+                        shared_face_p1,
+                        shared_face_p2,
+                    );
+                } else {
+                    // This is not documented in Springel 2009, but the Arepo code
+                    // does nothing here.
+                }
             }
             IntersectionType::OutsideTwoEdges(_, _) => {}
         }
