@@ -7,7 +7,21 @@ use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::DelaunayTriangulation;
 
-pub type Statement = String;
+#[derive(Clone, Hash, Eq, PartialEq)]
+pub struct Statement {
+    statement: String,
+    is_new_item: bool,
+}
+
+impl From<String> for Statement {
+    fn from(statement: String) -> Self {
+        Self {
+            statement,
+            is_new_item: true,
+        }
+    }
+}
+
 pub type Name = String;
 
 #[derive(Default)]
@@ -44,7 +58,16 @@ impl Visualizer {
         let statements: Vec<_> = self
             .statements
             .iter()
-            .map(|statement| format!("\"{} = {}\"", &self.statement_names[statement], &statement))
+            .map(|statement| {
+                if statement.is_new_item {
+                    format!(
+                        "\"{} = {}\"",
+                        &self.statement_names[statement], &statement.statement
+                    )
+                } else {
+                    format!("\"{}\"", &statement.statement)
+                }
+            })
             .collect();
         println!("Execute({{ {} }})", statements.join(", "));
     }
@@ -69,7 +92,7 @@ impl Visualizable for TriangleData<Point2d> {
             .map(|p| visualizer.add(&p)[0].clone())
             .collect();
         periodic_windows(&point_names)
-            .map(|(p1, p2)| format!("Segment({}, {})", p1, p2))
+            .map(|(p1, p2)| format!("Segment({}, {})", p1, p2).into())
             .collect()
     }
 }
@@ -83,7 +106,7 @@ impl Visualizable for super::primitives::tetrahedron::TetrahedronData {
             .map(|p| visualizer.add(&p)[0].clone())
             .collect();
         periodic_windows_3(&point_names)
-            .map(|(p1, p2, p3)| format!("Polygon({}, {}, {})", p1, p2, p3))
+            .map(|(p1, p2, p3)| format!("Polygon({}, {}, {})", p1, p2, p3).into())
             .collect()
     }
 }
@@ -94,7 +117,7 @@ where
     DelaunayTriangulation<D>: Delaunay<D>,
     <D as Dimension>::TetraData: Visualizable,
 {
-    fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<String> {
+    fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         self.tetras
             .iter()
             .flat_map(|(_, tetra)| self.get_tetra_data(tetra).get_statements(visualizer))
@@ -103,18 +126,41 @@ where
 }
 
 impl Visualizable for Point3d {
-    fn get_statements(&self, _visualizer: &mut Visualizer) -> Vec<String> {
-        vec![format!("({}, {}, {})", self.x, self.y, self.z)]
+    fn get_statements(&self, _visualizer: &mut Visualizer) -> Vec<Statement> {
+        vec![format!("({}, {}, {})", self.x, self.y, self.z).into()]
     }
 }
 
 impl Visualizable for Point2d {
-    fn get_statements(&self, _visualizer: &mut Visualizer) -> Vec<String> {
-        vec![format!("({}, {})", self.x, self.y)]
+    fn get_statements(&self, _visualizer: &mut Visualizer) -> Vec<Statement> {
+        vec![format!("({}, {})", self.x, self.y).into()]
     }
 }
 
-/// Debug print the expression only on MPI rank 0
+pub struct Color {
+    pub x: Box<dyn Visualizable>,
+    pub color: (f64, f64, f64),
+}
+
+impl Visualizable for Color {
+    fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
+        let statements = self.x.get_statements(visualizer);
+        statements
+            .into_iter()
+            .map(|statement| {
+                let name = visualizer.add_statement(statement);
+                Statement {
+                    statement: format!(
+                        "SetColor({}, {}, {}, {})",
+                        name, self.color.0, self.color.1, self.color.2
+                    ),
+                    is_new_item: false,
+                }
+            })
+            .collect()
+    }
+}
+
 #[macro_export]
 macro_rules! vis {
     ( $( $x:expr ),* ) => {
@@ -124,4 +170,35 @@ macro_rules! vis {
                 temp_vis.add($x);
             )*
         }
-    };}
+    };
+}
+
+#[macro_export]
+macro_rules! highlight_red {
+    ( $x:expr) => {{
+        &crate::voronoi::visualizer::Color {
+            x: Box::new($x.clone()),
+            color: (1.0, 0.0, 0.0),
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! highlight_blue {
+    ( $x:expr) => {{
+        &crate::voronoi::visualizer::Color {
+            x: Box::new($x.clone()),
+            color: (0.0, 0.0, 1.0),
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! highlight_green {
+    ( $x:expr) => {{
+        &crate::voronoi::visualizer::Color {
+            x: Box::new($x.clone()),
+            color: (0.0, 1.0, 0.0),
+        }
+    }};
+}
