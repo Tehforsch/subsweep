@@ -283,14 +283,25 @@ pub(super) mod tests {
         }
 
         fn get_example_point_set() -> Vec<Point3d> {
-            vec![
-                Point3d::new(0.5, 0.5, 0.5),
-                Point3d::new(0.25, 0.55, 0.3),
-                Point3d::new(0.5, 0.25, 0.4),
-                Point3d::new(0.125, 0.53, 0.2),
-                Point3d::new(0.8, 0.1, 0.23),
-                Point3d::new(0.1, 0.8, 0.7),
-            ]
+            use rand::Rng;
+            use rand::SeedableRng;
+            let mut rng = rand::rngs::StdRng::seed_from_u64(1338);
+            (0..100)
+                .map(|_| {
+                    let x = rng.gen_range(0.1..0.4);
+                    let y = rng.gen_range(0.1..0.4);
+                    let z = rng.gen_range(0.1..0.4);
+                    Point3d::new(x, y, z)
+                })
+                .collect()
+            // vec![
+            //     Point3d::new(0.5, 0.5, 0.5),
+            //     Point3d::new(0.25, 0.55, 0.3),
+            //     Point3d::new(0.5, 0.25, 0.4),
+            //     Point3d::new(0.125, 0.53, 0.2),
+            //     Point3d::new(0.8, 0.1, 0.23),
+            //     Point3d::new(0.1, 0.8, 0.7),
+            // ]
         }
     }
 

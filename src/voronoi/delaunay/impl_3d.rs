@@ -179,12 +179,10 @@ impl DelaunayTriangulation<ThreeD> {
                     });
 
                     let face_to_check = self.tetras[new_tetra].find_face_opposite(p1);
-                    if face_to_check.opposing.is_some() {
-                        self.to_check.push(FlipCheckData {
-                            tetra: new_tetra,
-                            face: face_to_check.face,
-                        });
-                    }
+                    self.to_check.push(FlipCheckData {
+                        tetra: new_tetra,
+                        face: face_to_check.face,
+                    });
                     (
                         new_tetra,
                         // Remember these to make the initialization of the connection data easier afterwards
