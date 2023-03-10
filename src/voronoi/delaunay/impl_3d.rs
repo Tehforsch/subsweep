@@ -125,7 +125,12 @@ impl DelaunayTriangulation<ThreeD> {
                 });
             }
         }
-        // todo!("add additional flip checks")
+        for ((tetra, _, _, _, _), (_, _)) in new_tetras.iter().zip(new_faces.iter()) {
+            self.to_check.push(FlipCheckData {
+                tetra: *tetra,
+                face: self.tetras[*tetra].find_face_opposite(p1).face,
+            });
+        }
     }
 
     fn three_to_two_flip(
@@ -173,6 +178,13 @@ impl DelaunayTriangulation<ThreeD> {
                         },
                     });
 
+                    let face_to_check = self.tetras[new_tetra].find_face_opposite(p1);
+                    if face_to_check.opposing.is_some() {
+                        self.to_check.push(FlipCheckData {
+                            tetra: new_tetra,
+                            face: face_to_check.face,
+                        });
+                    }
                     (
                         new_tetra,
                         // Remember these to make the initialization of the connection data easier afterwards
@@ -189,7 +201,6 @@ impl DelaunayTriangulation<ThreeD> {
                 point: *p_other,
             })
         }
-        // todo!("add additional flip checks")
     }
 }
 

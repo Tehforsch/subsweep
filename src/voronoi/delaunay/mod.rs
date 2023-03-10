@@ -178,6 +178,9 @@ where
     }
 
     fn flip_check(&mut self, to_check: FlipCheckData) {
+        if !self.tetras.contains(to_check.tetra) {
+            return;
+        }
         if self.circumcircle_contains_other_points(to_check.tetra) {
             self.flip(to_check);
         }
