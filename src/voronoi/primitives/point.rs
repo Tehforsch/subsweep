@@ -21,7 +21,7 @@ impl Vector for glam::DVec2 {
     }
 
     fn normalize(&self) -> Self {
-        self.normalize()
+        glam::DVec2::normalize(*self)
     }
 }
 
@@ -35,6 +35,6 @@ impl Vector for glam::DVec3 {
     }
 
     fn normalize(&self) -> Self {
-        self.normalize()
+        glam::DVec3::normalize(*self)
     }
 }

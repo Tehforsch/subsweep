@@ -4,6 +4,7 @@ use bevy::utils::hashbrown::HashMap;
 use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
 use super::DelaunayTriangulation;
+use super::DimensionCell;
 use super::PointIndex;
 use super::VoronoiGrid;
 use crate::grid::Cell;
@@ -21,6 +22,7 @@ pub fn construct_grid_from_iter<D>(
 where
     D: Dimension<Point = MVec>,
     DelaunayTriangulation<D>: Delaunay<D>,
+    super::Cell<D>: DimensionCell,
     VoronoiGrid<D>: for<'a> From<&'a DelaunayTriangulation<D>>,
 {
     let mut entities = vec![];
@@ -75,7 +77,11 @@ mod tests {
     use super::super::primitives::Point2d;
     use super::super::primitives::Point3d;
     use super::construct_grid_from_iter;
-    use crate::voronoi::ActiveDimension;
+    use crate::prelude::MVec;
+    use crate::voronoi::delaunay::Delaunay;
+    use crate::voronoi::Cell;
+    use crate::voronoi::DelaunayTriangulation;
+    use crate::voronoi::DimensionCell;
     use crate::voronoi::ThreeD;
     use crate::voronoi::TwoD;
 
@@ -111,9 +117,14 @@ mod tests {
     }
 
     #[test]
-    fn construct_small_grid() {
-        construct_grid_from_iter::<ActiveDimension>(
-            ActiveDimension::get_points_for_small_grid()
+    fn construct_small_grid<D>()
+    where
+        D: Dimension<Point = MVec> + TestableDimension,
+        DelaunayTriangulation<D>: Delaunay<D>,
+        Cell<D>: DimensionCell,
+    {
+        construct_grid_from_iter::<D>(
+            D::get_points_for_small_grid()
                 .into_iter()
                 .enumerate()
                 .map(move |(i, p)| (Entity::from_raw(i as u32), p.clone())),
