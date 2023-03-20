@@ -106,8 +106,37 @@ impl DimensionTetraData for TetrahedronData {
         is_positive(determinant)
     }
 
+    #[rustfmt::skip]
     fn get_center_of_circumcircle(&self) -> Point3d {
-        todo!()
+        let v1 = self.p1.x.powi(2) + self.p1.y.powi(2) + self.p1.z.powi(2);
+        let v2 = self.p2.x.powi(2) + self.p2.y.powi(2) + self.p2.z.powi(2);
+        let v3 = self.p3.x.powi(2) + self.p3.y.powi(2) + self.p3.z.powi(2);
+        let v4 = self.p4.x.powi(2) + self.p4.y.powi(2) + self.p4.z.powi(2);
+        let dx = determinant4x4(
+            v1, self.p1.y, self.p1.z, 1.0,
+            v2, self.p2.y, self.p2.z, 1.0,
+            v3, self.p3.y, self.p3.z, 1.0,
+            v4, self.p4.y, self.p4.z, 1.0,
+        );
+        let dy = -determinant4x4(
+            v1, self.p1.x, self.p1.z, 1.0,
+            v2, self.p2.x, self.p2.z, 1.0,
+            v3, self.p3.x, self.p3.z, 1.0,
+            v4, self.p4.x, self.p4.z, 1.0,
+        );
+        let dz = determinant4x4(
+            v1, self.p1.x, self.p1.y, 1.0,
+            v2, self.p2.x, self.p2.y, 1.0,
+            v3, self.p3.x, self.p3.y, 1.0,
+            v4, self.p4.x, self.p4.y, 1.0,
+        );
+        let a = determinant4x4(
+            self.p1.x, self.p1.y, self.p1.z, 1.0,
+            self.p2.x, self.p2.y, self.p2.z, 1.0,
+            self.p3.x, self.p3.y, self.p3.z, 1.0,
+            self.p4.x, self.p4.y, self.p4.z, 1.0,
+        );
+        Point3d::new(dx,dy,dz) / (2.0 * a)
     }
 }
 
@@ -121,4 +150,27 @@ fn points_are_on_same_side_of_triangle(
     let dot_1_sign = (p1 - p_a).dot(normal).signum();
     let dot_2_sign = (p2 - p_a).dot(normal).signum();
     is_positive(dot_1_sign * dot_2_sign)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::Point3d;
+    use super::TetrahedronData;
+    use crate::test_utils::assert_float_is_close;
+    use crate::voronoi::delaunay::dimension::DimensionTetraData;
+
+    #[test]
+    fn center_of_circumsphere() {
+        let tetra = TetrahedronData {
+            p1: Point3d::new(0.0, 0.0, 0.0),
+            p2: Point3d::new(1.0, 0.123, 0.456),
+            p3: Point3d::new(0.456, 1.0, 0.123),
+            p4: Point3d::new(0.123, 0.456, 1.0),
+        };
+        let circumsphere_center = tetra.get_center_of_circumcircle();
+        let d = tetra.p1.distance(circumsphere_center);
+        assert_float_is_close(d, tetra.p2.distance(circumsphere_center));
+        assert_float_is_close(d, tetra.p3.distance(circumsphere_center));
+        assert_float_is_close(d, tetra.p4.distance(circumsphere_center));
+    }
 }
