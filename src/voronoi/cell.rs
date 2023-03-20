@@ -1,14 +1,7 @@
 use std::f64::consts::PI;
 
-use bevy::utils::StableHashMap;
-
 use super::delaunay::dimension::Dimension;
-use super::delaunay::dimension::DimensionTetra;
-use super::delaunay::dimension::DimensionTetraData;
-use super::delaunay::Delaunay;
-use super::delaunay::DelaunayTriangulation;
 use super::delaunay::PointIndex;
-use super::delaunay::TetraIndex;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::primitives::Vector;
@@ -19,7 +12,6 @@ use super::ThreeD;
 use super::TwoD;
 use super::VoronoiGrid;
 use crate::prelude::Float;
-use crate::voronoi::delaunay::dimension::DimensionFace;
 
 pub trait DimensionCell {
     type Dimension: Dimension;
@@ -107,70 +99,4 @@ impl DimensionCell for Cell<ThreeD> {
     fn volume(&self) -> Float {
         todo!()
     }
-}
-
-impl<D> From<&DelaunayTriangulation<D>> for VoronoiGrid<D>
-where
-    D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
-{
-    fn from(t: &DelaunayTriangulation<D>) -> Self {
-        let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
-        let point_to_tetra_map = point_to_tetra_map(t);
-        let mut cells = vec![];
-        for (i, (point_index, _)) in t.points.iter().enumerate() {
-            map.insert(point_index, i);
-        }
-        for (point_index, _) in t.points.iter() {
-            let mut points = vec![];
-            let mut connected_cells = vec![];
-            let tetras = &point_to_tetra_map[&point_index];
-            for tetra in tetras.iter() {
-                points.push(
-                    t.get_tetra_data(&t.tetras[*tetra])
-                        .get_center_of_circumcircle(),
-                );
-            }
-            let mut is_boundary = false;
-            for (t1, t2) in periodic_windows(tetras) {
-                let common_face = t.tetras[*t1].get_common_face_with(&t.tetras[*t2]);
-                if let Some(common_face) = common_face {
-                    for other_point in t.faces[common_face].other_points(point_index) {
-                        connected_cells.push(map[&other_point]);
-                    }
-                } else {
-                    is_boundary = true;
-                }
-            }
-            cells.push(Cell {
-                center: t.points[point_index],
-                index: map[&point_index],
-                delaunay_point: point_index,
-                points,
-                connected_cells,
-                is_boundary,
-            });
-        }
-        VoronoiGrid { cells }
-    }
-}
-
-fn point_to_tetra_map<D: Dimension>(
-    triangulation: &DelaunayTriangulation<D>,
-) -> StableHashMap<PointIndex, Vec<TetraIndex>>
-where
-    D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
-{
-    let mut map: StableHashMap<_, _> = triangulation
-        .points
-        .iter()
-        .map(|(i, _)| (i, vec![]))
-        .collect();
-    for (tetra_index, tetra) in triangulation.tetras.iter() {
-        for p in tetra.points() {
-            map.get_mut(&p).unwrap().push(tetra_index);
-        }
-    }
-    map
 }
