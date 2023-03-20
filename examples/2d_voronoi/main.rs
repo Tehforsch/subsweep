@@ -12,6 +12,8 @@ use raxiom::prelude::*;
 use raxiom::units::VecLength;
 use raxiom::voronoi::delaunay::TetraIndex;
 use raxiom::voronoi::DelaunayTriangulation;
+use raxiom::voronoi::DimensionTetra;
+use raxiom::voronoi::TwoD;
 use raxiom::voronoi::VoronoiGrid;
 use vis::DrawPolygon;
 use vis::DrawTriangle;
@@ -87,7 +89,7 @@ fn show_voronoi_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut redraw_events: EventReader<RedrawEvent>,
-    triangulation: Option<Res<DelaunayTriangulation>>,
+    triangulation: Option<Res<DelaunayTriangulation<TwoD>>>,
 ) {
     if triangulation.is_some() && redraw_events.iter().count() == 0 {
         return;
@@ -109,7 +111,7 @@ fn show_voronoi_system(
     let (triangulation, _) = DelaunayTriangulation::construct_from_iter(
         particles.into_iter().map(|(_, pos)| pos.value_unchecked()),
     );
-    let grid = VoronoiGrid::from(triangulation.clone());
+    let grid = VoronoiGrid::<TwoD>::from(&triangulation);
     for cell in grid.cells.iter() {
         for vp in cell.points.iter() {
             commands.spawn((
@@ -177,7 +179,7 @@ fn show_voronoi_system(
 
 fn highlight_triangle_system(
     mut particles: Query<(&VisTriangle, &mut Handle<ColorMaterial>, &mut Transform)>,
-    triangulation: Res<DelaunayTriangulation>,
+    triangulation: Res<DelaunayTriangulation<TwoD>>,
     colors: Res<Colors>,
     mouse_pos: Res<MousePosition>,
 ) {
@@ -197,7 +199,7 @@ fn highlight_triangle_system(
     }
     if let Some(index) = index {
         let tetra = &triangulation.tetras[index];
-        for face in tetra.iter_faces() {
+        for face in tetra.faces() {
             for (triangle, mut color, mut transform) in particles.iter_mut() {
                 if Some(triangle.index) == face.opposing.as_ref().map(|opposing| opposing.tetra) {
                     *color = colors.green.clone();
@@ -210,8 +212,8 @@ fn highlight_triangle_system(
 
 fn highlight_cell_system(
     mut particles: Query<(&VisPolygon, &mut Handle<ColorMaterial>, &mut Transform)>,
-    grid: Res<VoronoiGrid>,
-    triangulation: Res<DelaunayTriangulation>,
+    grid: Res<VoronoiGrid<TwoD>>,
+    triangulation: Res<DelaunayTriangulation<TwoD>>,
     colors: Res<Colors>,
     mouse_pos: Res<MousePosition>,
 ) {

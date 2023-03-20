@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::mesh::Indices;
 use bevy::render::render_resource::PrimitiveTopology;
-use raxiom::voronoi::Point;
+type Point = glam::DVec2;
 
 #[derive(Clone, Debug)]
 pub struct DrawTriangle {

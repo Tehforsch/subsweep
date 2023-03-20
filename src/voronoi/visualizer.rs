@@ -6,6 +6,7 @@ use super::delaunay::TetraIndex;
 use super::primitives::triangle::TriangleData;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
+use super::Cell;
 use super::DelaunayTriangulation;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
@@ -136,6 +137,21 @@ where
         self.0
             .get_tetra_data(&self.0.tetras[self.1])
             .get_statements(visualizer)
+    }
+}
+
+impl<D> Visualizable for Cell<D>
+where
+    D: Dimension,
+    <D as Dimension>::Point: Visualizable,
+{
+    fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
+        let points: Vec<_> = self
+            .points
+            .iter()
+            .map(|p| p.get_statements(visualizer)[0].statement.clone())
+            .collect();
+        vec![format!("Polygon({})", points.join(",")).into()]
     }
 }
 

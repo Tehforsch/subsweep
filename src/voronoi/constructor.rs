@@ -3,6 +3,7 @@ use bevy::utils::hashbrown::HashMap;
 
 use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
+use super::visualizer::Visualizable;
 use super::DelaunayTriangulation;
 use super::DimensionCell;
 use super::PointIndex;
@@ -24,6 +25,8 @@ where
     DelaunayTriangulation<D>: Delaunay<D>,
     super::Cell<D>: DimensionCell,
     VoronoiGrid<D>: for<'a> From<&'a DelaunayTriangulation<D>>,
+    <D as Dimension>::TetraData: Visualizable,
+    <D as Dimension>::Point: Visualizable,
 {
     let mut entities = vec![];
     let mut positions = vec![];
@@ -69,19 +72,10 @@ where
 }
 
 #[cfg(test)]
-#[generic_tests::define]
 mod tests {
-    use bevy::prelude::Entity;
-
     use super::super::delaunay::dimension::Dimension;
     use super::super::primitives::Point2d;
     use super::super::primitives::Point3d;
-    use super::construct_grid_from_iter;
-    use crate::prelude::MVec;
-    use crate::voronoi::delaunay::Delaunay;
-    use crate::voronoi::Cell;
-    use crate::voronoi::DelaunayTriangulation;
-    use crate::voronoi::DimensionCell;
     use crate::voronoi::ThreeD;
     use crate::voronoi::TwoD;
 
@@ -116,15 +110,20 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "2d")]
     #[test]
-    fn construct_small_grid<D>()
-    where
-        D: Dimension<Point = MVec> + TestableDimension,
-        DelaunayTriangulation<D>: Delaunay<D>,
-        Cell<D>: DimensionCell,
-    {
-        construct_grid_from_iter::<D>(
-            D::get_points_for_small_grid()
+    fn construct_small_grid_2d() {
+        use bevy::prelude::Entity;
+
+        use super::construct_grid_from_iter;
+        use crate::prelude::MVec;
+        use crate::voronoi::delaunay::Delaunay;
+        use crate::voronoi::Cell;
+        use crate::voronoi::DelaunayTriangulation;
+        use crate::voronoi::DimensionCell;
+
+        construct_grid_from_iter::<TwoD>(
+            TwoD::get_points_for_small_grid()
                 .into_iter()
                 .enumerate()
                 .map(move |(i, p)| (Entity::from_raw(i as u32), p.clone())),

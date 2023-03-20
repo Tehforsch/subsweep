@@ -14,9 +14,10 @@ mod cell;
 use bevy::prelude::Resource;
 pub use cell::Cell;
 pub use cell::DimensionCell;
+pub use delaunay::dimension::Dimension;
+pub use delaunay::dimension::DimensionTetra;
 pub use delaunay::DelaunayTriangulation;
 
-use self::delaunay::dimension::Dimension;
 use self::delaunay::PointIndex;
 
 pub type CellIndex = usize;

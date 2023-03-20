@@ -3,13 +3,14 @@ use super::FaceIndex;
 use super::PointIndex;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::primitives::Vector;
+use crate::voronoi::visualizer::Visualizable;
 
 pub trait Dimension {
-    type Point: Clone + Copy + Vector;
+    type Point: Clone + Copy + Vector + Visualizable;
     type Face: Clone + DimensionFace<Dimension = Self>;
     type FaceData: Clone + DimensionFaceData<Dimension = Self>;
     type Tetra: Clone + DimensionTetra<Dimension = Self>;
-    type TetraData: DimensionTetraData<Dimension = Self> + Clone;
+    type TetraData: DimensionTetraData<Dimension = Self> + Clone + Visualizable;
 }
 
 pub trait DimensionTetra {
