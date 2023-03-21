@@ -7,6 +7,7 @@ use crate::voronoi::math::determinant5x5;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
+use crate::voronoi::utils::get_min_and_max;
 use crate::voronoi::PointIndex;
 use crate::voronoi::ThreeD;
 
@@ -63,8 +64,20 @@ impl FromIterator<Point3d> for TetrahedronData {
 impl DimensionTetraData for TetrahedronData {
     type Dimension = ThreeD;
 
-    fn all_encompassing(_points: &[Point3d]) -> TetrahedronData {
-        todo!()
+    fn all_encompassing(points: &[Point3d]) -> TetrahedronData {
+        let (min, max) = get_min_and_max(points, Point3d::min, Point3d::max).unwrap();
+        assert!(
+            (max - min).min_element() > 0.0,
+            "Could not construct encompassing tetra for points (zero extent along one axis)"
+        );
+        // An overshooting factor for numerical safety
+        let alpha = 1.00;
+        let projected = max + (max - min) * (1.0 + alpha);
+        let p1 = min - (max - min) * alpha;
+        let p2 = Point3d::new(projected.x, min.y, min.z);
+        let p3 = Point3d::new(min.x, projected.y, min.z);
+        let p4 = Point3d::new(min.x, min.y, projected.z);
+        Self { p1, p2, p3, p4 }
     }
 
     #[rustfmt::skip]

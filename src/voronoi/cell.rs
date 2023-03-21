@@ -24,7 +24,7 @@ pub trait DimensionCell {
     ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point<Self::Dimension>)> + '_>;
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum CellConnection {
     ToInner(CellIndex),
     ToOuter,

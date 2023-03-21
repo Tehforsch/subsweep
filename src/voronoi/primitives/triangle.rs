@@ -11,6 +11,7 @@ use crate::voronoi::math::solve_system_of_equations;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
+use crate::voronoi::utils::get_min_and_max;
 use crate::voronoi::PointIndex;
 use crate::voronoi::ThreeD;
 use crate::voronoi::TwoD;
@@ -127,7 +128,7 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
 impl DimensionTetraData for TriangleData<Point2d> {
     type Dimension = TwoD;
     fn all_encompassing(points: &[Point2d]) -> Self {
-        let (min, max) = get_min_and_max(points).unwrap();
+        let (min, max) = get_min_and_max(points, Point2d::min, Point2d::max).unwrap();
         assert!(
             (max - min).min_element() > 0.0,
             "Could not construct encompassing tetra for points (zero extent along one axis)"
@@ -203,30 +204,6 @@ impl DimensionTetraData for TriangleData<Point2d> {
                     + (c.x.powi(2) + c.y.powi(2)) * (b.x - a.x)),
         }
     }
-}
-
-fn get_min_and_max(points: &[Point2d]) -> Option<(Point2d, Point2d)> {
-    let mut min = None;
-    let mut max = None;
-    let update_min = |min: &mut Option<Point2d>, pos: Point2d| {
-        if let Some(ref mut min) = min {
-            *min = min.min(pos);
-        } else {
-            *min = Some(pos);
-        }
-    };
-    let update_max = |max: &mut Option<Point2d>, pos: Point2d| {
-        if let Some(ref mut max) = max {
-            *max = max.max(pos);
-        } else {
-            *max = Some(pos);
-        }
-    };
-    for p in points {
-        update_min(&mut min, *p);
-        update_max(&mut max, *p);
-    }
-    Some((min?, max?))
 }
 
 impl TriangleData<Point3d> {

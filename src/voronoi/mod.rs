@@ -11,6 +11,8 @@ mod utils;
 
 mod cell;
 
+use std::collections::HashSet;
+
 use bevy::prelude::Resource;
 use bevy::utils::StableHashMap;
 pub use cell::Cell;
@@ -36,12 +38,6 @@ type Point<D> = <D as Dimension>::Point;
 #[derive(Resource)]
 pub struct VoronoiGrid<D: Dimension> {
     pub cells: Vec<Cell<D>>,
-}
-
-impl From<&DelaunayTriangulation<ThreeD>> for VoronoiGrid<ThreeD> {
-    fn from(_t: &DelaunayTriangulation<ThreeD>) -> Self {
-        todo!()
-    }
 }
 
 impl From<&DelaunayTriangulation<TwoD>> for VoronoiGrid<TwoD> {
@@ -101,6 +97,43 @@ impl From<&DelaunayTriangulation<TwoD>> for VoronoiGrid<TwoD> {
     }
 }
 
+impl From<&DelaunayTriangulation<ThreeD>> for VoronoiGrid<ThreeD> {
+    fn from(t: &DelaunayTriangulation<ThreeD>) -> Self {
+        let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
+        let point_to_tetra_map = point_to_tetra_map(t);
+        let mut cells = vec![];
+        for (i, point_index) in t.iter_inner_points().enumerate() {
+            map.insert(point_index, i);
+        }
+        for point_index in t.iter_inner_points() {
+            let mut points = vec![];
+            let mut connected_cells = HashSet::new();
+            let tetras = &point_to_tetra_map[&point_index];
+            for tetra in tetras.iter() {
+                let tetra_data = &t.tetras[*tetra];
+                points.push(t.get_tetra_data(&tetra_data).get_center_of_circumcircle());
+                let face = tetra_data.find_face_opposite(point_index);
+                for other_point in t.faces[face.face].other_points(point_index) {
+                    connected_cells.insert(
+                        map.get(&other_point)
+                            .map(|i| CellConnection::ToInner(*i))
+                            .unwrap_or(CellConnection::ToOuter),
+                    );
+                }
+            }
+
+            cells.push(Cell {
+                center: t.points[point_index],
+                index: map[&point_index],
+                delaunay_point: point_index,
+                points,
+                connected_cells: connected_cells.into_iter().collect(),
+            });
+        }
+        VoronoiGrid { cells }
+    }
+}
+
 fn point_to_tetra_map<D: Dimension>(
     triangulation: &DelaunayTriangulation<D>,
 ) -> StableHashMap<PointIndex, Vec<TetraIndex>>
@@ -138,6 +171,7 @@ mod tests {
     use super::ThreeD;
     use super::TwoD;
     use super::VoronoiGrid;
+    use crate::vis;
     use crate::voronoi::primitives::point::Vector;
 
     #[instantiate_tests(<TwoD>)]
@@ -170,15 +204,21 @@ mod tests {
     fn voronoi_property<D: VoronoiTestDimension + TestableDimension>()
     where
         DelaunayTriangulation<D>: Delaunay<D>,
+        DelaunayTriangulation<D>: super::visualizer::Visualizable,
         Cell<D>: DimensionCell<Dimension = D>,
         VoronoiGrid<D>: for<'a> From<&'a DelaunayTriangulation<D>>,
     {
         perform_check_on_each_level_of_construction(|triangulation, num_inserted_points| {
             let grid: VoronoiGrid<D> = triangulation.into();
+            let mut temp_vis = crate::voronoi::visualizer::Visualizer::default();
+            for c in grid.cells.iter() {
+                temp_vis.add(c);
+            }
+            temp_vis.add(triangulation);
             for lookup_point in D::get_lookup_points() {
                 let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
                 if num_inserted_points == 0 {
-                    continue
+                    continue;
                 }
                 let closest_cell = grid
                     .cells
@@ -212,10 +252,12 @@ mod quantitative_tests {
     use super::VoronoiGrid;
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::cell::CellConnection;
+    use crate::voronoi::primitives::Point3d;
     use crate::voronoi::DimensionCell;
+    use crate::voronoi::ThreeD;
 
     #[test]
-    fn right_volume_and_face_areas() {
+    fn right_volume_and_face_areas_two_d() {
         let points = vec![
             Point2d::new(0.0, 0.0),
             Point2d::new(0.1, 0.9),
@@ -235,7 +277,6 @@ mod quantitative_tests {
             .unwrap();
         assert_float_is_close(cell.volume(), 0.3968809165232358);
         for (neighbour_index, face_area, normal) in cell.iter_neighbours_and_faces(&grid) {
-            dbg!(normal);
             if neighbour_index == CellConnection::ToInner(0) {
                 assert_float_is_close(face_area, 1.0846512947129363);
                 assert_float_is_close(normal.x, -0.5f64.sqrt());
@@ -252,5 +293,46 @@ mod quantitative_tests {
                 panic!()
             }
         }
+    }
+
+    #[test]
+    fn right_volume_and_face_areas_three_d() {
+        let points = vec![
+            Point3d::new(0.0, 0.0, 0.0),
+            Point3d::new(0.9, 0.1, 0.05),
+            Point3d::new(0.05, 0.9, 0.1),
+            Point3d::new(0.1, 0.05, 0.9),
+            Point3d::new(0.25, 0.25, 0.25),
+        ];
+        let (t, map) = DelaunayTriangulation::<ThreeD>::construct_from_iter(points.into_iter());
+        let last_point_index = map.last().unwrap();
+        let grid = VoronoiGrid::<ThreeD>::from(&t);
+        assert_eq!(grid.cells.len(), 5);
+        // Find the cell associated with the (0.25, 0.25, 0.25) point above.
+        // The exact values of faces and normals are taken from constructing the grid by hand and inspecting ;)
+        let cell = grid
+            .cells
+            .iter()
+            .find(|cell| cell.delaunay_point == *last_point_index)
+            .unwrap();
+        assert_eq!(cell.connected_cells.len(), 4);
+        // assert_float_is_close(cell.volume(), 0.3968809165232358);
+        // for (neighbour_index, face_area, normal) in cell.iter_neighbours_and_faces(&grid) {
+        //     if neighbour_index == CellConnection::ToInner(0) {
+        //         assert_float_is_close(face_area, 1.0846512947129363);
+        //         assert_float_is_close(normal.x, -0.5f64.sqrt());
+        //         assert_float_is_close(normal.y, -0.5f64.sqrt());
+        //     } else if neighbour_index == CellConnection::ToInner(1) {
+        //         assert_float_is_close(face_area, 0.862988661979256);
+        //         assert_float_is_close(normal.x, -0.22485950669875832);
+        //         assert_float_is_close(normal.y, 0.9743911956946198);
+        //     } else if neighbour_index == CellConnection::ToInner(2) {
+        //         assert_float_is_close(face_area, 0.9638545380497548);
+        //         assert_float_is_close(normal.x, 0.9970544855015816);
+        //         assert_float_is_close(normal.y, -0.07669649888473688);
+        //     } else {
+        //         panic!()
+        //     }
+        // }
     }
 }

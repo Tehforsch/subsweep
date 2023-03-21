@@ -45,8 +45,29 @@ pub fn periodic_windows_3<T>(v: &[T]) -> impl Iterator<Item = (&T, &T, &T)> {
         .filter(|_| v.len() > 2)
 }
 
+pub fn get_min_and_max<P: Clone>(
+    v: &[P],
+    min: fn(P, P) -> P,
+    max: fn(P, P) -> P,
+) -> Option<(P, P)> {
+    if v.len() == 0 {
+        None
+    } else {
+        let mut min_v = v[0].clone();
+        let mut max_v = v[0].clone();
+        for v in v[1..].iter() {
+            min_v = min(min_v, v.clone());
+            max_v = max(max_v, v.clone());
+        }
+        Some((min_v, max_v))
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::test_utils::assert_float_is_close;
+    use crate::voronoi::primitives::Point2d;
+
     #[test]
     fn periodic_windows_2() {
         let mut w = super::periodic_windows(&[0, 1, 2, 3, 4, 5, 6, 7]);
@@ -83,5 +104,27 @@ mod tests {
         assert_eq!(w.next().unwrap(), (&7, &0, &1));
         assert_eq!(w.next(), None);
         todo!("fix actual implementation and test")
+    }
+
+    #[test]
+    fn get_min_and_max() {
+        let (min, max) = super::get_min_and_max(
+            &[
+                Point2d::new(0.0, 0.0),
+                Point2d::new(1.0, 1.0),
+                Point2d::new(2.0, 0.5),
+            ],
+            Point2d::min,
+            Point2d::max,
+        )
+        .unwrap();
+        assert_float_is_close(min.x, 0.0);
+        assert_float_is_close(min.y, 0.0);
+        assert_float_is_close(max.x, 2.0);
+        assert_float_is_close(max.y, 1.0);
+        assert_eq!(
+            super::get_min_and_max(&[], Point2d::min, Point2d::max),
+            None
+        );
     }
 }
