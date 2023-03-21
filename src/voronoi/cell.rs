@@ -5,7 +5,7 @@ use super::delaunay::PointIndex;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::primitives::Vector;
-use super::utils::periodic_windows;
+use super::utils::periodic_windows_2;
 use super::CellIndex;
 use super::Point;
 use super::ThreeD;
@@ -44,7 +44,7 @@ fn sign(p1: Point2d, p2: Point2d, p3: Point2d) -> Float {
 
 impl Cell<TwoD> {
     pub fn point_windows(&self) -> impl Iterator<Item = (&Point2d, &Point2d)> {
-        periodic_windows(&self.points)
+        periodic_windows_2(&self.points)
     }
 }
 

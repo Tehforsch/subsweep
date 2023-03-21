@@ -87,13 +87,13 @@ pub trait Visualizable {
 
 impl Visualizable for TriangleData<Point2d> {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
-        use super::utils::periodic_windows;
+        use super::utils::periodic_windows_2;
         let points = [self.p1, self.p2, self.p3];
         let point_names: Vec<_> = points
             .into_iter()
             .map(|p| visualizer.add(&p)[0].clone())
             .collect();
-        periodic_windows(&point_names)
+        periodic_windows_2(&point_names)
             .map(|(p1, p2)| format!("Segment({}, {})", p1, p2).into())
             .collect()
     }

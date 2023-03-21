@@ -19,7 +19,7 @@ use crate::voronoi::primitives::tetrahedron::TetrahedronData;
 use crate::voronoi::primitives::triangle::IntersectionType;
 use crate::voronoi::primitives::triangle::Triangle;
 use crate::voronoi::primitives::triangle::TriangleData;
-use crate::voronoi::utils::periodic_windows;
+use crate::voronoi::utils::periodic_windows_2;
 use crate::voronoi::utils::periodic_windows_3;
 use crate::voronoi::ThreeD;
 
@@ -156,7 +156,7 @@ impl DelaunayTriangulation<ThreeD> {
         let new_face = self.faces.insert(Face { p1, p2, p3 });
 
         let new_tetras_with_uninitialized_faces: Vec<_> =
-            periodic_windows(&[shared_edge_p1, shared_edge_p2])
+            periodic_windows_2(&[shared_edge_p1, shared_edge_p2])
                 .map(|(pa, pb)| {
                     let f1 = t2.find_face_opposite(*pb).clone();
                     let f2 = t1.find_face_opposite(*pb).clone();
@@ -183,7 +183,7 @@ impl DelaunayTriangulation<ThreeD> {
                 .collect();
         // Fix the connection data in the newly created tetra
         for ((t, uninitialized_face, _), (t_other, _, p_other)) in
-            periodic_windows(&new_tetras_with_uninitialized_faces)
+            periodic_windows_2(&new_tetras_with_uninitialized_faces)
         {
             self.tetras[*t].find_face_mut(*uninitialized_face).opposing = Some(ConnectionData {
                 tetra: *t_other,
