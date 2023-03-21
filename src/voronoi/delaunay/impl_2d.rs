@@ -175,6 +175,9 @@ impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
         let p1 = self.points.insert(tetra.p1);
         let p2 = self.points.insert(tetra.p2);
         let p3 = self.points.insert(tetra.p3);
+        self.outer_points.push(p1);
+        self.outer_points.push(p2);
+        self.outer_points.push(p3);
         let f1 = self.faces.insert(Face { p1: p2, p2: p3 });
         let f2 = self.faces.insert(Face { p1: p3, p2: p1 });
         let f3 = self.faces.insert(Face { p1: p1, p2: p2 });

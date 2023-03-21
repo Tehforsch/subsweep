@@ -65,6 +65,7 @@ pub struct DelaunayTriangulation<D: Dimension> {
     pub tetras: TetraList<D>,
     pub faces: FaceList<D>,
     pub points: PointList<D>,
+    pub outer_points: Vec<PointIndex>,
 }
 
 pub trait Delaunay<D: Dimension> {
@@ -99,6 +100,7 @@ where
             tetras: TetraList::<D>::new(),
             faces: FaceList::<D>::new(),
             points: PointList::<D>::new(),
+            outer_points: vec![],
         };
         triangulation.insert_basic_tetra(tetra);
         triangulation
@@ -218,6 +220,21 @@ where
             let new_tetras_to_check = self.flip(to_check);
             stack.extend(new_tetras_to_check);
         }
+    }
+
+    /// Iterate over the inner points of the triangulation, i.e. every
+    /// point that is not on the boundary of the all-encompassing
+    /// tetra.  This only gives valid results if the triangulation was
+    /// constructed via incremental insertion, not if it has been
+    /// manually constructed from tetras, as is done in some of the
+    /// test code.
+    pub fn iter_inner_points(&self) -> impl Iterator<Item = PointIndex> + '_ {
+        // This is not a very efficient way to do this, but this probably doesn't matter
+        // in practice.
+        self.points
+            .iter()
+            .map(|(i, _)| i)
+            .filter(|p| !self.outer_points.contains(p))
     }
 }
 
@@ -478,6 +495,18 @@ pub(super) mod tests {
             for (tetra, _) in triangulation.tetras.iter() {
                 assert!(!triangulation.circumcircle_contains_other_points(tetra));
             }
+        });
+    }
+
+    #[test]
+    fn outer_point_contains_right_number_of_points<D>()
+    where
+        D: Dimension + TestableDimension,
+        DelaunayTriangulation<D>: Delaunay<D>,
+    {
+        perform_check_on_each_level_of_construction::<D>(|triangulation, num_inserted| {
+            let num_inner_points = triangulation.iter_inner_points().count();
+            assert_eq!(num_inner_points, num_inserted);
         });
     }
 }

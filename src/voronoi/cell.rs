@@ -18,6 +18,16 @@ pub trait DimensionCell {
     fn size(&self) -> Float;
     fn volume(&self) -> Float;
     fn contains(&self, point: Point<Self::Dimension>) -> bool;
+    fn iter_neighbours_and_faces<'a>(
+        &'a self,
+        grid: &'a VoronoiGrid<Self::Dimension>,
+    ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point<Self::Dimension>)> + '_>;
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum CellConnection {
+    ToInner(CellIndex),
+    ToOuter,
 }
 
 pub struct Cell<D: Dimension> {
@@ -25,39 +35,41 @@ pub struct Cell<D: Dimension> {
     pub center: Point<D>,
     pub index: CellIndex,
     pub points: Vec<Point<D>>,
-    pub connected_cells: Vec<CellIndex>,
-    pub is_boundary: bool,
+    pub connected_cells: Vec<CellConnection>,
 }
 
 fn sign(p1: Point2d, p2: Point2d, p3: Point2d) -> Float {
     (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
 }
 
-impl<D: Dimension> Cell<D> {
-    pub fn point_windows(&self) -> impl Iterator<Item = (&Point<D>, &Point<D>)> {
+impl Cell<TwoD> {
+    pub fn point_windows(&self) -> impl Iterator<Item = (&Point2d, &Point2d)> {
         periodic_windows(&self.points)
-    }
-
-    pub fn iter_neighbours_and_faces<'a>(
-        &'a self,
-        grid: &'a VoronoiGrid<D>,
-    ) -> impl Iterator<Item = (usize, Float, Point<D>)> + 'a {
-        self.connected_cells
-            .iter()
-            .zip(self.point_windows())
-            .map(|(c, (p1, p2))| {
-                let face_area = p1.distance(*p2);
-                let center_this_cell = self.center;
-                let center_other_cell = grid.cells[*c].center;
-                let normal = (center_other_cell - center_this_cell).normalize();
-                (*c, face_area, normal)
-            })
-            .filter(|_| !self.is_boundary) // For now: return an empty iterator if this is a boundary cell
     }
 }
 
 impl DimensionCell for Cell<TwoD> {
     type Dimension = TwoD;
+
+    fn iter_neighbours_and_faces<'a>(
+        &'a self,
+        _grid: &'a VoronoiGrid<TwoD>,
+    ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point2d)> + '_> {
+        Box::new(
+            self.connected_cells
+                .iter()
+                .zip(self.point_windows())
+                .map(|(c, (p1, p2))| {
+                    let face_area = p1.distance(*p2);
+                    let dir = *p1 - *p2;
+                    let mut normal = Point2d::new(dir.y, -dir.x).normalize();
+                    if (*p1 - self.center).dot(normal) < 0.0 {
+                        normal = -normal;
+                    }
+                    (*c, face_area, normal)
+                }),
+        )
+    }
 
     fn contains(&self, point: Point2d) -> bool {
         let has_negative = self
@@ -97,6 +109,13 @@ impl DimensionCell for Cell<ThreeD> {
     }
 
     fn volume(&self) -> Float {
+        todo!()
+    }
+
+    fn iter_neighbours_and_faces<'a>(
+        &'a self,
+        grid: &'a VoronoiGrid<ThreeD>,
+    ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point3d)>> {
         todo!()
     }
 }

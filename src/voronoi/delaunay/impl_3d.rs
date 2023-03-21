@@ -389,6 +389,10 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
         let p2 = self.points.insert(tetra.p2);
         let p3 = self.points.insert(tetra.p3);
         let p4 = self.points.insert(tetra.p4);
+        self.outer_points.push(p1);
+        self.outer_points.push(p2);
+        self.outer_points.push(p3);
+        self.outer_points.push(p4);
         self.insert_tetra_and_faces(p1, p2, p3, p4);
     }
 }
@@ -549,6 +553,7 @@ mod tests {
             tetras: TetraList::<ThreeD>::new(),
             faces: FaceList::<ThreeD>::new(),
             points: point_list,
+            outer_points: vec![],
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,
@@ -590,6 +595,7 @@ mod tests {
             tetras: TetraList::<ThreeD>::new(),
             faces: FaceList::<ThreeD>::new(),
             points: point_list,
+            outer_points: vec![],
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,

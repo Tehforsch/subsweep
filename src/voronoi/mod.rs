@@ -19,6 +19,7 @@ pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
 pub use delaunay::DelaunayTriangulation;
 
+use self::cell::CellConnection;
 use self::delaunay::dimension::DimensionTetraData;
 use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
@@ -38,7 +39,7 @@ pub struct VoronoiGrid<D: Dimension> {
 }
 
 impl From<&DelaunayTriangulation<ThreeD>> for VoronoiGrid<ThreeD> {
-    fn from(t: &DelaunayTriangulation<ThreeD>) -> Self {
+    fn from(_t: &DelaunayTriangulation<ThreeD>) -> Self {
         todo!()
     }
 }
@@ -48,42 +49,45 @@ impl From<&DelaunayTriangulation<TwoD>> for VoronoiGrid<TwoD> {
         let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
         let point_to_tetra_map = point_to_tetra_map(t);
         let mut cells = vec![];
-        for (i, (point_index, _)) in t.points.iter().enumerate() {
+        for (i, point_index) in t.iter_inner_points().enumerate() {
             map.insert(point_index, i);
         }
-        for (point_index, _) in t.points.iter() {
+        for point_index in t.iter_inner_points() {
             let mut points = vec![];
             let mut connected_cells = vec![];
             let tetras = &point_to_tetra_map[&point_index];
             let mut prev_tetra: Option<TetraIndex> = None;
             let mut tetra = tetras[0];
-            let is_boundary = loop {
+            loop {
                 let tetra_data = &t.tetras[tetra];
-                let face = tetra_data.faces().find(|face| {
-                    if let Some(opp) = face.opposing {
-                        let other_tetra_is_incident_with_cell = tetras.contains(&opp.tetra);
-                        let other_tetra_is_prev_tetra = prev_tetra
-                            .map(|prev_tetra| prev_tetra == opp.tetra)
-                            .unwrap_or(false);
-                        other_tetra_is_incident_with_cell && !other_tetra_is_prev_tetra
-                    } else {
-                        false
-                    }
-                });
-                if let Some(face) = face {
-                    points.push(t.get_tetra_data(tetra_data).get_center_of_circumcircle());
-                    for other_point in t.faces[face.face].other_points(point_index) {
-                        connected_cells.push(map[&other_point]);
-                    }
-                    prev_tetra = Some(tetra);
-                    tetra = face.opposing.unwrap().tetra;
-                    if tetra == tetras[0] {
-                        break false;
-                    }
-                } else {
-                    break true;
+                let face = tetra_data
+                    .faces()
+                    .find(|face| {
+                        if let Some(opp) = face.opposing {
+                            let other_tetra_is_incident_with_cell = tetras.contains(&opp.tetra);
+                            let other_tetra_is_prev_tetra = prev_tetra
+                                .map(|prev_tetra| prev_tetra == opp.tetra)
+                                .unwrap_or(false);
+                            other_tetra_is_incident_with_cell && !other_tetra_is_prev_tetra
+                        } else {
+                            false
+                        }
+                    })
+                    .unwrap();
+                points.push(t.get_tetra_data(tetra_data).get_center_of_circumcircle());
+                for other_point in t.faces[face.face].other_points(point_index) {
+                    connected_cells.push(
+                        map.get(&other_point)
+                            .map(|i| CellConnection::ToInner(*i))
+                            .unwrap_or(CellConnection::ToOuter),
+                    );
                 }
-            };
+                prev_tetra = Some(tetra);
+                tetra = face.opposing.unwrap().tetra;
+                if tetra == tetras[0] {
+                    break;
+                }
+            }
 
             cells.push(Cell {
                 center: t.points[point_index],
@@ -91,7 +95,6 @@ impl From<&DelaunayTriangulation<TwoD>> for VoronoiGrid<TwoD> {
                 delaunay_point: point_index,
                 points,
                 connected_cells,
-                is_boundary,
             });
         }
         VoronoiGrid { cells }
@@ -195,5 +198,56 @@ mod tests {
         Cell<D>: DimensionCell<Dimension = D>,
     {
         grid.cells.iter().find(|cell| cell.contains(point))
+    }
+}
+
+#[cfg(test)]
+mod quantitative_tests {
+    use super::primitives::Point2d;
+    use super::DelaunayTriangulation;
+    use super::TwoD;
+    use super::VoronoiGrid;
+    use crate::test_utils::assert_float_is_close;
+    use crate::voronoi::cell::CellConnection;
+    use crate::voronoi::DimensionCell;
+
+    #[test]
+    fn right_volume_and_face_areas() {
+        let points = vec![
+            Point2d::new(0.0, 0.0),
+            Point2d::new(0.1, 0.9),
+            Point2d::new(0.9, 0.2),
+            Point2d::new(0.25, 0.25),
+        ];
+        let (t, map) = DelaunayTriangulation::<TwoD>::construct_from_iter(points.into_iter());
+        let last_point_index = map.last().unwrap();
+        let grid = VoronoiGrid::<TwoD>::from(&t);
+        assert_eq!(grid.cells.len(), 4);
+        // Find the cell associated with the (0.25, 0.25) point above. This cell should be a triangle.
+        // The exact values of faces and normals are taken from constructing the grid by hand and inspecting ;)
+        let cell = grid
+            .cells
+            .iter()
+            .find(|cell| cell.delaunay_point == *last_point_index)
+            .unwrap();
+        assert_float_is_close(cell.volume(), 0.3968809165232358);
+        for (neighbour_index, face_area, normal) in cell.iter_neighbours_and_faces(&grid) {
+            dbg!(normal);
+            if neighbour_index == CellConnection::ToInner(0) {
+                assert_float_is_close(face_area, 1.0846512947129363);
+                assert_float_is_close(normal.x, -0.5f64.sqrt());
+                assert_float_is_close(normal.y, -0.5f64.sqrt());
+            } else if neighbour_index == CellConnection::ToInner(1) {
+                assert_float_is_close(face_area, 0.862988661979256);
+                assert_float_is_close(normal.x, -0.22485950669875832);
+                assert_float_is_close(normal.y, 0.9743911956946198);
+            } else if neighbour_index == CellConnection::ToInner(2) {
+                assert_float_is_close(face_area, 0.9638545380497548);
+                assert_float_is_close(normal.x, 0.9970544855015816);
+                assert_float_is_close(normal.y, -0.07669649888473688);
+            } else {
+                panic!()
+            }
+        }
     }
 }

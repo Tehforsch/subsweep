@@ -16,6 +16,7 @@ use crate::prelude::ParticleId;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
+use crate::voronoi::cell::CellConnection;
 
 pub fn construct_grid_from_iter<D>(
     iter: impl Iterator<Item = (Entity, <D as Dimension>::Point)>,
@@ -23,7 +24,8 @@ pub fn construct_grid_from_iter<D>(
 where
     D: Dimension<Point = MVec>,
     DelaunayTriangulation<D>: Delaunay<D>,
-    super::Cell<D>: DimensionCell,
+    super::Cell<D>: DimensionCell<Dimension = D>,
+    <super::Cell<D> as DimensionCell>::Dimension: Dimension<Point = MVec>,
     VoronoiGrid<D>: for<'a> From<&'a DelaunayTriangulation<D>>,
     <D as Dimension>::TetraData: Visualizable,
     <D as Dimension>::Point: Visualizable,
@@ -55,10 +57,10 @@ where
                                 area: FaceArea::new_unchecked(area),
                                 normal: VecDimensionless::new_unchecked(normal),
                             };
-                            if grid.cells[neigh].is_boundary {
-                                (face, Neighbour::Boundary)
-                            } else {
+                            if let CellConnection::ToInner(neigh) = neigh {
                                 (face, Neighbour::Local(ParticleId(neigh)))
+                            } else {
+                                (face, Neighbour::Boundary)
                             }
                         })
                         .collect(),

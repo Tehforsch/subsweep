@@ -20,6 +20,7 @@ use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::VecLength;
 use raxiom::voronoi::constructor::construct_grid_from_iter;
+use raxiom::voronoi::TwoD;
 use unit_reader::ArepoUnitReader;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
@@ -92,7 +93,7 @@ fn insert_missing_components_system(
             ),));
     }
 
-    let cells = construct_grid_from_iter(
+    let cells = construct_grid_from_iter::<TwoD>(
         particles
             .into_iter()
             .map(|(entity, pos)| (entity, pos.value_unchecked())),
