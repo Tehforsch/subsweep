@@ -115,7 +115,11 @@ impl DimensionCell for Cell<ThreeD> {
     fn iter_neighbours_and_faces<'a>(
         &'a self,
         grid: &'a VoronoiGrid<ThreeD>,
-    ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point3d)>> {
-        todo!()
+    ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point3d)> + 'a> {
+        Box::new(
+            self.connected_cells
+                .iter()
+                .map(|c| (*c, 0.0, Point3d::new(0.0, 0.0, 0.0))),
+        )
     }
 }

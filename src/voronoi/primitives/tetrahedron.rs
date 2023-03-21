@@ -71,9 +71,10 @@ impl DimensionTetraData for TetrahedronData {
             "Could not construct encompassing tetra for points (zero extent along one axis)"
         );
         // An overshooting factor for numerical safety
-        let alpha = 1.00;
-        let projected = max + (max - min) * (1.0 + alpha);
-        let p1 = min - (max - min) * alpha;
+        let alpha = 0.01;
+        let dir = max - min;
+        let projected = max + dir * (3.0 + alpha);
+        let p1 = min - dir * alpha;
         let p2 = Point3d::new(projected.x, min.y, min.z);
         let p3 = Point3d::new(min.x, projected.y, min.z);
         let p4 = Point3d::new(min.x, min.y, projected.z);

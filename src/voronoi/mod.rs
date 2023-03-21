@@ -26,6 +26,7 @@ use self::delaunay::dimension::DimensionTetraData;
 use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
 use self::delaunay::TetraIndex;
+use crate::vis;
 use crate::voronoi::delaunay::dimension::DimensionFace;
 
 pub type CellIndex = usize;
@@ -99,6 +100,7 @@ impl From<&DelaunayTriangulation<TwoD>> for VoronoiGrid<TwoD> {
 
 impl From<&DelaunayTriangulation<ThreeD>> for VoronoiGrid<ThreeD> {
     fn from(t: &DelaunayTriangulation<ThreeD>) -> Self {
+        vis![t];
         let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
         let point_to_tetra_map = point_to_tetra_map(t);
         let mut cells = vec![];
@@ -113,7 +115,7 @@ impl From<&DelaunayTriangulation<ThreeD>> for VoronoiGrid<ThreeD> {
                 let tetra_data = &t.tetras[*tetra];
                 points.push(t.get_tetra_data(&tetra_data).get_center_of_circumcircle());
                 let face = tetra_data.find_face_opposite(point_index);
-                for other_point in t.faces[face.face].other_points(point_index) {
+                for other_point in t.faces[face.face].points() {
                     connected_cells.insert(
                         map.get(&other_point)
                             .map(|i| CellConnection::ToInner(*i))
@@ -299,10 +301,10 @@ mod quantitative_tests {
     fn right_volume_and_face_areas_three_d() {
         let points = vec![
             Point3d::new(0.0, 0.0, 0.0),
-            Point3d::new(0.9, 0.1, 0.05),
-            Point3d::new(0.05, 0.9, 0.1),
-            Point3d::new(0.1, 0.05, 0.9),
-            Point3d::new(0.25, 0.25, 0.25),
+            Point3d::new(0.6, 0.1, 0.1),
+            Point3d::new(0.1, 0.5, 0.1),
+            Point3d::new(0.1, 0.1, 0.4),
+            Point3d::new(0.1, 0.1, 0.1),
         ];
         let (t, map) = DelaunayTriangulation::<ThreeD>::construct_from_iter(points.into_iter());
         let last_point_index = map.last().unwrap();
@@ -316,7 +318,8 @@ mod quantitative_tests {
             .find(|cell| cell.delaunay_point == *last_point_index)
             .unwrap();
         assert_eq!(cell.connected_cells.len(), 4);
-        // assert_float_is_close(cell.volume(), 0.3968809165232358);
+        assert_eq!(cell.points.len(), 4);
+        assert_float_is_close(cell.volume(), 0.3968809165232358);
         // for (neighbour_index, face_area, normal) in cell.iter_neighbours_and_faces(&grid) {
         //     if neighbour_index == CellConnection::ToInner(0) {
         //         assert_float_is_close(face_area, 1.0846512947129363);

@@ -12,6 +12,7 @@ use super::FlipCheckData;
 use super::PointIndex;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
+use crate::vis;
 use crate::voronoi::delaunay::dimension::DimensionFace;
 use crate::voronoi::primitives::tetrahedron::Tetrahedron;
 use crate::voronoi::primitives::tetrahedron::TetrahedronData;
