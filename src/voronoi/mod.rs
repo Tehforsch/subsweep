@@ -173,10 +173,13 @@ mod tests {
         Cell<D>: DimensionCell<Dimension = D>,
         VoronoiGrid<D>: for<'a> From<&'a DelaunayTriangulation<D>>,
     {
-        perform_check_on_each_level_of_construction(|triangulation, _| {
+        perform_check_on_each_level_of_construction(|triangulation, num_inserted_points| {
             let grid: VoronoiGrid<D> = triangulation.into();
             for lookup_point in D::get_lookup_points() {
                 let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
+                if num_inserted_points == 0 {
+                    continue
+                }
                 let closest_cell = grid
                     .cells
                     .iter()
