@@ -11,6 +11,7 @@ pub trait Dimension {
     type FaceData: Clone + DimensionFaceData<Dimension = Self>;
     type Tetra: Clone + DimensionTetra<Dimension = Self>;
     type TetraData: DimensionTetraData<Dimension = Self> + Clone + Visualizable;
+    type VoronoiFaceData;
 }
 
 pub trait DimensionTetra {

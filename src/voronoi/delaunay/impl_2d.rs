@@ -31,6 +31,7 @@ impl Dimension for TwoD {
     type FaceData = FaceData;
     type Tetra = Tetra;
     type TetraData = TetraData;
+    type VoronoiFaceData = ();
 }
 
 impl DelaunayTriangulation<TwoD> {

@@ -110,6 +110,13 @@ impl<'a, T> Iterator for Cyclic<'a, T> {
         if self.items.len() < 2 || self.items.len() == self.visited.len() {
             return None;
         }
+        if self.visited.len() == self.items.len() - 1 {
+            let i1 = &self.items[self.visiting];
+            let i2 = &self.items[0];
+            assert!((self.related)(i1, i2));
+            self.visited.insert(self.visiting);
+            return Some((i1, i2));
+        }
         let visiting = &self.items[self.visiting];
         let (related_index, related) = self
             .items
@@ -121,14 +128,16 @@ impl<'a, T> Iterator for Cyclic<'a, T> {
                     && (self.related)(visiting, value)
             })
             .expect("Expected another related item.");
-        self.visiting = related_index;
         self.visited.insert(self.visiting);
+        self.visiting = related_index;
         Some((visiting, related))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::primitives::Point2d;
 
@@ -182,16 +191,25 @@ mod tests {
 
     fn close(x: &usize, y: &usize) -> bool {
         let dist = ((*x as i32) - (*y as i32)).rem_euclid(7);
-        dist == 1 || dist == -1
+        dist == 1 || dist == -1 || dist == 0
     }
 
     #[test]
     fn arrange_cyclic_by() {
-        let w: Vec<_> = super::arrange_cyclic_by(&[3, 1, 4, 2, 5, 0, 6], close).collect();
+        let items = vec![3, 1, 4, 2, 5, 0, 6];
+        let w: Vec<_> = super::arrange_cyclic_by(&items, close).collect();
         assert_eq!(w.len(), 7);
         for (i1, i2) in w {
             assert!(close(i1, i2));
         }
+        let first_items = super::arrange_cyclic_by(&items, close)
+            .map(|x| *x.0)
+            .collect::<HashSet<_>>();
+        let second_items = super::arrange_cyclic_by(&items, close)
+            .map(|x| *x.1)
+            .collect::<HashSet<_>>();
+        assert_eq!(first_items.len(), 7);
+        assert_eq!(second_items.len(), 7);
         assert_eq!(super::arrange_cyclic_by(&[1], close).count(), 0);
     }
 

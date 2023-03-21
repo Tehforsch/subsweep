@@ -8,6 +8,7 @@ use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::Cell;
 use super::DelaunayTriangulation;
+use super::TwoD;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Statement {
@@ -99,6 +100,16 @@ impl Visualizable for TriangleData<Point2d> {
     }
 }
 
+impl Visualizable for Vec<Point3d> {
+    fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
+        let points: Vec<_> = self
+            .iter()
+            .map(|p| p.get_statements(visualizer)[0].statement.clone())
+            .collect();
+        vec![format!("Polygon({})", points.join(",")).into()]
+    }
+}
+
 impl Visualizable for super::primitives::tetrahedron::TetrahedronData {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         use super::utils::periodic_windows_3;
@@ -140,11 +151,7 @@ where
     }
 }
 
-impl<D> Visualizable for Cell<D>
-where
-    D: Dimension,
-    <D as Dimension>::Point: Visualizable,
-{
+impl Visualizable for Cell<TwoD> {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         let points: Vec<_> = self
             .points

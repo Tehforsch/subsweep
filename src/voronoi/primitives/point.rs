@@ -9,6 +9,7 @@ pub trait Vector: Sized + Sub<Self, Output = Self> {
     fn distance(&self, p: Self) -> Float;
     fn distance_squared(&self, p: Self) -> Float;
     fn normalize(&self) -> Self;
+    fn dot(&self, other: Self) -> Float;
 }
 
 impl Vector for glam::DVec2 {
@@ -23,6 +24,10 @@ impl Vector for glam::DVec2 {
     fn normalize(&self) -> Self {
         glam::DVec2::normalize(*self)
     }
+
+    fn dot(&self, other: Self) -> Float {
+        glam::DVec2::dot(*self, other)
+    }
 }
 
 impl Vector for glam::DVec3 {
@@ -36,5 +41,9 @@ impl Vector for glam::DVec3 {
 
     fn normalize(&self) -> Self {
         glam::DVec3::normalize(*self)
+    }
+
+    fn dot(&self, other: Self) -> Float {
+        glam::DVec3::dot(*self, other)
     }
 }

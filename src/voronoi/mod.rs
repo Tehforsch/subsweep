@@ -19,6 +19,7 @@ pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
 pub use delaunay::DelaunayTriangulation;
 
+use self::cell::CellConnection;
 use self::delaunay::dimension::DimensionTetraData;
 use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
@@ -78,6 +79,13 @@ where
                 .map(|p| Cell::<D>::new(&constructor, p))
                 .collect(),
         }
+    }
+
+    pub fn get_connection(&self, p: PointIndex) -> CellConnection {
+        self.point_to_cell_map
+            .get(&p)
+            .map(|i| CellConnection::ToInner(*i))
+            .unwrap_or(CellConnection::ToOuter)
     }
 }
 
@@ -166,11 +174,6 @@ mod tests {
     {
         perform_check_on_each_level_of_construction(|triangulation, num_inserted_points| {
             let grid: VoronoiGrid<D> = triangulation.into();
-            let mut temp_vis = crate::voronoi::visualizer::Visualizer::default();
-            for c in grid.cells.iter() {
-                temp_vis.add(c);
-            }
-            temp_vis.add(triangulation);
             for lookup_point in D::get_lookup_points() {
                 let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
                 if num_inserted_points == 0 {
@@ -273,5 +276,30 @@ mod quantitative_tests {
             .unwrap();
         assert_eq!(cell.faces.len(), 4);
         assert_eq!(cell.points.len(), 4);
+        for face in cell.faces.iter() {
+            if face.connection == CellConnection::ToInner(0) {
+                assert_float_is_close(face.area, 0.4871392896287468);
+                assert_float_is_close(face.normal.x, -(1.0f64 / 3.0).sqrt());
+                assert_float_is_close(face.normal.y, -(1.0f64 / 3.0).sqrt());
+                assert_float_is_close(face.normal.z, -(1.0f64 / 3.0).sqrt());
+            } else if face.connection == CellConnection::ToInner(1) {
+                assert_float_is_close(face.area, 0.28125);
+                assert_float_is_close(face.normal.x, 1.0);
+                assert_float_is_close(face.normal.y, 0.0);
+                assert_float_is_close(face.normal.z, 0.0);
+            } else if face.connection == CellConnection::ToInner(2) {
+                // assert_float_is_close(face.area, 0.9638545380497548);
+                assert_float_is_close(face.normal.x, 0.0);
+                assert_float_is_close(face.normal.y, 1.0);
+                assert_float_is_close(face.normal.z, 0.0);
+            } else if face.connection == CellConnection::ToInner(3) {
+                assert_float_is_close(face.area, 0.28125);
+                assert_float_is_close(face.normal.x, 0.0);
+                assert_float_is_close(face.normal.y, 0.0);
+                assert_float_is_close(face.normal.z, 1.0);
+            } else {
+                panic!()
+            }
+        }
     }
 }

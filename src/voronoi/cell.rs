@@ -1,10 +1,13 @@
+use std::collections::HashSet;
 use std::f64::consts::PI;
 
 use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
+use super::delaunay::FaceIndex;
 use super::delaunay::PointIndex;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
+use super::primitives::Vector;
 use super::utils::arrange_cyclic_by;
 use super::utils::periodic_windows_2;
 use super::CellIndex;
@@ -45,6 +48,7 @@ pub struct VoronoiFace<D: Dimension> {
     pub connection: CellConnection,
     pub normal: Point<D>,
     pub area: Float,
+    pub data: D::VoronoiFaceData,
 }
 
 fn sign(p1: Point2d, p2: Point2d, p3: Point2d) -> Float {
@@ -74,6 +78,22 @@ where
             faces: Self::get_faces(c, p),
         }
     }
+}
+
+fn get_common_face<D: Dimension>(
+    c: &Constructor<D>,
+    t1: &TetraIndex,
+    t2: &TetraIndex,
+) -> Option<FaceIndex> {
+    let t1_data = &c.triangulation.tetras[*t1];
+    let t2_data = &c.triangulation.tetras[*t2];
+    t1_data.get_common_face_with(t2_data)
+}
+
+fn get_normal<D: Dimension>(c: &Constructor<D>, p1: PointIndex, p2: PointIndex) -> Point<D> {
+    let p1 = c.triangulation.points[p1];
+    let p2 = c.triangulation.points[p2];
+    (p2 - p1).normalize()
 }
 
 impl DimensionCell for Cell<TwoD> {
@@ -106,38 +126,24 @@ impl DimensionCell for Cell<TwoD> {
 
     fn get_faces(c: &Constructor<TwoD>, p: PointIndex) -> Vec<VoronoiFace<TwoD>> {
         let tetras = &c.point_to_tetras_map[&p];
-        let mut faces = vec![];
-        let get_common_face = |t1: &TetraIndex, t2: &TetraIndex| {
-            let t1_data = &c.triangulation.tetras[*t1];
-            let t2_data = &c.triangulation.tetras[*t2];
-            t1_data.get_common_face_with(t2_data)
-        };
         let tetras_are_neighbours =
-            |t1: &TetraIndex, t2: &TetraIndex| get_common_face(t1, t2).is_some();
-        for (t1, t2) in arrange_cyclic_by(tetras, tetras_are_neighbours) {
-            let line = &c.triangulation.faces[get_common_face(t1, t2).unwrap()];
-            let p2_index = line.other_point(p);
-            let connection = c
-                .point_to_cell_map
-                .get(&p2_index)
-                .map(|i| CellConnection::ToInner(*i))
-                .unwrap_or(CellConnection::ToOuter);
-            let p1 = c.triangulation.points[p];
-            let p2 = c.triangulation.points[p2_index];
-            let mut normal = (p1 - p2).normalize();
-            if (p2 - p1).dot(normal) < 0.0 {
-                normal = -normal;
-            }
-            let vp1 = c.tetra_to_voronoi_point_map[&t1];
-            let vp2 = c.tetra_to_voronoi_point_map[&t2];
-            let area = vp1.distance(vp2);
-            faces.push(VoronoiFace {
-                connection,
-                normal,
-                area,
-            });
-        }
-        faces
+            |t1: &TetraIndex, t2: &TetraIndex| get_common_face(c, t1, t2).is_some();
+        arrange_cyclic_by(tetras, tetras_are_neighbours)
+            .map(|(t1, t2)| {
+                let line = &c.triangulation.faces[get_common_face(c, t1, t2).unwrap()];
+                let p2_index = line.other_point(p);
+                let vp1 = c.tetra_to_voronoi_point_map[&t1];
+                let vp2 = c.tetra_to_voronoi_point_map[&t2];
+                let area = vp1.distance(vp2);
+                let normal = get_normal(c, p, p2_index);
+                VoronoiFace {
+                    connection: c.get_connection(p2_index),
+                    normal,
+                    area,
+                    data: (),
+                }
+            })
+            .collect()
     }
 }
 
@@ -156,21 +162,55 @@ impl DimensionCell for Cell<ThreeD> {
         todo!()
     }
 
-    fn get_faces(c: &Constructor<ThreeD>, p: PointIndex) -> Vec<VoronoiFace<ThreeD>> {
-        todo!()
-        //             let mut connected_cells = HashSet::new();
-        //             let tetras = &point_to_tetra_map[&point_index];
-        //             for tetra in tetras.iter() {
-        //                 let tetra_data = &t.tetras[*tetra];
-        //                 points.push(t.get_tetra_data(&tetra_data).get_center_of_circumcircle());
-        //                 let face = tetra_data.find_face_opposite(point_index);
-        //                 for other_point in t.faces[face.face].points() {
-        //                     connected_cells.insert(
-        //                         map.get(&other_point)
-        //                             .map(|i| CellConnection::ToInner(*i))
-        //                             .unwrap_or(CellConnection::ToOuter),
-        //                     );
-        //                 }
-        //             }
+    fn get_faces(c: &Constructor<ThreeD>, p1: PointIndex) -> Vec<VoronoiFace<ThreeD>> {
+        let tetras = &c.point_to_tetras_map[&p1];
+        let connected_points: HashSet<PointIndex> = tetras
+            .iter()
+            .flat_map(|tetra| {
+                c.triangulation.tetras[*tetra]
+                    .points()
+                    .filter(|p2| *p2 != p1)
+            })
+            .collect();
+        connected_points
+            .iter()
+            .map(|p2| get_face_polygon_perpendicular_to_line(c, p1, *p2))
+            .collect()
+    }
+}
+
+fn get_face_polygon_perpendicular_to_line(
+    c: &Constructor<ThreeD>,
+    p1: PointIndex,
+    p2: PointIndex,
+) -> VoronoiFace<ThreeD> {
+    let tetras_are_neighbours =
+        |t1: &TetraIndex, t2: &TetraIndex| get_common_face(c, t1, t2).is_some();
+    let tetras_with_p1 = &c.point_to_tetras_map[&p1];
+    let tetras_with_both_points: Vec<TetraIndex> = tetras_with_p1
+        .iter()
+        .filter(|tetra| {
+            let tetra = &c.triangulation.tetras[**tetra];
+            debug_assert!(tetra.contains_point(p1));
+            tetra.contains_point(p2)
+        })
+        .cloned()
+        .collect();
+    let mut area = 0.0;
+    // Take any point out of the polygon for reference
+    let r: Point3d = c.tetra_to_voronoi_point_map[&tetras_with_both_points[0]];
+    let mut points = vec![];
+    for (t1, t2) in arrange_cyclic_by(&tetras_with_both_points, tetras_are_neighbours) {
+        let vp1 = c.tetra_to_voronoi_point_map[&t1];
+        points.push(vp1);
+        let vp2 = c.tetra_to_voronoi_point_map[&t2];
+        area += 0.5 * (r - vp1).cross(r - vp2).length();
+    }
+    let normal = get_normal(c, p1, p2);
+    VoronoiFace {
+        connection: c.get_connection(p2),
+        normal,
+        area,
+        data: points,
     }
 }

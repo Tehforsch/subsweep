@@ -18,6 +18,10 @@ impl DimensionFace for Line {
 }
 
 impl Line {
+    pub fn contains(&self, point: PointIndex) -> bool {
+        self.p1 == point || self.p2 == point
+    }
+
     pub fn other_point(&self, point: PointIndex) -> PointIndex {
         if point == self.p1 {
             self.p2
