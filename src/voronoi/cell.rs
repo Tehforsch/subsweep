@@ -5,6 +5,7 @@ use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
 use super::delaunay::FaceIndex;
 use super::delaunay::PointIndex;
+use super::primitives::polygon3d::Polygon3d;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::primitives::Vector;
@@ -42,6 +43,7 @@ pub struct Cell<D: Dimension> {
     pub index: CellIndex,
     pub points: Vec<Point<D>>,
     pub faces: Vec<VoronoiFace<D>>,
+    pub center: Point<D>,
 }
 
 pub struct VoronoiFace<D: Dimension> {
@@ -76,6 +78,7 @@ where
             points,
             index: c.point_to_cell_map[&p],
             faces: Self::get_faces(c, p),
+            center: c.triangulation.points[p],
         }
     }
 }
@@ -147,13 +150,19 @@ impl DimensionCell for Cell<TwoD> {
     }
 }
 
+fn pyramid_volume(normal: Point3d, p: Point3d, polygon: &Polygon3d) -> Float {
+    let base = polygon.area();
+    let height = normal.dot(p - polygon.points[0]).abs();
+    1.0 / 3.0 * base * height
+}
+
 impl DimensionCell for Cell<ThreeD> {
     type Dimension = ThreeD;
 
     fn contains(&self, point: Point3d) -> bool {
         self.faces
             .iter()
-            .all(|face| face.normal.dot(point - face.data[0]) < 0.0)
+            .all(|face| face.normal.dot(point - face.data.points[0]) < 0.0)
     }
 
     fn size(&self) -> Float {
@@ -161,7 +170,12 @@ impl DimensionCell for Cell<ThreeD> {
     }
 
     fn volume(&self) -> Float {
-        todo!()
+        // The volume is the sum over the volumes of the "pyramids" spanned by
+        // the generating delaunay point and a face.
+        self.faces
+            .iter()
+            .map(|face| pyramid_volume(face.normal, self.center, &face.data))
+            .sum()
     }
 
     fn get_faces(c: &Constructor<ThreeD>, p1: PointIndex) -> Vec<VoronoiFace<ThreeD>> {
@@ -198,21 +212,15 @@ fn get_face_polygon_perpendicular_to_line(
         })
         .cloned()
         .collect();
-    let mut area = 0.0;
-    // Take any point out of the polygon for reference
-    let r: Point3d = c.tetra_to_voronoi_point_map[&tetras_with_both_points[0]];
-    let mut points = vec![];
-    for (t1, t2) in arrange_cyclic_by(&tetras_with_both_points, tetras_are_neighbours) {
-        let vp1 = c.tetra_to_voronoi_point_map[&t1];
-        points.push(vp1);
-        let vp2 = c.tetra_to_voronoi_point_map[&t2];
-        area += 0.5 * (r - vp1).cross(r - vp2).length();
-    }
+    let points = arrange_cyclic_by(&tetras_with_both_points, tetras_are_neighbours)
+        .map(|(p1, _)| c.tetra_to_voronoi_point_map[&p1])
+        .collect();
     let normal = get_normal(c, p1, p2);
+    let poly = Polygon3d { points };
     VoronoiFace {
         connection: c.get_connection(p2),
         normal,
-        area,
-        data: points,
+        area: poly.area(),
+        data: poly,
     }
 }

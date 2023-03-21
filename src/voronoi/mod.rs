@@ -283,6 +283,7 @@ mod quantitative_tests {
             .unwrap();
         assert_eq!(cell.faces.len(), 4);
         assert_eq!(cell.points.len(), 4);
+        assert_float_is_close(cell.volume(), 0.0703125);
         for face in cell.faces.iter() {
             if face.connection == CellConnection::ToInner(0) {
                 assert_float_is_close(face.area, 0.4871392896287468);
@@ -295,7 +296,7 @@ mod quantitative_tests {
                 assert_float_is_close(face.normal.y, 0.0);
                 assert_float_is_close(face.normal.z, 0.0);
             } else if face.connection == CellConnection::ToInner(2) {
-                // assert_float_is_close(face.area, 0.9638545380497548);
+                assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 0.0);
                 assert_float_is_close(face.normal.y, 1.0);
                 assert_float_is_close(face.normal.z, 0.0);

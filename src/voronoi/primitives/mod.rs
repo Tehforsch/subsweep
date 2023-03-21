@@ -1,5 +1,6 @@
 pub mod line;
 pub mod point;
+pub mod polygon3d;
 pub mod tetrahedron;
 pub mod triangle;
 

@@ -13,12 +13,12 @@ use super::PointIndex;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
 use crate::voronoi::delaunay::dimension::DimensionFace;
+use crate::voronoi::primitives::polygon3d::Polygon3d;
 use crate::voronoi::primitives::tetrahedron::Tetrahedron;
 use crate::voronoi::primitives::tetrahedron::TetrahedronData;
 use crate::voronoi::primitives::triangle::IntersectionType;
 use crate::voronoi::primitives::triangle::Triangle;
 use crate::voronoi::primitives::triangle::TriangleData;
-use crate::voronoi::primitives::Point3d;
 use crate::voronoi::utils::periodic_windows_2;
 use crate::voronoi::utils::periodic_windows_3;
 use crate::voronoi::ThreeD;
@@ -35,7 +35,7 @@ impl Dimension for ThreeD {
     type FaceData = FaceData;
     type Tetra = Tetra;
     type TetraData = TetraData;
-    type VoronoiFaceData = Vec<Point3d>;
+    type VoronoiFaceData = Polygon3d;
 }
 
 impl DelaunayTriangulation<ThreeD> {
