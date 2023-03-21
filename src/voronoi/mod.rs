@@ -22,10 +22,13 @@ pub use delaunay::dimension::DimensionTetra;
 pub use delaunay::DelaunayTriangulation;
 
 use self::cell::CellConnection;
+use self::cell::VoronoiFace;
 use self::delaunay::dimension::DimensionTetraData;
 use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
 use self::delaunay::TetraIndex;
+use self::primitives::Point2d;
+use self::utils::periodic_windows_2;
 use crate::vis;
 use crate::voronoi::delaunay::dimension::DimensionFace;
 
@@ -39,6 +42,29 @@ type Point<D> = <D as Dimension>::Point;
 #[derive(Resource)]
 pub struct VoronoiGrid<D: Dimension> {
     pub cells: Vec<Cell<D>>,
+}
+
+fn iter_faces_two_d<'a>(
+    center: Point2d,
+    points: &'a [Point2d],
+    connected_cells: &'a [CellConnection],
+) -> impl Iterator<Item = VoronoiFace<TwoD>> + 'a {
+    connected_cells
+        .iter()
+        .zip(periodic_windows_2(points))
+        .map(move |(c, (p1, p2))| {
+            let area = p1.distance(*p2);
+            let dir = *p1 - *p2;
+            let mut normal = Point2d::new(dir.y, -dir.x).normalize();
+            if (*p1 - center).dot(normal) < 0.0 {
+                normal = -normal;
+            }
+            VoronoiFace {
+                area,
+                normal,
+                connection: *c,
+            }
+        })
 }
 
 impl From<&DelaunayTriangulation<TwoD>> for VoronoiGrid<TwoD> {
@@ -85,13 +111,15 @@ impl From<&DelaunayTriangulation<TwoD>> for VoronoiGrid<TwoD> {
                     break;
                 }
             }
+            let faces =
+                iter_faces_two_d(t.points[point_index], &points, &connected_cells).collect();
 
             cells.push(Cell {
                 center: t.points[point_index],
                 index: map[&point_index],
                 delaunay_point: point_index,
                 points,
-                connected_cells,
+                faces,
             });
         }
         VoronoiGrid { cells }
@@ -129,7 +157,7 @@ impl From<&DelaunayTriangulation<ThreeD>> for VoronoiGrid<ThreeD> {
                 index: map[&point_index],
                 delaunay_point: point_index,
                 points,
-                connected_cells: connected_cells.into_iter().collect(),
+                faces: connected_cells.into_iter().map(|_| todo!()).collect(),
             });
         }
         VoronoiGrid { cells }
@@ -173,7 +201,6 @@ mod tests {
     use super::ThreeD;
     use super::TwoD;
     use super::VoronoiGrid;
-    use crate::vis;
     use crate::voronoi::primitives::point::Vector;
 
     #[instantiate_tests(<TwoD>)]
@@ -278,19 +305,19 @@ mod quantitative_tests {
             .find(|cell| cell.delaunay_point == *last_point_index)
             .unwrap();
         assert_float_is_close(cell.volume(), 0.3968809165232358);
-        for (neighbour_index, face_area, normal) in cell.iter_neighbours_and_faces(&grid) {
-            if neighbour_index == CellConnection::ToInner(0) {
-                assert_float_is_close(face_area, 1.0846512947129363);
-                assert_float_is_close(normal.x, -0.5f64.sqrt());
-                assert_float_is_close(normal.y, -0.5f64.sqrt());
-            } else if neighbour_index == CellConnection::ToInner(1) {
-                assert_float_is_close(face_area, 0.862988661979256);
-                assert_float_is_close(normal.x, -0.22485950669875832);
-                assert_float_is_close(normal.y, 0.9743911956946198);
-            } else if neighbour_index == CellConnection::ToInner(2) {
-                assert_float_is_close(face_area, 0.9638545380497548);
-                assert_float_is_close(normal.x, 0.9970544855015816);
-                assert_float_is_close(normal.y, -0.07669649888473688);
+        for face in cell.faces.iter() {
+            if face.connection == CellConnection::ToInner(0) {
+                assert_float_is_close(face.area, 1.0846512947129363);
+                assert_float_is_close(face.normal.x, -0.5f64.sqrt());
+                assert_float_is_close(face.normal.y, -0.5f64.sqrt());
+            } else if face.connection == CellConnection::ToInner(1) {
+                assert_float_is_close(face.area, 0.862988661979256);
+                assert_float_is_close(face.normal.x, -0.22485950669875832);
+                assert_float_is_close(face.normal.y, 0.9743911956946198);
+            } else if face.connection == CellConnection::ToInner(2) {
+                assert_float_is_close(face.area, 0.9638545380497548);
+                assert_float_is_close(face.normal.x, 0.9970544855015816);
+                assert_float_is_close(face.normal.y, -0.07669649888473688);
             } else {
                 panic!()
             }
@@ -317,7 +344,7 @@ mod quantitative_tests {
             .iter()
             .find(|cell| cell.delaunay_point == *last_point_index)
             .unwrap();
-        assert_eq!(cell.connected_cells.len(), 4);
+        assert_eq!(cell.faces.len(), 4);
         assert_eq!(cell.points.len(), 4);
         assert_float_is_close(cell.volume(), 0.3968809165232358);
         // for (neighbour_index, face_area, normal) in cell.iter_neighbours_and_faces(&grid) {

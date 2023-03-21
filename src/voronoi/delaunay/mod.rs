@@ -15,7 +15,6 @@ use self::dimension::DimensionTetra;
 use self::dimension::DimensionTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
-use crate::vis;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct TetraIndex(Index);

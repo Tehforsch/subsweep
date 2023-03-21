@@ -4,13 +4,11 @@ use super::delaunay::dimension::Dimension;
 use super::delaunay::PointIndex;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
-use super::primitives::Vector;
 use super::utils::periodic_windows_2;
 use super::CellIndex;
 use super::Point;
 use super::ThreeD;
 use super::TwoD;
-use super::VoronoiGrid;
 use crate::prelude::Float;
 
 pub trait DimensionCell {
@@ -18,10 +16,6 @@ pub trait DimensionCell {
     fn size(&self) -> Float;
     fn volume(&self) -> Float;
     fn contains(&self, point: Point<Self::Dimension>) -> bool;
-    fn iter_neighbours_and_faces<'a>(
-        &'a self,
-        grid: &'a VoronoiGrid<Self::Dimension>,
-    ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point<Self::Dimension>)> + '_>;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -35,7 +29,13 @@ pub struct Cell<D: Dimension> {
     pub center: Point<D>,
     pub index: CellIndex,
     pub points: Vec<Point<D>>,
-    pub connected_cells: Vec<CellConnection>,
+    pub faces: Vec<VoronoiFace<D>>,
+}
+
+pub struct VoronoiFace<D: Dimension> {
+    pub connection: CellConnection,
+    pub normal: Point<D>,
+    pub area: Float,
 }
 
 fn sign(p1: Point2d, p2: Point2d, p3: Point2d) -> Float {
@@ -50,26 +50,6 @@ impl Cell<TwoD> {
 
 impl DimensionCell for Cell<TwoD> {
     type Dimension = TwoD;
-
-    fn iter_neighbours_and_faces<'a>(
-        &'a self,
-        _grid: &'a VoronoiGrid<TwoD>,
-    ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point2d)> + '_> {
-        Box::new(
-            self.connected_cells
-                .iter()
-                .zip(self.point_windows())
-                .map(|(c, (p1, p2))| {
-                    let face_area = p1.distance(*p2);
-                    let dir = *p1 - *p2;
-                    let mut normal = Point2d::new(dir.y, -dir.x).normalize();
-                    if (*p1 - self.center).dot(normal) < 0.0 {
-                        normal = -normal;
-                    }
-                    (*c, face_area, normal)
-                }),
-        )
-    }
 
     fn contains(&self, point: Point2d) -> bool {
         let has_negative = self
@@ -110,16 +90,5 @@ impl DimensionCell for Cell<ThreeD> {
 
     fn volume(&self) -> Float {
         todo!()
-    }
-
-    fn iter_neighbours_and_faces<'a>(
-        &'a self,
-        grid: &'a VoronoiGrid<ThreeD>,
-    ) -> Box<dyn Iterator<Item = (CellConnection, Float, Point3d)> + 'a> {
-        Box::new(
-            self.connected_cells
-                .iter()
-                .map(|c| (*c, 0.0, Point3d::new(0.0, 0.0, 0.0))),
-        )
     }
 }

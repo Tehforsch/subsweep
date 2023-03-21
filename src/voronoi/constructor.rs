@@ -51,11 +51,13 @@ where
                 let id = ParticleId(voronoi_cell.index);
                 let grid_cell = crate::grid::Cell {
                     neighbours: voronoi_cell
-                        .iter_neighbours_and_faces(&grid)
-                        .map(|(neigh, area, normal)| {
+                        .faces
+                        .iter()
+                        .map(|face| {
+                            let neigh = face.connection;
                             let face = crate::grid::Face {
-                                area: FaceArea::new_unchecked(area),
-                                normal: VecDimensionless::new_unchecked(normal),
+                                area: FaceArea::new_unchecked(face.area),
+                                normal: VecDimensionless::new_unchecked(face.normal),
                             };
                             if let CellConnection::ToInner(neigh) = neigh {
                                 (face, Neighbour::Local(ParticleId(neigh)))
