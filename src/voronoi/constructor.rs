@@ -120,11 +120,6 @@ mod tests {
         use bevy::prelude::Entity;
 
         use super::construct_grid_from_iter;
-        use crate::prelude::MVec;
-        use crate::voronoi::delaunay::Delaunay;
-        use crate::voronoi::Cell;
-        use crate::voronoi::DelaunayTriangulation;
-        use crate::voronoi::DimensionCell;
 
         construct_grid_from_iter::<TwoD>(
             TwoD::get_points_for_small_grid()

@@ -11,6 +11,7 @@ use raxiom::components::Position;
 use raxiom::prelude::*;
 use raxiom::units::VecLength;
 use raxiom::voronoi::delaunay::TetraIndex;
+use raxiom::voronoi::CellConnection;
 use raxiom::voronoi::DelaunayTriangulation;
 use raxiom::voronoi::DimensionTetra;
 use raxiom::voronoi::TwoD;
@@ -233,7 +234,11 @@ fn highlight_cell_system(
         if polygon.index == index {
             *color = colors.red.clone();
             transform.translation.z = HIGHLIGHT_LAYER;
-        } else if cell.connected_cells.contains(&polygon.index) {
+        } else if cell
+            .faces
+            .iter()
+            .any(|face| face.connection == CellConnection::ToInner(polygon.index))
+        {
             *color = colors.green.clone();
             transform.translation.z = INTERMEDIATE_LAYER;
         } else {

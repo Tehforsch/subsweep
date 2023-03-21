@@ -19,7 +19,7 @@ pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
 pub use delaunay::DelaunayTriangulation;
 
-use self::cell::CellConnection;
+pub use self::cell::CellConnection;
 use self::delaunay::dimension::DimensionTetraData;
 use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
@@ -150,7 +150,8 @@ mod tests {
 
     impl VoronoiTestDimension for TwoD {
         fn get_lookup_points() -> Vec<Point2d> {
-            ((0..10).zip(0..10))
+            (0..10)
+                .flat_map(move |i| (0..10).map(move |j| (i, j)))
                 .map(|(i, j)| Point2d::new(0.1 * i as f64, 0.1 * j as f64))
                 .collect()
         }
@@ -158,8 +159,10 @@ mod tests {
 
     impl VoronoiTestDimension for ThreeD {
         fn get_lookup_points() -> Vec<Point3d> {
-            ((0..10).zip(0..10).zip(0..10))
-                .map(|((i, j), k)| Point3d::new(0.1 * i as f64, 0.1 * j as f64, 0.1 * k as f64))
+            (0..10)
+                .flat_map(move |i| (0..10).map(move |j| (i, j)))
+                .flat_map(move |(i, j)| (0..10).map(move |k| (i, j, k)))
+                .map(|(i, j, k)| Point3d::new(0.1 * i as f64, 0.1 * j as f64, 0.1 * k as f64))
                 .collect()
         }
     }
@@ -171,14 +174,16 @@ mod tests {
         DelaunayTriangulation<D>: super::visualizer::Visualizable,
         Cell<D>: DimensionCell<Dimension = D>,
         VoronoiGrid<D>: for<'a> From<&'a DelaunayTriangulation<D>>,
+        <D as Dimension>::Point: std::fmt::Debug,
     {
         perform_check_on_each_level_of_construction(|triangulation, num_inserted_points| {
+            if num_inserted_points == 0 {
+                return;
+            }
+            let mut num_found = 0;
             let grid: VoronoiGrid<D> = triangulation.into();
             for lookup_point in D::get_lookup_points() {
                 let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
-                if num_inserted_points == 0 {
-                    continue;
-                }
                 let closest_cell = grid
                     .cells
                     .iter()
@@ -188,9 +193,11 @@ mod tests {
                     })
                     .unwrap();
                 if let Some(containing_cell) = containing_cell {
+                    num_found += 1;
                     assert_eq!(containing_cell.delaunay_point, closest_cell.delaunay_point);
                 }
             }
+            assert!(num_found != 0); // Most likely this means that cell.contains doesn't work
         });
     }
 

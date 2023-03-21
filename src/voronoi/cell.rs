@@ -150,8 +150,10 @@ impl DimensionCell for Cell<TwoD> {
 impl DimensionCell for Cell<ThreeD> {
     type Dimension = ThreeD;
 
-    fn contains(&self, _point: Point3d) -> bool {
-        todo!()
+    fn contains(&self, point: Point3d) -> bool {
+        self.faces
+            .iter()
+            .all(|face| face.normal.dot(point - face.data[0]) < 0.0)
     }
 
     fn size(&self) -> Float {
