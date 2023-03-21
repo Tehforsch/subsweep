@@ -11,8 +11,6 @@ mod utils;
 
 mod cell;
 
-use std::collections::HashSet;
-
 use bevy::prelude::Resource;
 use bevy::utils::StableHashMap;
 pub use cell::Cell;
@@ -21,16 +19,9 @@ pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
 pub use delaunay::DelaunayTriangulation;
 
-use self::cell::CellConnection;
-use self::cell::VoronoiFace;
-use self::delaunay::dimension::DimensionTetraData;
 use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
 use self::delaunay::TetraIndex;
-use self::primitives::Point2d;
-use self::utils::periodic_windows_2;
-use crate::vis;
-use crate::voronoi::delaunay::dimension::DimensionFace;
 
 pub type CellIndex = usize;
 
@@ -44,123 +35,51 @@ pub struct VoronoiGrid<D: Dimension> {
     pub cells: Vec<Cell<D>>,
 }
 
-fn iter_faces_two_d<'a>(
-    center: Point2d,
-    points: &'a [Point2d],
-    connected_cells: &'a [CellConnection],
-) -> impl Iterator<Item = VoronoiFace<TwoD>> + 'a {
-    connected_cells
-        .iter()
-        .zip(periodic_windows_2(points))
-        .map(move |(c, (p1, p2))| {
-            let area = p1.distance(*p2);
-            let dir = *p1 - *p2;
-            let mut normal = Point2d::new(dir.y, -dir.x).normalize();
-            if (*p1 - center).dot(normal) < 0.0 {
-                normal = -normal;
-            }
-            VoronoiFace {
-                area,
-                normal,
-                connection: *c,
-            }
-        })
+pub struct Constructor<'a, D: Dimension> {
+    triangulation: &'a DelaunayTriangulation<D>,
+    point_to_cell_map: StableHashMap<PointIndex, CellIndex>,
+    point_to_tetras_map: StableHashMap<PointIndex, Vec<TetraIndex>>,
 }
 
-impl From<&DelaunayTriangulation<TwoD>> for VoronoiGrid<TwoD> {
-    fn from(t: &DelaunayTriangulation<TwoD>) -> Self {
+impl<'a, D: Dimension> Constructor<'a, D>
+where
+    DelaunayTriangulation<D>: Delaunay<D>,
+    Cell<D>: DimensionCell<Dimension = D>,
+{
+    fn new(t: &'a DelaunayTriangulation<D>) -> Self {
         let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
-        let point_to_tetra_map = point_to_tetra_map(t);
-        let mut cells = vec![];
         for (i, point_index) in t.iter_inner_points().enumerate() {
             map.insert(point_index, i);
         }
-        for point_index in t.iter_inner_points() {
-            let mut points = vec![];
-            let mut connected_cells = vec![];
-            let tetras = &point_to_tetra_map[&point_index];
-            let mut prev_tetra: Option<TetraIndex> = None;
-            let mut tetra = tetras[0];
-            loop {
-                let tetra_data = &t.tetras[tetra];
-                let face = tetra_data
-                    .faces()
-                    .find(|face| {
-                        if let Some(opp) = face.opposing {
-                            let other_tetra_is_incident_with_cell = tetras.contains(&opp.tetra);
-                            let other_tetra_is_prev_tetra = prev_tetra
-                                .map(|prev_tetra| prev_tetra == opp.tetra)
-                                .unwrap_or(false);
-                            other_tetra_is_incident_with_cell && !other_tetra_is_prev_tetra
-                        } else {
-                            false
-                        }
-                    })
-                    .unwrap();
-                points.push(t.get_tetra_data(tetra_data).get_center_of_circumcircle());
-                for other_point in t.faces[face.face].other_points(point_index) {
-                    connected_cells.push(
-                        map.get(&other_point)
-                            .map(|i| CellConnection::ToInner(*i))
-                            .unwrap_or(CellConnection::ToOuter),
-                    );
-                }
-                prev_tetra = Some(tetra);
-                tetra = face.opposing.unwrap().tetra;
-                if tetra == tetras[0] {
-                    break;
-                }
-            }
-            let faces =
-                iter_faces_two_d(t.points[point_index], &points, &connected_cells).collect();
-
-            cells.push(Cell {
-                center: t.points[point_index],
-                index: map[&point_index],
-                delaunay_point: point_index,
-                points,
-                faces,
-            });
+        Self {
+            triangulation: t,
+            point_to_tetras_map: point_to_tetra_map(t),
+            point_to_cell_map: t
+                .iter_inner_points()
+                .enumerate()
+                .map(|(i, p)| (p, i))
+                .collect(),
         }
-        VoronoiGrid { cells }
+    }
+
+    pub fn construct(t: &'a DelaunayTriangulation<D>) -> VoronoiGrid<D> {
+        let constructor = Self::new(t);
+        VoronoiGrid {
+            cells: t
+                .iter_inner_points()
+                .map(|p| Cell::<D>::new(&constructor, p))
+                .collect(),
+        }
     }
 }
 
-impl From<&DelaunayTriangulation<ThreeD>> for VoronoiGrid<ThreeD> {
-    fn from(t: &DelaunayTriangulation<ThreeD>) -> Self {
-        vis![t];
-        let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
-        let point_to_tetra_map = point_to_tetra_map(t);
-        let mut cells = vec![];
-        for (i, point_index) in t.iter_inner_points().enumerate() {
-            map.insert(point_index, i);
-        }
-        for point_index in t.iter_inner_points() {
-            let mut points = vec![];
-            let mut connected_cells = HashSet::new();
-            let tetras = &point_to_tetra_map[&point_index];
-            for tetra in tetras.iter() {
-                let tetra_data = &t.tetras[*tetra];
-                points.push(t.get_tetra_data(&tetra_data).get_center_of_circumcircle());
-                let face = tetra_data.find_face_opposite(point_index);
-                for other_point in t.faces[face.face].points() {
-                    connected_cells.insert(
-                        map.get(&other_point)
-                            .map(|i| CellConnection::ToInner(*i))
-                            .unwrap_or(CellConnection::ToOuter),
-                    );
-                }
-            }
-
-            cells.push(Cell {
-                center: t.points[point_index],
-                index: map[&point_index],
-                delaunay_point: point_index,
-                points,
-                faces: connected_cells.into_iter().map(|_| todo!()).collect(),
-            });
-        }
-        VoronoiGrid { cells }
+impl<D: Dimension> From<&DelaunayTriangulation<D>> for VoronoiGrid<D>
+where
+    DelaunayTriangulation<D>: Delaunay<D>,
+    Cell<D>: DimensionCell<Dimension = D>,
+{
+    fn from(t: &DelaunayTriangulation<D>) -> Self {
+        Constructor::construct(t)
     }
 }
 
