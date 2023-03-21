@@ -1,11 +1,11 @@
 use std::f64::consts::PI;
 
 use super::delaunay::dimension::Dimension;
-use super::delaunay::dimension::DimensionTetraData;
 use super::delaunay::Delaunay;
 use super::delaunay::PointIndex;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
+use super::utils::arrange_cyclic_by;
 use super::utils::periodic_windows_2;
 use super::CellIndex;
 use super::Constructor;
@@ -14,6 +14,8 @@ use super::Point;
 use super::ThreeD;
 use super::TwoD;
 use crate::prelude::Float;
+use crate::voronoi::delaunay::TetraIndex;
+use crate::voronoi::DimensionTetra;
 
 pub trait DimensionCell: Sized {
     type Dimension: Dimension;
@@ -63,12 +65,7 @@ where
     pub fn new(c: &Constructor<'_, D>, p: PointIndex) -> Self {
         let points = c.point_to_tetras_map[&p]
             .iter()
-            .map(|tetra| {
-                let tetra_data = &c.triangulation.tetras[*tetra];
-                c.triangulation
-                    .get_tetra_data(&tetra_data)
-                    .get_center_of_circumcircle()
-            })
+            .map(|tetra| c.tetra_to_voronoi_point_map[tetra])
             .collect();
         Self {
             delaunay_point: p,
@@ -108,62 +105,39 @@ impl DimensionCell for Cell<TwoD> {
     }
 
     fn get_faces(c: &Constructor<TwoD>, p: PointIndex) -> Vec<VoronoiFace<TwoD>> {
-        todo!()
-        // let tetras = &c.point_to_tetras_map[&p];
-        // let mut prev_tetra: Option<TetraIndex> = None;
-        // let mut tetra = tetras[0];
-        // loop {
-        //     let tetra_data = &c.triangulation.tetras[tetra];
-        //     let face = tetra_data
-        //         .faces()
-        //         .find(|face| {
-        //             if let Some(opp) = face.opposing {
-        //                 let other_tetra_is_incident_with_cell = tetras.contains(&opp.tetra);
-        //                 let other_tetra_is_prev_tetra = prev_tetra
-        //                     .map(|prev_tetra| prev_tetra == opp.tetra)
-        //                     .unwrap_or(false);
-        //                 other_tetra_is_incident_with_cell && !other_tetra_is_prev_tetra
-        //             } else {
-        //                 false
-        //             }
-        //         })
-        //         .unwrap();
-        //     for other_point in t.faces[face.face].other_points(p) {
-        //         connected_cells.push(
-        //             map.get(&other_point)
-        //                 .map(|i| CellConnection::ToInner(*i))
-        //                 .unwrap_or(CellConnection::ToOuter),
-        //         );
-        //     }
-        //     prev_tetra = Some(tetra);
-        //     tetra = face.opposing.unwrap().tetra;
-        //     if tetra == tetras[0] {
-        //         break;
-        //     }
-        // }
-        // iter_faces_two_d(t.points[point_index], &points, &connected_cells).collect()
-        // fn iter_faces_two_d<'a>(
-        //     center: Point2d,
-        //     points: &'a [Point2d],
-        //     connected_cells: &'a [CellConnection],
-        // ) -> impl Iterator<Item = VoronoiFace<TwoD>> + 'a {
-        //     connected_cells
-        //         .iter()
-        //         .zip(periodic_windows_2(points))
-        //         .map(move |(c, (p1, p2))| {
-        //             let area = p1.distance(*p2);
-        //             let dir = *p1 - *p2;
-        //             let mut normal = Point2d::new(dir.y, -dir.x).normalize();
-        //             if (*p1 - center).dot(normal) < 0.0 {
-        //                 normal = -normal;
-        //             }
-        //             VoronoiFace {
-        //                 area,
-        //                 normal,
-        //                 connection: *c,
-        //             }
-        //         })
-        // }
+        let tetras = &c.point_to_tetras_map[&p];
+        let mut faces = vec![];
+        let get_common_face = |t1: &TetraIndex, t2: &TetraIndex| {
+            let t1_data = &c.triangulation.tetras[*t1];
+            let t2_data = &c.triangulation.tetras[*t2];
+            t1_data.get_common_face_with(t2_data)
+        };
+        let tetras_are_neighbours =
+            |t1: &TetraIndex, t2: &TetraIndex| get_common_face(t1, t2).is_some();
+        for (t1, t2) in arrange_cyclic_by(tetras, tetras_are_neighbours) {
+            let line = &c.triangulation.faces[get_common_face(t1, t2).unwrap()];
+            let p2_index = line.other_point(p);
+            let connection = c
+                .point_to_cell_map
+                .get(&p2_index)
+                .map(|i| CellConnection::ToInner(*i))
+                .unwrap_or(CellConnection::ToOuter);
+            let p1 = c.triangulation.points[p];
+            let p2 = c.triangulation.points[p2_index];
+            let mut normal = (p1 - p2).normalize();
+            if (p2 - p1).dot(normal) < 0.0 {
+                normal = -normal;
+            }
+            let vp1 = c.tetra_to_voronoi_point_map[&t1];
+            let vp2 = c.tetra_to_voronoi_point_map[&t2];
+            let area = vp1.distance(vp2);
+            faces.push(VoronoiFace {
+                connection,
+                normal,
+                area,
+            });
+        }
+        faces
     }
 }
 

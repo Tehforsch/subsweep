@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 pub struct PeriodicWindows2<'a, T> {
     values: &'a [T],
     cursor: usize,
@@ -76,6 +78,55 @@ pub fn get_min_and_max<P: Clone>(
     }
 }
 
+pub struct Cyclic<'a, T> {
+    items: &'a [T],
+    visited: HashSet<usize>,
+    visiting: usize,
+    related: Box<dyn Fn(&T, &T) -> bool + 'a>,
+}
+
+/// related: a symmetric relation between two T.
+/// items: a slice of items [T] where for any T_i \in [T] there are two i', i'', i' != i, i'' != i such that T_i is related to T_i' and T_i''
+/// Given these parameters, iterate over pairs of items (T_i, T_j) such that
+/// 1. T_i and T_j are always related
+/// 2. Any item is returned exactly once as T_i and once as T_j.
+/// 3. An empty iterator is returned if there are fewer than 2 items
+pub fn arrange_cyclic_by<'a, T>(
+    items: &'a [T],
+    related: impl Fn(&T, &T) -> bool + 'a,
+) -> Cyclic<'a, T> {
+    Cyclic {
+        items,
+        visited: HashSet::default(),
+        visiting: 0,
+        related: Box::new(related),
+    }
+}
+
+impl<'a, T> Iterator for Cyclic<'a, T> {
+    type Item = (&'a T, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.items.len() < 2 || self.items.len() == self.visited.len() {
+            return None;
+        }
+        let visiting = &self.items[self.visiting];
+        let (related_index, related) = self
+            .items
+            .iter()
+            .enumerate()
+            .find(|(index, value)| {
+                *index != self.visiting
+                    && !self.visited.contains(index)
+                    && (self.related)(visiting, value)
+            })
+            .expect("Expected another related item.");
+        self.visiting = related_index;
+        self.visited.insert(self.visiting);
+        Some((visiting, related))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::test_utils::assert_float_is_close;
@@ -127,6 +178,21 @@ mod tests {
         assert_eq!(w.next(), None);
         let mut w = super::periodic_windows_3(&[0, 1]);
         assert_eq!(w.next(), None);
+    }
+
+    fn close(x: &usize, y: &usize) -> bool {
+        let dist = ((*x as i32) - (*y as i32)).rem_euclid(7);
+        dist == 1 || dist == -1
+    }
+
+    #[test]
+    fn arrange_cyclic_by() {
+        let w: Vec<_> = super::arrange_cyclic_by(&[3, 1, 4, 2, 5, 0, 6], close).collect();
+        assert_eq!(w.len(), 7);
+        for (i1, i2) in w {
+            assert!(close(i1, i2));
+        }
+        assert_eq!(super::arrange_cyclic_by(&[1], close).count(), 0);
     }
 
     #[test]

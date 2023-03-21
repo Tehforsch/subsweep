@@ -17,6 +17,18 @@ impl DimensionFace for Line {
     }
 }
 
+impl Line {
+    pub fn other_point(&self, point: PointIndex) -> PointIndex {
+        if point == self.p1 {
+            self.p2
+        } else if point == self.p2 {
+            self.p1
+        } else {
+            panic!("other_point called with point that is not part of the line");
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct LineData<P> {
     pub p1: P,

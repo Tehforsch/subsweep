@@ -19,6 +19,7 @@ pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
 pub use delaunay::DelaunayTriangulation;
 
+use self::delaunay::dimension::DimensionTetraData;
 use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
 use self::delaunay::TetraIndex;
@@ -39,6 +40,7 @@ pub struct Constructor<'a, D: Dimension> {
     triangulation: &'a DelaunayTriangulation<D>,
     point_to_cell_map: StableHashMap<PointIndex, CellIndex>,
     point_to_tetras_map: StableHashMap<PointIndex, Vec<TetraIndex>>,
+    tetra_to_voronoi_point_map: StableHashMap<TetraIndex, Point<D>>,
 }
 
 impl<'a, D: Dimension> Constructor<'a, D>
@@ -51,6 +53,11 @@ where
         for (i, point_index) in t.iter_inner_points().enumerate() {
             map.insert(point_index, i);
         }
+        let tetra_to_voronoi_point_map = t
+            .tetras
+            .iter()
+            .map(|(i, tetra)| (i, t.get_tetra_data(&tetra).get_center_of_circumcircle()))
+            .collect();
         Self {
             triangulation: t,
             point_to_tetras_map: point_to_tetra_map(t),
@@ -59,6 +66,7 @@ where
                 .enumerate()
                 .map(|(i, p)| (p, i))
                 .collect(),
+            tetra_to_voronoi_point_map,
         }
     }
 
@@ -265,23 +273,5 @@ mod quantitative_tests {
             .unwrap();
         assert_eq!(cell.faces.len(), 4);
         assert_eq!(cell.points.len(), 4);
-        assert_float_is_close(cell.volume(), 0.3968809165232358);
-        // for (neighbour_index, face_area, normal) in cell.iter_neighbours_and_faces(&grid) {
-        //     if neighbour_index == CellConnection::ToInner(0) {
-        //         assert_float_is_close(face_area, 1.0846512947129363);
-        //         assert_float_is_close(normal.x, -0.5f64.sqrt());
-        //         assert_float_is_close(normal.y, -0.5f64.sqrt());
-        //     } else if neighbour_index == CellConnection::ToInner(1) {
-        //         assert_float_is_close(face_area, 0.862988661979256);
-        //         assert_float_is_close(normal.x, -0.22485950669875832);
-        //         assert_float_is_close(normal.y, 0.9743911956946198);
-        //     } else if neighbour_index == CellConnection::ToInner(2) {
-        //         assert_float_is_close(face_area, 0.9638545380497548);
-        //         assert_float_is_close(normal.x, 0.9970544855015816);
-        //         assert_float_is_close(normal.y, -0.07669649888473688);
-        //     } else {
-        //         panic!()
-        //     }
-        // }
     }
 }

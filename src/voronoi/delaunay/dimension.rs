@@ -81,11 +81,6 @@ pub trait DimensionFace {
 
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex>>;
 
-    fn other_points(&self, point: PointIndex) -> Box<dyn Iterator<Item = PointIndex>> {
-        debug_assert!(self.contains_point(point));
-        Box::new(self.points().filter(move |p| *p != point))
-    }
-
     fn contains_point(&self, point: PointIndex) -> bool {
         self.points().any(|p| p == point)
     }
