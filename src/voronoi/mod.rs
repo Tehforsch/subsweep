@@ -14,12 +14,14 @@ mod cell;
 use bevy::prelude::Resource;
 use bevy::utils::StableHashMap;
 pub use cell::Cell;
+pub use cell::CellConnection;
 pub use cell::DimensionCell;
 pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
 pub use delaunay::DelaunayTriangulation;
+pub use primitives::Point2d;
+pub use primitives::Point3d;
 
-pub use self::cell::CellConnection;
 use self::delaunay::dimension::DimensionTetraData;
 use self::delaunay::Delaunay;
 use self::delaunay::PointIndex;
