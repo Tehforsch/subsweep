@@ -22,7 +22,7 @@ use super::indexed_arena::IndexedArena;
 use super::primitives::Vector;
 use super::utils::min_and_max;
 
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TetraIndex(Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct FaceIndex(Index);
