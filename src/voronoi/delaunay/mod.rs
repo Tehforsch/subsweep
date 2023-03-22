@@ -3,6 +3,7 @@ pub(crate) mod face_info;
 
 mod impl_2d;
 mod impl_3d;
+mod point_location;
 
 use bevy::prelude::Resource;
 use derive_more::From;
@@ -65,7 +66,8 @@ pub struct DelaunayTriangulation<D: Dimension> {
     pub tetras: TetraList<D>,
     pub faces: FaceList<D>,
     pub points: PointList<D>,
-    pub outer_points: Vec<PointIndex>,
+    outer_points: Vec<PointIndex>,
+    last_insertion_tetra: Option<TetraIndex>,
 }
 
 pub trait Delaunay<D: Dimension> {
@@ -101,6 +103,7 @@ where
             faces: FaceList::<D>::new(),
             points: PointList::<D>::new(),
             outer_points: vec![],
+            last_insertion_tetra: None,
         };
         triangulation.insert_basic_tetra(tetra);
         triangulation
@@ -115,15 +118,7 @@ where
     }
 
     pub fn find_containing_tetra(&self, point: Point<D>) -> Option<TetraIndex> {
-        self.tetras
-            .iter()
-            .find(|(_, tetra)| {
-                let tetra_data = self.get_tetra_data(tetra);
-                tetra_data
-                    .contains(point)
-                    .unwrap_or_else(|_| todo!("Point wants to be inserted onto an edge."))
-            })
-            .map(|(index, _)| index)
+        point_location::find_containing_tetra(&self, point)
     }
 
     pub fn insert(&mut self, point: Point<D>) -> PointIndex {
@@ -152,6 +147,7 @@ where
                 face: self.tetras[tetra].find_face_opposite(stack.point).face,
             };
             self.flip_check(&mut stack, check);
+            self.last_insertion_tetra = Some(tetra);
         }
     }
 

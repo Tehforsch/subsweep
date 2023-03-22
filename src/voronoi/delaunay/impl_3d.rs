@@ -556,6 +556,7 @@ mod tests {
             faces: FaceList::<ThreeD>::new(),
             points: point_list,
             outer_points: vec![],
+            last_insertion_tetra: None,
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,
@@ -598,6 +599,7 @@ mod tests {
             faces: FaceList::<ThreeD>::new(),
             points: point_list,
             outer_points: vec![],
+            last_insertion_tetra: None,
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,
