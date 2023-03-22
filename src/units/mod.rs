@@ -99,7 +99,8 @@ unit_system!(
     },
     DENSITY3D, Density3D, mass: 1, length: -3, time: 0,
     {
-        kilogram_per_cubic_meter, 1.0, "kg/m^3"
+        kilogram_per_cubic_meter, 1.0, "kg/m^3",
+        gram_per_cubic_centimeter, 1000.0, "g/cm^3"
     },
     NUMBERDENSITY3D, NumberDensity3D, length: -3,
     {

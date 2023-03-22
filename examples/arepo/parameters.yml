@@ -3,17 +3,17 @@ timestep:
   max_timestep: 1e-1 Myr
 postprocess:
   initial_fraction_ionized_hydrogen: 0.00
-  source_strength: 1e30  photons s^-1
+  source_strength: 1e49  photons s^-1
 sweep:
   directions: 84
-  num_timestep_levels: 7
+  num_timestep_levels: 4
   significant_flux_treshold: 1e20 photons s^-1
   timestep_safety_factor: 0.1
 visualization:
   show_particles: true
   slice:
     - z
-    - 0.2 kpc
+    - 2.0 kpc
   color_map:
     type: timestep_level
 output:

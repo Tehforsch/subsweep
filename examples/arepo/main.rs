@@ -20,7 +20,7 @@ use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::VecLength;
 use raxiom::voronoi::constructor::construct_grid_from_iter;
-use raxiom::voronoi::TwoD;
+use raxiom::voronoi::ThreeD;
 use unit_reader::ArepoUnitReader;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
@@ -36,7 +36,9 @@ struct Parameters {
 }
 
 fn read_vec(data: &[Float]) -> Position {
-    Position(VecLength::new_unchecked(MVec::new(data[0], data[1])))
+    Position(VecLength::new_unchecked(MVec::new(
+        data[0], data[1], data[2],
+    )))
 }
 
 fn main() {
@@ -93,7 +95,7 @@ fn insert_missing_components_system(
             ),));
     }
 
-    let cells = construct_grid_from_iter::<TwoD>(
+    let cells = construct_grid_from_iter::<ThreeD>(
         particles
             .into_iter()
             .map(|(entity, pos)| (entity, pos.value_unchecked())),

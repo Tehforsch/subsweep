@@ -76,7 +76,7 @@ required-features = ["mpi", "3d"]
 
 [[example]]
 name = "arepo"
-required-features = ["mpi", "2d"]
+required-features = ["mpi", "3d"]
 
 [[bench]]
 name = "hydrodynamics"

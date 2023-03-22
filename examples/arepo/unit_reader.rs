@@ -1,4 +1,3 @@
-use bevy::prelude::error;
 use hdf5::Dataset;
 use raxiom::io::UnitReader;
 use raxiom::units::Dimension;
@@ -16,7 +15,7 @@ pub struct ArepoUnitReader;
 impl UnitReader for ArepoUnitReader {
     fn read_scale_factor(&self, set: &Dataset) -> f64 {
         let dimension = self.read_dimension(set);
-        let cgs_to_si = 0.01f64.powi(dimension.length);
+        let cgs_to_si = 0.01f64.powi(dimension.length) * 0.001f64.powi(dimension.mass);
         let cgs: f64 = set
             .attr(SCALE_FACTOR_IDENTIFIER)
             .expect("No scale factor in dataset")
@@ -41,13 +40,9 @@ impl UnitReader for ArepoUnitReader {
             h, 0,
             "Tried to read dataset with h_scaling != 0. Cosmological units not implemented yet."
         );
-        let mut length = length + velocity;
+        let length = length + velocity;
         let time = -velocity;
 
-        error!("FAKING UNITS FOR TEMPORARY TEST");
-        if length == -3 {
-            length = -2;
-        }
         Dimension {
             length,
             mass,
