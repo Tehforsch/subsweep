@@ -5,7 +5,10 @@ mod impl_2d;
 mod impl_3d;
 mod point_location;
 
+use std::hash::Hash;
+
 use bevy::prelude::Resource;
+use bimap::BiMap;
 use derive_more::From;
 use derive_more::Into;
 use generational_arena::Index;
@@ -81,18 +84,31 @@ impl<D: Dimension> DelaunayTriangulation<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
 {
-    pub fn all_encompassing(points: &[Point<D>]) -> Self {
-        let initial_tetra_data = TetraData::<D>::all_encompassing(points);
+    pub fn all_encompassing<I: Iterator<Item = Point<D>>>(points: I) -> Self {
+        let initial_tetra_data = TetraData::<D>::all_encompassing(Box::new(points));
         DelaunayTriangulation::from_basic_tetra(initial_tetra_data)
     }
 
-    pub fn construct(points: &[Point<D>]) -> (Self, Vec<PointIndex>) {
-        let mut triangulation = DelaunayTriangulation::all_encompassing(points);
-        let indices = points.iter().map(|p| triangulation.insert(*p)).collect();
+    pub fn construct<T: Hash + Clone + Eq>(
+        points: &[(T, Point<D>)],
+    ) -> (Self, BiMap<T, PointIndex>) {
+        let mut triangulation =
+            DelaunayTriangulation::all_encompassing(points.iter().map(|(_, p)| *p));
+        let indices = points
+            .iter()
+            .map(|(name, p)| (name.clone(), triangulation.insert(*p)))
+            .collect();
         (triangulation, indices)
     }
 
-    pub fn construct_from_iter(iter: impl Iterator<Item = Point<D>>) -> (Self, Vec<PointIndex>) {
+    pub fn construct_no_key(points: &[Point<D>]) -> Self {
+        let (t, _) = Self::construct_from_iter(points.into_iter().map(|p| ((), *p)));
+        t
+    }
+
+    pub fn construct_from_iter<T: Hash + Clone + Eq>(
+        iter: impl Iterator<Item = (T, Point<D>)>,
+    ) -> (Self, BiMap<T, PointIndex>) {
         let positions: Vec<_> = iter.collect();
         Self::construct(&positions)
     }

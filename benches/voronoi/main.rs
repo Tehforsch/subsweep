@@ -55,12 +55,12 @@ criterion_group!(benches, voronoi_benchmark);
 criterion_main!(benches);
 
 fn construct_voronoi_2d(points: Vec<Point2d>) {
-    let (t, _) = DelaunayTriangulation::<TwoD>::construct(&points);
+    let t = DelaunayTriangulation::<TwoD>::construct_no_key(&points);
     let _: VoronoiGrid<TwoD> = (&t).into();
 }
 
 fn construct_voronoi_3d(points: Vec<Point3d>) {
-    let (t, _) = DelaunayTriangulation::<ThreeD>::construct(&points);
+    let t = DelaunayTriangulation::<ThreeD>::construct_no_key(&points);
     let _: VoronoiGrid<ThreeD> = (&t).into();
 }
 

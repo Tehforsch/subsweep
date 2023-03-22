@@ -61,21 +61,18 @@ pub fn periodic_windows_3<T>(values: &[T]) -> impl Iterator<Item = (&T, &T, &T)>
 }
 
 pub fn get_min_and_max<P: Clone>(
-    v: &[P],
+    mut vs: impl Iterator<Item = P>,
     min: fn(P, P) -> P,
     max: fn(P, P) -> P,
 ) -> Option<(P, P)> {
-    if v.len() == 0 {
-        None
-    } else {
-        let mut min_v = v[0].clone();
-        let mut max_v = v[0].clone();
-        for v in v[1..].iter() {
-            min_v = min(min_v, v.clone());
-            max_v = max(max_v, v.clone());
-        }
-        Some((min_v, max_v))
+    let v_0 = vs.next()?;
+    let mut min_v = v_0.clone();
+    let mut max_v = v_0.clone();
+    for v in vs {
+        min_v = min(min_v, v.clone());
+        max_v = max(max_v, v.clone());
     }
+    Some((min_v, max_v))
 }
 
 pub struct Cyclic<'a, T> {
@@ -216,11 +213,12 @@ mod tests {
     #[test]
     fn get_min_and_max() {
         let (min, max) = super::get_min_and_max(
-            &[
+            [
                 Point2d::new(0.0, 0.0),
                 Point2d::new(1.0, 1.0),
                 Point2d::new(2.0, 0.5),
-            ],
+            ]
+            .into_iter(),
             Point2d::min,
             Point2d::max,
         )
@@ -230,7 +228,7 @@ mod tests {
         assert_float_is_close(max.x, 2.0);
         assert_float_is_close(max.y, 1.0);
         assert_eq!(
-            super::get_min_and_max(&[], Point2d::min, Point2d::max),
+            super::get_min_and_max([].into_iter(), Point2d::min, Point2d::max),
             None
         );
     }

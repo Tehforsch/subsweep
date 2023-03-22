@@ -1,12 +1,10 @@
 use bevy::prelude::Entity;
-use bevy::utils::hashbrown::HashMap;
 
 use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
 use super::visualizer::Visualizable;
 use super::DelaunayTriangulation;
 use super::DimensionCell;
-use super::PointIndex;
 use super::VoronoiGrid;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
@@ -30,23 +28,13 @@ where
     <D as Dimension>::TetraData: Visualizable,
     <D as Dimension>::Point: Visualizable,
 {
-    let mut entities = vec![];
-    let mut positions = vec![];
-    for (entity, pos) in iter {
-        entities.push(entity);
-        positions.push(pos);
-    }
-    let (triangulation, indices) = DelaunayTriangulation::<D>::construct(&positions);
-    let point_index_to_entity: HashMap<PointIndex, Entity> = entities
-        .iter()
-        .enumerate()
-        .map(|(i, entity)| (indices[i], *entity))
-        .collect();
+    let (triangulation, point_index_to_entity) =
+        DelaunayTriangulation::<D>::construct_from_iter(iter);
     let grid = VoronoiGrid::from(&triangulation);
     grid.cells
         .iter()
         .filter_map(|voronoi_cell| {
-            let entity = point_index_to_entity.get(&voronoi_cell.delaunay_point);
+            let entity = point_index_to_entity.get_by_right(&voronoi_cell.delaunay_point);
             entity.map(|entity| {
                 let id = ParticleId(voronoi_cell.index);
                 let grid_cell = crate::grid::Cell {

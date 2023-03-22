@@ -127,7 +127,7 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
 
 impl DimensionTetraData for TriangleData<Point2d> {
     type Dimension = TwoD;
-    fn all_encompassing(points: &[Point2d]) -> Self {
+    fn all_encompassing<'a>(points: Box<dyn Iterator<Item = Point2d> + 'a>) -> Self {
         let (min, max) = get_min_and_max(points, Point2d::min, Point2d::max).unwrap();
         assert!(
             (max - min).min_element() > 0.0,

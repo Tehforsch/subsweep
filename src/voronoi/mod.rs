@@ -227,13 +227,13 @@ mod quantitative_tests {
     #[test]
     fn right_volume_and_face_areas_two_d() {
         let points = vec![
-            Point2d::new(0.0, 0.0),
-            Point2d::new(0.1, 0.9),
-            Point2d::new(0.9, 0.2),
-            Point2d::new(0.25, 0.25),
+            (0, Point2d::new(0.0, 0.0)),
+            (1, Point2d::new(0.1, 0.9)),
+            (2, Point2d::new(0.9, 0.2)),
+            (3, Point2d::new(0.25, 0.25)),
         ];
         let (t, map) = DelaunayTriangulation::<TwoD>::construct_from_iter(points.into_iter());
-        let last_point_index = map.last().unwrap();
+        let last_point_index = map.get_by_left(&3).unwrap();
         let grid = VoronoiGrid::<TwoD>::from(&t);
         assert_eq!(grid.cells.len(), 4);
         // Find the cell associated with the (0.25, 0.25) point above. This cell should be a triangle.
@@ -266,14 +266,14 @@ mod quantitative_tests {
     #[test]
     fn right_volume_and_face_areas_three_d() {
         let points = vec![
-            Point3d::new(0.0, 0.0, 0.0),
-            Point3d::new(0.6, 0.1, 0.1),
-            Point3d::new(0.1, 0.5, 0.1),
-            Point3d::new(0.1, 0.1, 0.4),
-            Point3d::new(0.1, 0.1, 0.1),
+            (0, Point3d::new(0.0, 0.0, 0.0)),
+            (1, Point3d::new(0.6, 0.1, 0.1)),
+            (2, Point3d::new(0.1, 0.5, 0.1)),
+            (3, Point3d::new(0.1, 0.1, 0.4)),
+            (4, Point3d::new(0.1, 0.1, 0.1)),
         ];
         let (t, map) = DelaunayTriangulation::<ThreeD>::construct_from_iter(points.into_iter());
-        let last_point_index = map.last().unwrap();
+        let last_point_index = map.get_by_left(&4).unwrap();
         let grid = VoronoiGrid::<ThreeD>::from(&t);
         assert_eq!(grid.cells.len(), 5);
         // Find the cell associated with the (0.25, 0.25, 0.25) point above.

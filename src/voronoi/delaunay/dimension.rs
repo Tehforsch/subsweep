@@ -67,7 +67,9 @@ pub trait DimensionTetra {
 pub trait DimensionTetraData: FromIterator<<Self::Dimension as Dimension>::Point> {
     type Dimension: Dimension;
 
-    fn all_encompassing(points: &[<Self::Dimension as Dimension>::Point]) -> Self;
+    fn all_encompassing<'a>(
+        points: Box<dyn Iterator<Item = <Self::Dimension as Dimension>::Point> + 'a>,
+    ) -> Self;
     fn contains(&self, p: <Self::Dimension as Dimension>::Point) -> Result<bool, PrecisionError>;
     fn circumcircle_contains(
         &self,

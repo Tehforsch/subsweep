@@ -64,7 +64,7 @@ impl FromIterator<Point3d> for TetrahedronData {
 impl DimensionTetraData for TetrahedronData {
     type Dimension = ThreeD;
 
-    fn all_encompassing(points: &[Point3d]) -> TetrahedronData {
+    fn all_encompassing<'a>(points: Box<dyn Iterator<Item = Point3d> + 'a>) -> Self {
         let (min, max) = get_min_and_max(points, Point3d::min, Point3d::max).unwrap();
         assert!(
             (max - min).min_element() > 0.0,
