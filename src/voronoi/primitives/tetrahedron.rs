@@ -7,7 +7,7 @@ use crate::voronoi::math::determinant5x5;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::utils::get_min_and_max;
+use crate::voronoi::utils::min_and_max;
 use crate::voronoi::PointIndex;
 use crate::voronoi::ThreeD;
 
@@ -65,7 +65,7 @@ impl DimensionTetraData for TetrahedronData {
     type Dimension = ThreeD;
 
     fn all_encompassing<'a>(points: Box<dyn Iterator<Item = Point3d> + 'a>) -> Self {
-        let (min, max) = get_min_and_max(points, Point3d::min, Point3d::max).unwrap();
+        let (min, max) = min_and_max(points).unwrap();
         assert!(
             (max - min).min_element() > 0.0,
             "Could not construct encompassing tetra for points (zero extent along one axis)"

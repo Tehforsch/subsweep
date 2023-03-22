@@ -19,6 +19,8 @@ use self::dimension::DimensionTetra;
 use self::dimension::DimensionTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
+use super::primitives::Vector;
+use super::utils::min_and_max;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
 pub struct TetraIndex(Index);
@@ -83,6 +85,7 @@ pub trait Delaunay<D: Dimension> {
 impl<D: Dimension> DelaunayTriangulation<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
+    Point<D>: Vector,
 {
     pub fn all_encompassing<I: Iterator<Item = Point<D>>>(points: I) -> Self {
         let initial_tetra_data = TetraData::<D>::all_encompassing(Box::new(points));
@@ -90,8 +93,14 @@ where
     }
 
     pub fn construct<T: Hash + Clone + Eq>(
-        points: &[(T, Point<D>)],
+        points: &mut [(T, Point<D>)],
     ) -> (Self, BiMap<T, PointIndex>) {
+        let min_max = min_and_max(points.iter().map(|(_, p)| *p));
+        if let Some((min, max)) = min_max {
+            points.sort_by_key(|(_, p)| {
+                p.get_peano_hilbert_key(min, max);
+            });
+        }
         let mut triangulation =
             DelaunayTriangulation::all_encompassing(points.iter().map(|(_, p)| *p));
         let indices = points
@@ -109,8 +118,8 @@ where
     pub fn construct_from_iter<T: Hash + Clone + Eq>(
         iter: impl Iterator<Item = (T, Point<D>)>,
     ) -> (Self, BiMap<T, PointIndex>) {
-        let positions: Vec<_> = iter.collect();
-        Self::construct(&positions)
+        let mut positions: Vec<_> = iter.collect();
+        Self::construct(&mut positions)
     }
 
     fn from_basic_tetra(tetra: TetraData<D>) -> Self {

@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use super::primitives::Vector;
+
 pub struct PeriodicWindows2<'a, T> {
     values: &'a [T],
     cursor: usize,
@@ -73,6 +75,13 @@ pub fn get_min_and_max<P: Clone>(
         max_v = max(max_v, v.clone());
     }
     Some((min_v, max_v))
+}
+
+pub fn min_and_max<P: Vector>(points: impl Iterator<Item = P>) -> Option<(P, P)>
+where
+    P: Clone,
+{
+    get_min_and_max(points, |p1, p2| P::min(p1, p2), |p1, p2| P::max(p1, p2))
 }
 
 pub struct Cyclic<'a, T> {

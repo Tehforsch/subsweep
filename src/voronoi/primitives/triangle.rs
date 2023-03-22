@@ -11,7 +11,7 @@ use crate::voronoi::math::solve_system_of_equations;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::utils::get_min_and_max;
+use crate::voronoi::utils::min_and_max;
 use crate::voronoi::PointIndex;
 use crate::voronoi::ThreeD;
 use crate::voronoi::TwoD;
@@ -128,7 +128,7 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
 impl DimensionTetraData for TriangleData<Point2d> {
     type Dimension = TwoD;
     fn all_encompassing<'a>(points: Box<dyn Iterator<Item = Point2d> + 'a>) -> Self {
-        let (min, max) = get_min_and_max(points, Point2d::min, Point2d::max).unwrap();
+        let (min, max) = min_and_max(points).unwrap();
         assert!(
             (max - min).min_element() > 0.0,
             "Could not construct encompassing tetra for points (zero extent along one axis)"

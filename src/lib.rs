@@ -25,6 +25,7 @@ pub mod io;
 pub(crate) mod memory;
 pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
+mod peano_hilbert;
 pub(crate) mod performance_parameters;
 pub mod quadtree;
 pub(crate) mod rand;
