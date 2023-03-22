@@ -88,15 +88,16 @@ pub trait Visualizable {
 
 impl Visualizable for TriangleData<Point2d> {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
-        use super::utils::periodic_windows_2;
         let points = [self.p1, self.p2, self.p3];
         let point_names: Vec<_> = points
             .into_iter()
             .map(|p| visualizer.add(&p)[0].clone())
             .collect();
-        periodic_windows_2(&point_names)
-            .map(|(p1, p2)| format!("Segment({}, {})", p1, p2).into())
-            .collect()
+        vec![format!(
+            "Polygon({}, {}, {})",
+            point_names[0], point_names[1], point_names[2]
+        )
+        .into()]
     }
 }
 
@@ -174,12 +175,12 @@ impl Visualizable for Point2d {
     }
 }
 
-pub struct Color {
-    pub x: Box<dyn Visualizable>,
+pub struct Color<T> {
+    pub x: T,
     pub color: (f64, f64, f64),
 }
 
-impl Visualizable for Color {
+impl<T: Visualizable> Visualizable for Color<T> {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         let statements = self.x.get_statements(visualizer);
         statements
@@ -188,7 +189,7 @@ impl Visualizable for Color {
                 let name = visualizer.add_statement(statement);
                 Statement {
                     statement: format!(
-                        "SetColor({}, {}, {}, {})",
+                        "SetDynamicColor({}, {}, {}, {}, 0.7)",
                         name, self.color.0, self.color.1, self.color.2
                     ),
                     is_new_item: false,
