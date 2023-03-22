@@ -97,9 +97,7 @@ where
     ) -> (Self, BiMap<T, PointIndex>) {
         let min_max = min_and_max(points.iter().map(|(_, p)| *p));
         if let Some((min, max)) = min_max {
-            points.sort_by_key(|(_, p)| {
-                p.get_peano_hilbert_key(min, max);
-            });
+            points.sort_by_key(|(_, p)| p.get_peano_hilbert_key(min, max));
         }
         let mut triangulation =
             DelaunayTriangulation::all_encompassing(points.iter().map(|(_, p)| *p));

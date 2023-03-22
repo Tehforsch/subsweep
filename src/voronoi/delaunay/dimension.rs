@@ -1,12 +1,13 @@
 use super::face_info::FaceInfo;
 use super::FaceIndex;
 use super::PointIndex;
+use crate::prelude::Float;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::primitives::Vector;
 use crate::voronoi::visualizer::Visualizable;
 
 pub trait Dimension {
-    type Point: Clone + Copy + Vector + Visualizable;
+    type Point: Clone + Copy + Vector + Visualizable + std::fmt::Debug;
     type Face: Clone + DimensionFace<Dimension = Self>;
     type FaceData: Clone + DimensionFaceData<Dimension = Self>;
     type Tetra: Clone + DimensionTetra<Dimension = Self>;
@@ -71,6 +72,7 @@ pub trait DimensionTetraData: FromIterator<<Self::Dimension as Dimension>::Point
         points: Box<dyn Iterator<Item = <Self::Dimension as Dimension>::Point> + 'a>,
     ) -> Self;
     fn contains(&self, p: <Self::Dimension as Dimension>::Point) -> Result<bool, PrecisionError>;
+    fn distance_to_point(&self, p: <Self::Dimension as Dimension>::Point) -> Float;
     fn circumcircle_contains(
         &self,
         point: <Self::Dimension as Dimension>::Point,

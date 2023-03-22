@@ -58,26 +58,29 @@ where
         tetra: first_to_check,
         heuristic_distance: OrderedFloat(0.0), // Heuristic doesn't matter for the first item anyways
     });
+    already_checked.insert(first_to_check);
+    let mut ts = vec![];
     while let Some(check) = to_check.pop() {
         let tetra = &t.tetras[check.tetra];
+        ts.push(t.get_tetra_data(tetra));
         if tetra_contains_point(t, tetra, point) {
             return Some(check.tetra);
         } else {
-            to_check.extend(
-                tetra
-                    .faces()
-                    .filter_map(|face| face.opposing)
-                    .filter(|opp| !already_checked.contains(&opp.tetra))
-                    .map(|opp| CheckData {
-                        // We take the opposing point here because its
-                        // 1. the simplest
-                        // 2. also possibly the most meaningful
-                        heuristic_distance: OrderedFloat(t.points[opp.point].distance(point)),
-                        tetra: opp.tetra,
-                    }),
-            );
+            for face in tetra.faces() {
+                if let Some(opp) = face.opposing {
+                    if already_checked.insert(opp.tetra) {
+                        let heuristic_distance = OrderedFloat(
+                            t.get_tetra_data(&t.tetras[opp.tetra])
+                                .distance_to_point(point),
+                        );
+                        to_check.push(CheckData {
+                            heuristic_distance,
+                            tetra: opp.tetra,
+                        });
+                    }
+                }
+            }
         }
-        already_checked.insert(check.tetra);
     }
     None
 }

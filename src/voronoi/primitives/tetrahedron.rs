@@ -1,4 +1,5 @@
 use super::super::delaunay::face_info::FaceInfo;
+use super::Float;
 use super::Point3d;
 use crate::voronoi::delaunay::dimension::DimensionTetra;
 use crate::voronoi::delaunay::dimension::DimensionTetraData;
@@ -89,6 +90,10 @@ impl DimensionTetraData for TetrahedronData {
             && points_are_on_same_side_of_triangle(point, self.p3, (self.p1, self.p2, self.p4))?
             && points_are_on_same_side_of_triangle(point, self.p4, (self.p1, self.p2, self.p3))?,
         )
+    }
+
+    fn distance_to_point(&self, p: Point3d) -> Float {
+        todo!()
     }
 
     #[rustfmt::skip]

@@ -125,6 +125,19 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
     }
 }
 
+impl TriangleData<Point2d> {
+    fn transform_point_to_canonical_coordinates(&self, point: Point2d) -> (Float, Float) {
+        // We solve
+        // p = p1 + r (p2 - p1) + s (p3 - p1)
+        // where r and s are the coordinates of the point in the (two-dimensional) vector space
+        // spanned by the (linearly independent) vectors given by (p2 - p1) and (p3 - p1).
+        let a = self.p2 - self.p1;
+        let b = self.p3 - self.p1;
+        let c = point - self.p1;
+        let [r, s] = solve_system_of_equations([[a.x, b.x, c.x], [a.y, b.y, c.y]]);
+        (r, s)
+    }
+}
 impl DimensionTetraData for TriangleData<Point2d> {
     type Dimension = TwoD;
     fn all_encompassing<'a>(points: Box<dyn Iterator<Item = Point2d> + 'a>) -> Self {
@@ -142,14 +155,7 @@ impl DimensionTetraData for TriangleData<Point2d> {
     }
 
     fn contains(&self, p: Point2d) -> Result<bool, PrecisionError> {
-        // We solve
-        // p = p1 + r (p2 - p1) + s (p3 - p1)
-        // where r and s are the coordinates of the point in the (two-dimensional) vector space
-        // spanned by the (linearly independent) vectors given by (p2 - p1) and (p3 - p1).
-        let a = self.p2 - self.p1;
-        let b = self.p3 - self.p1;
-        let c = p - self.p1;
-        let [r, s] = solve_system_of_equations([[a.x, b.x, c.x], [a.y, b.y, c.y]]);
+        let (r, s) = self.transform_point_to_canonical_coordinates(p);
         let values = [r, s, 1.0 - (r + s)];
         let is_definitely_outside = values
             .iter()
@@ -162,6 +168,19 @@ impl DimensionTetraData for TriangleData<Point2d> {
             }
             Ok(true)
         }
+    }
+
+    fn distance_to_point(&self, p: Point2d) -> Float {
+        let distance_to_side = |pa: Point2d, pb: Point2d| {
+            ((pb.y - pa.y) * p.x - (pb.x - pa.x) * p.y + pb.x * pa.y - pa.x * pb.y)
+                / pa.distance(pb)
+        };
+
+        let d1 = distance_to_side(self.p1, self.p2);
+        let d2 = distance_to_side(self.p2, self.p3);
+        let d3 = distance_to_side(self.p3, self.p1);
+
+        d1.max(d2).max(d3)
     }
 
     #[rustfmt::skip]
