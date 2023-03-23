@@ -1,4 +1,5 @@
 use super::super::delaunay::face_info::FaceInfo;
+use super::triangle::TriangleData;
 use super::Float;
 use super::Point3d;
 use crate::voronoi::delaunay::dimension::DimensionTetra;
@@ -96,8 +97,36 @@ impl DimensionTetraData for TetrahedronData {
         )
     }
 
+    /// This only works if the point is outside of the tetrahedron
     fn distance_to_point(&self, p: Point3d) -> Float {
-        todo!()
+        if self.contains(p).unwrap() {
+            return 0.0;
+        }
+        let a1 = TriangleData {
+            p1: self.p1,
+            p2: self.p2,
+            p3: self.p3,
+        }
+        .distance_to_point(p);
+        let a2 = TriangleData {
+            p1: self.p2,
+            p2: self.p3,
+            p3: self.p4,
+        }
+        .distance_to_point(p);
+        let a3 = TriangleData {
+            p1: self.p3,
+            p2: self.p4,
+            p3: self.p1,
+        }
+        .distance_to_point(p);
+        let a4 = TriangleData {
+            p1: self.p4,
+            p2: self.p1,
+            p3: self.p2,
+        }
+        .distance_to_point(p);
+        a1.min(a2).min(a3).min(a4)
     }
 
     #[rustfmt::skip]
