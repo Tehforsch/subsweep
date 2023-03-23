@@ -220,25 +220,29 @@ where
         self.tetras[new_tetra].find_face_mut(face).opposing = Some(ConnectionData { tetra, point });
     }
 
-    fn circumcircle_contains_other_points(&self, tetra: TetraIndex) -> bool {
-        let tetra = self.tetras.get(tetra);
+    fn circumcircle_contains_point(&self, tetra: &Tetra<D>, point: PointIndex) -> bool {
+        let tetra_data = self.get_tetra_data(tetra);
+        tetra_data
+            .circumcircle_contains(self.points[point])
+            .unwrap()
+    }
+
+    fn face_is_invalid(&self, to_check: &FlipCheckData) -> bool {
+        let tetra = self.tetras.get(to_check.tetra);
         if let Some(tetra) = tetra {
-            let tetra_data = self.get_tetra_data(tetra);
-            let other_point_contained = self
-                .points
-                .iter()
-                .filter(|(point, _)| !tetra.contains_point(*point))
-                .find(|(_, point)| tetra_data.circumcircle_contains(**point).unwrap())
-                .is_some();
-            other_point_contained
+            if let Some(opp) = tetra.find_face(to_check.face).opposing {
+                if !tetra.contains_point(opp.point) {
+                    return self.circumcircle_contains_point(tetra, opp.point);
+                }
+            }
         } else {
             // If the tetra has been deleted by now: Skip this check
-            false
         }
+        false
     }
 
     fn flip_check(&mut self, stack: &mut FlipCheckStack, to_check: FlipCheckData) {
-        if self.circumcircle_contains_other_points(to_check.tetra) {
+        if self.face_is_invalid(&to_check) {
             let new_tetras_to_check = self.flip(to_check);
             stack.extend(new_tetras_to_check);
         }
@@ -499,8 +503,10 @@ pub(super) mod tests {
         DelaunayTriangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
-            for (tetra, _) in triangulation.tetras.iter() {
-                assert!(!triangulation.circumcircle_contains_other_points(tetra));
+            for (_, tetra) in triangulation.tetras.iter() {
+                for (p, _) in triangulation.points.iter() {
+                    assert!(!triangulation.circumcircle_contains_point(tetra, p));
+                }
             }
         });
     }
