@@ -86,6 +86,10 @@ impl DimensionTetra for TriangleWithFaces {
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_> {
         Box::new([self.p1, self.p2, self.p3].into_iter())
     }
+
+    fn contains_point(&self, p: PointIndex) -> bool {
+        self.p1 == p || self.p2 == p || self.p3 == p
+    }
 }
 
 #[derive(Clone)]

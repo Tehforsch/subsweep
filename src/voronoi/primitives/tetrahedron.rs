@@ -46,6 +46,10 @@ impl DimensionTetra for Tetrahedron {
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_> {
         Box::new([self.p1, self.p2, self.p3, self.p4].into_iter())
     }
+
+    fn contains_point(&self, p: PointIndex) -> bool {
+        self.p1 == p || self.p2 == p || self.p3 == p || self.p4 == p
+    }
 }
 
 impl FromIterator<Point3d> for TetrahedronData {

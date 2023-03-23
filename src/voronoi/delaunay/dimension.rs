@@ -21,6 +21,7 @@ pub trait DimensionTetra {
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_>;
     fn faces(&self) -> Box<dyn Iterator<Item = &FaceInfo> + '_>;
     fn faces_mut(&mut self) -> Box<dyn Iterator<Item = &mut FaceInfo> + '_>;
+    fn contains_point(&self, p1: PointIndex) -> bool;
 
     fn faces_and_points(&self) -> Box<dyn Iterator<Item = (&FaceInfo, PointIndex)> + '_> {
         Box::new(self.faces().zip(self.points()))
@@ -52,10 +53,6 @@ pub trait DimensionTetra {
             .unwrap_or_else(|| {
                 panic!("find_point_opposite called with face that is not part of the tetra.");
             })
-    }
-
-    fn contains_point(&self, p1: PointIndex) -> bool {
-        self.points().any(|p| p == p1)
     }
 
     fn get_common_face_with(&self, other: &Self) -> Option<FaceIndex> {
