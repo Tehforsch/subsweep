@@ -28,7 +28,7 @@ impl PeanoHilbertKey {
         let min_padded = min - (max - min) * 0.001;
         let max_padded = max + (max - min) * 0.001;
         let p = (pos - min_padded) / (max_padded - min_padded);
-        Self::new(DVec2::new(p.x, p.y))
+        Self::new(DVec2::new(p.x, p.y + p.z))
     }
 
     fn new(pos: DVec2) -> Self {

@@ -71,7 +71,8 @@ impl Vector for glam::DVec3 {
         glam::DVec3::max(self, other)
     }
 
-    fn get_peano_hilbert_key(self, min: Self, max: Self) -> PeanoHilbertKey {
-        PeanoHilbertKey::from_point_and_min_max_3d(self, min, max)
+    fn get_peano_hilbert_key(self, _min: Self, _max: Self) -> PeanoHilbertKey {
+        // TODO implement this
+        PeanoHilbertKey(0)
     }
 }
