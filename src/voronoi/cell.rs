@@ -68,7 +68,7 @@ where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
-    pub fn new(c: &Constructor<'_, D>, p: PointIndex) -> Self {
+    pub fn new(c: &Constructor<D>, p: PointIndex) -> Self {
         let points = c.point_to_tetras_map[&p]
             .iter()
             .map(|tetra| c.tetra_to_voronoi_point_map[tetra])
@@ -76,7 +76,7 @@ where
         Self {
             delaunay_point: p,
             points,
-            index: c.point_to_cell_map[&p],
+            index: *c.point_to_cell_map.get_by_right(&p).unwrap(),
             faces: Self::get_faces(c, p),
             center: c.triangulation.points[p],
         }

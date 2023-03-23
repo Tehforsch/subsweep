@@ -13,6 +13,7 @@ mod cell;
 
 use bevy::prelude::Resource;
 use bevy::utils::StableHashMap;
+use bimap::BiMap;
 pub use cell::Cell;
 pub use cell::CellConnection;
 pub use cell::DimensionCell;
@@ -29,7 +30,9 @@ use self::delaunay::TetraIndex;
 
 pub type CellIndex = usize;
 
+#[derive(Clone)]
 pub struct TwoD;
+#[derive(Clone)]
 pub struct ThreeD;
 
 type Point<D> = <D as Dimension>::Point;
@@ -39,65 +42,58 @@ pub struct VoronoiGrid<D: Dimension> {
     pub cells: Vec<Cell<D>>,
 }
 
-pub struct Constructor<'a, D: Dimension> {
-    triangulation: &'a DelaunayTriangulation<D>,
-    point_to_cell_map: StableHashMap<PointIndex, CellIndex>,
+pub struct Constructor<D: Dimension> {
+    triangulation: DelaunayTriangulation<D>,
+    point_to_cell_map: BiMap<CellIndex, PointIndex>,
     point_to_tetras_map: StableHashMap<PointIndex, Vec<TetraIndex>>,
     tetra_to_voronoi_point_map: StableHashMap<TetraIndex, Point<D>>,
 }
 
-impl<'a, D: Dimension> Constructor<'a, D>
+impl<D: Dimension> Constructor<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
-    fn new(t: &'a DelaunayTriangulation<D>) -> Self {
-        let mut map: StableHashMap<PointIndex, CellIndex> = StableHashMap::default();
-        for (i, point_index) in t.iter_inner_points().enumerate() {
-            map.insert(point_index, i);
-        }
+    fn new(t: DelaunayTriangulation<D>, map: BiMap<CellIndex, PointIndex>) -> Self {
         let tetra_to_voronoi_point_map = t
             .tetras
             .iter()
             .map(|(i, tetra)| (i, t.get_tetra_data(&tetra).get_center_of_circumcircle()))
             .collect();
+        let point_to_tetras_map = point_to_tetra_map(&t);
         Self {
             triangulation: t,
-            point_to_tetras_map: point_to_tetra_map(t),
-            point_to_cell_map: t
-                .iter_inner_points()
-                .enumerate()
-                .map(|(i, p)| (p, i))
-                .collect(),
+            point_to_tetras_map,
+            point_to_cell_map: map,
             tetra_to_voronoi_point_map,
         }
     }
 
-    pub fn construct(t: &'a DelaunayTriangulation<D>) -> VoronoiGrid<D> {
-        let constructor = Self::new(t);
+    pub fn construct(&self) -> VoronoiGrid<D> {
         VoronoiGrid {
-            cells: t
+            cells: self
+                .triangulation
                 .iter_inner_points()
-                .map(|p| Cell::<D>::new(&constructor, p))
+                .map(|p| Cell::<D>::new(self, p))
                 .collect(),
         }
     }
 
     pub fn get_connection(&self, p: PointIndex) -> CellConnection {
         self.point_to_cell_map
-            .get(&p)
+            .get_by_right(&p)
             .map(|i| CellConnection::ToInner(*i))
             .unwrap_or(CellConnection::ToOuter)
     }
 }
 
-impl<D: Dimension> From<&DelaunayTriangulation<D>> for VoronoiGrid<D>
+impl<D: Dimension> From<&Constructor<D>> for VoronoiGrid<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
-    fn from(t: &DelaunayTriangulation<D>) -> Self {
-        Constructor::construct(t)
+    fn from(c: &Constructor<D>) -> Self {
+        c.construct()
     }
 }
 
@@ -124,16 +120,18 @@ where
 #[cfg(test)]
 #[generic_tests::define]
 mod tests {
+    use bimap::BiMap;
     use ordered_float::OrderedFloat;
 
     use super::delaunay::dimension::Dimension;
-    use super::delaunay::tests::perform_check_on_each_level_of_construction;
+    use super::delaunay::tests::perform_triangulation_check_on_each_level_of_construction;
     use super::delaunay::tests::TestableDimension;
     use super::delaunay::Delaunay;
     use super::delaunay::DelaunayTriangulation;
     use super::primitives::Point2d;
     use super::primitives::Point3d;
     use super::Cell;
+    use super::Constructor;
     use super::DimensionCell;
     use super::ThreeD;
     use super::TwoD;
@@ -169,28 +167,42 @@ mod tests {
         }
     }
 
+    pub fn perform_check_on_each_level_of_construction<D>(
+        check: impl Fn(&Constructor<D>, usize) -> (),
+    ) where
+        D: Dimension + TestableDimension + Clone,
+        DelaunayTriangulation<D>: Delaunay<D> + Clone,
+        Cell<D>: DimensionCell<Dimension = D>,
+    {
+        perform_triangulation_check_on_each_level_of_construction(|t, num| {
+            let map: BiMap<_, _> = t.points.iter().map(|(i, _)| i).enumerate().collect();
+            check(&Constructor::new(t.clone(), map), num);
+        });
+    }
+
     #[test]
     fn voronoi_property<D: VoronoiTestDimension + TestableDimension>()
     where
         DelaunayTriangulation<D>: Delaunay<D>,
         DelaunayTriangulation<D>: super::visualizer::Visualizable,
         Cell<D>: DimensionCell<Dimension = D>,
-        VoronoiGrid<D>: for<'a> From<&'a DelaunayTriangulation<D>>,
+        VoronoiGrid<D>: for<'a> From<&'a Constructor<D>>,
         <D as Dimension>::Point: std::fmt::Debug,
+        D: Clone,
     {
-        perform_check_on_each_level_of_construction(|triangulation, num_inserted_points| {
+        perform_check_on_each_level_of_construction(|constructor, num_inserted_points| {
             if num_inserted_points == 0 {
                 return;
             }
             let mut num_found = 0;
-            let grid: VoronoiGrid<D> = triangulation.into();
+            let grid: VoronoiGrid<D> = constructor.into();
             for lookup_point in D::get_lookup_points() {
                 let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
                 let closest_cell = grid
                     .cells
                     .iter()
                     .min_by_key(|cell| {
-                        let p: D::Point = triangulation.points[cell.delaunay_point];
+                        let p: D::Point = constructor.triangulation.points[cell.delaunay_point];
                         OrderedFloat(p.distance_squared(lookup_point))
                     })
                     .unwrap();
@@ -221,6 +233,7 @@ mod quantitative_tests {
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::cell::CellConnection;
     use crate::voronoi::primitives::Point3d;
+    use crate::voronoi::Constructor;
     use crate::voronoi::DimensionCell;
     use crate::voronoi::ThreeD;
 
@@ -233,15 +246,15 @@ mod quantitative_tests {
             (3, Point2d::new(0.25, 0.25)),
         ];
         let (t, map) = DelaunayTriangulation::<TwoD>::construct_from_iter(points.into_iter());
-        let last_point_index = map.get_by_left(&3).unwrap();
-        let grid = VoronoiGrid::<TwoD>::from(&t);
+        let last_point_index = *map.get_by_left(&3).unwrap();
+        let grid = VoronoiGrid::<TwoD>::from(&Constructor::new(t, map));
         assert_eq!(grid.cells.len(), 4);
         // Find the cell associated with the (0.25, 0.25) point above. This cell should be a triangle.
         // The exact values of faces and normals are taken from constructing the grid by hand and inspecting ;)
         let cell = grid
             .cells
             .iter()
-            .find(|cell| cell.delaunay_point == *last_point_index)
+            .find(|cell| cell.delaunay_point == last_point_index)
             .unwrap();
         assert_float_is_close(cell.volume(), 0.3968809165232358);
         for face in cell.faces.iter() {
@@ -273,8 +286,9 @@ mod quantitative_tests {
             (4, Point3d::new(0.1, 0.1, 0.1)),
         ];
         let (t, map) = DelaunayTriangulation::<ThreeD>::construct_from_iter(points.into_iter());
-        let last_point_index = map.get_by_left(&4).unwrap();
-        let grid = VoronoiGrid::<ThreeD>::from(&t);
+        let constructor = Constructor::new(t, map);
+        let last_point_index = constructor.point_to_cell_map.get_by_left(&4).unwrap();
+        let grid = VoronoiGrid::<ThreeD>::from(&constructor);
         assert_eq!(grid.cells.len(), 5);
         // Find the cell associated with the (0.25, 0.25, 0.25) point above.
         // The exact values of faces and normals are taken from constructing the grid by hand and inspecting ;)

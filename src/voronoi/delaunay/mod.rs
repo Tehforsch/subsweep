@@ -367,8 +367,8 @@ pub(super) mod tests {
         }
     }
 
-    pub fn perform_check_on_each_level_of_construction<D>(
-        check: fn(&DelaunayTriangulation<D>, usize) -> (),
+    pub fn perform_triangulation_check_on_each_level_of_construction<D>(
+        check: impl Fn(&DelaunayTriangulation<D>, usize) -> (),
     ) where
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
@@ -388,25 +388,27 @@ pub(super) mod tests {
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
     {
-        perform_check_on_each_level_of_construction(|triangulation, num_inserted_points| {
-            let assert_correct_number = |correct_value, value| {
-                if let Some(correct_value) = correct_value {
-                    assert_eq!(correct_value, value);
-                }
-            };
-            assert_correct_number(
-                D::number_of_tetras(num_inserted_points),
-                triangulation.tetras.len(),
-            );
-            assert_correct_number(
-                D::number_of_faces(num_inserted_points),
-                triangulation.faces.len(),
-            );
-            assert_correct_number(
-                D::number_of_points(num_inserted_points),
-                triangulation.points.len(),
-            );
-        });
+        perform_triangulation_check_on_each_level_of_construction(
+            |triangulation, num_inserted_points| {
+                let assert_correct_number = |correct_value, value| {
+                    if let Some(correct_value) = correct_value {
+                        assert_eq!(correct_value, value);
+                    }
+                };
+                assert_correct_number(
+                    D::number_of_tetras(num_inserted_points),
+                    triangulation.tetras.len(),
+                );
+                assert_correct_number(
+                    D::number_of_faces(num_inserted_points),
+                    triangulation.faces.len(),
+                );
+                assert_correct_number(
+                    D::number_of_points(num_inserted_points),
+                    triangulation.points.len(),
+                );
+            },
+        );
     }
 
     #[test]
@@ -415,19 +417,21 @@ pub(super) mod tests {
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
     {
-        perform_check_on_each_level_of_construction::<D>(|triangulation, num_points_inserted| {
-            if num_points_inserted == 1 {
-                // After the first insertion, we know that each tetra
-                // should contain d faces which have an opposing
-                // face (the `inner` ones).
-                for (_, tetra) in triangulation.tetras.iter() {
-                    assert_eq!(
-                        tetra.faces().filter_map(|face| face.opposing).count(),
-                        D::num()
-                    );
+        perform_triangulation_check_on_each_level_of_construction::<D>(
+            |triangulation, num_points_inserted| {
+                if num_points_inserted == 1 {
+                    // After the first insertion, we know that each tetra
+                    // should contain d faces which have an opposing
+                    // face (the `inner` ones).
+                    for (_, tetra) in triangulation.tetras.iter() {
+                        assert_eq!(
+                            tetra.faces().filter_map(|face| face.opposing).count(),
+                            D::num()
+                        );
+                    }
                 }
-            }
-        });
+            },
+        );
     }
 
     pub fn check_opposing_faces_are_symmetric<D>(triangulation: &DelaunayTriangulation<D>)
@@ -457,7 +461,7 @@ pub(super) mod tests {
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
     {
-        perform_check_on_each_level_of_construction::<D>(|triangulation, _| {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
             check_opposing_faces_are_symmetric(triangulation)
         });
     }
@@ -468,7 +472,7 @@ pub(super) mod tests {
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
     {
-        perform_check_on_each_level_of_construction::<D>(|triangulation, _| {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
             for (_, tetra) in triangulation.tetras.iter() {
                 for face in tetra.faces() {
                     if let Some(opp) = face.opposing {
@@ -499,7 +503,7 @@ pub(super) mod tests {
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
     {
-        perform_check_on_each_level_of_construction::<D>(|triangulation, _| {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
             check_faces_share_points_with_tetra(triangulation);
         });
     }
@@ -510,7 +514,7 @@ pub(super) mod tests {
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
     {
-        perform_check_on_each_level_of_construction::<D>(|triangulation, _| {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
             for (tetra, _) in triangulation.tetras.iter() {
                 assert!(!triangulation.circumcircle_contains_other_points(tetra));
             }
@@ -523,9 +527,11 @@ pub(super) mod tests {
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
     {
-        perform_check_on_each_level_of_construction::<D>(|triangulation, num_inserted| {
-            let num_inner_points = triangulation.iter_inner_points().count();
-            assert_eq!(num_inner_points, num_inserted);
-        });
+        perform_triangulation_check_on_each_level_of_construction::<D>(
+            |triangulation, num_inserted| {
+                let num_inner_points = triangulation.iter_inner_points().count();
+                assert_eq!(num_inner_points, num_inserted);
+            },
+        );
     }
 }
