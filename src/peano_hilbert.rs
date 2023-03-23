@@ -1,5 +1,4 @@
 use glam::DVec2;
-use glam::DVec3;
 use mpi::traits::Equivalence;
 
 // These values are for 3d, but I'll use them for 2D as well, since it
@@ -22,13 +21,6 @@ impl PeanoHilbertKey {
         let min_padded = min - (max - min) * 0.001;
         let max_padded = max + (max - min) * 0.001;
         Self::new((pos - min_padded) / (max_padded - min_padded))
-    }
-
-    pub fn from_point_and_min_max_3d(pos: DVec3, min: DVec3, max: DVec3) -> Self {
-        let min_padded = min - (max - min) * 0.001;
-        let max_padded = max + (max - min) * 0.001;
-        let p = (pos - min_padded) / (max_padded - min_padded);
-        Self::new(DVec2::new(p.x, p.y + p.z))
     }
 
     fn new(pos: DVec2) -> Self {
