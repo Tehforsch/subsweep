@@ -22,7 +22,7 @@ pub fn voronoi_benchmark(c: &mut Criterion) {
         .noise_threshold(0.05)
         .measurement_time(Duration::from_secs(20))
         .sample_size(10);
-    for num_particles in [100, 1000] {
+    for num_particles in [100, 1000, 10000] {
         group_2d.throughput(Throughput::Elements(num_particles as u64));
         group_2d.bench_function(BenchmarkId::from_parameter(num_particles), |b| {
             b.iter_batched(
