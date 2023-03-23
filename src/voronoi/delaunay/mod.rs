@@ -108,7 +108,10 @@ where
         (triangulation, indices)
     }
 
-    pub fn construct_no_key(points: &[Point<D>]) -> Self {
+    pub fn construct_no_key<'a>(points: impl Iterator<Item = &'a Point<D>> + 'a) -> Self
+    where
+        Point<D>: 'static,
+    {
         let (t, _) = Self::construct_from_iter(points.into_iter().map(|p| ((), *p)));
         t
     }
@@ -279,8 +282,6 @@ pub(super) mod tests {
     pub trait TestableDimension: Dimension {
         fn num() -> usize;
         fn get_example_point_set() -> Vec<Self::Point>;
-        fn basic_tetra() -> Self::TetraData;
-
         fn number_of_tetras(num_inserted_points: usize) -> Option<usize>;
         fn number_of_faces(num_inserted_points: usize) -> Option<usize>;
         fn number_of_points(num_inserted_points: usize) -> Option<usize>;
@@ -314,14 +315,6 @@ pub(super) mod tests {
                 Point2d::new(0.9, 0.8),
             ]
         }
-
-        fn basic_tetra() -> Self::TetraData {
-            Self::TetraData {
-                p1: Point2d::new(0.0, 0.0),
-                p2: Point2d::new(2.0, 0.0),
-                p3: Point2d::new(0.0, 2.0),
-            }
-        }
     }
 
     impl TestableDimension for ThreeD {
@@ -341,15 +334,6 @@ pub(super) mod tests {
 
         fn number_of_points(num_inserted_points: usize) -> Option<usize> {
             Some(4 + num_inserted_points)
-        }
-
-        fn basic_tetra() -> Self::TetraData {
-            Self::TetraData {
-                p1: Point3d::new(0.0, 0.0, 0.0),
-                p2: Point3d::new(2.0, 0.0, 0.0),
-                p3: Point3d::new(0.0, 2.0, 0.0),
-                p4: Point3d::new(0.0, 0.0, 2.0),
-            }
         }
 
         fn get_example_point_set() -> Vec<Point3d> {
@@ -373,8 +357,8 @@ pub(super) mod tests {
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
     {
-        let mut triangulation = DelaunayTriangulation::from_basic_tetra(D::basic_tetra());
         let points = D::get_example_point_set();
+        let mut triangulation = DelaunayTriangulation::all_encompassing(points.iter().map(|p| *p));
         for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);
             triangulation.insert(*point);

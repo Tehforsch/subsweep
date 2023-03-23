@@ -1,6 +1,7 @@
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
+use raxiom::voronoi::Constructor;
 use raxiom::voronoi::DelaunayTriangulation;
 use raxiom::voronoi::Point2d;
 use raxiom::voronoi::TwoD;
@@ -12,8 +13,11 @@ pub fn main() {
 }
 
 fn construct_voronoi_2d(points: Vec<Point2d>) {
-    let t = DelaunayTriangulation::<TwoD>::construct_no_key(&points);
-    let _: VoronoiGrid<TwoD> = (&t).into();
+    let (t, map) = DelaunayTriangulation::<TwoD>::construct_from_iter(
+        points.iter().enumerate().map(|(i, p)| (i, *p)),
+    );
+    let cons = Constructor::new(t, map);
+    let _: VoronoiGrid<TwoD> = (&cons).into();
 }
 
 fn setup_particles_2d(num_particles: usize) -> Vec<Point2d> {

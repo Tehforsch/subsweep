@@ -14,8 +14,6 @@ use raxiom::voronoi::Point2d;
 use raxiom::voronoi::Point3d;
 use raxiom::voronoi::ThreeD;
 use raxiom::voronoi::TwoD;
-use raxiom::voronoi::VoronoiGrid;
-
 pub fn voronoi_benchmark(c: &mut Criterion) {
     let mut group_2d = c.benchmark_group("voronoi2d");
     group_2d
@@ -55,13 +53,11 @@ criterion_group!(benches, voronoi_benchmark);
 criterion_main!(benches);
 
 fn construct_voronoi_2d(points: Vec<Point2d>) {
-    let t = DelaunayTriangulation::<TwoD>::construct_no_key(&points);
-    let _: VoronoiGrid<TwoD> = (&t).into();
+    let _ = DelaunayTriangulation::<TwoD>::construct_no_key(points.iter());
 }
 
 fn construct_voronoi_3d(points: Vec<Point3d>) {
-    let t = DelaunayTriangulation::<ThreeD>::construct_no_key(&points);
-    let _: VoronoiGrid<ThreeD> = (&t).into();
+    let _ = DelaunayTriangulation::<ThreeD>::construct_no_key(points.iter());
 }
 
 fn setup_particles_3d(num_particles: usize) -> Vec<Point3d> {

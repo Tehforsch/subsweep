@@ -1,8 +1,10 @@
 use bevy::prelude::Entity;
+use bimap::BiMap;
 
 use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
 use super::visualizer::Visualizable;
+use super::Constructor;
 use super::DelaunayTriangulation;
 use super::DimensionCell;
 use super::VoronoiGrid;
@@ -24,17 +26,25 @@ where
     DelaunayTriangulation<D>: Delaunay<D>,
     super::Cell<D>: DimensionCell<Dimension = D>,
     <super::Cell<D> as DimensionCell>::Dimension: Dimension<Point = MVec>,
-    VoronoiGrid<D>: for<'a> From<&'a DelaunayTriangulation<D>>,
+    VoronoiGrid<D>: for<'a> From<&'a Constructor<D>>,
     <D as Dimension>::TetraData: Visualizable,
     <D as Dimension>::Point: Visualizable,
 {
-    let (triangulation, point_index_to_entity) =
-        DelaunayTriangulation::<D>::construct_from_iter(iter);
-    let grid = VoronoiGrid::from(&triangulation);
+    let (triangulation, map) = DelaunayTriangulation::<D>::construct_from_iter(
+        iter.enumerate()
+            .map(|(i, (entity, point))| ((i, entity), point)),
+    );
+    let cell_index_to_point_index = map.iter().map(|((i, _), point)| (*i, *point)).collect();
+    let entity_to_point_index: BiMap<_, _> = map
+        .iter()
+        .map(|((_, entity), point)| (*entity, *point))
+        .collect();
+    let cons = Constructor::new(triangulation, cell_index_to_point_index);
+    let grid = VoronoiGrid::from(&cons);
     grid.cells
         .iter()
         .filter_map(|voronoi_cell| {
-            let entity = point_index_to_entity.get_by_right(&voronoi_cell.delaunay_point);
+            let entity = entity_to_point_index.get_by_right(&voronoi_cell.delaunay_point);
             entity.map(|entity| {
                 let id = ParticleId(voronoi_cell.index);
                 let grid_cell = crate::grid::Cell {

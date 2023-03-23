@@ -54,7 +54,7 @@ where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
-    fn new(t: DelaunayTriangulation<D>, map: BiMap<CellIndex, PointIndex>) -> Self {
+    pub fn new(t: DelaunayTriangulation<D>, map: BiMap<CellIndex, PointIndex>) -> Self {
         let tetra_to_voronoi_point_map = t
             .tetras
             .iter()

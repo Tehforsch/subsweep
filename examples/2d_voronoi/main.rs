@@ -12,6 +12,7 @@ use raxiom::prelude::*;
 use raxiom::units::VecLength;
 use raxiom::voronoi::delaunay::TetraIndex;
 use raxiom::voronoi::CellConnection;
+use raxiom::voronoi::Constructor;
 use raxiom::voronoi::DelaunayTriangulation;
 use raxiom::voronoi::DimensionTetra;
 use raxiom::voronoi::TwoD;
@@ -109,10 +110,13 @@ fn show_voronoi_system(
         red: materials.add(ColorMaterial::from(Color::RED)),
         green: materials.add(ColorMaterial::from(Color::GREEN)),
     };
-    let (triangulation, _) = DelaunayTriangulation::construct_from_iter(
-        particles.into_iter().map(|(_, pos)| pos.value_unchecked()),
+    let (triangulation, map) = DelaunayTriangulation::construct_from_iter(
+        particles
+            .iter()
+            .enumerate()
+            .map(|(i, (_, pos))| (i, pos.value_unchecked())),
     );
-    let grid = VoronoiGrid::<TwoD>::from(&triangulation);
+    let grid = VoronoiGrid::<TwoD>::from(&Constructor::new(triangulation.clone(), map));
     for cell in grid.cells.iter() {
         for vp in cell.points.iter() {
             commands.spawn((
