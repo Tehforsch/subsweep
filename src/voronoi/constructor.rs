@@ -37,7 +37,15 @@ where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
-    pub fn new(t: DelaunayTriangulation<D>, map: BiMap<CellIndex, PointIndex>) -> Self {
+    pub fn new<'a>(points: impl Iterator<Item = (CellIndex, Point<D>)>) -> Self {
+        let (t, map) = DelaunayTriangulation::construct_from_iter(points);
+        Self::from_triangulation_and_map(t, map)
+    }
+
+    pub fn from_triangulation_and_map(
+        t: DelaunayTriangulation<D>,
+        map: BiMap<CellIndex, PointIndex>,
+    ) -> Self {
         let tetra_to_voronoi_point_map = t
             .tetras
             .iter()
@@ -52,7 +60,7 @@ where
         }
     }
 
-    pub fn construct(&self) -> VoronoiGrid<D> {
+    pub fn construct_voronoi(&self) -> VoronoiGrid<D> {
         VoronoiGrid {
             cells: self
                 .triangulation
@@ -111,8 +119,8 @@ where
         .iter()
         .map(|((_, entity), point)| (*entity, *point))
         .collect();
-    let cons = Constructor::new(triangulation, cell_index_to_point_index);
-    let grid = VoronoiGrid::from(&cons);
+    let cons = Constructor::from_triangulation_and_map(triangulation, cell_index_to_point_index);
+    let grid = cons.construct_voronoi();
     grid.cells
         .iter()
         .filter_map(|voronoi_cell| {

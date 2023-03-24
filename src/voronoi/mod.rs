@@ -44,7 +44,7 @@ where
     Cell<D>: DimensionCell<Dimension = D>,
 {
     fn from(c: &Constructor<D>) -> Self {
-        c.construct()
+        c.construct_voronoi()
     }
 }
 
@@ -107,7 +107,10 @@ mod tests {
     {
         perform_triangulation_check_on_each_level_of_construction(|t, num| {
             let map: BiMap<_, _> = t.points.iter().map(|(i, _)| i).enumerate().collect();
-            check(&Constructor::new(t.clone(), map), num);
+            check(
+                &Constructor::from_triangulation_and_map(t.clone(), map),
+                num,
+            );
         });
     }
 
@@ -158,7 +161,6 @@ mod tests {
 #[cfg(test)]
 mod quantitative_tests {
     use super::primitives::Point2d;
-    use super::DelaunayTriangulation;
     use super::TwoD;
     use super::VoronoiGrid;
     use crate::test_utils::assert_float_is_close;
@@ -176,9 +178,9 @@ mod quantitative_tests {
             (2, Point2d::new(0.9, 0.2)),
             (3, Point2d::new(0.25, 0.25)),
         ];
-        let (t, map) = DelaunayTriangulation::<TwoD>::construct_from_iter(points.into_iter());
-        let last_point_index = *map.get_by_left(&3).unwrap();
-        let grid = VoronoiGrid::<TwoD>::from(&Constructor::new(t, map));
+        let constructor = Constructor::new(points.into_iter());
+        let last_point_index = *constructor.point_to_cell_map.get_by_left(&3).unwrap();
+        let grid: VoronoiGrid<TwoD> = constructor.construct_voronoi();
         assert_eq!(grid.cells.len(), 4);
         // Find the cell associated with the (0.25, 0.25) point above. This cell should be a triangle.
         // The exact values of faces and normals are taken from constructing the grid by hand and inspecting ;)
@@ -216,10 +218,9 @@ mod quantitative_tests {
             (3, Point3d::new(0.1, 0.1, 0.4)),
             (4, Point3d::new(0.1, 0.1, 0.1)),
         ];
-        let (t, map) = DelaunayTriangulation::<ThreeD>::construct_from_iter(points.into_iter());
-        let constructor = Constructor::new(t, map);
+        let constructor = Constructor::new(points.into_iter());
         let last_point_index = constructor.point_to_cell_map.get_by_left(&4).unwrap();
-        let grid = VoronoiGrid::<ThreeD>::from(&constructor);
+        let grid: VoronoiGrid<ThreeD> = constructor.construct_voronoi();
         assert_eq!(grid.cells.len(), 5);
         // Find the cell associated with the (0.25, 0.25, 0.25) point above.
         // The exact values of faces and normals are taken from constructing the grid by hand and inspecting ;)
