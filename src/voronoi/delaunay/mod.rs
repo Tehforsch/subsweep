@@ -309,15 +309,16 @@ pub(super) mod tests {
         }
 
         fn get_example_point_set() -> Vec<Self::Point> {
-            vec![
-                Point2d::new(0.5, 0.5),
-                Point2d::new(0.25, 0.5),
-                Point2d::new(0.5, 0.25),
-                Point2d::new(0.125, 0.4),
-                Point2d::new(0.3, 0.125),
-                Point2d::new(0.8, 0.15),
-                Point2d::new(0.9, 0.8),
-            ]
+            use rand::Rng;
+            use rand::SeedableRng;
+            let mut rng = rand::rngs::StdRng::seed_from_u64(1338);
+            (0..100)
+                .map(|_| {
+                    let x = rng.gen_range(0.1..0.4);
+                    let y = rng.gen_range(0.1..0.4);
+                    Point2d::new(x, y)
+                })
+                .collect()
         }
     }
 
@@ -497,7 +498,7 @@ pub(super) mod tests {
     }
 
     #[test]
-    fn circumcircles_contain_no_additional_points<D>()
+    fn global_delaunayhood<D>()
     where
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
@@ -505,7 +506,27 @@ pub(super) mod tests {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
             for (_, tetra) in triangulation.tetras.iter() {
                 for (p, _) in triangulation.points.iter() {
-                    assert!(!triangulation.circumcircle_contains_point(tetra, p));
+                    if !tetra.contains_point(p) {
+                        assert!(!triangulation.circumcircle_contains_point(tetra, p));
+                    }
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn local_delaunayhood<D>()
+    where
+        D: Dimension + TestableDimension,
+        DelaunayTriangulation<D>: Delaunay<D>,
+    {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
+            for (_, tetra) in triangulation.tetras.iter() {
+                for face in tetra.faces() {
+                    if let Some(opp) = face.opposing {
+                        assert!(!tetra.contains_point(opp.point));
+                        assert!(!triangulation.circumcircle_contains_point(tetra, opp.point));
+                    }
                 }
             }
         });

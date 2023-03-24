@@ -92,7 +92,7 @@ impl DimensionTetra for TriangleWithFaces {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TriangleData<P> {
     pub p1: P,
     pub p2: P,

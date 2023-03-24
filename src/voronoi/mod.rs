@@ -150,9 +150,9 @@ mod tests {
 
     impl VoronoiTestDimension for TwoD {
         fn get_lookup_points() -> Vec<Point2d> {
-            (0..10)
-                .flat_map(move |i| (0..10).map(move |j| (i, j)))
-                .map(|(i, j)| Point2d::new(0.1 * i as f64, 0.1 * j as f64))
+            (0..30)
+                .flat_map(move |i| (0..30).map(move |j| (i, j)))
+                .map(|(i, j)| Point2d::new(0.01 * i as f64, 0.01 * j as f64))
                 .collect()
         }
     }

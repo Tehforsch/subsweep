@@ -15,7 +15,7 @@ pub trait Dimension {
     type VoronoiFaceData;
 }
 
-pub trait DimensionTetra {
+pub trait DimensionTetra: core::fmt::Debug {
     type Dimension: Dimension;
 
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_>;
@@ -62,7 +62,9 @@ pub trait DimensionTetra {
     }
 }
 
-pub trait DimensionTetraData: FromIterator<<Self::Dimension as Dimension>::Point> {
+pub trait DimensionTetraData:
+    core::fmt::Debug + FromIterator<<Self::Dimension as Dimension>::Point>
+{
     type Dimension: Dimension;
 
     fn all_encompassing<'a>(
