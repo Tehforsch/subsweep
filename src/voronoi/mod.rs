@@ -12,21 +12,17 @@ mod utils;
 mod cell;
 
 use bevy::prelude::Resource;
-use bevy::utils::StableHashMap;
-use bimap::BiMap;
 pub use cell::Cell;
 pub use cell::CellConnection;
 pub use cell::DimensionCell;
+pub use constructor::Constructor;
 pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
+use delaunay::Delaunay;
 pub use delaunay::DelaunayTriangulation;
+use delaunay::PointIndex;
 pub use primitives::Point2d;
 pub use primitives::Point3d;
-
-use self::delaunay::dimension::DimensionTetraData;
-use self::delaunay::Delaunay;
-use self::delaunay::PointIndex;
-use self::delaunay::TetraIndex;
 
 pub type CellIndex = usize;
 
@@ -42,51 +38,6 @@ pub struct VoronoiGrid<D: Dimension> {
     pub cells: Vec<Cell<D>>,
 }
 
-pub struct Constructor<D: Dimension> {
-    triangulation: DelaunayTriangulation<D>,
-    point_to_cell_map: BiMap<CellIndex, PointIndex>,
-    point_to_tetras_map: StableHashMap<PointIndex, Vec<TetraIndex>>,
-    tetra_to_voronoi_point_map: StableHashMap<TetraIndex, Point<D>>,
-}
-
-impl<D: Dimension> Constructor<D>
-where
-    DelaunayTriangulation<D>: Delaunay<D>,
-    Cell<D>: DimensionCell<Dimension = D>,
-{
-    pub fn new(t: DelaunayTriangulation<D>, map: BiMap<CellIndex, PointIndex>) -> Self {
-        let tetra_to_voronoi_point_map = t
-            .tetras
-            .iter()
-            .map(|(i, tetra)| (i, t.get_tetra_data(&tetra).get_center_of_circumcircle()))
-            .collect();
-        let point_to_tetras_map = point_to_tetra_map(&t);
-        Self {
-            triangulation: t,
-            point_to_tetras_map,
-            point_to_cell_map: map,
-            tetra_to_voronoi_point_map,
-        }
-    }
-
-    pub fn construct(&self) -> VoronoiGrid<D> {
-        VoronoiGrid {
-            cells: self
-                .triangulation
-                .iter_inner_points()
-                .map(|p| Cell::<D>::new(self, p))
-                .collect(),
-        }
-    }
-
-    pub fn get_connection(&self, p: PointIndex) -> CellConnection {
-        self.point_to_cell_map
-            .get_by_right(&p)
-            .map(|i| CellConnection::ToInner(*i))
-            .unwrap_or(CellConnection::ToOuter)
-    }
-}
-
 impl<D: Dimension> From<&Constructor<D>> for VoronoiGrid<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
@@ -95,26 +46,6 @@ where
     fn from(c: &Constructor<D>) -> Self {
         c.construct()
     }
-}
-
-fn point_to_tetra_map<D: Dimension>(
-    triangulation: &DelaunayTriangulation<D>,
-) -> StableHashMap<PointIndex, Vec<TetraIndex>>
-where
-    D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
-{
-    let mut map: StableHashMap<_, _> = triangulation
-        .points
-        .iter()
-        .map(|(i, _)| (i, vec![]))
-        .collect();
-    for (tetra_index, tetra) in triangulation.tetras.iter() {
-        for p in tetra.points() {
-            map.get_mut(&p).unwrap().push(tetra_index);
-        }
-    }
-    map
 }
 
 #[cfg(test)]

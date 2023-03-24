@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::f64::consts::PI;
 
+use super::constructor::Constructor;
 use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
 use super::delaunay::FaceIndex;
@@ -12,7 +13,6 @@ use super::primitives::Vector;
 use super::utils::arrange_cyclic_by;
 use super::utils::periodic_windows_2;
 use super::CellIndex;
-use super::Constructor;
 use super::DelaunayTriangulation;
 use super::Point;
 use super::ThreeD;
