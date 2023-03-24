@@ -85,13 +85,7 @@ pub trait Delaunay<D: Dimension> {
 impl<D: Dimension> DelaunayTriangulation<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
-    Point<D>: Vector,
 {
-    pub fn all_encompassing<I: Iterator<Item = Point<D>>>(points: I) -> Self {
-        let initial_tetra_data = TetraData::<D>::all_encompassing(Box::new(points));
-        DelaunayTriangulation::from_basic_tetra(initial_tetra_data)
-    }
-
     pub fn construct<T: Hash + Clone + Eq>(
         points: &mut [(T, Point<D>)],
     ) -> (Self, BiMap<T, PointIndex>) {
@@ -123,6 +117,11 @@ where
         Self::construct(&mut positions)
     }
 
+    fn all_encompassing<I: Iterator<Item = Point<D>>>(points: I) -> Self {
+        let initial_tetra_data = TetraData::<D>::all_encompassing(Box::new(points));
+        DelaunayTriangulation::from_basic_tetra(initial_tetra_data)
+    }
+
     fn from_basic_tetra(tetra: TetraData<D>) -> Self {
         let mut triangulation = DelaunayTriangulation {
             tetras: TetraList::<D>::new(),
@@ -145,6 +144,64 @@ where
 
     pub fn find_containing_tetra(&self, point: Point<D>) -> Option<TetraIndex> {
         point_location::find_containing_tetra(&self, point)
+    }
+
+    /// Iterate over the inner points of the triangulation, i.e. every
+    /// point that is not on the boundary of the all-encompassing
+    /// tetra.  This only gives valid results if the triangulation was
+    /// constructed via incremental insertion, not if it has been
+    /// manually constructed from tetras, as is done in some of the
+    /// test code.
+    pub fn iter_inner_points(&self) -> impl Iterator<Item = PointIndex> + '_ {
+        // This is not a very efficient way to do this, but this probably doesn't matter
+        // in practice.
+        self.points
+            .iter()
+            .map(|(i, _)| i)
+            .filter(|p| !self.outer_points.contains(p))
+    }
+
+    fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
+        let tetra = self.make_positively_oriented_tetra(tetra);
+        debug_assert!(self
+            .get_tetra_data(&tetra)
+            .is_positively_oriented()
+            .unwrap());
+        let tetra_index = self.tetras.insert(tetra);
+        self.update_connections_in_existing_tetra(tetra_index);
+        tetra_index
+    }
+
+    fn set_opposing_in_new_tetra(
+        &mut self,
+        new_tetra: TetraIndex,
+        face: FaceIndex,
+        tetra: TetraIndex,
+        point: PointIndex,
+    ) {
+        self.tetras[new_tetra].find_face_mut(face).opposing = Some(ConnectionData { tetra, point });
+    }
+
+    fn update_connections_in_existing_tetra(&mut self, tetra_index: TetraIndex) {
+        let tetra = &self.tetras[tetra_index];
+        let new_connections: Vec<_> = tetra
+            .faces_and_points()
+            .filter_map(|(face, point)| {
+                face.opposing.map(|opposing| {
+                    (
+                        opposing.tetra,
+                        face.face,
+                        ConnectionData {
+                            tetra: tetra_index,
+                            point: point,
+                        },
+                    )
+                })
+            })
+            .collect();
+        for (tetra, face, connection) in new_connections.into_iter() {
+            self.tetras[tetra].find_face_mut(face).opposing = Some(connection);
+        }
     }
 
     pub fn insert(&mut self, point: Point<D>) -> PointIndex {
@@ -177,54 +234,11 @@ where
         }
     }
 
-    fn update_connections_in_existing_tetra(&mut self, tetra_index: TetraIndex) {
-        let tetra = &self.tetras[tetra_index];
-        let new_connections: Vec<_> = tetra
-            .faces_and_points()
-            .filter_map(|(face, point)| {
-                face.opposing.map(|opposing| {
-                    (
-                        opposing.tetra,
-                        face.face,
-                        ConnectionData {
-                            tetra: tetra_index,
-                            point: point,
-                        },
-                    )
-                })
-            })
-            .collect();
-        for (tetra, face, connection) in new_connections.into_iter() {
-            self.tetras[tetra].find_face_mut(face).opposing = Some(connection);
+    fn flip_check(&mut self, stack: &mut FlipCheckStack, to_check: FlipCheckData) {
+        if self.face_is_invalid(&to_check) {
+            let new_tetras_to_check = self.flip(to_check);
+            stack.extend(new_tetras_to_check);
         }
-    }
-
-    pub fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
-        let tetra = self.make_positively_oriented_tetra(tetra);
-        debug_assert!(self
-            .get_tetra_data(&tetra)
-            .is_positively_oriented()
-            .unwrap());
-        let tetra_index = self.tetras.insert(tetra);
-        self.update_connections_in_existing_tetra(tetra_index);
-        tetra_index
-    }
-
-    fn set_opposing_in_new_tetra(
-        &mut self,
-        new_tetra: TetraIndex,
-        face: FaceIndex,
-        tetra: TetraIndex,
-        point: PointIndex,
-    ) {
-        self.tetras[new_tetra].find_face_mut(face).opposing = Some(ConnectionData { tetra, point });
-    }
-
-    fn circumcircle_contains_point(&self, tetra: &Tetra<D>, point: PointIndex) -> bool {
-        let tetra_data = self.get_tetra_data(tetra);
-        tetra_data
-            .circumcircle_contains(self.points[point])
-            .unwrap()
     }
 
     fn face_is_invalid(&self, to_check: &FlipCheckData) -> bool {
@@ -239,26 +253,11 @@ where
         false
     }
 
-    fn flip_check(&mut self, stack: &mut FlipCheckStack, to_check: FlipCheckData) {
-        if self.face_is_invalid(&to_check) {
-            let new_tetras_to_check = self.flip(to_check);
-            stack.extend(new_tetras_to_check);
-        }
-    }
-
-    /// Iterate over the inner points of the triangulation, i.e. every
-    /// point that is not on the boundary of the all-encompassing
-    /// tetra.  This only gives valid results if the triangulation was
-    /// constructed via incremental insertion, not if it has been
-    /// manually constructed from tetras, as is done in some of the
-    /// test code.
-    pub fn iter_inner_points(&self) -> impl Iterator<Item = PointIndex> + '_ {
-        // This is not a very efficient way to do this, but this probably doesn't matter
-        // in practice.
-        self.points
-            .iter()
-            .map(|(i, _)| i)
-            .filter(|p| !self.outer_points.contains(p))
+    fn circumcircle_contains_point(&self, tetra: &Tetra<D>, point: PointIndex) -> bool {
+        let tetra_data = self.get_tetra_data(tetra);
+        tetra_data
+            .circumcircle_contains(self.points[point])
+            .unwrap()
     }
 }
 
