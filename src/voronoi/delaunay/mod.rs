@@ -231,9 +231,7 @@ where
         let tetra = self.tetras.get(to_check.tetra);
         if let Some(tetra) = tetra {
             if let Some(opp) = tetra.find_face(to_check.face).opposing {
-                if !tetra.contains_point(opp.point) {
-                    return self.circumcircle_contains_point(tetra, opp.point);
-                }
+                return self.circumcircle_contains_point(tetra, opp.point);
             }
         } else {
             // If the tetra has been deleted by now: Skip this check
@@ -344,7 +342,7 @@ pub(super) mod tests {
         fn get_example_point_set() -> Vec<Point3d> {
             use rand::Rng;
             use rand::SeedableRng;
-            let mut rng = rand::rngs::StdRng::seed_from_u64(1338);
+            let mut rng = rand::rngs::StdRng::seed_from_u64(1400);
             (0..100)
                 .map(|_| {
                     let x = rng.gen_range(0.1..0.4);
@@ -421,6 +419,34 @@ pub(super) mod tests {
                 }
             },
         );
+    }
+
+    /// This checks that the "opposing" point in any face of a tetra t
+    /// is not part of the t itself (which is a trivial requirement, but
+    /// necessary nonetheless)
+    pub fn check_opposing_point_is_in_other_tetra<D>(triangulation: &DelaunayTriangulation<D>)
+    where
+        D: Dimension,
+        DelaunayTriangulation<D>: Delaunay<D>,
+    {
+        for (_, tetra) in triangulation.tetras.iter() {
+            for face in tetra.faces() {
+                if let Some(opp) = face.opposing {
+                    assert!(!tetra.contains_point(opp.point));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn opposing_point_is_in_other_tetra<D>()
+    where
+        D: Dimension + TestableDimension,
+        DelaunayTriangulation<D>: Delaunay<D>,
+    {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
+            check_opposing_point_is_in_other_tetra(triangulation)
+        });
     }
 
     pub fn check_opposing_faces_are_symmetric<D>(triangulation: &DelaunayTriangulation<D>)
@@ -524,7 +550,6 @@ pub(super) mod tests {
             for (_, tetra) in triangulation.tetras.iter() {
                 for face in tetra.faces() {
                     if let Some(opp) = face.opposing {
-                        assert!(!tetra.contains_point(opp.point));
                         assert!(!triangulation.circumcircle_contains_point(tetra, opp.point));
                     }
                 }

@@ -2,7 +2,7 @@ use super::FaceIndex;
 use super::PointIndex;
 use super::TetraIndex;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ConnectionData {
     pub tetra: TetraIndex,
     pub point: PointIndex,
