@@ -7,7 +7,7 @@ use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
-#[name = "source"]
+#[name = "absorption_rate"]
 #[repr(transparent)]
 pub struct AbsorptionRate(pub crate::units::PhotonFlux);
 
