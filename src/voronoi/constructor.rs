@@ -17,7 +17,7 @@ use super::Point;
 use super::VoronoiGrid;
 use crate::grid;
 use crate::grid::FaceArea;
-use crate::grid::Neighbour;
+use crate::grid::ParticleType;
 use crate::prelude::MVec;
 use crate::prelude::ParticleId;
 use crate::units::Length;
@@ -138,9 +138,9 @@ where
                                 normal: VecDimensionless::new_unchecked(face.normal),
                             };
                             if let CellConnection::ToInner(neigh) = neigh {
-                                (face, Neighbour::Local(ParticleId(neigh)))
+                                (face, ParticleType::Local(ParticleId(neigh)))
                             } else {
-                                (face, Neighbour::Boundary)
+                                (face, ParticleType::Boundary)
                             }
                         })
                         .collect(),

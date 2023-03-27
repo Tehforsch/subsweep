@@ -13,13 +13,13 @@ pub type FaceArea = crate::units::Length;
 pub type FaceArea = crate::units::Area;
 
 #[derive(Clone, Debug)]
-pub enum Neighbour {
+pub enum ParticleType {
     Local(ParticleId),
     Remote(RemoteNeighbour),
     Boundary,
 }
 
-impl Neighbour {
+impl ParticleType {
     pub fn is_boundary(&self) -> bool {
         match self {
             Self::Boundary => true,
@@ -45,7 +45,7 @@ pub struct RemoteNeighbour {
 
 #[derive(Debug, Component, Clone)]
 pub struct Cell {
-    pub neighbours: Vec<(Face, Neighbour)>,
+    pub neighbours: Vec<(Face, ParticleType)>,
     pub size: Length,
     pub volume: Volume,
 }

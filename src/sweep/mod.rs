@@ -39,7 +39,7 @@ use crate::communication::SizedCommunicator;
 use crate::components::Density;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
-use crate::grid::Neighbour;
+use crate::grid::ParticleType;
 use crate::grid::RemoteNeighbour;
 use crate::hydrodynamics::HaloParticle;
 use crate::parameters::TimestepParameters;
@@ -197,7 +197,7 @@ impl<'a> Sweep<'a> {
                         continue;
                     }
                     site.num_missing_upwind[dir_index] += 1;
-                    if let Neighbour::Remote(neighbour) = neighbour {
+                    if let ParticleType::Remote(neighbour) = neighbour {
                         self.to_receive_count[neighbour.rank] += 1;
                     }
                 }
@@ -320,15 +320,15 @@ impl<'a> Sweep<'a> {
                 let flux_correction_this_cell =
                     outgoing_flux_correction * (effective_area / total_effective_area);
                 match neighbour {
-                    Neighbour::Local(neighbour_id) => self.handle_local_neighbour(
+                    ParticleType::Local(neighbour_id) => self.handle_local_neighbour(
                         flux_correction_this_cell,
                         task.dir,
                         *neighbour_id,
                     ),
-                    Neighbour::Remote(remote) => {
+                    ParticleType::Remote(remote) => {
                         self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
                     }
-                    Neighbour::Boundary => {}
+                    ParticleType::Boundary => {}
                 }
             }
         }
@@ -473,7 +473,7 @@ fn communicate_levels_system(
     let mut data: DataByRank<Vec<TimestepLevelData>> = DataByRank::from_communicator(&*levels_comm);
     for (id, level, cell) in local_levels.iter() {
         for (_, n) in cell.neighbours.iter() {
-            if let Neighbour::Remote(n) = n {
+            if let ParticleType::Remote(n) = n {
                 data[n.rank].push(TimestepLevelData {
                     id: *id,
                     level: *level,

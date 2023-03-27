@@ -6,7 +6,7 @@ pub use cartesian::NumCellsSpec;
 pub use cell::Cell;
 pub use cell::Face;
 pub use cell::FaceArea;
-pub use cell::Neighbour;
+pub use cell::ParticleType;
 pub use cell::RemoteNeighbour;
 use derive_custom::Named;
 
