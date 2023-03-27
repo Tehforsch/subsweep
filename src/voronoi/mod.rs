@@ -24,7 +24,9 @@ use delaunay::PointIndex;
 pub use primitives::Point2d;
 pub use primitives::Point3d;
 
-pub type CellIndex = usize;
+use crate::prelude::ParticleId;
+
+pub type CellIndex = ParticleId;
 
 #[derive(Clone)]
 pub struct TwoD;
@@ -67,6 +69,7 @@ mod tests {
     use super::ThreeD;
     use super::TwoD;
     use super::VoronoiGrid;
+    use crate::prelude::ParticleId;
     use crate::voronoi::primitives::point::Vector;
 
     #[instantiate_tests(<TwoD>)]
@@ -106,7 +109,12 @@ mod tests {
         Cell<D>: DimensionCell<Dimension = D>,
     {
         perform_triangulation_check_on_each_level_of_construction(|t, num| {
-            let map: BiMap<_, _> = t.points.iter().map(|(i, _)| i).enumerate().collect();
+            let map: BiMap<_, _> = t
+                .points
+                .iter()
+                .enumerate()
+                .map(|(i, (p, _))| (ParticleId(i as u64), p))
+                .collect();
             check(
                 &Constructor::from_triangulation_and_map(t.clone(), map),
                 num,
@@ -163,6 +171,7 @@ mod quantitative_tests {
     use super::primitives::Point2d;
     use super::TwoD;
     use super::VoronoiGrid;
+    use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::cell::CellConnection;
     use crate::voronoi::primitives::Point3d;
@@ -173,13 +182,16 @@ mod quantitative_tests {
     #[test]
     fn right_volume_and_face_areas_two_d() {
         let points = vec![
-            (0, Point2d::new(0.0, 0.0)),
-            (1, Point2d::new(0.1, 0.9)),
-            (2, Point2d::new(0.9, 0.2)),
-            (3, Point2d::new(0.25, 0.25)),
+            (ParticleId(0), Point2d::new(0.0, 0.0)),
+            (ParticleId(1), Point2d::new(0.1, 0.9)),
+            (ParticleId(2), Point2d::new(0.9, 0.2)),
+            (ParticleId(3), Point2d::new(0.25, 0.25)),
         ];
         let constructor = Constructor::new(points.into_iter());
-        let last_point_index = *constructor.point_to_cell_map.get_by_left(&3).unwrap();
+        let last_point_index = *constructor
+            .point_to_cell_map
+            .get_by_left(&ParticleId(3))
+            .unwrap();
         let grid: VoronoiGrid<TwoD> = constructor.construct_voronoi();
         assert_eq!(grid.cells.len(), 4);
         // Find the cell associated with the (0.25, 0.25) point above. This cell should be a triangle.
@@ -191,15 +203,15 @@ mod quantitative_tests {
             .unwrap();
         assert_float_is_close(cell.volume(), 0.3968809165232358);
         for face in cell.faces.iter() {
-            if face.connection == CellConnection::ToInner(0) {
+            if face.connection == CellConnection::ToInner(ParticleId(0)) {
                 assert_float_is_close(face.area, 1.0846512947129363);
                 assert_float_is_close(face.normal.x, -0.5f64.sqrt());
                 assert_float_is_close(face.normal.y, -0.5f64.sqrt());
-            } else if face.connection == CellConnection::ToInner(1) {
+            } else if face.connection == CellConnection::ToInner(ParticleId(1)) {
                 assert_float_is_close(face.area, 0.862988661979256);
                 assert_float_is_close(face.normal.x, -0.22485950669875832);
                 assert_float_is_close(face.normal.y, 0.9743911956946198);
-            } else if face.connection == CellConnection::ToInner(2) {
+            } else if face.connection == CellConnection::ToInner(ParticleId(2)) {
                 assert_float_is_close(face.area, 0.9638545380497548);
                 assert_float_is_close(face.normal.x, 0.9970544855015816);
                 assert_float_is_close(face.normal.y, -0.07669649888473688);
@@ -212,14 +224,17 @@ mod quantitative_tests {
     #[test]
     fn right_volume_and_face_areas_three_d() {
         let points = vec![
-            (0, Point3d::new(0.0, 0.0, 0.0)),
-            (1, Point3d::new(0.6, 0.1, 0.1)),
-            (2, Point3d::new(0.1, 0.5, 0.1)),
-            (3, Point3d::new(0.1, 0.1, 0.4)),
-            (4, Point3d::new(0.1, 0.1, 0.1)),
+            (ParticleId(0), Point3d::new(0.0, 0.0, 0.0)),
+            (ParticleId(1), Point3d::new(0.6, 0.1, 0.1)),
+            (ParticleId(2), Point3d::new(0.1, 0.5, 0.1)),
+            (ParticleId(3), Point3d::new(0.1, 0.1, 0.4)),
+            (ParticleId(4), Point3d::new(0.1, 0.1, 0.1)),
         ];
         let constructor = Constructor::new(points.into_iter());
-        let last_point_index = constructor.point_to_cell_map.get_by_left(&4).unwrap();
+        let last_point_index = constructor
+            .point_to_cell_map
+            .get_by_left(&ParticleId(4))
+            .unwrap();
         let grid: VoronoiGrid<ThreeD> = constructor.construct_voronoi();
         assert_eq!(grid.cells.len(), 5);
         // Find the cell associated with the (0.25, 0.25, 0.25) point above.
@@ -233,22 +248,22 @@ mod quantitative_tests {
         assert_eq!(cell.points.len(), 4);
         assert_float_is_close(cell.volume(), 0.0703125);
         for face in cell.faces.iter() {
-            if face.connection == CellConnection::ToInner(0) {
+            if face.connection == CellConnection::ToInner(ParticleId(0)) {
                 assert_float_is_close(face.area, 0.4871392896287468);
                 assert_float_is_close(face.normal.x, -(1.0f64 / 3.0).sqrt());
                 assert_float_is_close(face.normal.y, -(1.0f64 / 3.0).sqrt());
                 assert_float_is_close(face.normal.z, -(1.0f64 / 3.0).sqrt());
-            } else if face.connection == CellConnection::ToInner(1) {
+            } else if face.connection == CellConnection::ToInner(ParticleId(1)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 1.0);
                 assert_float_is_close(face.normal.y, 0.0);
                 assert_float_is_close(face.normal.z, 0.0);
-            } else if face.connection == CellConnection::ToInner(2) {
+            } else if face.connection == CellConnection::ToInner(ParticleId(2)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 0.0);
                 assert_float_is_close(face.normal.y, 1.0);
                 assert_float_is_close(face.normal.z, 0.0);
-            } else if face.connection == CellConnection::ToInner(3) {
+            } else if face.connection == CellConnection::ToInner(ParticleId(3)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 0.0);
                 assert_float_is_close(face.normal.y, 0.0);

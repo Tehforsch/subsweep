@@ -24,7 +24,9 @@ use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Velocity;
 use crate::named::Named;
+use crate::prelude::ParticleId;
 use crate::prelude::Particles;
+use crate::prelude::SimulationStartupStages;
 use crate::quadtree::QuadTreeConfig;
 use crate::quadtree::QuadTreeIndex;
 use crate::simulation::RaxiomPlugin;
@@ -69,6 +71,10 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
             .insert_resource(TopLevelIndices::default())
             .add_parameter_type::<DomainParameters>()
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
+            .add_startup_system_to_stage(
+                SimulationStartupStages::InsertComponents,
+                determine_particle_ids_system,
+            )
             .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
             .add_startup_system_to_stage(
                 DomainDecompositionStages::TopLevelTreeConstruction,
@@ -107,6 +113,22 @@ pub(super) fn determine_global_extent_system(
             .expect("Failed to find simulation extent - are there no particles?")
             .pad(),
     );
+}
+
+fn determine_particle_ids_system(
+    mut commands: Commands,
+    world_rank: Res<WorldRank>,
+    particles: Particles<Entity>,
+) {
+    // Ugly and hacky but most likely safe and nice for debugging.
+    const MAX_NUM_PARTICLES_PER_RANK: u64 = 1000000000;
+    if particles.iter().count() > 1000000000 {
+        panic!("Too many particles on rank - change ID scheme to account for this");
+    }
+    for (i, entity) in particles.iter().enumerate() {
+        let id: u64 = MAX_NUM_PARTICLES_PER_RANK * (**world_rank as u64) + i as u64;
+        commands.entity(entity).insert(ParticleId(id));
+    }
 }
 
 #[derive(Equivalence, Clone)]

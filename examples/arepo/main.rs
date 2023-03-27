@@ -15,6 +15,7 @@ use raxiom::io::input::DatasetInputPlugin;
 use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
+use raxiom::mpidbg;
 use raxiom::prelude::*;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
@@ -55,12 +56,12 @@ fn main() {
             insert_missing_components_system,
         )
         .add_startup_system_to_stage(
-            SimulationStartupStages::InsertGrid,
-            insert_grid_components_system,
-        )
-        .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
             initialize_source_system,
+        )
+        .add_startup_system_to_stage(
+            SimulationStartupStages::InsertGrid,
+            insert_grid_components_system,
         )
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
             InputDatasetDescriptor::<Position>::new(
@@ -89,15 +90,16 @@ fn main() {
 
 fn insert_grid_components_system(
     mut commands: Commands,
-    particles: Particles<(Entity, &Position)>,
+    particles: Particles<(Entity, &ParticleId, &Position)>,
 ) {
+    mpidbg!(particles.iter().count());
     let cells = construct_grid_from_iter::<ThreeD>(
         particles
             .into_iter()
-            .map(|(entity, pos)| (entity, pos.value_unchecked())),
+            .map(|(entity, id, pos)| (entity, *id, pos.value_unchecked())),
     );
-    for (entity, id, cell) in cells.into_iter() {
-        commands.entity(entity).insert((id, cell));
+    for (entity, cell) in cells.into_iter() {
+        commands.entity(entity).insert(cell);
     }
 }
 

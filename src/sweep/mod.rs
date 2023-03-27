@@ -80,6 +80,7 @@ impl RaxiomPlugin for SweepPlugin {
         .add_derived_component::<IonizedHydrogenFraction>()
         .add_derived_component::<Source>()
         .add_derived_component::<components::Flux>()
+        .add_component_no_io::<ParticleId>()
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
             initialize_timestep_levels_system,

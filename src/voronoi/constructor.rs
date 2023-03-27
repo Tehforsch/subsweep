@@ -99,8 +99,8 @@ where
 }
 
 pub fn construct_grid_from_iter<D>(
-    iter: impl Iterator<Item = (Entity, <D as Dimension>::Point)>,
-) -> Vec<(Entity, ParticleId, grid::Cell)>
+    iter: impl Iterator<Item = (Entity, ParticleId, <D as Dimension>::Point)>,
+) -> Vec<(Entity, grid::Cell)>
 where
     D: Dimension<Point = MVec>,
     DelaunayTriangulation<D>: Delaunay<D>,
@@ -111,22 +111,20 @@ where
     <D as Dimension>::Point: Visualizable,
 {
     let (triangulation, map) = DelaunayTriangulation::<D>::construct_from_iter(
-        iter.enumerate()
-            .map(|(i, (entity, point))| ((i, entity), point)),
+        iter.map(|(entity, id, point)| ((id, entity), point)),
     );
-    let cell_index_to_point_index = map.iter().map(|((i, _), point)| (*i, *point)).collect();
+    let id_to_point_index = map.iter().map(|((i, _), point)| (*i, *point)).collect();
     let entity_to_point_index: BiMap<_, _> = map
         .iter()
         .map(|((_, entity), point)| (*entity, *point))
         .collect();
-    let cons = Constructor::from_triangulation_and_map(triangulation, cell_index_to_point_index);
+    let cons = Constructor::from_triangulation_and_map(triangulation, id_to_point_index);
     let grid = cons.construct_voronoi();
     grid.cells
         .iter()
         .filter_map(|voronoi_cell| {
             let entity = entity_to_point_index.get_by_right(&voronoi_cell.delaunay_point);
             entity.map(|entity| {
-                let id = ParticleId(voronoi_cell.index);
                 let grid_cell = grid::Cell {
                     neighbours: voronoi_cell
                         .faces
@@ -138,7 +136,7 @@ where
                                 normal: VecDimensionless::new_unchecked(face.normal),
                             };
                             if let CellConnection::ToInner(neigh) = neigh {
-                                (face, ParticleType::Local(ParticleId(neigh)))
+                                (face, ParticleType::Local(neigh))
                             } else {
                                 (face, ParticleType::Boundary)
                             }
@@ -147,7 +145,7 @@ where
                     size: Length::new_unchecked(voronoi_cell.size()),
                     volume: Volume::new_unchecked(voronoi_cell.volume()),
                 };
-                (*entity, id, grid_cell)
+                (*entity, grid_cell)
             })
         })
         .collect()

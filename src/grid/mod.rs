@@ -8,13 +8,3 @@ pub use cell::Face;
 pub use cell::FaceArea;
 pub use cell::ParticleType;
 pub use cell::RemoteNeighbour;
-use derive_custom::Named;
-
-use crate::simulation::RaxiomPlugin;
-
-#[derive(Named)]
-struct GridPlugin {}
-
-impl RaxiomPlugin for GridPlugin {
-    fn build_everywhere(&self, _sim: &mut crate::simulation::Simulation) {}
-}

@@ -16,8 +16,9 @@ use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 
-#[derive(Component, Clone, Debug, PartialEq, Eq, Hash, Equivalence, Copy, Display)]
-pub struct ParticleId(pub usize);
+#[derive(Component, Clone, Debug, PartialEq, Eq, Hash, Equivalence, Copy, Display, Named)]
+#[name = "id"]
+pub struct ParticleId(pub u64);
 
 #[derive(Component)]
 pub struct LocalParticle;

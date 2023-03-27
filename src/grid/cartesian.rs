@@ -220,7 +220,7 @@ impl GridConstructor {
             .into_iter()
             .enumerate()
         {
-            constructor.ids.insert(integer_pos, ParticleId(i));
+            constructor.ids.insert(integer_pos, ParticleId(i as u64));
         }
         constructor.construct_neighbours();
         constructor.spawn_local_cells(commands);
