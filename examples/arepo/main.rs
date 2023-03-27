@@ -15,7 +15,6 @@ use raxiom::io::input::DatasetInputPlugin;
 use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
-use raxiom::mpidbg;
 use raxiom::prelude::*;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
@@ -92,7 +91,6 @@ fn insert_grid_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &ParticleId, &Position)>,
 ) {
-    mpidbg!(particles.iter().count());
     let cells = construct_grid_from_iter::<ThreeD>(
         particles
             .into_iter()

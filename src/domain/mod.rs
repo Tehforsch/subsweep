@@ -122,7 +122,7 @@ fn determine_particle_ids_system(
 ) {
     // Ugly and hacky but most likely safe and nice for debugging.
     const MAX_NUM_PARTICLES_PER_RANK: u64 = 1000000000;
-    if particles.iter().count() > 1000000000 {
+    if particles.iter().count() as u64 > MAX_NUM_PARTICLES_PER_RANK {
         panic!("Too many particles on rank - change ID scheme to account for this");
     }
     for (i, entity) in particles.iter().enumerate() {
