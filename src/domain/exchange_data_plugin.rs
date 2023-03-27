@@ -82,21 +82,21 @@ where
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
             .add_plugin(CommunicationPlugin::<NumEntities>::exchange())
-            .add_system_to_stage(
+            .add_startup_system_to_stage(
                 DomainDecompositionStages::Exchange,
                 send_num_outgoing_entities_system,
             )
-            .add_system_to_stage(
+            .add_startup_system_to_stage(
                 DomainDecompositionStages::Exchange,
                 despawn_outgoing_entities_system,
             )
-            .add_system_to_stage(
+            .add_startup_system_to_stage(
                 DomainDecompositionStages::Exchange,
                 reset_outgoing_entities_system
                     .after(send_num_outgoing_entities_system)
                     .after(despawn_outgoing_entities_system),
             )
-            .add_system_to_stage(
+            .add_startup_system_to_stage(
                 DomainDecompositionStages::Exchange,
                 spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
             );
@@ -108,7 +108,7 @@ where
         sim.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
             size, rank,
         )))
-        .add_well_ordered_system_to_stage::<_, ExchangeDataOrder>(
+        .add_well_ordered_system_to_startup_stage::<_, ExchangeDataOrder>(
             DomainDecompositionStages::Exchange,
             Self::exchange_buffers_system
                 .after(Self::fill_buffers_system)
@@ -117,11 +117,11 @@ where
             Self::exchange_buffers_system.as_system_label(),
         )
         .add_plugin(CommunicationPlugin::<T>::exchange())
-        .add_system_to_stage(
+        .add_startup_system_to_stage(
             DomainDecompositionStages::Exchange,
             Self::fill_buffers_system,
         )
-        .add_system_to_stage(
+        .add_startup_system_to_stage(
             DomainDecompositionStages::Exchange,
             Self::reset_buffers_system.after(Self::exchange_buffers_system),
         );

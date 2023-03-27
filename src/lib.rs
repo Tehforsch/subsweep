@@ -10,10 +10,7 @@
 #![doc = include_str!("../README.md")]
 
 pub(crate) mod command_line_options;
-#[cfg(feature = "mpi_test")]
 pub mod communication;
-#[cfg(not(feature = "mpi_test"))]
-pub(crate) mod communication;
 pub mod components;
 pub(crate) mod config;
 pub(crate) mod domain;

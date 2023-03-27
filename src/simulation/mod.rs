@@ -175,6 +175,15 @@ impl Simulation {
         self
     }
 
+    pub fn add_startup_system_to_stage<Params>(
+        &mut self,
+        stage_label: impl StageLabel,
+        system: impl IntoSystemDescriptor<Params>,
+    ) -> &mut Self {
+        self.app.add_startup_system_to_stage(stage_label, system);
+        self
+    }
+
     pub fn add_system_set_to_stage(
         &mut self,
         stage_label: impl StageLabel,
@@ -217,13 +226,37 @@ impl Simulation {
         }
     }
 
-    pub fn add_startup_system_to_stage<Params>(
+    /// Adds a system to a startup stage and makes sure that this system and
+    /// all other systems with the same Marker type are executed by
+    /// the scheduler in the exact order that they were added in, with
+    /// the first system to be added being executed first.
+    pub fn add_well_ordered_system_to_startup_stage<Params, Marker: Named>(
         &mut self,
         stage_label: impl StageLabel,
         system: impl IntoSystemDescriptor<Params>,
+        label: SystemLabelId,
     ) -> &mut Self {
-        self.app.add_startup_system_to_stage(stage_label, system);
-        self
+        let marker = Marker::name();
+        if !self.ordering_labels.contains_key(marker) {
+            self.ordering_labels.insert(marker, vec![]);
+        }
+        let labels = self.ordering_labels.get_mut(marker).unwrap();
+        // The following is a bit overly complicated because I am
+        // confused about ParallelSystemDescriptors - how do I get one
+        // without calling .after() or .label() or .before()?
+        if labels.is_empty() {
+            self.app.add_startup_system_to_stage(stage_label, system);
+            labels.push(label);
+            self
+        } else {
+            let mut system: SystemDescriptor = system.after(labels[0]);
+            for label in labels.iter() {
+                system = system.after(*label);
+            }
+            labels.push(label);
+            self.app.add_startup_system_to_stage(stage_label, system);
+            self
+        }
     }
 
     pub fn add_startup_system<Params>(

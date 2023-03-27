@@ -31,10 +31,6 @@ impl MassMoments {
         self.total += *mass;
         self.weighted_position_sum += *pos * *mass;
     }
-
-    pub fn count(&self) -> usize {
-        self.count
-    }
 }
 
 impl Sum<(Mass, VecLength)> for MassMoments {

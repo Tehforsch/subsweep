@@ -8,7 +8,7 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::Identified;
 use crate::components::Mass;
 use crate::components::Velocity;
-use crate::domain::communicate_mass_moments_system;
+use crate::domain::communicate_work_system;
 use crate::domain::construct_quad_tree_system;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
@@ -28,12 +28,12 @@ impl RaxiomPlugin for GravityPlugin {
             )
             .add_system_to_stage(
                 SimulationStages::ForceCalculation,
-                communicate_mass_moments_system.after(construct_quad_tree_system),
+                communicate_work_system.after(construct_quad_tree_system),
             )
             .add_system_to_stage(
                 SimulationStages::ForceCalculation,
                 gravity_system
-                    .after(communicate_mass_moments_system)
+                    .after(communicate_work_system)
                     .before(integrate_motion_system),
             )
             .add_required_component::<Velocity>()

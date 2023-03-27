@@ -5,8 +5,9 @@ mod unit_reader;
 
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
-use mpi::Rank;
 use ordered_float::OrderedFloat;
+use raxiom::communication::CommunicatedOption;
+use raxiom::communication::Identified;
 use raxiom::components;
 use raxiom::components::Density;
 use raxiom::components::Position;
@@ -18,16 +19,14 @@ use raxiom::prelude::*;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
+use raxiom::units::SourceRate;
 use raxiom::units::VecLength;
 use raxiom::voronoi::constructor::construct_grid_from_iter;
 use raxiom::voronoi::ThreeD;
 use unit_reader::ArepoUnitReader;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
-struct DistanceToSourceData {
-    distance: Length,
-    rank: Rank,
-}
+struct DistanceToSourceData(Length);
 
 #[raxiom_parameters("postprocess")]
 struct Parameters {
@@ -56,6 +55,10 @@ fn main() {
             insert_missing_components_system,
         )
         .add_startup_system_to_stage(
+            SimulationStartupStages::InsertGrid,
+            insert_grid_components_system,
+        )
+        .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
             initialize_source_system,
         )
@@ -77,24 +80,17 @@ fn main() {
                 ..default()
             },
         ))
-        .add_plugin(CommunicationPlugin::<DistanceToSourceData>::default())
+        .add_plugin(CommunicationPlugin::<
+            CommunicatedOption<Identified<DistanceToSourceData>>,
+        >::default())
         .add_plugin(SweepPlugin)
         .run();
 }
 
-fn insert_missing_components_system(
+fn insert_grid_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
-    parameters: Res<Parameters>,
 ) {
-    for (entity, _) in particles.iter() {
-        commands
-            .entity(entity)
-            .insert((components::IonizedHydrogenFraction(
-                parameters.initial_fraction_ionized_hydrogen,
-            ),));
-    }
-
     let cells = construct_grid_from_iter::<ThreeD>(
         particles
             .into_iter()
@@ -105,32 +101,58 @@ fn insert_missing_components_system(
     }
 }
 
+fn insert_missing_components_system(
+    mut commands: Commands,
+    particles: Particles<(Entity, &Position)>,
+    parameters: Res<Parameters>,
+) {
+    for (entity, _) in particles.iter() {
+        commands.entity(entity).insert((
+            components::IonizedHydrogenFraction(parameters.initial_fraction_ionized_hydrogen),
+            components::Flux(PhotonFlux::zero()),
+        ));
+    }
+}
+
 fn initialize_source_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
     box_size: Res<SimulationBox>,
-    mut comm: Communicator<DistanceToSourceData>,
-    world_rank: Res<WorldRank>,
+    mut comm: Communicator<CommunicatedOption<Identified<DistanceToSourceData>>>,
 ) {
-    let (closest_entity_to_center, distance) = particles
+    let closest = particles
         .iter()
         .map(|(entity, pos)| {
             let dist = **pos - box_size.center();
             (entity, OrderedFloat(dist.length().value_unchecked()))
         })
         .min_by_key(|(_, dist)| *dist)
+        .map(|(entity, dist)| {
+            Identified::new(entity, DistanceToSourceData(Length::new_unchecked(*dist)))
+        });
+    let closest_on_each_rank = if let Some(closest) = closest {
+        comm.all_gather(&Some(closest).into())
+    } else {
+        comm.all_gather(&None.into())
+    };
+    let global_closest: Identified<DistanceToSourceData> = closest_on_each_rank
+        .into_iter()
+        .filter_map(|x| Into::<Option<_>>::into(x))
+        .min_by(
+            |x: &Identified<DistanceToSourceData>, y: &Identified<DistanceToSourceData>| {
+                x.data
+                    .partial_cmp(&y.data)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            },
+        )
         .unwrap();
-    let rank_with_min_distance: Rank = comm
-        .all_gather_min::<DistanceToSourceData>(&DistanceToSourceData {
-            distance: Length::new_unchecked(*distance),
-            rank: **world_rank,
-        })
-        .unwrap()
-        .rank;
-    if **world_rank == rank_with_min_distance {
-        commands
-            .entity(closest_entity_to_center)
-            .insert(components::Source(parameters.source_strength));
+    for (entity, _) in particles.iter() {
+        let source = if entity == global_closest.entity() {
+            parameters.source_strength
+        } else {
+            SourceRate::zero()
+        };
+        commands.entity(entity).insert(components::Source(source));
     }
 }

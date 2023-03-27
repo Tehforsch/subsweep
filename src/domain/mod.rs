@@ -4,9 +4,15 @@ use mpi::traits::Equivalence;
 
 mod exchange_data_plugin;
 pub mod extent;
+mod quadtree;
+mod work;
+
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
+use self::quadtree::LeafData;
+pub use self::quadtree::QuadTree;
+use self::work::Work;
 use crate::communication::CommunicatedOption;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
@@ -17,17 +23,12 @@ use crate::communication::WorldSize;
 use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Velocity;
-use crate::gravity;
-use crate::gravity::LeafData;
-use crate::gravity::MassMoments;
 use crate::named::Named;
 use crate::prelude::Particles;
 use crate::quadtree::QuadTreeConfig;
 use crate::quadtree::QuadTreeIndex;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-
-pub type QuadTree = gravity::QuadTree;
 
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
 #[raxiom_parameters("domain")]
@@ -68,29 +69,25 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
             .insert_resource(TopLevelIndices::default())
             .add_parameter_type::<DomainParameters>()
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
-            .add_system_to_stage(
-                DomainDecompositionStages::TopLevelTreeConstruction,
-                determine_global_extent_system,
-            )
             .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
-            .add_system_to_stage(
+            .add_startup_system_to_stage(
                 DomainDecompositionStages::TopLevelTreeConstruction,
-                construct_quad_tree_system.after(determine_global_extent_system),
+                construct_quad_tree_system,
             )
-            .add_system_to_stage(
+            .add_startup_system_to_stage(
                 DomainDecompositionStages::TopLevelTreeConstruction,
-                communicate_mass_moments_system.after(construct_quad_tree_system),
+                communicate_work_system.after(construct_quad_tree_system),
             )
-            .add_system_to_stage(
+            .add_startup_system_to_stage(
                 DomainDecompositionStages::Decomposition,
                 distribute_top_level_nodes_system,
             )
-            .add_system_to_stage(
+            .add_startup_system_to_stage(
                 DomainDecompositionStages::Decomposition,
                 domain_decomposition_system.after(distribute_top_level_nodes_system),
             )
             .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::default())
-            .add_plugin(CommunicationPlugin::<MassMoments>::default());
+            .add_plugin(CommunicationPlugin::<Work>::default());
     }
 }
 
@@ -121,40 +118,36 @@ pub(super) struct ParticleExchangeData {
 
 pub fn construct_quad_tree_system(
     config: Res<DomainParameters>,
-    particles: Particles<(Entity, &Position, &Mass)>,
+    particles: Particles<(Entity, &Position)>,
     extent: Res<GlobalExtent>,
     mut quadtree: ResMut<QuadTree>,
 ) {
     let particles: Vec<_> = particles
         .iter()
-        .map(|(entity, pos, mass)| LeafData {
-            entity,
-            pos: pos.0,
-            mass: **mass,
-        })
+        .map(|(entity, pos)| LeafData { entity, pos: pos.0 })
         .collect();
     *quadtree = QuadTree::new(&config, particles, &extent);
 }
 
-fn sum_vecs(mut data: DataByRank<Vec<MassMoments>>) -> Vec<MassMoments> {
+fn sum_vecs(mut data: DataByRank<Vec<Work>>) -> Vec<Work> {
     let mut sum = data.remove(&0).unwrap();
     for (_, other_result) in data.drain_all() {
         debug_assert_eq!(sum.len(), other_result.len());
         for i in 0..other_result.len() {
-            sum[i] += &other_result[i];
+            sum[i] += other_result[i];
         }
     }
     sum
 }
 
-fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
-    let total_work: usize = particle_counts.iter().sum();
-    let mut work_per_rank = total_work / num_ranks;
+fn get_cutoffs(work_counts: &[Work], num_ranks: usize) -> Vec<usize> {
+    let total_work: Work = work_counts.iter().cloned().sum();
+    let mut work_per_rank = total_work / num_ranks as f64;
     let mut key_cutoffs_by_rank = vec![0];
-    let mut load = 0;
+    let mut load = Work(0.0);
     let mut loads = vec![];
-    let remaining_work = |loads: &[usize]| total_work - loads.iter().sum::<usize>();
-    for (i, count) in particle_counts.iter().enumerate() {
+    let remaining_work = |loads: &[Work]| total_work - loads.iter().cloned().sum::<Work>();
+    for (i, work) in work_counts.iter().enumerate() {
         if load >= work_per_rank {
             key_cutoffs_by_rank.push(i);
             loads.push(load);
@@ -162,17 +155,18 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
             if key_cutoffs_by_rank.len() >= num_ranks {
                 break;
             }
-            work_per_rank = remaining_work(&loads) / (num_ranks - loads.len());
-            load = 0;
+            let num_remaining_ranks = num_ranks - loads.len();
+            work_per_rank = remaining_work(&loads) / num_remaining_ranks as f64;
+            load = Work(0.0);
         }
-        load += count;
+        load += *work;
     }
     loads.push(remaining_work(&loads));
-    let max_load = *loads.iter().max().unwrap() as f64;
-    let min_load = *loads.iter().min().unwrap() as f64;
+    let max_load = *loads.iter().max().unwrap();
+    let min_load = *loads.iter().min().unwrap();
     let load_imbalance = (max_load - min_load) / max_load;
     if num_ranks != 1 {
-        debug!("Load imbalance: {:.1}%", (load_imbalance * 100.0));
+        debug!("Load imbalance: {:.1}%", (load_imbalance.0 * 100.0));
     }
     let num_entries_to_fill = num_ranks as i32 - key_cutoffs_by_rank.len() as i32;
     if num_entries_to_fill > 0 {
@@ -180,7 +174,7 @@ fn get_cutoffs(particle_counts: &[usize], num_ranks: usize) -> Vec<usize> {
     }
     // Even if num_entries_to_fill is zero, we add the final index once to make calculating the index
     // ranges later easier (since we can just use cutoffs[rank]..cutoffs[rank+1], even for the last rank)
-    key_cutoffs_by_rank.extend((0..1 + num_entries_to_fill).map(|_| particle_counts.len()));
+    key_cutoffs_by_rank.extend((0..1 + num_entries_to_fill).map(|_| work_counts.len()));
     key_cutoffs_by_rank
 }
 
@@ -199,26 +193,23 @@ fn get_top_level_indices(depth: usize) -> Vec<QuadTreeIndex> {
     QuadTreeIndex::iter_all_nodes_at_depth(depth).collect()
 }
 
-pub fn communicate_mass_moments_system(
+pub fn communicate_work_system(
     mut tree: ResMut<QuadTree>,
     config: Res<DomainParameters>,
-    mut comm: Communicator<MassMoments>,
+    mut comm: Communicator<Work>,
 ) {
-    // Use the particle counts at depth config.min_depth for
+    // Use the work at depth config.min_depth for
     // decomposition for now. This obviously needs to be fixed and
     // replaced by a proper peano hilbert curve on an actual tree
     let top_level_tree_leaf_indices = get_top_level_indices(config.min_depth);
-    let mass_moments: Vec<_> = top_level_tree_leaf_indices
+    let work: Vec<_> = top_level_tree_leaf_indices
         .iter()
-        .map(|index| tree[index].data.moments.clone())
+        .map(|index| tree[index].data.work)
         .collect();
     // replace with allreduce over buffer at some point
-    let total_mass_moments = sum_vecs(comm.all_gather_vec(&mass_moments));
-    for (index, moments) in top_level_tree_leaf_indices
-        .iter()
-        .zip(total_mass_moments.iter())
-    {
-        tree[index].data.moments = moments.clone();
+    let total_work = sum_vecs(comm.all_gather_vec(&work));
+    for (index, work) in top_level_tree_leaf_indices.iter().zip(total_work.iter()) {
+        tree[index].data.work = *work;
     }
 }
 
@@ -229,11 +220,11 @@ fn distribute_top_level_nodes_system(
     mut indices: ResMut<TopLevelIndices>,
 ) {
     let top_level_tree_leaf_indices = get_top_level_indices(config.min_depth);
-    let particles_per_leaf: Vec<usize> = top_level_tree_leaf_indices
+    let work_per_leaf: Vec<Work> = top_level_tree_leaf_indices
         .iter()
-        .map(|index| tree[index].data.moments.count())
+        .map(|index| tree[index].data.work)
         .collect();
-    let cutoffs = get_cutoffs(&particles_per_leaf, **num_ranks);
+    let cutoffs = get_cutoffs(&work_per_leaf, **num_ranks);
     *indices = TopLevelIndices(
         (0..**num_ranks)
             .map(|rank| {

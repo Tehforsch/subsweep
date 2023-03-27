@@ -18,9 +18,6 @@ impl RaxiomPlugin for SimulationStagesPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),
-            DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
-            DomainDecompositionStages::Decomposition.as_label(),
-            DomainDecompositionStages::Exchange.as_label(),
             SimulationStages::SetTimestep.as_label(),
             HydrodynamicsStages::BeforeForceCalculation.as_label(),
             SimulationStages::ForceCalculation.as_label(),
@@ -41,9 +38,13 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             );
         }
         let startup_stages = &[
-            StartupStage::Startup.as_label(),
+            StartupStage::PostStartup.as_label(),
             SimulationStartupStages::InsertComponents.as_label(),
             SimulationStartupStages::InsertDerivedComponents.as_label(),
+            DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
+            DomainDecompositionStages::Decomposition.as_label(),
+            DomainDecompositionStages::Exchange.as_label(),
+            SimulationStartupStages::InsertGrid.as_label(),
         ];
         for window in startup_stages.windows(2) {
             sim.add_startup_stage_after(

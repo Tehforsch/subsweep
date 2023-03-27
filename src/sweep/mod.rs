@@ -48,7 +48,6 @@ use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
-use crate::units::SourceRate;
 use crate::units::Time;
 use crate::units::PROTON_MASS;
 
@@ -393,7 +392,7 @@ pub fn sweep_system(
         &ParticleId,
         &Density,
         &mut IonizedHydrogenFraction,
-        Option<&Source>,
+        &Source,
     )>,
     mut levels_query: HydroParticles<(&ParticleId, &mut TimestepLevel)>,
     timestep: Res<TimestepParameters>,
@@ -416,7 +415,7 @@ pub fn sweep_system(
                     &directions,
                     **density,
                     **ionized_hydrogen_fraction,
-                    source.map(|source| **source).unwrap_or(SourceRate::zero()),
+                    **source,
                 ),
             )
         })
