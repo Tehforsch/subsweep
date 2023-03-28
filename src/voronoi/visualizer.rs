@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use super::delaunay::dimension::Dimension;
+use super::delaunay::ghost_iteration::SearchData;
 use super::delaunay::Delaunay;
+use super::delaunay::PointKind;
 use super::delaunay::TetraIndex;
 use super::primitives::triangle::TriangleData;
 use super::primitives::Point2d;
@@ -22,6 +24,12 @@ impl From<String> for Statement {
             statement,
             is_new_item: true,
         }
+    }
+}
+
+impl From<Statement> for String {
+    fn from(s: Statement) -> Self {
+        s.statement.into()
     }
 }
 
@@ -103,11 +111,17 @@ impl Visualizable for TriangleData<Point2d> {
 
 impl Visualizable for Vec<Point3d> {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
-        let points: Vec<_> = self
-            .iter()
-            .map(|p| p.get_statements(visualizer)[0].statement.clone())
-            .collect();
-        vec![format!("Polygon({})", points.join(",")).into()]
+        self.iter()
+            .map(|p| p.get_statements(visualizer)[0].statement.clone().into())
+            .collect()
+    }
+}
+
+impl Visualizable for Vec<Point2d> {
+    fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
+        self.iter()
+            .map(|p| p.get_statements(visualizer)[0].statement.clone().into())
+            .collect()
     }
 }
 
@@ -132,6 +146,14 @@ where
     <D as Dimension>::TetraData: Visualizable,
 {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
+        self.points.iter().for_each(|(index, point)| {
+            let color = match self.point_kinds[&index] {
+                PointKind::Inner => (1.0, 0.0, 0.0),
+                PointKind::Outer => (0.0, 1.0, 0.0),
+                PointKind::Ghost => (0.0, 0.0, 1.0),
+            };
+            visualizer.add(&Color { x: *point, color });
+        });
         self.tetras
             .iter()
             .flat_map(|(_, tetra)| self.get_tetra_data(tetra).get_statements(visualizer))
@@ -172,6 +194,16 @@ impl Visualizable for Point3d {
 impl Visualizable for Point2d {
     fn get_statements(&self, _visualizer: &mut Visualizer) -> Vec<Statement> {
         vec![format!("({}, {})", self.x, self.y).into()]
+    }
+}
+
+impl<D> Visualizable for SearchData<D>
+where
+    D: Dimension,
+{
+    fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
+        let s: String = self.point.get_statements(visualizer)[0].clone().into();
+        vec![format!("Circle({}, {})", &s, self.radius).into()]
     }
 }
 
