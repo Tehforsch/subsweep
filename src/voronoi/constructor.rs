@@ -7,6 +7,7 @@ use super::delaunay::dimension::DimensionTetra;
 use super::delaunay::dimension::DimensionTetraData;
 use super::delaunay::Delaunay;
 use super::delaunay::PointIndex;
+use super::delaunay::PointKind;
 use super::delaunay::TetraIndex;
 use super::visualizer::Visualizable;
 use super::Cell;
@@ -40,6 +41,15 @@ where
     pub fn new<'a>(points: impl Iterator<Item = (CellIndex, Point<D>)>) -> Self {
         let (t, map) = DelaunayTriangulation::construct_from_iter(points);
         Self::from_triangulation_and_map(t, map)
+    }
+
+    pub fn is_infinite_cell(&self, p: PointIndex) -> bool {
+        let tetras = &self.point_to_tetras_map[&p];
+        tetras.iter().any(|t| {
+            self.triangulation.tetras[*t]
+                .points()
+                .any(|p| self.triangulation.point_kinds[&p] == PointKind::Outer)
+        })
     }
 
     pub fn from_triangulation_and_map(

@@ -1,7 +1,7 @@
 pub(crate) mod dimension;
 pub(crate) mod face_info;
 
-mod ghost_iteration;
+pub(super) mod ghost_iteration;
 mod impl_2d;
 mod impl_3d;
 mod point_location;
@@ -42,7 +42,7 @@ type TetraList<D> = IndexedArena<TetraIndex, Tetra<D>>;
 type FaceList<D> = IndexedArena<FaceIndex, Face<D>>;
 type PointList<D> = IndexedArena<PointIndex, Point<D>>;
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum PointKind {
     Inner,
     Outer,
@@ -81,7 +81,7 @@ pub struct DelaunayTriangulation<D: Dimension> {
     pub tetras: TetraList<D>,
     pub faces: FaceList<D>,
     pub points: PointList<D>,
-    point_kinds: HashMap<PointIndex, PointKind>,
+    pub(super) point_kinds: HashMap<PointIndex, PointKind>,
     last_insertion_tetra: Option<TetraIndex>,
 }
 
@@ -175,8 +175,6 @@ where
     /// if it has been manually constructed from tetras, as is done in
     /// some of the test code.
     pub fn iter_inner_points(&self) -> impl Iterator<Item = PointIndex> + '_ {
-        // This is not a very efficient way to do this, but this probably doesn't matter
-        // in practice.
         self.points
             .iter()
             .map(|(i, _)| i)

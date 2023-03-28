@@ -1,3 +1,4 @@
+use std::ops::Mul;
 use std::ops::Sub;
 
 use super::Float;
@@ -6,7 +7,7 @@ use crate::peano_hilbert::PeanoHilbertKey;
 pub type Point2d = glam::DVec2;
 pub type Point3d = glam::DVec3;
 
-pub trait Vector: Sized + Sub<Self, Output = Self> {
+pub trait Vector: Sized + Sub<Self, Output = Self> + Mul<Float, Output = Self> {
     fn distance(&self, p: Self) -> Float;
     fn distance_squared(&self, p: Self) -> Float;
     fn normalize(&self) -> Self;

@@ -44,9 +44,9 @@ impl From<TetraIndexSend> for TetraIndex {
 }
 
 pub struct SearchData<D: Dimension> {
-    point: Point<D>,
-    radius: Float,
-    tetra_index: TetraIndexSend,
+    pub point: Point<D>,
+    pub radius: Float,
+    pub tetra_index: TetraIndexSend,
 }
 
 pub struct SearchResult<D: Dimension> {
@@ -147,9 +147,13 @@ where
     fn iterate(&mut self) {
         let search_data = self.get_radius_search_data();
         let newly_imported = self.f.unique_radius_search(search_data);
-        println!("Imported: {:>8}", newly_imported.len());
         let checked: StableHashSet<TetraIndex> = self.iter_remaining_tetras().collect();
-        let tetras_with_new_points_in_vicinity = newly_imported
+        println!(
+            "To check: {:>8}, Imported: {:>8}",
+            checked.len(),
+            newly_imported.len()
+        );
+        let tetras_with_new_points_in_vicinity: StableHashSet<_> = newly_imported
             .into_iter()
             .map(
                 |SearchResult {
@@ -183,11 +187,14 @@ where
             .collect()
     }
 
-    fn tetra_contains_local_point(&self, t: TetraIndex) -> bool {
+    fn tetra_should_be_checked(&self, t: TetraIndex) -> bool {
         let tetra = &self.tri.tetras[t];
         tetra
             .points()
             .any(|p| self.tri.point_kinds[&p] == PointKind::Inner)
+            && tetra
+                .points()
+                .all(|p| self.tri.point_kinds[&p] != PointKind::Outer)
     }
 
     fn iter_remaining_tetras(&self) -> impl Iterator<Item = TetraIndex> + '_ {
@@ -195,7 +202,7 @@ where
             .tetras
             .iter()
             .map(|(t, _)| t)
-            .filter(|t| !self.checked_tetras.contains(&t) && self.tetra_contains_local_point(*t))
+            .filter(|t| !self.checked_tetras.contains(&t) && self.tetra_should_be_checked(*t))
     }
 }
 
@@ -210,7 +217,6 @@ mod tests {
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::delaunay::ghost_iteration::GhostExporter;
-    use crate::voronoi::delaunay::tests::TestableDimension;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::Vector;
     use crate::voronoi::utils::get_extent;
@@ -220,6 +226,8 @@ mod tests {
     use crate::voronoi::Dimension;
     use crate::voronoi::DimensionCell;
     use crate::voronoi::Point;
+    use crate::voronoi::Point2d;
+    use crate::voronoi::Point3d;
     use crate::voronoi::ThreeD;
     use crate::voronoi::TwoD;
     use crate::voronoi::VoronoiGrid;
@@ -229,6 +237,81 @@ mod tests {
 
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
+
+    pub trait TestableDimension: Dimension {
+        fn get_example_point_sets() -> (Vec<Self::Point>, Vec<Self::Point>);
+
+        fn get_combined_point_set() -> Vec<(ParticleId, Self::Point)> {
+            let (p1, p2) = Self::get_example_point_sets_with_ids();
+            p1.into_iter().chain(p2.into_iter()).collect()
+        }
+
+        fn get_example_point_sets_with_ids() -> (
+            Vec<(ParticleId, Self::Point)>,
+            Vec<(ParticleId, Self::Point)>,
+        ) {
+            let (p1, p2) = Self::get_example_point_sets();
+            let len_p1 = p1.len();
+            (
+                p1.into_iter()
+                    .enumerate()
+                    .map(|(i, p)| (ParticleId(i as u64), p))
+                    .collect(),
+                p2.into_iter()
+                    .enumerate()
+                    .map(|(i, p)| (ParticleId(len_p1 as u64 + i as u64), p))
+                    .collect(),
+            )
+        }
+    }
+
+    impl TestableDimension for TwoD {
+        fn get_example_point_sets() -> (Vec<Self::Point>, Vec<Self::Point>) {
+            use rand::Rng;
+            use rand::SeedableRng;
+            let mut rng = rand::rngs::StdRng::seed_from_u64(1338);
+            let p1 = (0..100)
+                .map(|_| {
+                    let x = rng.gen_range(0.1..0.4);
+                    let y = rng.gen_range(0.1..0.4);
+                    Point2d::new(x, y)
+                })
+                .collect();
+            let p2 = (0..100)
+                .map(|_| {
+                    let x = rng.gen_range(0.4..0.7);
+                    let y = rng.gen_range(0.1..0.4);
+                    Point2d::new(x, y)
+                })
+                .collect();
+            (p1, p2)
+        }
+    }
+
+    impl TestableDimension for ThreeD {
+        fn get_example_point_sets() -> (Vec<Self::Point>, Vec<Self::Point>) {
+            use rand::Rng;
+            use rand::SeedableRng;
+            let mut rng = rand::rngs::StdRng::seed_from_u64(1338);
+            let p1 = (0..100)
+                .map(|_| {
+                    let x = rng.gen_range(0.1..0.4);
+                    let y = rng.gen_range(0.1..0.4);
+                    let z = rng.gen_range(0.1..0.4);
+                    Point3d::new(x, y, z)
+                })
+                .collect();
+            let p2 = (0..100)
+                .map(|_| {
+                    let x = rng.gen_range(0.4..0.7);
+                    let y = rng.gen_range(0.1..0.4);
+                    let z = rng.gen_range(0.1..0.4);
+                    Point3d::new(x, y, z)
+                })
+                .collect();
+            (p1, p2)
+        }
+    }
 
     pub struct LocalRadiusSearch<D: Dimension>(Vec<(ParticleId, Point<D>)>);
 
@@ -277,33 +360,34 @@ mod tests {
         Point<D>: Vector,
         Cell<D>: DimensionCell<Dimension = D>,
     {
-        let points: Vec<_> = D::get_example_point_set()
-            .into_iter()
-            .enumerate()
-            .map(|(i, p)| (ParticleId(i as u64), p))
-            .collect();
+        // Obtain two point sets - the second of them shifted by some offset away from the first
+        let (points1, points2) = D::get_example_point_sets_with_ids();
+        let points = D::get_combined_point_set();
         // First construct the triangulation normally
-        let (triangulation1, map1) =
+        let (full_triangulation, full_map) =
             DelaunayTriangulation::construct_from_iter(points.iter().cloned());
-        // Now split the point set on some arbitrary criterion and
-        // construct the sub-triangulation of the first set using imported
+        // Now construct the triangulation of the first set using imported
         // ghosts of the other set.
-        let half_len = points.len() / 2;
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();
-        let (points_1, points_2) = points.split_at(half_len);
-        let points_2 = points_2.iter().cloned().collect();
-        let (triangulation2, map2) = GhostIteration::construct_from_iter(
-            points_1.into_iter().cloned(),
-            GhostExporter::new(LocalRadiusSearch(points_2)),
+        let (sub_triangulation, sub_map) = GhostIteration::construct_from_iter(
+            points1.iter().cloned(),
+            GhostExporter::new(LocalRadiusSearch(points2)),
             extent,
         );
-        let cons1 = Constructor::from_triangulation_and_map(triangulation1, map1);
-        let cons2 = Constructor::from_triangulation_and_map(triangulation2, map2);
+        let cons1 = Constructor::from_triangulation_and_map(full_triangulation, full_map);
+        let cons2 = Constructor::from_triangulation_and_map(sub_triangulation, sub_map);
         let voronoi1 = cons1.construct_voronoi();
         let voronoi2 = cons2.construct_voronoi();
-        for (id, _) in points_1.iter() {
+        for (id, _) in points1.iter() {
             let c1 = get_cell_for_particle(&voronoi1, &cons1, *id);
             let c2 = get_cell_for_particle(&voronoi2, &cons2, *id);
+            // Infinite cells (i.e. those neighbouring the boundary) might very well
+            // differ in exact shape because of the different encompassing tetras,
+            // but this doesn't matter since they cannot be used anyways.
+            if c1.is_infinite {
+                assert!(c2.is_infinite);
+                continue;
+            }
             assert_eq!(c1.faces.len(), c2.faces.len());
             assert_float_is_close_high_error(c1.volume(), c2.volume());
         }

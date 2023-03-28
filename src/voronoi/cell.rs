@@ -39,6 +39,7 @@ pub struct Cell<D: Dimension> {
     pub points: Vec<Point<D>>,
     pub faces: Vec<VoronoiFace<D>>,
     pub center: Point<D>,
+    pub is_infinite: bool,
 }
 
 pub struct VoronoiFace<D: Dimension> {
@@ -136,6 +137,7 @@ impl DimensionCell for Cell<TwoD> {
         Self {
             delaunay_point: p,
             points,
+            is_infinite: c.is_infinite_cell(p),
             index: *c.point_to_cell_map.get_by_right(&p).unwrap(),
             faces: Self::get_faces(c, p),
             center: c.triangulation.points[p],
@@ -197,6 +199,7 @@ impl DimensionCell for Cell<ThreeD> {
         Self {
             delaunay_point: p,
             points,
+            is_infinite: c.is_infinite_cell(p),
             index: *c.point_to_cell_map.get_by_right(&p).unwrap(),
             faces: Self::get_faces(c, p),
             center: c.triangulation.points[p],
