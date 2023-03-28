@@ -9,6 +9,7 @@ mod point_location;
 use std::hash::Hash;
 
 use bevy::prelude::Resource;
+use bevy::utils::HashMap;
 use bimap::BiMap;
 use derive_more::From;
 use derive_more::Into;
@@ -40,6 +41,13 @@ type TetraData<D> = <D as Dimension>::TetraData;
 type TetraList<D> = IndexedArena<TetraIndex, Tetra<D>>;
 type FaceList<D> = IndexedArena<FaceIndex, Face<D>>;
 type PointList<D> = IndexedArena<PointIndex, Point<D>>;
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub enum PointKind {
+    Inner,
+    Outer,
+    Ghost,
+}
 
 type TetrasRequiringCheck = Vec<TetraIndex>;
 
@@ -73,7 +81,7 @@ pub struct DelaunayTriangulation<D: Dimension> {
     pub tetras: TetraList<D>,
     pub faces: FaceList<D>,
     pub points: PointList<D>,
-    outer_points: Vec<PointIndex>,
+    point_kinds: HashMap<PointIndex, PointKind>,
     last_insertion_tetra: Option<TetraIndex>,
 }
 
@@ -96,7 +104,7 @@ where
         let mut triangulation = Self::all_encompassing(extent);
         let indices = points
             .iter()
-            .map(|(name, p)| (name.clone(), triangulation.insert(*p)))
+            .map(|(name, p)| (name.clone(), triangulation.insert(*p, PointKind::Inner)))
             .collect();
         (triangulation, indices)
     }
@@ -141,8 +149,8 @@ where
             tetras: TetraList::<D>::new(),
             faces: FaceList::<D>::new(),
             points: PointList::<D>::new(),
-            outer_points: vec![],
             last_insertion_tetra: None,
+            point_kinds: HashMap::default(),
         };
         triangulation.insert_basic_tetra(tetra);
         triangulation
@@ -172,7 +180,7 @@ where
         self.points
             .iter()
             .map(|(i, _)| i)
-            .filter(|p| !self.outer_points.contains(p))
+            .filter(|p| self.point_kinds[p] == PointKind::Inner)
     }
 
     fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
@@ -218,11 +226,12 @@ where
         }
     }
 
-    pub fn insert(&mut self, point: Point<D>) -> PointIndex {
+    pub fn insert(&mut self, point: Point<D>, kind: PointKind) -> PointIndex {
         let t = self
             .find_containing_tetra(point)
             .expect("No tetra containing the point {point:?} found");
         let new_point_index = self.points.insert(point);
+        self.point_kinds.insert(new_point_index, kind);
         let new_tetras = self.split(t, new_point_index);
         self.perform_flip_checks(new_point_index, new_tetras);
         new_point_index
@@ -283,6 +292,7 @@ pub(super) mod tests {
     use super::dimension::DimensionTetra;
     use super::Delaunay;
     use super::DelaunayTriangulation;
+    use super::PointKind;
     use crate::voronoi::primitives::Point2d;
     use crate::voronoi::primitives::Point3d;
     use crate::voronoi::utils::get_extent;
@@ -379,7 +389,7 @@ pub(super) mod tests {
         let mut triangulation = DelaunayTriangulation::all_encompassing(&extent);
         for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);
-            triangulation.insert(*point);
+            triangulation.insert(*point, PointKind::Inner);
         }
         check(&triangulation, points.len());
     }
@@ -573,7 +583,7 @@ pub(super) mod tests {
     }
 
     #[test]
-    fn outer_point_contains_right_number_of_points<D>()
+    fn inner_points_contains_right_number_of_points<D>()
     where
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,

@@ -13,6 +13,7 @@ use super::PointIndex;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
 use crate::voronoi::delaunay::dimension::DimensionFace;
+use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::polygon3d::Polygon3d;
 use crate::voronoi::primitives::tetrahedron::Tetrahedron;
 use crate::voronoi::primitives::tetrahedron::TetrahedronData;
@@ -402,10 +403,10 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
         let p2 = self.points.insert(tetra.p2);
         let p3 = self.points.insert(tetra.p3);
         let p4 = self.points.insert(tetra.p4);
-        self.outer_points.push(p1);
-        self.outer_points.push(p2);
-        self.outer_points.push(p3);
-        self.outer_points.push(p4);
+        self.point_kinds.insert(p1, PointKind::Outer);
+        self.point_kinds.insert(p2, PointKind::Outer);
+        self.point_kinds.insert(p3, PointKind::Outer);
+        self.point_kinds.insert(p4, PointKind::Outer);
         self.insert_tetra_and_faces(p1, p2, p3, p4);
     }
 }
@@ -465,6 +466,8 @@ impl DelaunayTriangulation<ThreeD> {
 
 #[cfg(test)]
 mod tests {
+    use bevy::utils::HashMap;
+
     use super::Tetra;
     use crate::voronoi::delaunay::dimension::DimensionFace;
     use crate::voronoi::delaunay::dimension::DimensionTetra;
@@ -567,8 +570,8 @@ mod tests {
             tetras: TetraList::<ThreeD>::new(),
             faces: FaceList::<ThreeD>::new(),
             points: point_list,
-            outer_points: vec![],
             last_insertion_tetra: None,
+            point_kinds: HashMap::default(),
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,
@@ -682,8 +685,8 @@ mod tests {
             tetras: TetraList::<ThreeD>::new(),
             faces: FaceList::<ThreeD>::new(),
             points: point_list,
-            outer_points: vec![],
             last_insertion_tetra: None,
+            point_kinds: HashMap::default(),
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,

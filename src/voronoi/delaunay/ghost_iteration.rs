@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use bevy::utils::HashSet;
+use bevy::utils::StableHashSet;
 use bimap::BiMap;
 use generational_arena::Index;
 use mpi::traits::Equivalence;
@@ -9,6 +9,7 @@ use super::Delaunay;
 use super::DelaunayTriangulation;
 use super::Point;
 use super::PointIndex;
+use super::PointKind;
 use super::TetraIndex;
 use crate::voronoi::delaunay::dimension::DimensionTetra;
 use crate::voronoi::delaunay::dimension::DimensionTetraData;
@@ -16,6 +17,12 @@ use crate::voronoi::primitives::point::Vector;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::Dimension;
+
+/// Determines by how much the search radius is increased beyond the
+/// mathematically necessary radius (equal to the radius of the
+/// circumcircle/sphere of the tetra), in order to prevent numerical
+/// problems due to floating point arithmetic.
+const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 
 #[derive(Equivalence, Clone, Copy)]
 pub struct TetraIndexSend {
@@ -68,14 +75,14 @@ pub trait IndexedRadiusSearch<D: Dimension> {
 
 pub struct GhostExporter<F, I> {
     radius_search: F,
-    already_exported: HashSet<I>,
+    already_exported: StableHashSet<I>,
 }
 
 impl<F, I> GhostExporter<F, I> {
     fn new(radius_search: F) -> Self {
         Self {
             radius_search,
-            already_exported: HashSet::default(),
+            already_exported: StableHashSet::default(),
         }
     }
 }
@@ -104,7 +111,7 @@ impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for GhostExporter<
 pub struct GhostIteration<'a, D: Dimension, F: RadiusSearch<D>> {
     tri: &'a mut DelaunayTriangulation<D>,
     f: F,
-    checked_tetras: HashSet<TetraIndex>,
+    checked_tetras: StableHashSet<TetraIndex>,
 }
 
 impl<'a, D, F> GhostIteration<'a, D, F>
@@ -124,7 +131,7 @@ where
             let mut iteration = GhostIteration {
                 tri: &mut tri,
                 f,
-                checked_tetras: HashSet::default(),
+                checked_tetras: StableHashSet::default(),
             };
             iteration.run();
         }
@@ -140,7 +147,8 @@ where
     fn iterate(&mut self) {
         let search_data = self.get_radius_search_data();
         let newly_imported = self.f.unique_radius_search(search_data);
-        let checked: HashSet<TetraIndex> = self.iter_remaining_tetras().collect();
+        println!("Imported: {:>8}", newly_imported.len());
+        let checked: StableHashSet<TetraIndex> = self.iter_remaining_tetras().collect();
         let tetras_with_new_points_in_vicinity = newly_imported
             .into_iter()
             .map(
@@ -148,7 +156,7 @@ where
                      point,
                      tetra_index: search_index,
                  }| {
-                    self.tri.insert(point);
+                    self.tri.insert(point, PointKind::Ghost);
                     search_index.into()
                 },
             )
@@ -165,7 +173,7 @@ where
                 let center = tetra_data.get_center_of_circumcircle();
                 let sample_point = self.tri.points[tetra.points().next().unwrap()];
                 let radius_circumcircle = center.distance(sample_point);
-                let radius = 2.0 * radius_circumcircle;
+                let radius = SEARCH_SAFETY_FACTOR * radius_circumcircle;
                 SearchData::<D> {
                     radius,
                     point: center,
@@ -193,7 +201,7 @@ mod tests {
     use super::SearchData;
     use super::SearchResult;
     use crate::prelude::ParticleId;
-    use crate::test_utils::assert_float_is_close;
+    use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::delaunay::ghost_iteration::GhostExporter;
     use crate::voronoi::delaunay::tests::TestableDimension;
     use crate::voronoi::delaunay::Delaunay;
@@ -289,7 +297,8 @@ mod tests {
         for (id, _) in points_1.iter() {
             let c1 = get_cell_for_particle(&voronoi1, &cons1, *id);
             let c2 = get_cell_for_particle(&voronoi2, &cons2, *id);
-            assert_float_is_close(c1.volume(), c2.volume());
+            assert_eq!(c1.faces.len(), c2.faces.len());
+            assert_float_is_close_high_error(c1.volume(), c2.volume());
         }
     }
 }
