@@ -1,6 +1,7 @@
 pub(crate) mod dimension;
 pub(crate) mod face_info;
 
+mod ghost_iteration;
 mod impl_2d;
 mod impl_3d;
 mod point_location;
@@ -20,7 +21,8 @@ use self::dimension::DimensionTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
 use super::primitives::Vector;
-use super::utils::min_and_max;
+use super::utils::get_extent;
+use super::utils::Extent;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TetraIndex(Index);
@@ -86,20 +88,24 @@ impl<D: Dimension> DelaunayTriangulation<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
 {
-    pub fn construct<T: Hash + Clone + Eq>(
+    fn perform_construction<T: Hash + Clone + Eq>(
         points: &mut [(T, Point<D>)],
+        extent: &Extent<Point<D>>,
     ) -> (Self, BiMap<T, PointIndex>) {
-        let min_max = min_and_max(points.iter().map(|(_, p)| *p));
-        if let Some((min, max)) = min_max {
-            points.sort_by_key(|(_, p)| p.get_peano_hilbert_key(min, max));
-        }
-        let mut triangulation =
-            DelaunayTriangulation::all_encompassing(points.iter().map(|(_, p)| *p));
+        points.sort_by_key(|(_, p)| p.get_peano_hilbert_key(extent.min, extent.max));
+        let mut triangulation = Self::all_encompassing(extent);
         let indices = points
             .iter()
             .map(|(name, p)| (name.clone(), triangulation.insert(*p)))
             .collect();
         (triangulation, indices)
+    }
+
+    pub fn construct<T: Hash + Clone + Eq>(
+        points: &mut [(T, Point<D>)],
+    ) -> (Self, BiMap<T, PointIndex>) {
+        let extent = get_extent(points.iter().map(|(_, p)| *p)).unwrap();
+        Self::perform_construction(points, &extent)
     }
 
     pub fn construct_no_key<'a>(points: impl Iterator<Item = &'a Point<D>> + 'a) -> Self
@@ -117,8 +123,16 @@ where
         Self::construct(&mut positions)
     }
 
-    fn all_encompassing<I: Iterator<Item = Point<D>>>(points: I) -> Self {
-        let initial_tetra_data = TetraData::<D>::all_encompassing(Box::new(points));
+    pub fn construct_from_iter_custom_extent<T: Hash + Clone + Eq>(
+        iter: impl Iterator<Item = (T, Point<D>)>,
+        extent: &Extent<Point<D>>,
+    ) -> (Self, BiMap<T, PointIndex>) {
+        let mut positions: Vec<_> = iter.collect();
+        Self::perform_construction(&mut positions, extent)
+    }
+
+    fn all_encompassing(extent: &Extent<Point<D>>) -> Self {
+        let initial_tetra_data = TetraData::<D>::all_encompassing(&extent);
         DelaunayTriangulation::from_basic_tetra(initial_tetra_data)
     }
 
@@ -271,6 +285,7 @@ pub(super) mod tests {
     use super::DelaunayTriangulation;
     use crate::voronoi::primitives::Point2d;
     use crate::voronoi::primitives::Point3d;
+    use crate::voronoi::utils::get_extent;
     use crate::voronoi::ThreeD;
     use crate::voronoi::TwoD;
 
@@ -360,7 +375,8 @@ pub(super) mod tests {
         DelaunayTriangulation<D>: Delaunay<D>,
     {
         let points = D::get_example_point_set();
-        let mut triangulation = DelaunayTriangulation::all_encompassing(points.iter().map(|p| *p));
+        let extent = get_extent(points.iter().map(|p| *p)).unwrap();
+        let mut triangulation = DelaunayTriangulation::all_encompassing(&extent);
         for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);
             triangulation.insert(*point);

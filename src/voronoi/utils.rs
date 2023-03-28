@@ -62,11 +62,16 @@ pub fn periodic_windows_3<T>(values: &[T]) -> impl Iterator<Item = (&T, &T, &T)>
     PeriodicWindows3 { values, cursor: 0 }
 }
 
-pub fn get_min_and_max<P: Clone>(
+pub struct Extent<P> {
+    pub min: P,
+    pub max: P,
+}
+
+pub fn get_extent_from_min_and_max_reduce<P: Clone>(
     mut vs: impl Iterator<Item = P>,
     min: fn(P, P) -> P,
     max: fn(P, P) -> P,
-) -> Option<(P, P)> {
+) -> Option<Extent<P>> {
     let v_0 = vs.next()?;
     let mut min_v = v_0.clone();
     let mut max_v = v_0.clone();
@@ -74,14 +79,17 @@ pub fn get_min_and_max<P: Clone>(
         min_v = min(min_v, v.clone());
         max_v = max(max_v, v.clone());
     }
-    Some((min_v, max_v))
+    Some(Extent {
+        min: min_v,
+        max: max_v,
+    })
 }
 
-pub fn min_and_max<P: Vector>(points: impl Iterator<Item = P>) -> Option<(P, P)>
+pub fn get_extent<P: Vector>(points: impl Iterator<Item = P>) -> Option<Extent<P>>
 where
     P: Clone,
 {
-    get_min_and_max(points, |p1, p2| P::min(p1, p2), |p1, p2| P::max(p1, p2))
+    get_extent_from_min_and_max_reduce(points, |p1, p2| P::min(p1, p2), |p1, p2| P::max(p1, p2))
 }
 
 pub struct Cyclic<'a, T> {
@@ -220,8 +228,8 @@ mod tests {
     }
 
     #[test]
-    fn get_min_and_max() {
-        let (min, max) = super::get_min_and_max(
+    fn get_extent_from_min_and_max_reduce() {
+        let extent = super::get_extent_from_min_and_max_reduce(
             [
                 Point2d::new(0.0, 0.0),
                 Point2d::new(1.0, 1.0),
@@ -232,13 +240,15 @@ mod tests {
             Point2d::max,
         )
         .unwrap();
-        assert_float_is_close(min.x, 0.0);
-        assert_float_is_close(min.y, 0.0);
-        assert_float_is_close(max.x, 2.0);
-        assert_float_is_close(max.y, 1.0);
-        assert_eq!(
-            super::get_min_and_max([].into_iter(), Point2d::min, Point2d::max),
-            None
-        );
+        assert_float_is_close(extent.min.x, 0.0);
+        assert_float_is_close(extent.min.y, 0.0);
+        assert_float_is_close(extent.max.x, 2.0);
+        assert_float_is_close(extent.max.y, 1.0);
+        assert!(super::get_extent_from_min_and_max_reduce(
+            [].into_iter(),
+            Point2d::min,
+            Point2d::max
+        )
+        .is_none());
     }
 }

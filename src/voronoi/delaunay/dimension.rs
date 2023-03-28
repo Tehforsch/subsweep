@@ -4,6 +4,7 @@ use super::PointIndex;
 use crate::prelude::Float;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::primitives::Vector;
+use crate::voronoi::utils::Extent;
 use crate::voronoi::visualizer::Visualizable;
 
 pub trait Dimension {
@@ -67,9 +68,7 @@ pub trait DimensionTetraData:
 {
     type Dimension: Dimension;
 
-    fn all_encompassing<'a>(
-        points: Box<dyn Iterator<Item = <Self::Dimension as Dimension>::Point> + 'a>,
-    ) -> Self;
+    fn all_encompassing<'a>(extent: &Extent<<Self::Dimension as Dimension>::Point>) -> Self;
     fn contains(&self, p: <Self::Dimension as Dimension>::Point) -> Result<bool, PrecisionError>;
     fn distance_to_point(&self, p: <Self::Dimension as Dimension>::Point) -> Float;
     fn circumcircle_contains(
