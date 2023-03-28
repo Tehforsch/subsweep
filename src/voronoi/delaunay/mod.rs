@@ -170,10 +170,10 @@ where
 
     /// Iterate over the inner points of the triangulation, i.e. every
     /// point that is not on the boundary of the all-encompassing
-    /// tetra.  This only gives valid results if the triangulation was
-    /// constructed via incremental insertion, not if it has been
-    /// manually constructed from tetras, as is done in some of the
-    /// test code.
+    /// tetra (and not a ghost).  This only gives valid results if the
+    /// triangulation was constructed via incremental insertion, not
+    /// if it has been manually constructed from tetras, as is done in
+    /// some of the test code.
     pub fn iter_inner_points(&self) -> impl Iterator<Item = PointIndex> + '_ {
         // This is not a very efficient way to do this, but this probably doesn't matter
         // in practice.

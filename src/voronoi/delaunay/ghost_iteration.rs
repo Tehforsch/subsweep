@@ -183,12 +183,19 @@ where
             .collect()
     }
 
+    fn tetra_contains_local_point(&self, t: TetraIndex) -> bool {
+        let tetra = &self.tri.tetras[t];
+        tetra
+            .points()
+            .any(|p| self.tri.point_kinds[&p] == PointKind::Inner)
+    }
+
     fn iter_remaining_tetras(&self) -> impl Iterator<Item = TetraIndex> + '_ {
         self.tri
             .tetras
             .iter()
-            .map(|(i, _)| i)
-            .filter(|i| !self.checked_tetras.contains(&i))
+            .map(|(t, _)| t)
+            .filter(|t| !self.checked_tetras.contains(&t) && self.tetra_contains_local_point(*t))
     }
 }
 
