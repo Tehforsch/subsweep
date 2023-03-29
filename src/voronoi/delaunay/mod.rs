@@ -96,8 +96,8 @@ impl<D: Dimension> Triangulation<D>
 where
     Triangulation<D>: Delaunay<D>,
 {
-    fn perform_construction<T: Hash + Clone + Eq>(
-        points: &mut [(T, Point<D>)],
+    fn construct<T: Hash + Clone + Eq>(
+        mut points: Vec<(T, Point<D>)>,
         extent: &Extent<Point<D>>,
     ) -> (Self, BiMap<T, PointIndex>) {
         points.sort_by_key(|(_, p)| p.get_peano_hilbert_key(extent.min, extent.max));
@@ -109,11 +109,20 @@ where
         (triangulation, indices)
     }
 
-    pub fn construct<T: Hash + Clone + Eq>(
-        points: &mut [(T, Point<D>)],
+    pub fn construct_from_iter_custom_extent<T: Hash + Clone + Eq>(
+        iter: impl Iterator<Item = (T, Point<D>)>,
+        extent: &Extent<Point<D>>,
     ) -> (Self, BiMap<T, PointIndex>) {
+        let points: Vec<_> = iter.collect();
+        Self::construct(points, extent)
+    }
+
+    pub fn construct_from_iter<T: Hash + Clone + Eq>(
+        iter: impl Iterator<Item = (T, Point<D>)>,
+    ) -> (Self, BiMap<T, PointIndex>) {
+        let points: Vec<_> = iter.collect();
         let extent = get_extent(points.iter().map(|(_, p)| *p)).unwrap();
-        Self::perform_construction(points, &extent)
+        Self::construct(points, &extent)
     }
 
     pub fn construct_no_key<'a>(points: impl Iterator<Item = &'a Point<D>> + 'a) -> Self
@@ -122,21 +131,6 @@ where
     {
         let (t, _) = Self::construct_from_iter(points.into_iter().map(|p| ((), *p)));
         t
-    }
-
-    pub fn construct_from_iter<T: Hash + Clone + Eq>(
-        iter: impl Iterator<Item = (T, Point<D>)>,
-    ) -> (Self, BiMap<T, PointIndex>) {
-        let mut positions: Vec<_> = iter.collect();
-        Self::construct(&mut positions)
-    }
-
-    pub fn construct_from_iter_custom_extent<T: Hash + Clone + Eq>(
-        iter: impl Iterator<Item = (T, Point<D>)>,
-        extent: &Extent<Point<D>>,
-    ) -> (Self, BiMap<T, PointIndex>) {
-        let mut positions: Vec<_> = iter.collect();
-        Self::perform_construction(&mut positions, extent)
     }
 
     fn all_encompassing(extent: &Extent<Point<D>>) -> Self {
