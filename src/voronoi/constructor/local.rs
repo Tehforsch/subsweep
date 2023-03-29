@@ -16,4 +16,8 @@ impl<D: Dimension> RadiusSearch<D> for Local {
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
         None
     }
+
+    fn everyone_finished(&mut self, _: usize) -> bool {
+        true
+    }
 }

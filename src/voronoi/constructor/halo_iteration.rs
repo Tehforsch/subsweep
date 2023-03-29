@@ -58,6 +58,7 @@ pub trait RadiusSearch<D: Dimension> {
         data: Vec<SearchData<D>>,
     ) -> DataByRank<Vec<SearchResult<D>>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
+    fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
 }
 
 pub trait IndexedRadiusSearch<D: Dimension> {
@@ -67,6 +68,7 @@ pub trait IndexedRadiusSearch<D: Dimension> {
         data: Vec<SearchData<D>>,
     ) -> DataByRank<Vec<IndexedSearchResult<D, Self::Index>>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
+    fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
 }
 
 pub struct HaloExporter<F, I> {
@@ -117,6 +119,11 @@ impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
         <F as IndexedRadiusSearch<D>>::determine_global_extent(&self.radius_search)
     }
+
+    fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool {
+        self.radius_search
+            .everyone_finished(num_undecided_this_rank)
+    }
 }
 
 pub(super) struct HaloIteration<D: Dimension, F> {
@@ -141,7 +148,10 @@ where
     }
 
     pub fn run(&mut self) {
-        while self.iter_remaining_tetras().next().is_some() {
+        while !self
+            .search
+            .everyone_finished(self.iter_remaining_tetras().count())
+        {
             self.iterate();
         }
     }
@@ -150,11 +160,6 @@ where
         let search_data = self.get_radius_search_data();
         let mut newly_imported = self.search.unique_radius_search(search_data);
         let checked: StableHashSet<TetraIndex> = self.iter_remaining_tetras().collect();
-        println!(
-            "To check: {:>8}, Imported: {:>8}",
-            checked.len(),
-            newly_imported.size()
-        );
         let mut tetras_with_new_points_in_vicinity = StableHashSet::default();
         for (rank, results) in newly_imported.drain_all() {
             for SearchResult {
@@ -272,6 +277,10 @@ mod tests {
 
         fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
             Some(self.1.clone())
+        }
+
+        fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool {
+            num_undecided_this_rank == 0
         }
     }
 

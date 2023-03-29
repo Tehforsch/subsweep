@@ -11,7 +11,11 @@ use crate::voronoi::Point2d;
 
 pub trait TestDimension: Dimension {
     fn num() -> usize;
-    fn get_example_point_set(shift: usize) -> Vec<Self::Point>;
+    fn get_example_point_set(shift: usize) -> Vec<Self::Point> {
+        Self::get_example_point_set_num(100, shift)
+    }
+
+    fn get_example_point_set_num(num: usize, shift: usize) -> Vec<Self::Point>;
     fn number_of_tetras(num_inserted_points: usize) -> Option<usize>;
     fn number_of_faces(num_inserted_points: usize) -> Option<usize>;
     fn number_of_points(num_inserted_points: usize) -> Option<usize>;
@@ -61,9 +65,9 @@ impl TestDimension for TwoD {
         2
     }
 
-    fn get_example_point_set(shift: usize) -> Vec<Self::Point> {
+    fn get_example_point_set_num(num: usize, shift: usize) -> Vec<Self::Point> {
         let mut rng = StdRng::seed_from_u64(1338 + shift as u64);
-        (0..100)
+        (0..num)
             .map(|_| {
                 let offset = 0.3 * shift as f64;
                 let x = rng.gen_range(0.1 + offset..0.4 + offset);
@@ -100,9 +104,9 @@ impl TestDimension for ThreeD {
         Some(4 + num_inserted_points)
     }
 
-    fn get_example_point_set(shift: usize) -> Vec<Point3d> {
+    fn get_example_point_set_num(num: usize, shift: usize) -> Vec<Point3d> {
         let mut rng = StdRng::seed_from_u64(1338 + shift as u64);
-        (0..100)
+        (0..num)
             .map(|_| {
                 let offset = 0.3 * shift as f64;
                 let x = rng.gen_range(0.1 + offset..0.4 + offset);

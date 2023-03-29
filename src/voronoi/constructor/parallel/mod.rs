@@ -2,13 +2,18 @@ mod mpi_types;
 #[cfg(all(test, not(feature = "mpi")))]
 mod tests;
 
+use bevy::prelude::info;
 use bevy::prelude::Entity;
+use derive_more::Add;
+use derive_more::Sum;
+use mpi::traits::Equivalence;
 
 use self::mpi_types::IntoEquivalenceType;
 use super::halo_iteration::IndexedRadiusSearch;
 use super::halo_iteration::IndexedSearchResult;
 use super::halo_iteration::SearchResult;
 use super::SearchData;
+use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
@@ -27,6 +32,9 @@ use crate::voronoi::Point;
 type MpiSearchData<D> = <SearchData<D> as IntoEquivalenceType>::Equiv;
 type MpiSearchResult<D> = <IndexedSearchResult<D, Entity> as IntoEquivalenceType>::Equiv;
 
+#[derive(Clone, Add, Sum, Equivalence)]
+pub struct NumUndecided(pub usize);
+
 pub struct ParallelSearch<'a, D: Dimension + 'static>
 where
     SearchData<D>: IntoEquivalenceType,
@@ -34,6 +42,7 @@ where
 {
     data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
     result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<D>>,
+    finished_comm: &'a mut Communicator<NumUndecided>,
     global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
     indices: &'a TopLevelIndices,
@@ -166,5 +175,13 @@ impl<'a> IndexedRadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimen
 
     fn determine_global_extent(&self) -> Option<Extent<Point<ActiveDimension>>> {
         Some(self.global_extent.clone())
+    }
+
+    fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool {
+        let total_undecided: NumUndecided = self
+            .finished_comm
+            .all_gather_sum(&NumUndecided(num_undecided_this_rank));
+        info!("{} tetras undecided", total_undecided.0);
+        total_undecided.0 == 0
     }
 }

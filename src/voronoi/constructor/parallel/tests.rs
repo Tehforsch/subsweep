@@ -16,6 +16,7 @@ use crate::parameters::DomainStage;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
 use crate::prelude::CommunicationPlugin;
+use crate::prelude::Communicator;
 use crate::prelude::LocalParticle;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
@@ -27,6 +28,7 @@ use crate::units::Length;
 use crate::units::Time;
 use crate::units::VecLength;
 use crate::voronoi::constructor::halo_iteration::HaloExporter;
+use crate::voronoi::constructor::parallel::NumUndecided;
 use crate::voronoi::test_utils::TestDimension;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::Constructor;
@@ -59,6 +61,7 @@ fn build_sim(sim: &mut Simulation) {
         .add_plugin(DomainDecompositionPlugin)
         .add_plugin(CommunicationPlugin::<MpiSearchData<ThreeD>>::exchange())
         .add_plugin(CommunicationPlugin::<MpiSearchResult<ThreeD>>::exchange())
+        .add_plugin(CommunicationPlugin::<NumUndecided>::default())
         .add_parameters_explicitly(simulation_box)
         .add_parameters_explicitly(SimulationParameters {
             final_time: Some(Time::zero()),
@@ -71,7 +74,7 @@ fn build_sim(sim: &mut Simulation) {
 }
 
 fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
-    for p in ThreeD::get_example_point_set(**rank as usize) {
+    for p in ThreeD::get_example_point_set_num(20, **rank as usize) {
         commands.spawn((LocalParticle, Position(VecLength::new_unchecked(p))));
     }
 }
@@ -80,6 +83,7 @@ fn construct_grid_system(
     particles: Particles<(&ParticleId, &Position)>,
     mut data_comm: ExchangeCommunicator<MpiSearchData<ThreeD>>,
     mut result_comm: ExchangeCommunicator<MpiSearchResult<ThreeD>>,
+    mut finished_comm: Communicator<NumUndecided>,
     tree: Res<QuadTree>,
     indices: Res<TopLevelIndices>,
     global_extent: Res<GlobalExtent>,
@@ -93,6 +97,7 @@ fn construct_grid_system(
     let search = ParallelSearch {
         data_comm: &mut *data_comm,
         result_comm: &mut *result_comm,
+        finished_comm: &mut *finished_comm,
         global_extent: extent,
         tree: &*tree,
         indices: &*indices,

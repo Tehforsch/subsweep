@@ -40,7 +40,7 @@ pub use local_reexport::*;
 mod local_reexport {
     pub mod local_sim_building;
 
-    pub(super) mod communicator {
+    pub mod communicator {
         pub type Communicator<T> = super::super::local::LocalCommunicator<T>;
     }
 }
@@ -57,7 +57,7 @@ mod mpi_reexport {
     pub use super::mpi_world::MpiWorld;
     pub use super::mpi_world::MPI_UNIVERSE;
 
-    pub(super) mod communicator {
+    pub mod communicator {
         pub type Communicator<T> = super::super::mpi_world::MpiWorld<T>;
     }
 }
