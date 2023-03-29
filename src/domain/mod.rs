@@ -35,6 +35,7 @@ use crate::simulation::Simulation;
 #[raxiom_parameters]
 #[derive(Copy)]
 pub enum DomainStage {
+    None,
     Startup,
     Update,
 }
@@ -43,8 +44,8 @@ pub enum DomainStage {
 #[raxiom_parameters("domain")]
 pub struct DomainParameters {
     #[serde(default)]
-    tree: QuadTreeConfig,
-    stage: DomainStage,
+    pub tree: QuadTreeConfig,
+    pub stage: DomainStage,
 }
 
 impl Default for DomainParameters {
@@ -82,50 +83,62 @@ pub struct DomainDecompositionPlugin;
 
 impl RaxiomPlugin for DomainDecompositionPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.insert_resource(GlobalExtent(Extent::default()))
+        let stage = sim
+            .insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
-            .try_add_parameter_type::<DomainParameters>()
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
-            .add_startup_system_to_stage(
-                SimulationStartupStages::InsertComponents,
-                determine_particle_ids_system,
-            )
-            .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
-            .add_startup_system_to_stage(
-                DomainDecompositionStartupStages::TopLevelTreeConstruction,
-                construct_quad_tree_system,
-            )
-            .add_startup_system_to_stage(
-                DomainDecompositionStartupStages::TopLevelTreeConstruction,
-                communicate_work_system.after(construct_quad_tree_system),
-            )
-            .add_startup_system_to_stage(
-                DomainDecompositionStartupStages::Decomposition,
-                distribute_top_level_nodes_system,
-            )
-            .add_startup_system_to_stage(
-                DomainDecompositionStartupStages::Decomposition,
-                domain_decomposition_system.after(distribute_top_level_nodes_system),
-            )
-            .add_system_to_stage(CoreStage::PostUpdate, determine_global_extent_system)
-            .add_system_to_stage(
-                DomainDecompositionStages::TopLevelTreeConstruction,
-                construct_quad_tree_system,
-            )
-            .add_system_to_stage(
-                DomainDecompositionStages::TopLevelTreeConstruction,
-                communicate_work_system.after(construct_quad_tree_system),
-            )
-            .add_system_to_stage(
-                DomainDecompositionStages::Decomposition,
-                distribute_top_level_nodes_system,
-            )
-            .add_system_to_stage(
-                DomainDecompositionStages::Decomposition,
-                domain_decomposition_system.after(distribute_top_level_nodes_system),
-            )
             .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::default())
-            .add_plugin(CommunicationPlugin::<Work>::default());
+            .add_plugin(CommunicationPlugin::<Work>::default())
+            .try_add_parameter_type_and_get_result::<DomainParameters>()
+            .stage;
+        match stage {
+            DomainStage::None => {}
+            DomainStage::Startup => {
+                sim.add_startup_system_to_stage(
+                    SimulationStartupStages::InsertComponents,
+                    determine_particle_ids_system,
+                )
+                .add_startup_system_to_stage(
+                    StartupStage::PostStartup,
+                    determine_global_extent_system,
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::TopLevelTreeConstruction,
+                    construct_quad_tree_system,
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::TopLevelTreeConstruction,
+                    communicate_work_system.after(construct_quad_tree_system),
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::Decomposition,
+                    distribute_top_level_nodes_system,
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::Decomposition,
+                    domain_decomposition_system.after(distribute_top_level_nodes_system),
+                );
+            }
+            DomainStage::Update => {
+                sim.add_system_to_stage(CoreStage::PostUpdate, determine_global_extent_system)
+                    .add_system_to_stage(
+                        DomainDecompositionStages::TopLevelTreeConstruction,
+                        construct_quad_tree_system,
+                    )
+                    .add_system_to_stage(
+                        DomainDecompositionStages::TopLevelTreeConstruction,
+                        communicate_work_system.after(construct_quad_tree_system),
+                    )
+                    .add_system_to_stage(
+                        DomainDecompositionStages::Decomposition,
+                        distribute_top_level_nodes_system,
+                    )
+                    .add_system_to_stage(
+                        DomainDecompositionStages::Decomposition,
+                        domain_decomposition_system.after(distribute_top_level_nodes_system),
+                    );
+            }
+        }
     }
 }
 

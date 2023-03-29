@@ -90,6 +90,7 @@ where
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
             .add_plugin(CommunicationPlugin::<NumEntities>::exchange());
         match stage {
+            super::DomainStage::None => {}
             super::DomainStage::Startup => {
                 sim.add_startup_system_to_stage(
                     DomainDecompositionStartupStages::Exchange,
@@ -144,6 +145,7 @@ where
         )))
         .add_plugin(CommunicationPlugin::<T>::exchange());
         match stage {
+            super::DomainStage::None => {}
             super::DomainStage::Startup => {
                 sim.add_well_ordered_system_to_startup_stage::<_, ExchangeDataStartupOrder>(
                     DomainDecompositionStartupStages::Exchange,

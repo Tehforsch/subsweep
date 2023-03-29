@@ -48,6 +48,7 @@ use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::units::Dimensionless;
 use crate::units::PhotonFlux;
+use crate::units::SourceRate;
 use crate::units::Time;
 use crate::units::PROTON_MASS;
 
@@ -510,6 +511,7 @@ pub fn initialize_sweep_components_system(
             Density(units::Density::zero()),
             components::IonizedHydrogenFraction(Dimensionless::zero()),
             TimestepLevel(sweep_parameters.num_timestep_levels - 1),
+            Source(SourceRate::zero()),
         ));
     }
     for entity in halo_particles.iter() {
