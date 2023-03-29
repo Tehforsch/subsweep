@@ -19,7 +19,6 @@ use super::simulation_plugin::SimulationPlugin;
 use super::visualization::VisualizationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::parameter_plugin::parameter_file_contents::Override;
-use crate::performance_parameters::PerformanceParameters;
 use crate::simulation::Simulation;
 use crate::stages::SimulationStagesPlugin;
 
@@ -156,8 +155,7 @@ impl SimulationBuilder {
             sim.add_parameter_file_contents("".into());
         }
         sim.with_parameter_overrides(self.parameter_overrides.clone());
-        sim.add_parameter_type::<PerformanceParameters>()
-            .insert_resource(self.winit_settings())
+        sim.insert_resource(self.winit_settings())
             .read_initial_conditions(self.read_initial_conditions)
             .write_output(self.write_output)
             .maybe_add_plugin(self.base_communication.clone());

@@ -3,7 +3,6 @@ use bevy::prelude::*;
 
 use crate::domain::DomainDecompositionStages;
 use crate::domain::DomainDecompositionStartupStages;
-use crate::hydrodynamics::HydrodynamicsStages;
 use crate::io::output::OutputStages;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
@@ -23,7 +22,6 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainDecompositionStages::Decomposition.as_label(),
             DomainDecompositionStages::Exchange.as_label(),
             SimulationStages::SetTimestep.as_label(),
-            HydrodynamicsStages::BeforeForceCalculation.as_label(),
             SimulationStages::ForceCalculation.as_label(),
             SimulationStages::Integration.as_label(),
             VisualizationStage::AddVisualization.as_label(),

@@ -41,8 +41,10 @@ use crate::grid::Cell;
 use crate::grid::FaceArea;
 use crate::grid::ParticleType;
 use crate::grid::RemoteNeighbour;
-use crate::hydrodynamics::HaloParticle;
 use crate::parameters::TimestepParameters;
+use crate::particle::AllParticles;
+use crate::particle::HaloParticle;
+use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
@@ -398,7 +400,7 @@ pub fn sweep_system(
         &mut IonizedHydrogenFraction,
         &Source,
     )>,
-    mut levels_query: HydroParticles<(&ParticleId, &mut TimestepLevel)>,
+    mut levels_query: AllParticles<(&ParticleId, &mut TimestepLevel)>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,

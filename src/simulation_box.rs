@@ -95,7 +95,7 @@ impl SimulationBox {
 }
 
 #[cfg(test)]
-#[cfg(not(feature = "2d"))]
+#[cfg(feature = "3d")]
 pub(crate) mod tests {
 
     use crate::domain::Extent;

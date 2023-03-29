@@ -5,7 +5,6 @@ use derive_more::From;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
-pub use crate::hydrodynamics::hydro_components::*;
 use crate::named::Named;
 pub use crate::sweep::components::*;
 use crate::units::VecLength;
@@ -25,3 +24,13 @@ pub struct Mass(pub crate::units::Mass);
 #[name = "velocity"]
 #[repr(transparent)]
 pub struct Velocity(pub VecVelocity);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
+#[repr(transparent)]
+#[name = "density"]
+pub struct Density(pub crate::units::Density);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
+#[name = "internal_energy"]
+#[repr(transparent)]
+pub struct InternalEnergy(pub crate::units::Energy);

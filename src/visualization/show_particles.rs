@@ -15,7 +15,6 @@ use crate::components::InternalEnergy;
 use crate::components::IonizedHydrogenFraction;
 use crate::components::Mass;
 use crate::components::Position;
-use crate::components::Pressure;
 use crate::named::Named;
 use crate::parameters::SimulationBox;
 use crate::parameters::SweepParameters;
@@ -33,7 +32,6 @@ use crate::units::Temperature;
 use crate::units::DENSITY;
 use crate::units::DIMENSIONLESS;
 use crate::units::MASS;
-use crate::units::PRESSURE;
 
 // The molecular weight that this plugin just blindly assumes.
 const MOLECULAR_WEIGHT: Float = 4.0;
@@ -63,7 +61,6 @@ pub enum ColorMap {
     Rank,
     Density,
     Temperature,
-    Pressure,
     Mass,
     IonizedHydrogenFraction,
     TimestepLevel,
@@ -75,7 +72,6 @@ impl ColorMap {
             ColorMap::Rank => &RColor::reds,
             ColorMap::Density => &RColor::blues,
             ColorMap::Temperature => &RColor::reds,
-            ColorMap::Pressure => &RColor::blues,
             ColorMap::Mass => &RColor::reds,
             ColorMap::IonizedHydrogenFraction => &RColor::greens,
             ColorMap::TimestepLevel => &RColor::greys,
@@ -112,9 +108,6 @@ impl RaxiomPlugin for ShowParticlesPlugin {
                             .ambiguous_with(ColorParticlesLabel),
                     )
                     .with_system(color_particles_by_quantity_system::<Density, { ColorMap::Density }, DENSITY>
-                            .ambiguous_with(ColorParticlesLabel),
-                    )
-                    .with_system(color_particles_by_quantity_system::<Pressure, { ColorMap::Pressure }, PRESSURE>
                             .ambiguous_with(ColorParticlesLabel),
                     )
                     .with_system(color_particles_by_quantity_system::<IonizedHydrogenFraction, { ColorMap::IonizedHydrogenFraction }, DIMENSIONLESS>

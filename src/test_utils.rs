@@ -57,6 +57,7 @@ pub fn assert_vec_is_close<const U: Dimension>(
     )
 }
 
+#[cfg(feature = "3d")]
 pub fn get_particles(n: i32, m: i32) -> Vec<LeafData> {
     (1..n + 1)
         .flat_map(move |x| {

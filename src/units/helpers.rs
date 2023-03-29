@@ -11,8 +11,6 @@ pub type MVec = glam::DVec2;
 /// The default vector type.
 pub type MVec = glam::DVec3;
 
-pub type VecQuantity<const D: Dimension> = Quantity<MVec, D>;
-
 impl<const D: Dimension> Quantity<MVec, D> {
     /// Construct the vector from just x and y, filling z with zero,
     /// if available. This helps with constructing vectors in examples
