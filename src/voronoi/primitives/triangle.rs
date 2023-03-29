@@ -324,7 +324,7 @@ impl TriangleData<Point3d> {
         let denom = 1.0 / (va + vb + vc);
         let v = vb * denom;
         let w = vc * denom;
-        return a + v * ab + w * ac;
+        a + v * ab + w * ac
     }
 }
 

@@ -74,7 +74,7 @@ pub fn get_extent_from_min_and_max_reduce<P: Clone>(
 ) -> Option<Extent<P>> {
     let v_0 = vs.next()?;
     let mut min_v = v_0.clone();
-    let mut max_v = v_0.clone();
+    let mut max_v = v_0;
     for v in vs {
         min_v = min(min_v, v.clone());
         max_v = max(max_v, v.clone());

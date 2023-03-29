@@ -22,18 +22,18 @@ pub fn solve_system_of_equations<const M: usize>(mut a: Matrix<M, { M + 1 }>) ->
     while h < M && k < n {
         let i_max = (h..M).max_by_key(|i| OrderedFloat(a[*i][k].abs())).unwrap();
         if a[i_max][k] == 0.0 {
-            k = k + 1;
+            k += 1;
         } else {
             swap_rows(&mut a, h, i_max);
             for i in h + 1..M {
                 let f = a[i][k] / a[h][k];
                 a[i][k] = 0.0;
                 for j in (k + 1)..n {
-                    a[i][j] = a[i][j] - a[h][j] * f;
+                    a[i][j] -= a[h][j] * f;
                 }
             }
-            h = h + 1;
-            k = k + 1;
+            h += 1;
+            k += 1;
         }
     }
     backward_substitution(a)

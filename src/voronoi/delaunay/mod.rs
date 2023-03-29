@@ -140,15 +140,15 @@ where
     }
 
     fn all_encompassing(extent: &Extent<Point<D>>) -> Self {
-        let initial_tetra_data = TetraData::<D>::all_encompassing(&extent);
+        let initial_tetra_data = TetraData::<D>::all_encompassing(extent);
         DelaunayTriangulation::from_basic_tetra(initial_tetra_data)
     }
 
     fn from_basic_tetra(tetra: TetraData<D>) -> Self {
         let mut triangulation = DelaunayTriangulation {
-            tetras: TetraList::<D>::new(),
-            faces: FaceList::<D>::new(),
-            points: PointList::<D>::new(),
+            tetras: TetraList::<D>::default(),
+            faces: FaceList::<D>::default(),
+            points: PointList::<D>::default(),
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
         };
@@ -165,7 +165,7 @@ where
     }
 
     pub fn find_containing_tetra(&self, point: Point<D>) -> Option<TetraIndex> {
-        point_location::find_containing_tetra(&self, point)
+        point_location::find_containing_tetra(self, point)
     }
 
     /// Iterate over the inner points of the triangulation, i.e. every
@@ -213,7 +213,7 @@ where
                         face.face,
                         ConnectionData {
                             tetra: tetra_index,
-                            point: point,
+                            point,
                         },
                     )
                 })

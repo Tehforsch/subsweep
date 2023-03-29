@@ -7,19 +7,21 @@ use generational_arena::Index;
 /// we cannot accidentally confuse indices into the different arenas in the
 /// triangulations (i.e. use a face index for the tetra arena).
 #[derive(Clone)]
-pub struct IndexedArena<Id: Into<Index> + From<Index>, T> {
+pub struct IndexedArena<Id, T> {
     _marker: PhantomData<Id>,
     arena: Arena<T>,
 }
 
-impl<Id: Into<Index> + From<Index>, T> IndexedArena<Id, T> {
-    pub fn new() -> Self {
+impl<Id, T> Default for IndexedArena<Id, T> {
+    fn default() -> Self {
         Self {
             _marker: PhantomData,
-            arena: Arena::new(),
+            arena: Arena::default(),
         }
     }
+}
 
+impl<Id: Into<Index> + From<Index>, T> IndexedArena<Id, T> {
     pub fn get(&self, id: Id) -> Option<&T> {
         self.arena.get(id.into())
     }

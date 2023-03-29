@@ -38,7 +38,7 @@ where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
-    pub fn new<'a>(points: impl Iterator<Item = (CellIndex, Point<D>)>) -> Self {
+    pub fn new(points: impl Iterator<Item = (CellIndex, Point<D>)>) -> Self {
         let (t, map) = DelaunayTriangulation::construct_from_iter(points);
         Self::from_triangulation_and_map(t, map)
     }
@@ -59,7 +59,7 @@ where
         let tetra_to_voronoi_point_map = t
             .tetras
             .iter()
-            .map(|(i, tetra)| (i, t.get_tetra_data(&tetra).get_center_of_circumcircle()))
+            .map(|(i, tetra)| (i, t.get_tetra_data(tetra).get_center_of_circumcircle()))
             .collect();
         let point_to_tetras_map = point_to_tetra_map(&t);
         Self {

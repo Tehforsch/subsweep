@@ -62,9 +62,7 @@ pub struct DatasetInputPlugin<T> {
 
 impl<T> DatasetInputPlugin<T> {
     pub fn from_descriptor(descriptor: InputDatasetDescriptor<T>) -> Self {
-        Self {
-            descriptor: descriptor,
-        }
+        Self { descriptor }
     }
 }
 
@@ -195,7 +193,7 @@ fn read_dataset_system<T: ToDataset + Component>(
     let name = descriptor.dataset_name();
     let data = files.iter().map(|file| {
         let set = file
-            .dataset(&name)
+            .dataset(name)
             .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
         let data = match descriptor.shape {
             DatasetShape::OneDimensional => set

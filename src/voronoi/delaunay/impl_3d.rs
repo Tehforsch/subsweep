@@ -100,8 +100,8 @@ impl DelaunayTriangulation<ThreeD> {
             p3: shared_face.p3,
         });
         let mut make_tetra = |pa, pb, fa, fb, other_point| {
-            let f1 = ta.find_face_opposite(other_point).clone();
-            let f2 = tb.find_face_opposite(other_point).clone();
+            let f1 = *ta.find_face_opposite(other_point);
+            let f2 = *tb.find_face_opposite(other_point);
             self.insert_positively_oriented_tetra(Tetra {
                 p1,
                 p2,
@@ -177,9 +177,9 @@ impl DelaunayTriangulation<ThreeD> {
         let new_face = self.faces.insert(Face { p1, p2, p3 });
 
         let mut make_new_tetra = |contained_point, opposite_point| {
-            let f1 = t2.find_face_opposite(opposite_point).clone();
-            let f2 = t1.find_face_opposite(opposite_point).clone();
-            let f3 = t3.find_face_opposite(opposite_point).clone();
+            let f1 = *t2.find_face_opposite(opposite_point);
+            let f2 = *t1.find_face_opposite(opposite_point);
+            let f3 = *t3.find_face_opposite(opposite_point);
             self.insert_positively_oriented_tetra(Tetra {
                 p1,
                 p2,
@@ -345,7 +345,7 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
         // For more information see Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
         let t1 = &self.tetras[check.tetra];
         let shared_face = &self.faces[check.face];
-        let opposing = t1.find_face(check.face).opposing.clone().unwrap();
+        let opposing = t1.find_face(check.face).opposing.unwrap();
         let t2 = &self.tetras[opposing.tetra];
         // Obtain the two points opposite of the shared face
         let p1 = t1.find_point_opposite(check.face);
@@ -358,8 +358,7 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
             });
         match intersection_type {
             IntersectionType::Inside => {
-                let res = self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face);
-                res
+                self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face)
             }
             IntersectionType::OutsideOneEdge(edge) => {
                 let opposite_point = shared_face.get_point_opposite(edge);
@@ -369,7 +368,7 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
                     .opposing
                     .unwrap()
                     .tetra;
-                let res = if t2
+                if t2
                     .find_face_opposite(opposite_point)
                     .opposing
                     .unwrap()
@@ -390,8 +389,7 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
                     [].into()
                     // This is not documented in Springel 2009, but the Arepo code
                     // does nothing here.
-                };
-                res
+                }
             }
             IntersectionType::OutsideTwoEdges(_, _) => [].into(),
         }
@@ -414,50 +412,50 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
 impl DelaunayTriangulation<ThreeD> {
     fn insert_tetra_and_faces(
         &mut self,
-        p1: PointIndex,
-        p2: PointIndex,
-        p3: PointIndex,
-        p4: PointIndex,
+        pa: PointIndex,
+        pb: PointIndex,
+        pc: PointIndex,
+        pd: PointIndex,
     ) -> TetraIndex {
-        let f1 = self.faces.insert(Face {
-            p1: p2,
-            p2: p3,
-            p3: p4,
+        let fa = self.faces.insert(Face {
+            p1: pb,
+            p2: pc,
+            p3: pd,
         });
-        let f2 = self.faces.insert(Face {
-            p1: p1,
-            p2: p3,
-            p3: p4,
+        let fb = self.faces.insert(Face {
+            p1: pa,
+            p2: pc,
+            p3: pd,
         });
-        let f3 = self.faces.insert(Face {
-            p1: p1,
-            p2: p2,
-            p3: p4,
+        let fc = self.faces.insert(Face {
+            p1: pa,
+            p2: pb,
+            p3: pd,
         });
-        let f4 = self.faces.insert(Face {
-            p1: p1,
-            p2: p2,
-            p3: p3,
+        let fd = self.faces.insert(Face {
+            p1: pa,
+            p2: pb,
+            p3: pc,
         });
         self.insert_positively_oriented_tetra(Tetra {
-            p1,
-            p2,
-            p3,
-            p4,
+            p1: pa,
+            p2: pb,
+            p3: pc,
+            p4: pd,
             f1: FaceInfo {
-                face: f1,
+                face: fa,
                 opposing: None,
             },
             f2: FaceInfo {
-                face: f2,
+                face: fb,
                 opposing: None,
             },
             f3: FaceInfo {
-                face: f3,
+                face: fc,
                 opposing: None,
             },
             f4: FaceInfo {
-                face: f4,
+                face: fd,
                 opposing: None,
             },
         })
@@ -556,7 +554,7 @@ mod tests {
 
     #[test]
     fn two_to_three_flip() {
-        let mut point_list = PointList::<ThreeD>::new();
+        let mut point_list = PointList::<ThreeD>::default();
         let points = [
             Point3d::new(-0.3, -0.3, -1.0),
             Point3d::new(-1.0, -1.0, 0.0),
@@ -567,8 +565,8 @@ mod tests {
         let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
 
         let mut triangulation = DelaunayTriangulation::<ThreeD> {
-            tetras: TetraList::<ThreeD>::new(),
-            faces: FaceList::<ThreeD>::new(),
+            tetras: TetraList::<ThreeD>::default(),
+            faces: FaceList::<ThreeD>::default(),
             points: point_list,
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
@@ -671,7 +669,7 @@ mod tests {
 
     #[test]
     fn three_to_two_flip() {
-        let mut point_list = PointList::<ThreeD>::new();
+        let mut point_list = PointList::<ThreeD>::default();
         let points = [
             Point3d::new(-0.3, -0.3, -1.0),
             Point3d::new(-1.0, -1.0, 0.0),
@@ -682,8 +680,8 @@ mod tests {
         let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
 
         let mut triangulation = DelaunayTriangulation::<ThreeD> {
-            tetras: TetraList::<ThreeD>::new(),
-            faces: FaceList::<ThreeD>::new(),
+            tetras: TetraList::<ThreeD>::default(),
+            faces: FaceList::<ThreeD>::default(),
             points: point_list,
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),

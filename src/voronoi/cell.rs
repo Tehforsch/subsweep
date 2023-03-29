@@ -86,8 +86,8 @@ impl Cell<TwoD> {
             .map(|(t1, t2)| {
                 let line = &c.triangulation.faces[get_common_face(c, t1, t2).unwrap()];
                 let p2_index = line.other_point(p);
-                let vp1 = c.tetra_to_voronoi_point_map[&t1];
-                let vp2 = c.tetra_to_voronoi_point_map[&t2];
+                let vp1 = c.tetra_to_voronoi_point_map[t1];
+                let vp2 = c.tetra_to_voronoi_point_map[t2];
                 let area = vp1.distance(vp2);
                 let normal = get_normal(c, p, p2_index);
                 VoronoiFace {
@@ -225,7 +225,7 @@ fn get_face_polygon_perpendicular_to_line(
         .cloned()
         .collect();
     let points = arrange_cyclic_by(&tetras_with_both_points, tetras_are_neighbours)
-        .map(|(p1, _)| c.tetra_to_voronoi_point_map[&p1])
+        .map(|(p1, _)| c.tetra_to_voronoi_point_map[p1])
         .collect();
     let normal = get_normal(c, p1, p2);
     let poly = Polygon3d { points };

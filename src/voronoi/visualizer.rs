@@ -29,7 +29,7 @@ impl From<String> for Statement {
 
 impl From<Statement> for String {
     fn from(s: Statement) -> Self {
-        s.statement.into()
+        s.statement
     }
 }
 
@@ -56,12 +56,10 @@ impl Visualizer {
     }
 
     pub fn add(&mut self, p: &impl Visualizable) -> Vec<Name> {
-        let res = p
-            .get_statements(self)
+        p.get_statements(self)
             .into_iter()
             .map(|statement| self.add_statement(statement))
-            .collect();
-        res
+            .collect()
     }
 
     fn dump(&self) {
@@ -235,7 +233,7 @@ impl<T: Visualizable> Visualizable for Color<T> {
 macro_rules! vis {
     ( $( $x:expr ),* ) => {
         {
-            let mut temp_vis = crate::voronoi::visualizer::Visualizer::default();
+            let mut temp_vis = $crate::voronoi::visualizer::Visualizer::default();
             $(
                 temp_vis.add($x);
             )*
@@ -246,7 +244,7 @@ macro_rules! vis {
 #[macro_export]
 macro_rules! highlight_red {
     ( $x:expr) => {{
-        &crate::voronoi::visualizer::Color {
+        &$crate::voronoi::visualizer::Color {
             x: Box::new($x.clone()),
             color: (1.0, 0.0, 0.0),
         }
@@ -256,7 +254,7 @@ macro_rules! highlight_red {
 #[macro_export]
 macro_rules! highlight_blue {
     ( $x:expr) => {{
-        &crate::voronoi::visualizer::Color {
+        &$crate::voronoi::visualizer::Color {
             x: Box::new($x.clone()),
             color: (0.0, 0.0, 1.0),
         }
@@ -266,7 +264,7 @@ macro_rules! highlight_blue {
 #[macro_export]
 macro_rules! highlight_green {
     ( $x:expr) => {{
-        &crate::voronoi::visualizer::Color {
+        &$crate::voronoi::visualizer::Color {
             x: Box::new($x.clone()),
             color: (0.0, 1.0, 0.0),
         }

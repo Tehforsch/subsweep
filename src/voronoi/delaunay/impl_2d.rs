@@ -123,7 +123,7 @@ impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
         let old_face = self.faces.remove(check.face).unwrap();
         // I am not sure whether unwrapping here is correct -
         // can a boundary face require a flip? what does that even mean?
-        let opposing = old_tetra.find_face(check.face).opposing.clone().unwrap();
+        let opposing = old_tetra.find_face(check.face).opposing.unwrap();
         let opposing_old_tetra = self.tetras.remove(opposing.tetra).unwrap();
         let opposing_point = opposing.point;
         let check_point = old_tetra.find_point_opposite(check.face);
@@ -132,10 +132,10 @@ impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
             p2: opposing_point,
         });
 
-        let f1_a = opposing_old_tetra.find_face_opposite(old_face.p2).clone();
-        let f1_b = old_tetra.find_face_opposite(old_face.p2).clone();
-        let f2_a = opposing_old_tetra.find_face_opposite(old_face.p1).clone();
-        let f2_b = old_tetra.find_face_opposite(old_face.p1).clone();
+        let f1_a = *opposing_old_tetra.find_face_opposite(old_face.p2);
+        let f1_b = *old_tetra.find_face_opposite(old_face.p2);
+        let f2_a = *opposing_old_tetra.find_face_opposite(old_face.p1);
+        let f2_b = *old_tetra.find_face_opposite(old_face.p1);
 
         let t1 = self.insert_positively_oriented_tetra(Tetra {
             p1: old_face.p1,
@@ -174,29 +174,29 @@ impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
     }
 
     fn insert_basic_tetra(&mut self, tetra: TetraData) {
-        let p1 = self.points.insert(tetra.p1);
-        let p2 = self.points.insert(tetra.p2);
-        let p3 = self.points.insert(tetra.p3);
-        self.point_kinds.insert(p1, PointKind::Outer);
-        self.point_kinds.insert(p2, PointKind::Outer);
-        self.point_kinds.insert(p3, PointKind::Outer);
-        let f1 = self.faces.insert(Face { p1: p2, p2: p3 });
-        let f2 = self.faces.insert(Face { p1: p3, p2: p1 });
-        let f3 = self.faces.insert(Face { p1: p1, p2: p2 });
+        let pa = self.points.insert(tetra.p1);
+        let pb = self.points.insert(tetra.p2);
+        let pc = self.points.insert(tetra.p3);
+        self.point_kinds.insert(pa, PointKind::Outer);
+        self.point_kinds.insert(pb, PointKind::Outer);
+        self.point_kinds.insert(pc, PointKind::Outer);
+        let fa = self.faces.insert(Face { p1: pb, p2: pc });
+        let fb = self.faces.insert(Face { p1: pc, p2: pa });
+        let fc = self.faces.insert(Face { p1: pa, p2: pb });
         self.insert_positively_oriented_tetra(Tetra {
-            p1,
-            p2,
-            p3,
+            p1: pa,
+            p2: pb,
+            p3: pc,
             f1: FaceInfo {
-                face: f1,
+                face: fa,
                 opposing: None,
             },
             f2: FaceInfo {
-                face: f2,
+                face: fb,
                 opposing: None,
             },
             f3: FaceInfo {
-                face: f3,
+                face: fc,
                 opposing: None,
             },
         });

@@ -14,7 +14,7 @@ use crate::voronoi::delaunay::dimension::DimensionTetra;
 use crate::voronoi::primitives::Vector;
 use crate::voronoi::Dimension;
 
-#[derive(PartialEq, Eq, Ord)]
+#[derive(PartialEq, Eq)]
 struct CheckData {
     heuristic_distance: OrderedFloat<f64>,
     tetra: TetraIndex,
@@ -28,6 +28,12 @@ impl PartialOrd for CheckData {
                 .cmp(&other.heuristic_distance)
                 .reverse(),
         )
+    }
+}
+
+impl Ord for CheckData {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 

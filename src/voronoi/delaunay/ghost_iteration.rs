@@ -202,7 +202,7 @@ where
             .tetras
             .iter()
             .map(|(t, _)| t)
-            .filter(|t| !self.checked_tetras.contains(&t) && self.tetra_should_be_checked(*t))
+            .filter(|t| !self.checked_tetras.contains(t) && self.tetra_should_be_checked(*t))
     }
 }
 
