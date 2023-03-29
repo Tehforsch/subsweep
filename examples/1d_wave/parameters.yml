@@ -1,5 +1,0 @@
-visualization:
-  show_particles: True
-  color_map:
-    type: pressure
-    scale: 1.01 N m^-1

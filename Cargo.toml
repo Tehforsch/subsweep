@@ -52,45 +52,11 @@ name = "mpi_test"
 required-features = ["mpi", "mpi_test", "3d"]
 
 [[example]]
-name = "figure8"
-required-features = ["mpi", "2d"]
-
-[[example]]
-name = "2d_blast"
-required-features = ["mpi", "2d"]
-
-[[example]]
-name = "1d_wave"
-required-features = ["mpi", "2d"] # This is slightly ironic, but this test is only effectively 1d
-
-[[example]]
-name = "gravity_collapse"
-required-features = ["mpi", "3d"]
-
-[[example]]
-name = "2d_voronoi"
-required-features = ["2d"]
-
-[[example]]
-name = "rtype_expansion"
-required-features = ["mpi", "3d"]
-
-[[example]]
 name = "arepo"
 required-features = ["mpi", "3d"]
 
 [[example]]
 name = "voronoi"
-
-[[bench]]
-name = "hydrodynamics"
-harness = false
-required-features = ["3d"]
-
-[[bench]]
-name = "gravity"
-harness = false
-required-features = ["3d"]
 
 [[bench]]
 name = "quadtree"

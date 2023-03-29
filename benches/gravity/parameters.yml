@@ -1,9 +1,0 @@
-simulation:
-  timestep: 1e-3 s
-  final_time: 5e-3 s
-hydrodynamics:
-  smoothing_length: 1 m
-output:
-  time_first_snapshot: 1 yr
-performance:
-  batch_size: 10000000
