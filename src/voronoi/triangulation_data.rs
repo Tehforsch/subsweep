@@ -38,11 +38,6 @@ where
     Triangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
-    pub fn new(points: impl Iterator<Item = (CellIndex, Point<D>)>) -> Self {
-        let (t, map) = Triangulation::construct_from_iter(points);
-        Self::from_triangulation_and_map(t, map)
-    }
-
     pub fn is_infinite_cell(&self, p: PointIndex) -> bool {
         let tetras = &self.point_to_tetras_map[&p];
         tetras.iter().any(|t| {

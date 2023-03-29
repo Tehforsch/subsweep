@@ -119,6 +119,7 @@ mod tests {
     use crate::voronoi::Cell;
     use crate::voronoi::Dimension;
     use crate::voronoi::DimensionCell;
+    use crate::voronoi::LocalConstructor;
     use crate::voronoi::Point;
     use crate::voronoi::ThreeD;
     use crate::voronoi::Triangulation;
@@ -132,9 +133,9 @@ mod tests {
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
 
-    pub struct LocalRadiusSearch<D: Dimension>(Vec<(ParticleId, Point<D>)>, Extent<Point<D>>);
+    pub struct TestRadiusSearch<D: Dimension>(Vec<(ParticleId, Point<D>)>, Extent<Point<D>>);
 
-    impl<D: Dimension> IndexedRadiusSearch<D> for LocalRadiusSearch<D> {
+    impl<D: Dimension> IndexedRadiusSearch<D> for TestRadiusSearch<D> {
         type Index = ParticleId;
 
         fn radius_search(
@@ -187,22 +188,21 @@ mod tests {
         let (points1, points2) = D::get_example_point_sets_with_ids();
         let points = D::get_combined_point_set();
         // First construct the triangulation normally
-        let (full_triangulation, full_map) =
-            Triangulation::construct_from_iter(points.iter().cloned());
+        let full_constructor = LocalConstructor::new(points.iter().cloned());
         // Now construct the triangulation of the first set using imported
         // halo particles imported from the other set.
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();
-        let (sub_triangulation, sub_map) = Constructor::construct_from_iter(
+        let sub_constructor = Constructor::construct_from_iter(
             points1.iter().cloned(),
-            HaloExporter::new(LocalRadiusSearch(points2, extent)),
+            HaloExporter::new(TestRadiusSearch(points2, extent)),
         );
-        let cons1 = TriangulationData::from_triangulation_and_map(full_triangulation, full_map);
-        let cons2 = TriangulationData::from_triangulation_and_map(sub_triangulation, sub_map);
-        let voronoi1 = cons1.construct_voronoi();
-        let voronoi2 = cons2.construct_voronoi();
+        let data1 = full_constructor.data;
+        let data2 = sub_constructor.data;
+        let voronoi1 = data1.construct_voronoi();
+        let voronoi2 = data2.construct_voronoi();
         for (id, _) in points1.iter() {
-            let c1 = get_cell_for_particle(&voronoi1, &cons1, *id);
-            let c2 = get_cell_for_particle(&voronoi2, &cons2, *id);
+            let c1 = get_cell_for_particle(&voronoi1, &data1, *id);
+            let c2 = get_cell_for_particle(&voronoi2, &data2, *id);
             // Infinite cells (i.e. those neighbouring the boundary) might very well
             // differ in exact shape because of the different encompassing tetras,
             // but this doesn't matter since they cannot be used anyways.

@@ -20,7 +20,7 @@ pub trait TestDimension: Dimension {
 
     fn get_combined_point_set() -> Vec<(ParticleId, Self::Point)> {
         let (p1, p2) = Self::get_example_point_sets_with_ids();
-        dbg!(p1.into_iter().chain(p2.into_iter()).collect())
+        p1.into_iter().chain(p2.into_iter()).collect()
     }
 
     fn get_example_point_sets_with_ids() -> (

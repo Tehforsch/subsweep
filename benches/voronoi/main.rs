@@ -9,6 +9,7 @@ use criterion::Throughput;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
+use raxiom::voronoi::LocalConstructor;
 use raxiom::voronoi::Point2d;
 use raxiom::voronoi::Point3d;
 use raxiom::voronoi::ThreeD;
@@ -53,11 +54,11 @@ criterion_group!(benches, voronoi_benchmark);
 criterion_main!(benches);
 
 fn construct_voronoi_2d(points: Vec<Point2d>) {
-    let _ = Triangulation::<TwoD>::construct_no_key(points.iter());
+    let _ = LocalConstructor::<TwoD>::only_delaunay(points.iter());
 }
 
 fn construct_voronoi_3d(points: Vec<Point3d>) {
-    let _ = Triangulation::<ThreeD>::construct_no_key(points.iter());
+    let _ = LocalConstructor::<ThreeD>::only_delaunay(points.iter());
 }
 
 fn setup_particles_3d(num_particles: usize) -> Vec<Point3d> {

@@ -1,24 +1,30 @@
 mod halo_iteration;
+mod local;
 
 use std::hash::Hash;
 
 use bevy::utils::StableHashSet;
 use bimap::BiMap;
+pub use local::LocalConstructor;
 
 use self::halo_iteration::RadiusSearch;
 pub(super) use self::halo_iteration::SearchData;
 use self::halo_iteration::SearchResult;
 use super::delaunay::TetraIndex;
 use super::utils::get_extent;
+use super::Cell;
+use super::CellIndex;
 use super::Delaunay;
+use super::DimensionCell;
 use super::Point;
 use super::PointIndex;
 use super::Triangulation;
+use super::TriangulationData;
+use super::VoronoiGrid;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::point::DVector;
-use crate::voronoi::utils::Extent;
 use crate::voronoi::Dimension;
 
 /// Determines by how much the search radius is increased beyond the
@@ -28,7 +34,7 @@ use crate::voronoi::Dimension;
 const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 
 pub struct Constructor<D: Dimension, F> {
-    tri: Triangulation<D>,
+    pub data: TriangulationData<D>,
     f: F,
     checked_tetras: StableHashSet<TetraIndex>,
 }
@@ -38,24 +44,26 @@ where
     D: Dimension,
     Triangulation<D>: Delaunay<D>,
     F: RadiusSearch<D>,
+    Cell<D>: DimensionCell<Dimension = D>,
 {
-    pub fn construct_from_iter<'b, T: Hash + Clone + Eq>(
-        iter: impl Iterator<Item = (T, Point<D>)> + 'b,
+    pub fn construct_from_iter<'b>(
+        iter: impl Iterator<Item = (CellIndex, Point<D>)> + 'b,
         f: F,
-    ) -> (Triangulation<D>, BiMap<T, PointIndex>) {
+    ) -> Self {
         let points: Vec<_> = iter.collect();
         let extent = f
             .determine_global_extent()
             .unwrap_or(get_extent(points.iter().map(|p| p.1)).unwrap());
         let (tri, map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
+        let data = TriangulationData::from_triangulation_and_map(tri, map);
         let mut constructor = Constructor {
-            tri: tri,
+            data,
             f,
             checked_tetras: StableHashSet::default(),
         };
         constructor.run();
-        (constructor.tri, map)
+        constructor
     }
 
     fn run(&mut self) {
@@ -80,7 +88,7 @@ where
                      point,
                      tetra_index: search_index,
                  }| {
-                    self.tri.insert(point, PointKind::Halo);
+                    self.data.triangulation.insert(point, PointKind::Halo);
                     search_index.into()
                 },
             )
@@ -92,10 +100,10 @@ where
     fn get_radius_search_data(&self) -> Vec<SearchData<D>> {
         self.iter_remaining_tetras()
             .map(|t| {
-                let tetra = &self.tri.tetras[t];
-                let tetra_data = self.tri.get_tetra_data(tetra);
+                let tetra = &self.data.triangulation.tetras[t];
+                let tetra_data = self.data.triangulation.get_tetra_data(tetra);
                 let center = tetra_data.get_center_of_circumcircle();
-                let sample_point = self.tri.points[tetra.points().next().unwrap()];
+                let sample_point = self.data.triangulation.points[tetra.points().next().unwrap()];
                 let radius_circumcircle = center.distance(sample_point);
                 let radius = SEARCH_SAFETY_FACTOR * radius_circumcircle;
                 SearchData::<D> {
@@ -108,20 +116,25 @@ where
     }
 
     fn tetra_should_be_checked(&self, t: TetraIndex) -> bool {
-        let tetra = &self.tri.tetras[t];
+        let tetra = &self.data.triangulation.tetras[t];
         tetra
             .points()
-            .any(|p| self.tri.point_kinds[&p] == PointKind::Inner)
+            .any(|p| self.data.triangulation.point_kinds[&p] == PointKind::Inner)
             && tetra
                 .points()
-                .all(|p| self.tri.point_kinds[&p] != PointKind::Outer)
+                .all(|p| self.data.triangulation.point_kinds[&p] != PointKind::Outer)
     }
 
     fn iter_remaining_tetras(&self) -> impl Iterator<Item = TetraIndex> + '_ {
-        self.tri
+        self.data
+            .triangulation
             .tetras
             .iter()
             .map(|(t, _)| t)
             .filter(|t| !self.checked_tetras.contains(t) && self.tetra_should_be_checked(*t))
+    }
+
+    pub fn voronoi(&self) -> VoronoiGrid<D> {
+        self.data.construct_voronoi()
     }
 }
