@@ -1,7 +1,7 @@
 pub(crate) mod dimension;
 pub(crate) mod face_info;
 
-pub(super) mod ghost_iteration;
+pub(super) mod halo_iteration;
 mod impl_2d;
 mod impl_3d;
 mod point_location;
@@ -46,7 +46,7 @@ type PointList<D> = IndexedArena<PointIndex, Point<D>>;
 pub enum PointKind {
     Inner,
     Outer,
-    Ghost,
+    Halo,
 }
 
 type TetrasRequiringCheck = Vec<TetraIndex>;
@@ -170,7 +170,7 @@ where
 
     /// Iterate over the inner points of the triangulation, i.e. every
     /// point that is not on the boundary of the all-encompassing
-    /// tetra (and not a ghost).  This only gives valid results if the
+    /// tetra (and not a halo).  This only gives valid results if the
     /// triangulation was constructed via incremental insertion, not
     /// if it has been manually constructed from tetras, as is done in
     /// some of the test code.

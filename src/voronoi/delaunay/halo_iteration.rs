@@ -73,12 +73,12 @@ pub trait IndexedRadiusSearch<D: Dimension> {
     ) -> Vec<IndexedSearchResult<D, Self::Index>>;
 }
 
-pub struct GhostExporter<F, I> {
+pub struct HaloExporter<F, I> {
     radius_search: F,
     already_exported: StableHashSet<I>,
 }
 
-impl<F, I> GhostExporter<F, I> {
+impl<F, I> HaloExporter<F, I> {
     fn new(radius_search: F) -> Self {
         Self {
             radius_search,
@@ -87,7 +87,7 @@ impl<F, I> GhostExporter<F, I> {
     }
 }
 
-impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for GhostExporter<F, F::Index> {
+impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F, F::Index> {
     fn unique_radius_search(&mut self, data: Vec<SearchData<D>>) -> Vec<SearchResult<D>> {
         let indexed_results = self.radius_search.radius_search(data);
         indexed_results
@@ -108,13 +108,13 @@ impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for GhostExporter<
     }
 }
 
-pub struct GhostIteration<'a, D: Dimension, F: RadiusSearch<D>> {
+pub struct HaloIteration<'a, D: Dimension, F: RadiusSearch<D>> {
     tri: &'a mut DelaunayTriangulation<D>,
     f: F,
     checked_tetras: StableHashSet<TetraIndex>,
 }
 
-impl<'a, D, F> GhostIteration<'a, D, F>
+impl<'a, D, F> HaloIteration<'a, D, F>
 where
     D: Dimension + 'a,
     DelaunayTriangulation<D>: Delaunay<D>,
@@ -128,7 +128,7 @@ where
         let (mut tri, map) =
             DelaunayTriangulation::<D>::construct_from_iter_custom_extent(iter, &extent);
         {
-            let mut iteration = GhostIteration {
+            let mut iteration = HaloIteration {
                 tri: &mut tri,
                 f,
                 checked_tetras: StableHashSet::default(),
@@ -160,7 +160,7 @@ where
                      point,
                      tetra_index: search_index,
                  }| {
-                    self.tri.insert(point, PointKind::Ghost);
+                    self.tri.insert(point, PointKind::Halo);
                     search_index.into()
                 },
             )
@@ -209,14 +209,14 @@ where
 #[cfg(test)]
 #[generic_tests::define]
 mod tests {
-    use super::GhostIteration;
+    use super::HaloIteration;
     use super::IndexedRadiusSearch;
     use super::IndexedSearchResult;
     use super::SearchData;
     use super::SearchResult;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
-    use crate::voronoi::delaunay::ghost_iteration::GhostExporter;
+    use crate::voronoi::delaunay::halo_iteration::HaloExporter;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::Vector;
     use crate::voronoi::utils::get_extent;
@@ -353,7 +353,7 @@ mod tests {
     }
 
     #[test]
-    pub fn voronoi_grid_with_ghost_points_is_the_same_as_without<D>()
+    pub fn voronoi_grid_with_halo_points_is_the_same_as_without<D>()
     where
         D: Dimension + TestableDimension,
         DelaunayTriangulation<D>: Delaunay<D>,
@@ -367,11 +367,11 @@ mod tests {
         let (full_triangulation, full_map) =
             DelaunayTriangulation::construct_from_iter(points.iter().cloned());
         // Now construct the triangulation of the first set using imported
-        // ghosts of the other set.
+        // halo particles imported from the other set.
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();
-        let (sub_triangulation, sub_map) = GhostIteration::construct_from_iter(
+        let (sub_triangulation, sub_map) = HaloIteration::construct_from_iter(
             points1.iter().cloned(),
-            GhostExporter::new(LocalRadiusSearch(points2)),
+            HaloExporter::new(LocalRadiusSearch(points2)),
             extent,
         );
         let cons1 = Constructor::from_triangulation_and_map(full_triangulation, full_map);

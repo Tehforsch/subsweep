@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::delaunay::dimension::Dimension;
-use super::delaunay::ghost_iteration::SearchData;
+use super::delaunay::halo_iteration::SearchData;
 use super::delaunay::Delaunay;
 use super::delaunay::PointKind;
 use super::delaunay::TetraIndex;
@@ -148,7 +148,7 @@ where
             let color = match self.point_kinds[&index] {
                 PointKind::Inner => (1.0, 0.0, 0.0),
                 PointKind::Outer => (0.0, 1.0, 0.0),
-                PointKind::Ghost => (0.0, 0.0, 1.0),
+                PointKind::Halo => (0.0, 0.0, 1.0),
             };
             visualizer.add(&Color { x: *point, color });
         });
