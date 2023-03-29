@@ -1,4 +1,5 @@
 mod cell;
+mod constructor;
 pub mod delaunay;
 mod indexed_arena;
 pub mod math;

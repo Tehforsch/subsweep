@@ -1,28 +1,13 @@
 use std::hash::Hash;
 
 use bevy::utils::StableHashSet;
-use bimap::BiMap;
 use generational_arena::Index;
 use mpi::traits::Equivalence;
 
-use super::Delaunay;
 use super::Point;
-use super::PointIndex;
-use super::PointKind;
 use super::TetraIndex;
-use super::Triangulation;
-use crate::voronoi::delaunay::dimension::DTetra;
-use crate::voronoi::delaunay::dimension::DTetraData;
-use crate::voronoi::primitives::point::DVector;
 use crate::voronoi::primitives::Float;
-use crate::voronoi::utils::Extent;
 use crate::voronoi::Dimension;
-
-/// Determines by how much the search radius is increased beyond the
-/// mathematically necessary radius (equal to the radius of the
-/// circumcircle/sphere of the tetra), in order to prevent numerical
-/// problems due to floating point arithmetic.
-const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 
 #[derive(Equivalence, Clone, Copy)]
 pub struct TetraIndexSend {
@@ -50,10 +35,10 @@ pub struct SearchData<D: Dimension> {
 }
 
 pub struct SearchResult<D: Dimension> {
-    point: Point<D>,
+    pub point: Point<D>,
     /// The index in the Vec of the corresponding RadiusSearchData
     /// that produced this result.
-    tetra_index: TetraIndexSend,
+    pub tetra_index: TetraIndexSend,
 }
 
 pub struct IndexedSearchResult<D: Dimension, I> {
@@ -108,113 +93,16 @@ impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F
     }
 }
 
-pub struct HaloIteration<'a, D: Dimension, F: RadiusSearch<D>> {
-    tri: &'a mut Triangulation<D>,
-    f: F,
-    checked_tetras: StableHashSet<TetraIndex>,
-}
-
-impl<'a, D, F> HaloIteration<'a, D, F>
-where
-    D: Dimension + 'a,
-    Triangulation<D>: Delaunay<D>,
-    F: RadiusSearch<D>,
-{
-    pub fn construct_from_iter<'b, T: Hash + Clone + Eq>(
-        iter: impl Iterator<Item = (T, Point<D>)> + 'b,
-        f: F,
-        extent: Extent<Point<D>>,
-    ) -> (Triangulation<D>, BiMap<T, PointIndex>) {
-        let (mut tri, map) = Triangulation::<D>::construct_from_iter_custom_extent(iter, &extent);
-        {
-            let mut iteration = HaloIteration {
-                tri: &mut tri,
-                f,
-                checked_tetras: StableHashSet::default(),
-            };
-            iteration.run();
-        }
-        (tri, map)
-    }
-
-    fn run(&mut self) {
-        while self.iter_remaining_tetras().next().is_some() {
-            self.iterate();
-        }
-    }
-
-    fn iterate(&mut self) {
-        let search_data = self.get_radius_search_data();
-        let newly_imported = self.f.unique_radius_search(search_data);
-        let checked: StableHashSet<TetraIndex> = self.iter_remaining_tetras().collect();
-        println!(
-            "To check: {:>8}, Imported: {:>8}",
-            checked.len(),
-            newly_imported.len()
-        );
-        let tetras_with_new_points_in_vicinity: StableHashSet<_> = newly_imported
-            .into_iter()
-            .map(
-                |SearchResult {
-                     point,
-                     tetra_index: search_index,
-                 }| {
-                    self.tri.insert(point, PointKind::Halo);
-                    search_index.into()
-                },
-            )
-            .collect();
-        self.checked_tetras
-            .extend(checked.difference(&tetras_with_new_points_in_vicinity));
-    }
-
-    fn get_radius_search_data(&self) -> Vec<SearchData<D>> {
-        self.iter_remaining_tetras()
-            .map(|t| {
-                let tetra = &self.tri.tetras[t];
-                let tetra_data = self.tri.get_tetra_data(tetra);
-                let center = tetra_data.get_center_of_circumcircle();
-                let sample_point = self.tri.points[tetra.points().next().unwrap()];
-                let radius_circumcircle = center.distance(sample_point);
-                let radius = SEARCH_SAFETY_FACTOR * radius_circumcircle;
-                SearchData::<D> {
-                    radius,
-                    point: center,
-                    tetra_index: t.into(),
-                }
-            })
-            .collect()
-    }
-
-    fn tetra_should_be_checked(&self, t: TetraIndex) -> bool {
-        let tetra = &self.tri.tetras[t];
-        tetra
-            .points()
-            .any(|p| self.tri.point_kinds[&p] == PointKind::Inner)
-            && tetra
-                .points()
-                .all(|p| self.tri.point_kinds[&p] != PointKind::Outer)
-    }
-
-    fn iter_remaining_tetras(&self) -> impl Iterator<Item = TetraIndex> + '_ {
-        self.tri
-            .tetras
-            .iter()
-            .map(|(t, _)| t)
-            .filter(|t| !self.checked_tetras.contains(t) && self.tetra_should_be_checked(*t))
-    }
-}
-
 #[cfg(test)]
 #[generic_tests::define]
 mod tests {
-    use super::HaloIteration;
     use super::IndexedRadiusSearch;
     use super::IndexedSearchResult;
     use super::SearchData;
     use super::SearchResult;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
+    use crate::voronoi::constructor::HaloIteration;
     use crate::voronoi::delaunay::halo_iteration::HaloExporter;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::DVector;
