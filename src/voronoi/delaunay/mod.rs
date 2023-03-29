@@ -22,6 +22,7 @@ use super::indexed_arena::IndexedArena;
 use super::primitives::DVector;
 use super::utils::get_extent;
 use super::utils::Extent;
+use crate::communication::Rank;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TetraIndex(pub Index);
@@ -44,7 +45,7 @@ type PointList<D> = IndexedArena<PointIndex, Point<D>>;
 pub enum PointKind {
     Inner,
     Outer,
-    Halo,
+    Halo(Rank),
 }
 
 type TetrasRequiringCheck = Vec<TetraIndex>;

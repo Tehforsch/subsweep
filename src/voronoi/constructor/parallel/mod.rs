@@ -2,16 +2,19 @@ mod mpi_types;
 #[cfg(all(test, not(feature = "mpi")))]
 mod tests;
 
+use bevy::prelude::Entity;
+
 use self::mpi_types::IntoEquivalenceType;
-use super::halo_iteration::RadiusSearch;
+use super::halo_iteration::IndexedRadiusSearch;
+use super::halo_iteration::IndexedSearchResult;
 use super::halo_iteration::SearchResult;
 use super::SearchData;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
+use crate::communication::Rank;
 use crate::domain::QuadTree;
 use crate::domain::TopLevelIndices;
 use crate::parameters::SimulationBox;
-use crate::prelude::WorldRank;
 use crate::quadtree::radius_search::bounding_boxes_overlap_periodic;
 use crate::units::Length;
 use crate::units::MVec;
@@ -22,12 +25,12 @@ use crate::voronoi::Dimension;
 use crate::voronoi::Point;
 
 type MpiSearchData<D> = <SearchData<D> as IntoEquivalenceType>::Equiv;
-type MpiSearchResult<D> = <SearchResult<D> as IntoEquivalenceType>::Equiv;
+type MpiSearchResult<D> = <IndexedSearchResult<D, Entity> as IntoEquivalenceType>::Equiv;
 
 pub struct ParallelSearch<'a, D: Dimension + 'static>
 where
     SearchData<D>: IntoEquivalenceType,
-    SearchResult<D>: IntoEquivalenceType,
+    IndexedSearchResult<D, Entity>: IntoEquivalenceType,
 {
     data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
     result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<D>>,
@@ -35,12 +38,13 @@ where
     tree: &'a QuadTree,
     indices: &'a TopLevelIndices,
     box_: SimulationBox,
-    rank: WorldRank,
+    rank: Rank,
 }
 
 type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
 type IncomingRequests<D> = DataByRank<Vec<SearchData<D>>>;
 type OutgoingResults<D> = DataByRank<Vec<MpiSearchResult<D>>>;
+type IncomingResults<D> = DataByRank<Vec<IndexedSearchResult<D, Entity>>>;
 
 impl<'a> ParallelSearch<'a, ActiveDimension> {
     fn tree_node_and_search_overlap(
@@ -57,13 +61,13 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         )
     }
 
-    fn get_requests_by_rank(
+    fn get_outgoing_searches(
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
     ) -> OutgoingRequests<ActiveDimension> {
         let mut outgoing = DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.data_comm);
         for (rank, indices_this_rank) in self.indices.iter() {
-            if *rank == *self.rank {
+            if *rank == self.rank {
                 continue;
             }
             for i in indices_this_rank.iter() {
@@ -78,7 +82,33 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         outgoing
     }
 
-    fn exchange_all(
+    fn get_outgoing_results(
+        &self,
+        incoming: IncomingRequests<ActiveDimension>,
+    ) -> OutgoingResults<ActiveDimension> {
+        let mut outgoing =
+            DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.result_comm);
+        for (rank, data) in incoming.iter() {
+            for search in data {
+                let particles = self.tree.get_particles_in_radius(
+                    &self.box_,
+                    &VecLength::new_unchecked(search.point),
+                    &Length::new_unchecked(search.radius),
+                );
+                outgoing[*rank].extend(particles.into_iter().map(|p| {
+                    let result = SearchResult::from_search(&search, p.pos.value_unchecked());
+                    let indexed_result = IndexedSearchResult {
+                        result,
+                        point_index: p.entity,
+                    };
+                    indexed_result.to_equivalent()
+                }));
+            }
+        }
+        outgoing
+    }
+
+    fn exchange_all_searches(
         &mut self,
         outgoing: OutgoingRequests<ActiveDimension>,
     ) -> IncomingRequests<ActiveDimension> {
@@ -97,37 +127,41 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
             .collect()
     }
 
-    fn get_search_result(
-        &self,
-        incoming: IncomingRequests<ActiveDimension>,
-    ) -> OutgoingResults<ActiveDimension> {
-        let mut outgoing =
-            DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.result_comm);
-        for (rank, data) in incoming.iter() {
-            for search in data {
-                let particles = self.tree.get_particles_in_radius(
-                    &self.box_,
-                    &VecLength::new_unchecked(search.point),
-                    &Length::new_unchecked(search.radius),
-                );
-                outgoing[*rank].extend(particles.into_iter().map(|p| {
-                    SearchResult::from_search(&search, p.pos.value_unchecked()).to_equivalent()
-                }));
-            }
-        }
-        outgoing
+    fn exchange_all_results(
+        &mut self,
+        outgoing: OutgoingResults<ActiveDimension>,
+    ) -> IncomingResults<ActiveDimension> {
+        let mut incoming = self.result_comm.exchange_all(outgoing);
+        incoming
+            .drain_all()
+            .map(|(rank, requests)| {
+                (
+                    rank,
+                    requests
+                        .into_iter()
+                        .map(|request| {
+                            IndexedSearchResult::<ActiveDimension, Entity>::from_equivalent(
+                                &request,
+                            )
+                        })
+                        .collect(),
+                )
+            })
+            .collect()
     }
 }
 
-impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
-    fn unique_radius_search(
+impl<'a> IndexedRadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
+    type Index = Entity;
+
+    fn radius_search(
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
-    ) -> Vec<SearchResult<ActiveDimension>> {
-        let outgoing = self.get_requests_by_rank(data);
-        let incoming = self.exchange_all(outgoing);
-        let search_result = self.get_search_result(incoming);
-        vec![]
+    ) -> DataByRank<Vec<IndexedSearchResult<ActiveDimension, Entity>>> {
+        let outgoing = self.get_outgoing_searches(data);
+        let incoming = self.exchange_all_searches(outgoing);
+        let outgoing_results = self.get_outgoing_results(incoming);
+        self.exchange_all_results(outgoing_results)
     }
 
     fn determine_global_extent(&self) -> Option<Extent<Point<ActiveDimension>>> {

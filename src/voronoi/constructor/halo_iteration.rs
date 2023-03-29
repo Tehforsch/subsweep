@@ -10,6 +10,8 @@ use super::Delaunay;
 use super::DimensionCell;
 use super::Point;
 use super::TetraIndex;
+use crate::communication::DataByRank;
+use crate::communication::Rank;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::utils::Extent;
@@ -46,12 +48,15 @@ impl<D: Dimension> SearchResult<D> {
 }
 
 pub struct IndexedSearchResult<D: Dimension, I> {
-    result: SearchResult<D>,
-    point_index: I,
+    pub result: SearchResult<D>,
+    pub point_index: I,
 }
 
 pub trait RadiusSearch<D: Dimension> {
-    fn unique_radius_search(&mut self, data: Vec<SearchData<D>>) -> Vec<SearchResult<D>>;
+    fn unique_radius_search(
+        &mut self,
+        data: Vec<SearchData<D>>,
+    ) -> DataByRank<Vec<SearchResult<D>>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
 }
 
@@ -60,21 +65,57 @@ pub trait IndexedRadiusSearch<D: Dimension> {
     fn radius_search(
         &mut self,
         data: Vec<SearchData<D>>,
-    ) -> Vec<IndexedSearchResult<D, Self::Index>>;
+    ) -> DataByRank<Vec<IndexedSearchResult<D, Self::Index>>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
 }
 
 pub struct HaloExporter<F, I> {
     radius_search: F,
-    already_exported: StableHashSet<I>,
+    already_exported: StableHashSet<(Rank, I)>,
 }
 
 impl<F, I> HaloExporter<F, I> {
-    fn new(radius_search: F) -> Self {
+    pub fn new(radius_search: F) -> Self {
         Self {
             radius_search,
             already_exported: StableHashSet::default(),
         }
+    }
+}
+
+impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F, F::Index> {
+    fn unique_radius_search(
+        &mut self,
+        data: Vec<SearchData<D>>,
+    ) -> DataByRank<Vec<SearchResult<D>>> {
+        let indexed_results = self.radius_search.radius_search(data);
+        indexed_results
+            .into_iter()
+            .map(|(rank, results)| {
+                (
+                    rank,
+                    results
+                        .into_iter()
+                        .filter_map(
+                            |IndexedSearchResult {
+                                 result,
+                                 point_index,
+                             }| {
+                                if self.already_exported.insert((rank, point_index)) {
+                                    Some(result)
+                                } else {
+                                    None
+                                }
+                            },
+                        )
+                        .collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
+        <F as IndexedRadiusSearch<D>>::determine_global_extent(&self.radius_search)
     }
 }
 
@@ -107,25 +148,24 @@ where
 
     fn iterate(&mut self) {
         let search_data = self.get_radius_search_data();
-        let newly_imported = self.search.unique_radius_search(search_data);
+        let mut newly_imported = self.search.unique_radius_search(search_data);
         let checked: StableHashSet<TetraIndex> = self.iter_remaining_tetras().collect();
         println!(
             "To check: {:>8}, Imported: {:>8}",
             checked.len(),
-            newly_imported.len()
+            newly_imported.size()
         );
-        let tetras_with_new_points_in_vicinity: StableHashSet<_> = newly_imported
-            .into_iter()
-            .map(
-                |SearchResult {
-                     point,
-                     tetra_index: search_index,
-                 }| {
-                    self.triangulation.insert(point, PointKind::Halo);
-                    search_index
-                },
-            )
-            .collect();
+        let mut tetras_with_new_points_in_vicinity = StableHashSet::default();
+        for (rank, results) in newly_imported.drain_all() {
+            for SearchResult {
+                point,
+                tetra_index: search_index,
+            } in results.into_iter()
+            {
+                self.triangulation.insert(point, PointKind::Halo(rank));
+                tetras_with_new_points_in_vicinity.insert(search_index);
+            }
+        }
         self.checked_tetras
             .extend(checked.difference(&tetras_with_new_points_in_vicinity));
     }
@@ -166,30 +206,6 @@ where
             .filter(|t| !self.checked_tetras.contains(t) && self.tetra_should_be_checked(*t))
     }
 }
-impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F, F::Index> {
-    fn unique_radius_search(&mut self, data: Vec<SearchData<D>>) -> Vec<SearchResult<D>> {
-        let indexed_results = self.radius_search.radius_search(data);
-        indexed_results
-            .into_iter()
-            .filter_map(
-                |IndexedSearchResult {
-                     result,
-                     point_index,
-                 }| {
-                    if self.already_exported.insert(point_index) {
-                        Some(result)
-                    } else {
-                        None
-                    }
-                },
-            )
-            .collect()
-    }
-
-    fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
-        <F as IndexedRadiusSearch<D>>::determine_global_extent(&self.radius_search)
-    }
-}
 
 #[cfg(test)]
 #[generic_tests::define]
@@ -199,6 +215,7 @@ mod tests {
     use super::IndexedSearchResult;
     use super::SearchData;
     use super::SearchResult;
+    use crate::communication::DataByRank;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::constructor::Constructor;
@@ -231,8 +248,11 @@ mod tests {
         fn radius_search(
             &mut self,
             data: Vec<SearchData<D>>,
-        ) -> Vec<IndexedSearchResult<D, Self::Index>> {
-            data.iter()
+        ) -> DataByRank<Vec<IndexedSearchResult<D, Self::Index>>> {
+            let fake_rank = 1;
+            let mut d = DataByRank::empty();
+            let results: Vec<_> = data
+                .iter()
                 .flat_map(|data| {
                     self.0
                         .iter()
@@ -245,7 +265,9 @@ mod tests {
                             },
                         })
                 })
-                .collect()
+                .collect();
+            d.insert(fake_rank, results);
+            d
         }
 
         fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {

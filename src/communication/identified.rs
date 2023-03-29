@@ -1,4 +1,4 @@
-pub(super) type EntityKey = u64;
+pub type EntityKey = u64;
 
 #[derive(PartialEq, Eq, Clone)]
 pub struct Identified<T> {

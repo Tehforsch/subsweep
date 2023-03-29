@@ -13,6 +13,7 @@ use bevy::prelude::NonSendMut;
 use bevy::prelude::Resource;
 pub use communicated_option::CommunicatedOption;
 pub use data_by_rank::DataByRank;
+pub use identified::EntityKey;
 pub use identified::Identified;
 pub use plugin::BaseCommunicationPlugin;
 pub use plugin::CommunicationPlugin;
@@ -66,7 +67,7 @@ pub type Rank = mpi::Rank;
 #[derive(Clone, Copy, PartialEq, Eq, Deref, DerefMut, Resource)]
 pub struct WorldSize(pub usize);
 
-#[derive(Clone, Copy, PartialEq, Eq, Deref, DerefMut, Resource)]
+#[derive(Clone, Copy, PartialEq, Eq, Deref, DerefMut, Resource, Hash)]
 pub struct WorldRank(pub Rank);
 
 impl WorldRank {

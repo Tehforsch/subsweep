@@ -148,7 +148,7 @@ where
             let color = match self.point_kinds[&index] {
                 PointKind::Inner => (1.0, 0.0, 0.0),
                 PointKind::Outer => (0.0, 1.0, 0.0),
-                PointKind::Halo => (0.0, 0.0, 1.0),
+                PointKind::Halo(_) => (0.0, 0.0, 1.0),
             };
             visualizer.add(&Color { x: *point, color });
         });

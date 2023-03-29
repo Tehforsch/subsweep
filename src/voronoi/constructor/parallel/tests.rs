@@ -26,6 +26,7 @@ use crate::stages::SimulationStagesPlugin;
 use crate::units::Length;
 use crate::units::Time;
 use crate::units::VecLength;
+use crate::voronoi::constructor::halo_iteration::HaloExporter;
 use crate::voronoi::test_utils::TestDimension;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::Constructor;
@@ -96,11 +97,12 @@ fn construct_grid_system(
         tree: &*tree,
         indices: &*indices,
         box_: box_.clone(),
-        rank: *rank,
+        rank: **rank,
     };
+    let halo_exporter = HaloExporter::new(search);
     let cons = Constructor::<ThreeD>::construct_from_iter(
         particles.iter().map(|(i, p)| (*i, p.value_unchecked())),
-        search,
+        halo_exporter,
     );
     let voronoi = cons.voronoi();
 }
