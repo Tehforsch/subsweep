@@ -58,7 +58,7 @@ mod tests {
     use super::delaunay::tests::perform_triangulation_check_on_each_level_of_construction;
     use super::delaunay::Delaunay;
     use super::delaunay::Triangulation;
-    use super::test_utils::TestableDimension;
+    use super::test_utils::TestDimension;
     use super::Cell;
     use super::DimensionCell;
     use super::ThreeD;
@@ -77,7 +77,7 @@ mod tests {
     pub fn perform_check_on_each_level_of_construction<D>(
         check: impl Fn(&TriangulationData<D>, usize) -> (),
     ) where
-        D: Dimension + TestableDimension + Clone,
+        D: Dimension + TestDimension + Clone,
         Triangulation<D>: Delaunay<D> + Clone,
         Cell<D>: DimensionCell<Dimension = D>,
     {
@@ -96,7 +96,7 @@ mod tests {
     }
 
     #[test]
-    fn voronoi_property<D: TestableDimension>()
+    fn voronoi_property<D: TestDimension>()
     where
         Triangulation<D>: Delaunay<D>,
         Triangulation<D>: super::visualizer::Visualizable,
@@ -132,7 +132,7 @@ mod tests {
 
     fn get_containing_voronoi_cell<D>(grid: &VoronoiGrid<D>, point: D::Point) -> Option<&Cell<D>>
     where
-        D: TestableDimension,
+        D: TestDimension,
         Cell<D>: DimensionCell<Dimension = D>,
     {
         grid.cells.iter().find(|cell| cell.contains(point))

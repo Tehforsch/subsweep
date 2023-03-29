@@ -9,7 +9,7 @@ use super::TwoD;
 use crate::prelude::ParticleId;
 use crate::voronoi::Point2d;
 
-pub trait TestableDimension: Dimension {
+pub trait TestDimension: Dimension {
     fn num() -> usize;
     fn get_example_point_set() -> Vec<Self::Point>;
     fn get_example_point_set_2() -> Vec<Self::Point>;
@@ -45,7 +45,7 @@ pub trait TestableDimension: Dimension {
     }
 }
 
-impl TestableDimension for TwoD {
+impl TestDimension for TwoD {
     fn number_of_tetras(num_inserted_points: usize) -> Option<usize> {
         Some(1 + 2 * num_inserted_points)
     }
@@ -92,7 +92,7 @@ impl TestableDimension for TwoD {
     }
 }
 
-impl TestableDimension for ThreeD {
+impl TestDimension for ThreeD {
     fn num() -> usize {
         3
     }

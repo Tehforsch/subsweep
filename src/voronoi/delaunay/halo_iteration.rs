@@ -218,7 +218,7 @@ mod tests {
     use crate::voronoi::delaunay::halo_iteration::HaloExporter;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::DVector;
-    use crate::voronoi::test_utils::TestableDimension;
+    use crate::voronoi::test_utils::TestDimension;
     use crate::voronoi::utils::get_extent;
     use crate::voronoi::Cell;
     use crate::voronoi::Dimension;
@@ -278,7 +278,7 @@ mod tests {
     #[test]
     pub fn voronoi_grid_with_halo_points_is_the_same_as_without<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
         Point<D>: DVector,
         Cell<D>: DimensionCell<Dimension = D>,

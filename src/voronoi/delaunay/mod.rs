@@ -291,7 +291,7 @@ pub(super) mod tests {
     use super::Delaunay;
     use super::PointKind;
     use super::Triangulation;
-    use crate::voronoi::test_utils::TestableDimension;
+    use crate::voronoi::test_utils::TestDimension;
     use crate::voronoi::utils::get_extent;
     use crate::voronoi::ThreeD;
     use crate::voronoi::TwoD;
@@ -305,7 +305,7 @@ pub(super) mod tests {
     pub fn perform_triangulation_check_on_each_level_of_construction<D>(
         check: impl Fn(&Triangulation<D>, usize) -> (),
     ) where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         let points = D::get_example_point_set();
@@ -321,7 +321,7 @@ pub(super) mod tests {
     #[test]
     fn correct_number_of_objects<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction(
@@ -350,7 +350,7 @@ pub(super) mod tests {
     #[test]
     fn first_insertion_creates_correct_number_of_opposing_faces<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(
@@ -390,7 +390,7 @@ pub(super) mod tests {
     #[test]
     fn opposing_point_is_in_other_tetra<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -422,7 +422,7 @@ pub(super) mod tests {
     #[test]
     fn opposing_faces_are_symmetric<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -433,7 +433,7 @@ pub(super) mod tests {
     #[test]
     fn opposing_faces_contain_valid_indices<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -449,7 +449,7 @@ pub(super) mod tests {
 
     pub fn check_faces_share_points_with_tetra<D>(triangulation: &Triangulation<D>)
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         for (_, tetra) in triangulation.tetras.iter() {
@@ -464,7 +464,7 @@ pub(super) mod tests {
     #[test]
     fn faces_share_points_with_tetra<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -475,7 +475,7 @@ pub(super) mod tests {
     #[test]
     fn global_delaunayhood<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -492,7 +492,7 @@ pub(super) mod tests {
     #[test]
     fn local_delaunayhood<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -509,7 +509,7 @@ pub(super) mod tests {
     #[test]
     fn inner_points_contains_right_number_of_points<D>()
     where
-        D: Dimension + TestableDimension,
+        D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(
