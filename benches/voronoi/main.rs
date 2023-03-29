@@ -9,12 +9,12 @@ use criterion::Throughput;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use raxiom::voronoi::LocalConstructor;
+use raxiom::voronoi::Constructor;
 use raxiom::voronoi::Point2d;
 use raxiom::voronoi::Point3d;
 use raxiom::voronoi::ThreeD;
-use raxiom::voronoi::Triangulation;
 use raxiom::voronoi::TwoD;
+
 pub fn voronoi_benchmark(c: &mut Criterion) {
     let mut group_2d = c.benchmark_group("voronoi2d");
     group_2d
@@ -54,11 +54,11 @@ criterion_group!(benches, voronoi_benchmark);
 criterion_main!(benches);
 
 fn construct_voronoi_2d(points: Vec<Point2d>) {
-    let _ = LocalConstructor::<TwoD>::only_delaunay(points.iter());
+    let _ = Constructor::<TwoD>::only_delaunay(points.iter());
 }
 
 fn construct_voronoi_3d(points: Vec<Point3d>) {
-    let _ = LocalConstructor::<ThreeD>::only_delaunay(points.iter());
+    let _ = Constructor::<ThreeD>::only_delaunay(points.iter());
 }
 
 fn setup_particles_3d(num_particles: usize) -> Vec<Point3d> {

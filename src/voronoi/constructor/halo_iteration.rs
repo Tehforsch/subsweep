@@ -119,7 +119,6 @@ mod tests {
     use crate::voronoi::Cell;
     use crate::voronoi::Dimension;
     use crate::voronoi::DimensionCell;
-    use crate::voronoi::LocalConstructor;
     use crate::voronoi::Point;
     use crate::voronoi::ThreeD;
     use crate::voronoi::Triangulation;
@@ -188,7 +187,7 @@ mod tests {
         let (points1, points2) = D::get_example_point_sets_with_ids();
         let points = D::get_combined_point_set();
         // First construct the triangulation normally
-        let full_constructor = LocalConstructor::new(points.iter().cloned());
+        let full_constructor = Constructor::new(points.iter().cloned());
         // Now construct the triangulation of the first set using imported
         // halo particles imported from the other set.
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();

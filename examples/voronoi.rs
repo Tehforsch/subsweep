@@ -2,7 +2,7 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use raxiom::prelude::ParticleId;
-use raxiom::voronoi::LocalConstructor;
+use raxiom::voronoi::Constructor;
 use raxiom::voronoi::Point2d;
 use raxiom::voronoi::TwoD;
 
@@ -12,7 +12,7 @@ pub fn main() {
 }
 
 fn construct_voronoi_2d(points: Vec<Point2d>) {
-    let _ = LocalConstructor::<TwoD>::new(
+    let _ = Constructor::<TwoD>::new(
         points
             .iter()
             .enumerate()

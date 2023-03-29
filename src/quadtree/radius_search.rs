@@ -25,21 +25,6 @@ pub(super) fn bounding_boxes_overlap_periodic(
     relative_bounding_box_overlap(dist, total_size)
 }
 
-/// Returns whether the two bounding boxes given by
-/// the center coordinates pos1 and pos2 and the side lengths
-/// size1 and size2. This function does not respect periodic
-/// boundary conditions.
-pub fn bounding_boxes_overlap_non_periodic(
-    pos1: &VecLength,
-    size1: &VecLength,
-    pos2: &VecLength,
-    size2: &VecLength,
-) -> bool {
-    let dist = *pos1 - *pos2;
-    let total_size = *size1 + *size2;
-    relative_bounding_box_overlap(dist, total_size)
-}
-
 fn within_radius(
     box_: &SimulationBox,
     pos1: &VecLength,

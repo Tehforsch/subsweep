@@ -15,7 +15,6 @@ pub use cell::Cell;
 pub use cell::CellConnection;
 pub use cell::DimensionCell;
 pub use constructor::Constructor;
-pub use constructor::LocalConstructor;
 pub use delaunay::dimension::DTetra;
 pub use delaunay::dimension::Dimension;
 use delaunay::Delaunay;
@@ -151,10 +150,9 @@ mod quantitative_tests {
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::cell::CellConnection;
     use crate::voronoi::primitives::Point3d;
+    use crate::voronoi::Constructor;
     use crate::voronoi::DimensionCell;
-    use crate::voronoi::LocalConstructor;
     use crate::voronoi::ThreeD;
-    use crate::voronoi::TriangulationData;
 
     #[test]
     fn right_volume_and_face_areas_two_d() {
@@ -164,12 +162,8 @@ mod quantitative_tests {
             (ParticleId(2), Point2d::new(0.9, 0.2)),
             (ParticleId(3), Point2d::new(0.25, 0.25)),
         ];
-        let cons = LocalConstructor::new(points.into_iter());
-        let last_point_index = *cons
-            .data
-            .point_to_cell_map
-            .get_by_left(&ParticleId(3))
-            .unwrap();
+        let cons = Constructor::new(points.into_iter());
+        let last_point_index = cons.get_point_by_particle_id(ParticleId(3)).unwrap();
         let grid: VoronoiGrid<TwoD> = cons.voronoi();
         assert_eq!(grid.cells.len(), 4);
         // Find the cell associated with the (0.25, 0.25) point above. This cell should be a triangle.
@@ -208,12 +202,8 @@ mod quantitative_tests {
             (ParticleId(3), Point3d::new(0.1, 0.1, 0.4)),
             (ParticleId(4), Point3d::new(0.1, 0.1, 0.1)),
         ];
-        let cons = LocalConstructor::new(points.into_iter());
-        let last_point_index = cons
-            .data
-            .point_to_cell_map
-            .get_by_left(&ParticleId(4))
-            .unwrap();
+        let cons = Constructor::new(points.into_iter());
+        let last_point_index = cons.get_point_by_particle_id(ParticleId(4)).unwrap();
         let grid: VoronoiGrid<ThreeD> = cons.voronoi();
         assert_eq!(grid.cells.len(), 5);
         // Find the cell associated with the (0.25, 0.25, 0.25) point above.
@@ -221,7 +211,7 @@ mod quantitative_tests {
         let cell = grid
             .cells
             .iter()
-            .find(|cell| cell.delaunay_point == *last_point_index)
+            .find(|cell| cell.delaunay_point == last_point_index)
             .unwrap();
         assert_eq!(cell.faces.len(), 4);
         assert_eq!(cell.points.len(), 4);
