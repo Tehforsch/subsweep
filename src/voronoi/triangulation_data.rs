@@ -26,14 +26,14 @@ use crate::units::VecDimensionless;
 use crate::units::Volume;
 use crate::voronoi::cell::CellConnection;
 
-pub struct Constructor<D: Dimension> {
+pub struct TriangulationData<D: Dimension> {
     pub triangulation: DelaunayTriangulation<D>,
     pub point_to_cell_map: BiMap<CellIndex, PointIndex>,
     pub point_to_tetras_map: StableHashMap<PointIndex, Vec<TetraIndex>>,
     pub tetra_to_voronoi_point_map: StableHashMap<TetraIndex, Point<D>>,
 }
 
-impl<D: Dimension> Constructor<D>
+impl<D: Dimension> TriangulationData<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
@@ -116,7 +116,7 @@ where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
     <Cell<D> as DimensionCell>::Dimension: Dimension<Point = MVec>,
-    VoronoiGrid<D>: for<'a> From<&'a Constructor<D>>,
+    VoronoiGrid<D>: for<'a> From<&'a TriangulationData<D>>,
     <D as Dimension>::TetraData: Visualizable,
     <D as Dimension>::Point: Visualizable,
 {
@@ -128,7 +128,7 @@ where
         .iter()
         .map(|((_, entity), point)| (*entity, *point))
         .collect();
-    let cons = Constructor::from_triangulation_and_map(triangulation, id_to_point_index);
+    let cons = TriangulationData::from_triangulation_and_map(triangulation, id_to_point_index);
     let grid = cons.construct_voronoi();
     grid.cells
         .iter()

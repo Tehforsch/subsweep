@@ -21,7 +21,7 @@ use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::SourceRate;
 use raxiom::units::VecLength;
-use raxiom::voronoi::constructor::construct_grid_from_iter;
+use raxiom::voronoi::triangulation_data::construct_grid_from_iter;
 use raxiom::voronoi::ThreeD;
 use unit_reader::ArepoUnitReader;
 

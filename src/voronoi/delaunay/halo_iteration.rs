@@ -221,7 +221,6 @@ mod tests {
     use crate::voronoi::primitives::point::Vector;
     use crate::voronoi::utils::get_extent;
     use crate::voronoi::Cell;
-    use crate::voronoi::Constructor;
     use crate::voronoi::DelaunayTriangulation;
     use crate::voronoi::Dimension;
     use crate::voronoi::DimensionCell;
@@ -229,6 +228,7 @@ mod tests {
     use crate::voronoi::Point2d;
     use crate::voronoi::Point3d;
     use crate::voronoi::ThreeD;
+    use crate::voronoi::TriangulationData;
     use crate::voronoi::TwoD;
     use crate::voronoi::VoronoiGrid;
 
@@ -341,7 +341,7 @@ mod tests {
 
     fn get_cell_for_particle<D: Dimension, 'a>(
         grid: &'a VoronoiGrid<D>,
-        cons: &'a Constructor<D>,
+        cons: &'a TriangulationData<D>,
         particle: ParticleId,
     ) -> &'a Cell<D> {
         grid.cells
@@ -374,8 +374,8 @@ mod tests {
             HaloExporter::new(LocalRadiusSearch(points2)),
             extent,
         );
-        let cons1 = Constructor::from_triangulation_and_map(full_triangulation, full_map);
-        let cons2 = Constructor::from_triangulation_and_map(sub_triangulation, sub_map);
+        let cons1 = TriangulationData::from_triangulation_and_map(full_triangulation, full_map);
+        let cons2 = TriangulationData::from_triangulation_and_map(sub_triangulation, sub_map);
         let voronoi1 = cons1.construct_voronoi();
         let voronoi2 = cons2.construct_voronoi();
         for (id, _) in points1.iter() {

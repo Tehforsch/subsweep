@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::f64::consts::PI;
 
-use super::constructor::Constructor;
 use super::delaunay::dimension::Dimension;
 use super::delaunay::FaceIndex;
 use super::delaunay::PointIndex;
@@ -9,6 +8,7 @@ use super::primitives::polygon3d::Polygon3d;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::primitives::Vector;
+use super::triangulation_data::TriangulationData;
 use super::utils::arrange_cyclic_by;
 use super::utils::periodic_windows_2;
 use super::CellIndex;
@@ -24,7 +24,7 @@ pub trait DimensionCell: Sized {
     fn size(&self) -> Float;
     fn volume(&self) -> Float;
     fn contains(&self, point: Point<Self::Dimension>) -> bool;
-    fn new(constructor: &Constructor<Self::Dimension>, point: PointIndex) -> Self;
+    fn new(data: &TriangulationData<Self::Dimension>, point: PointIndex) -> Self;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -54,24 +54,32 @@ fn sign(p1: Point2d, p2: Point2d, p3: Point2d) -> Float {
 }
 
 fn get_common_face<D: Dimension>(
-    c: &Constructor<D>,
+    data: &TriangulationData<D>,
     t1: &TetraIndex,
     t2: &TetraIndex,
 ) -> Option<FaceIndex> {
-    let t1_data = &c.triangulation.tetras[*t1];
-    let t2_data = &c.triangulation.tetras[*t2];
+    let t1_data = &data.triangulation.tetras[*t1];
+    let t2_data = &data.triangulation.tetras[*t2];
     t1_data.get_common_face_with(t2_data)
 }
 
-fn get_normal<D: Dimension>(c: &Constructor<D>, p1: PointIndex, p2: PointIndex) -> Point<D> {
-    let p1 = c.triangulation.points[p1];
-    let p2 = c.triangulation.points[p2];
+fn get_normal<D: Dimension>(
+    data: &TriangulationData<D>,
+    p1: PointIndex,
+    p2: PointIndex,
+) -> Point<D> {
+    let p1 = data.triangulation.points[p1];
+    let p2 = data.triangulation.points[p2];
     (p2 - p1).normalize()
 }
 
 impl Cell<TwoD> {
-    fn tetras_are_neighbours(c: &Constructor<TwoD>, t1: &TetraIndex, t2: &TetraIndex) -> bool {
-        get_common_face(c, t1, t2).is_some()
+    fn tetras_are_neighbours(
+        data: &TriangulationData<TwoD>,
+        t1: &TetraIndex,
+        t2: &TetraIndex,
+    ) -> bool {
+        get_common_face(data, t1, t2).is_some()
     }
 
     pub fn point_windows(&self) -> impl Iterator<Item = (&Point2d, &Point2d)> {
@@ -80,18 +88,18 @@ impl Cell<TwoD> {
 }
 
 impl Cell<TwoD> {
-    fn get_faces(c: &Constructor<TwoD>, p: PointIndex) -> Vec<VoronoiFace<TwoD>> {
-        let tetras = &c.point_to_tetras_map[&p];
-        arrange_cyclic_by(tetras, |t1, t2| Self::tetras_are_neighbours(c, t1, t2))
+    fn get_faces(data: &TriangulationData<TwoD>, p: PointIndex) -> Vec<VoronoiFace<TwoD>> {
+        let tetras = &data.point_to_tetras_map[&p];
+        arrange_cyclic_by(tetras, |t1, t2| Self::tetras_are_neighbours(data, t1, t2))
             .map(|(t1, t2)| {
-                let line = &c.triangulation.faces[get_common_face(c, t1, t2).unwrap()];
+                let line = &data.triangulation.faces[get_common_face(data, t1, t2).unwrap()];
                 let p2_index = line.other_point(p);
-                let vp1 = c.tetra_to_voronoi_point_map[t1];
-                let vp2 = c.tetra_to_voronoi_point_map[t2];
+                let vp1 = data.tetra_to_voronoi_point_map[t1];
+                let vp2 = data.tetra_to_voronoi_point_map[t2];
                 let area = vp1.distance(vp2);
-                let normal = get_normal(c, p, p2_index);
+                let normal = get_normal(data, p, p2_index);
                 VoronoiFace {
-                    connection: c.get_connection(p2_index),
+                    connection: data.get_connection(p2_index),
                     normal,
                     area,
                     data: (),
@@ -129,18 +137,18 @@ impl DimensionCell for Cell<TwoD> {
             .abs()
     }
 
-    fn new(c: &Constructor<TwoD>, p: PointIndex) -> Self {
-        let tetras = &c.point_to_tetras_map[&p];
-        let points = arrange_cyclic_by(tetras, |t1, t2| Self::tetras_are_neighbours(c, t1, t2))
-            .map(|(t1, _)| c.tetra_to_voronoi_point_map[t1])
+    fn new(data: &TriangulationData<TwoD>, p: PointIndex) -> Self {
+        let tetras = &data.point_to_tetras_map[&p];
+        let points = arrange_cyclic_by(tetras, |t1, t2| Self::tetras_are_neighbours(data, t1, t2))
+            .map(|(t1, _)| data.tetra_to_voronoi_point_map[t1])
             .collect();
         Self {
             delaunay_point: p,
             points,
-            is_infinite: c.is_infinite_cell(p),
-            index: *c.point_to_cell_map.get_by_right(&p).unwrap(),
-            faces: Self::get_faces(c, p),
-            center: c.triangulation.points[p],
+            is_infinite: data.is_infinite_cell(p),
+            index: *data.point_to_cell_map.get_by_right(&p).unwrap(),
+            faces: Self::get_faces(data, p),
+            center: data.triangulation.points[p],
         }
     }
 }
@@ -152,19 +160,19 @@ fn pyramid_volume(normal: Point3d, p: Point3d, polygon: &Polygon3d) -> Float {
 }
 
 impl Cell<ThreeD> {
-    fn get_faces(c: &Constructor<ThreeD>, p1: PointIndex) -> Vec<VoronoiFace<ThreeD>> {
-        let tetras = &c.point_to_tetras_map[&p1];
+    fn get_faces(data: &TriangulationData<ThreeD>, p1: PointIndex) -> Vec<VoronoiFace<ThreeD>> {
+        let tetras = &data.point_to_tetras_map[&p1];
         let connected_points: HashSet<PointIndex> = tetras
             .iter()
             .flat_map(|tetra| {
-                c.triangulation.tetras[*tetra]
+                data.triangulation.tetras[*tetra]
                     .points()
                     .filter(|p2| *p2 != p1)
             })
             .collect();
         connected_points
             .iter()
-            .map(|p2| get_face_polygon_perpendicular_to_line(c, p1, *p2))
+            .map(|p2| get_face_polygon_perpendicular_to_line(data, p1, *p2))
             .collect()
     }
 }
@@ -191,46 +199,46 @@ impl DimensionCell for Cell<ThreeD> {
             .sum()
     }
 
-    fn new(c: &Constructor<ThreeD>, p: PointIndex) -> Self {
-        let points = c.point_to_tetras_map[&p]
+    fn new(data: &TriangulationData<ThreeD>, p: PointIndex) -> Self {
+        let points = data.point_to_tetras_map[&p]
             .iter()
-            .map(|tetra| c.tetra_to_voronoi_point_map[tetra])
+            .map(|tetra| data.tetra_to_voronoi_point_map[tetra])
             .collect();
         Self {
             delaunay_point: p,
             points,
-            is_infinite: c.is_infinite_cell(p),
-            index: *c.point_to_cell_map.get_by_right(&p).unwrap(),
-            faces: Self::get_faces(c, p),
-            center: c.triangulation.points[p],
+            is_infinite: data.is_infinite_cell(p),
+            index: *data.point_to_cell_map.get_by_right(&p).unwrap(),
+            faces: Self::get_faces(data, p),
+            center: data.triangulation.points[p],
         }
     }
 }
 
 fn get_face_polygon_perpendicular_to_line(
-    c: &Constructor<ThreeD>,
+    data: &TriangulationData<ThreeD>,
     p1: PointIndex,
     p2: PointIndex,
 ) -> VoronoiFace<ThreeD> {
     let tetras_are_neighbours =
-        |t1: &TetraIndex, t2: &TetraIndex| get_common_face(c, t1, t2).is_some();
-    let tetras_with_p1 = &c.point_to_tetras_map[&p1];
+        |t1: &TetraIndex, t2: &TetraIndex| get_common_face(data, t1, t2).is_some();
+    let tetras_with_p1 = &data.point_to_tetras_map[&p1];
     let tetras_with_both_points: Vec<TetraIndex> = tetras_with_p1
         .iter()
         .filter(|tetra| {
-            let tetra = &c.triangulation.tetras[**tetra];
+            let tetra = &data.triangulation.tetras[**tetra];
             debug_assert!(tetra.contains_point(p1));
             tetra.contains_point(p2)
         })
         .cloned()
         .collect();
     let points = arrange_cyclic_by(&tetras_with_both_points, tetras_are_neighbours)
-        .map(|(p1, _)| c.tetra_to_voronoi_point_map[p1])
+        .map(|(p1, _)| data.tetra_to_voronoi_point_map[p1])
         .collect();
-    let normal = get_normal(c, p1, p2);
+    let normal = get_normal(data, p1, p2);
     let poly = Polygon3d { points };
     VoronoiFace {
-        connection: c.get_connection(p2),
+        connection: data.get_connection(p2),
         normal,
         area: poly.area(),
         data: poly,

@@ -2,8 +2,8 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use raxiom::prelude::ParticleId;
-use raxiom::voronoi::Constructor;
 use raxiom::voronoi::Point2d;
+use raxiom::voronoi::TriangulationData;
 use raxiom::voronoi::TwoD;
 use raxiom::voronoi::VoronoiGrid;
 
@@ -13,13 +13,13 @@ pub fn main() {
 }
 
 fn construct_voronoi_2d(points: Vec<Point2d>) {
-    let cons = Constructor::new(
+    let data = TriangulationData::new(
         points
             .iter()
             .enumerate()
             .map(|(i, p)| (ParticleId(i as u64), *p)),
     );
-    let _: VoronoiGrid<TwoD> = cons.construct_voronoi();
+    let _: VoronoiGrid<TwoD> = data.construct_voronoi();
 }
 
 fn setup_particles_2d(num_particles: usize) -> Vec<Point2d> {

@@ -1,8 +1,8 @@
-pub mod constructor;
 pub mod delaunay;
 mod indexed_arena;
 pub mod math;
 mod precision_error;
+pub mod triangulation_data;
 mod visualizer;
 
 mod primitives;
@@ -15,7 +15,6 @@ use bevy::prelude::Resource;
 pub use cell::Cell;
 pub use cell::CellConnection;
 pub use cell::DimensionCell;
-pub use constructor::Constructor;
 pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
 use delaunay::Delaunay;
@@ -23,6 +22,7 @@ pub use delaunay::DelaunayTriangulation;
 use delaunay::PointIndex;
 pub use primitives::Point2d;
 pub use primitives::Point3d;
+pub use triangulation_data::TriangulationData;
 
 use crate::prelude::ParticleId;
 
@@ -40,12 +40,12 @@ pub struct VoronoiGrid<D: Dimension> {
     pub cells: Vec<Cell<D>>,
 }
 
-impl<D: Dimension> From<&Constructor<D>> for VoronoiGrid<D>
+impl<D: Dimension> From<&TriangulationData<D>> for VoronoiGrid<D>
 where
     DelaunayTriangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
-    fn from(c: &Constructor<D>) -> Self {
+    fn from(c: &TriangulationData<D>) -> Self {
         c.construct_voronoi()
     }
 }
@@ -64,9 +64,9 @@ mod tests {
     use super::primitives::Point2d;
     use super::primitives::Point3d;
     use super::Cell;
-    use super::Constructor;
     use super::DimensionCell;
     use super::ThreeD;
+    use super::TriangulationData;
     use super::TwoD;
     use super::VoronoiGrid;
     use crate::prelude::ParticleId;
@@ -102,7 +102,7 @@ mod tests {
     }
 
     pub fn perform_check_on_each_level_of_construction<D>(
-        check: impl Fn(&Constructor<D>, usize) -> (),
+        check: impl Fn(&TriangulationData<D>, usize) -> (),
     ) where
         D: Dimension + TestableDimension + Clone,
         DelaunayTriangulation<D>: Delaunay<D> + Clone,
@@ -116,7 +116,7 @@ mod tests {
                 .map(|(i, (p, _))| (ParticleId(i as u64), p))
                 .collect();
             check(
-                &Constructor::from_triangulation_and_map(t.clone(), map),
+                &TriangulationData::from_triangulation_and_map(t.clone(), map),
                 num,
             );
         });
@@ -128,23 +128,23 @@ mod tests {
         DelaunayTriangulation<D>: Delaunay<D>,
         DelaunayTriangulation<D>: super::visualizer::Visualizable,
         Cell<D>: DimensionCell<Dimension = D>,
-        VoronoiGrid<D>: for<'a> From<&'a Constructor<D>>,
+        VoronoiGrid<D>: for<'a> From<&'a TriangulationData<D>>,
         <D as Dimension>::Point: std::fmt::Debug,
         D: Clone,
     {
-        perform_check_on_each_level_of_construction(|constructor, num_inserted_points| {
+        perform_check_on_each_level_of_construction(|data, num_inserted_points| {
             if num_inserted_points == 0 {
                 return;
             }
             let mut num_found = 0;
-            let grid: VoronoiGrid<D> = constructor.into();
+            let grid: VoronoiGrid<D> = data.into();
             for lookup_point in D::get_lookup_points() {
                 let containing_cell = get_containing_voronoi_cell(&grid, lookup_point);
                 let closest_cell = grid
                     .cells
                     .iter()
                     .min_by_key(|cell| {
-                        let p: D::Point = constructor.triangulation.points[cell.delaunay_point];
+                        let p: D::Point = data.triangulation.points[cell.delaunay_point];
                         OrderedFloat(p.distance_squared(lookup_point))
                     })
                     .unwrap();
@@ -175,9 +175,9 @@ mod quantitative_tests {
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::cell::CellConnection;
     use crate::voronoi::primitives::Point3d;
-    use crate::voronoi::Constructor;
     use crate::voronoi::DimensionCell;
     use crate::voronoi::ThreeD;
+    use crate::voronoi::TriangulationData;
 
     #[test]
     fn right_volume_and_face_areas_two_d() {
@@ -187,12 +187,9 @@ mod quantitative_tests {
             (ParticleId(2), Point2d::new(0.9, 0.2)),
             (ParticleId(3), Point2d::new(0.25, 0.25)),
         ];
-        let constructor = Constructor::new(points.into_iter());
-        let last_point_index = *constructor
-            .point_to_cell_map
-            .get_by_left(&ParticleId(3))
-            .unwrap();
-        let grid: VoronoiGrid<TwoD> = constructor.construct_voronoi();
+        let data = TriangulationData::new(points.into_iter());
+        let last_point_index = *data.point_to_cell_map.get_by_left(&ParticleId(3)).unwrap();
+        let grid: VoronoiGrid<TwoD> = data.construct_voronoi();
         assert_eq!(grid.cells.len(), 4);
         // Find the cell associated with the (0.25, 0.25) point above. This cell should be a triangle.
         // The exact values of faces and normals are taken from constructing the grid by hand and inspecting ;)
@@ -230,12 +227,9 @@ mod quantitative_tests {
             (ParticleId(3), Point3d::new(0.1, 0.1, 0.4)),
             (ParticleId(4), Point3d::new(0.1, 0.1, 0.1)),
         ];
-        let constructor = Constructor::new(points.into_iter());
-        let last_point_index = constructor
-            .point_to_cell_map
-            .get_by_left(&ParticleId(4))
-            .unwrap();
-        let grid: VoronoiGrid<ThreeD> = constructor.construct_voronoi();
+        let data = TriangulationData::new(points.into_iter());
+        let last_point_index = data.point_to_cell_map.get_by_left(&ParticleId(4)).unwrap();
+        let grid: VoronoiGrid<ThreeD> = data.construct_voronoi();
         assert_eq!(grid.cells.len(), 5);
         // Find the cell associated with the (0.25, 0.25, 0.25) point above.
         // The exact values of faces and normals are taken from constructing the grid by hand and inspecting ;)
