@@ -6,10 +6,10 @@ use ordered_float::OrderedFloat;
 
 use super::dimension::DimensionTetraData;
 use super::Delaunay;
-use super::DelaunayTriangulation;
 use super::Point;
 use super::Tetra;
 use super::TetraIndex;
+use super::Triangulation;
 use crate::voronoi::delaunay::dimension::DimensionTetra;
 use crate::voronoi::primitives::Vector;
 use crate::voronoi::Dimension;
@@ -37,10 +37,10 @@ impl Ord for CheckData {
     }
 }
 
-fn tetra_contains_point<D>(t: &DelaunayTriangulation<D>, tetra: &Tetra<D>, point: Point<D>) -> bool
+fn tetra_contains_point<D>(t: &Triangulation<D>, tetra: &Tetra<D>, point: Point<D>) -> bool
 where
     D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
 {
     let tetra_data = t.get_tetra_data(tetra);
     tetra_data
@@ -49,13 +49,13 @@ where
 }
 
 fn find_breadth_first<D>(
-    t: &DelaunayTriangulation<D>,
+    t: &Triangulation<D>,
     point: D::Point,
     first_to_check: TetraIndex,
 ) -> Option<TetraIndex>
 where
     D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
     Point<D>: Vector,
 {
     let mut already_checked: HashSet<TetraIndex> = HashSet::default();
@@ -91,10 +91,10 @@ where
     None
 }
 
-pub fn find_containing_tetra<D>(t: &DelaunayTriangulation<D>, point: D::Point) -> Option<TetraIndex>
+pub fn find_containing_tetra<D>(t: &Triangulation<D>, point: D::Point) -> Option<TetraIndex>
 where
     D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
 {
     if let Some(last_insertion_tetra) = t.last_insertion_tetra {
         find_breadth_first(t, point, last_insertion_tetra)

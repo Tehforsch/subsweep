@@ -3,12 +3,12 @@ use super::dimension::DimensionTetra;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
 use super::Delaunay;
-use super::DelaunayTriangulation;
 use super::FaceIndex;
 use super::PointIndex;
 use super::PointKind;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
+use super::Triangulation;
 use crate::voronoi::delaunay::dimension::DimensionFace;
 use crate::voronoi::delaunay::dimension::DimensionTetraData;
 use crate::voronoi::delaunay::FlipCheckData;
@@ -35,7 +35,7 @@ impl Dimension for TwoD {
     type VoronoiFaceData = ();
 }
 
-impl DelaunayTriangulation<TwoD> {
+impl Triangulation<TwoD> {
     fn insert_split_tetra(
         &mut self,
         p_a: PointIndex,
@@ -65,7 +65,7 @@ impl DelaunayTriangulation<TwoD> {
     }
 }
 
-impl Delaunay<TwoD> for DelaunayTriangulation<TwoD> {
+impl Delaunay<TwoD> for Triangulation<TwoD> {
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
         let tetra_data = TetraData {
             p1: self.points[tetra.p1],

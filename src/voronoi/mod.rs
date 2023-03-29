@@ -1,15 +1,12 @@
+mod cell;
 pub mod delaunay;
 mod indexed_arena;
 pub mod math;
 mod precision_error;
-pub mod triangulation_data;
-mod visualizer;
-
 mod primitives;
-
+pub mod triangulation_data;
 mod utils;
-
-mod cell;
+mod visualizer;
 
 use bevy::prelude::Resource;
 pub use cell::Cell;
@@ -18,8 +15,8 @@ pub use cell::DimensionCell;
 pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DimensionTetra;
 use delaunay::Delaunay;
-pub use delaunay::DelaunayTriangulation;
 use delaunay::PointIndex;
+pub use delaunay::Triangulation;
 pub use primitives::Point2d;
 pub use primitives::Point3d;
 pub use triangulation_data::TriangulationData;
@@ -42,7 +39,7 @@ pub struct VoronoiGrid<D: Dimension> {
 
 impl<D: Dimension> From<&TriangulationData<D>> for VoronoiGrid<D>
 where
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
     fn from(c: &TriangulationData<D>) -> Self {
@@ -60,7 +57,7 @@ mod tests {
     use super::delaunay::tests::perform_triangulation_check_on_each_level_of_construction;
     use super::delaunay::tests::TestableDimension;
     use super::delaunay::Delaunay;
-    use super::delaunay::DelaunayTriangulation;
+    use super::delaunay::Triangulation;
     use super::primitives::Point2d;
     use super::primitives::Point3d;
     use super::Cell;
@@ -105,7 +102,7 @@ mod tests {
         check: impl Fn(&TriangulationData<D>, usize) -> (),
     ) where
         D: Dimension + TestableDimension + Clone,
-        DelaunayTriangulation<D>: Delaunay<D> + Clone,
+        Triangulation<D>: Delaunay<D> + Clone,
         Cell<D>: DimensionCell<Dimension = D>,
     {
         perform_triangulation_check_on_each_level_of_construction(|t, num| {
@@ -125,8 +122,8 @@ mod tests {
     #[test]
     fn voronoi_property<D: VoronoiTestDimension + TestableDimension>()
     where
-        DelaunayTriangulation<D>: Delaunay<D>,
-        DelaunayTriangulation<D>: super::visualizer::Visualizable,
+        Triangulation<D>: Delaunay<D>,
+        Triangulation<D>: super::visualizer::Visualizable,
         Cell<D>: DimensionCell<Dimension = D>,
         VoronoiGrid<D>: for<'a> From<&'a TriangulationData<D>>,
         <D as Dimension>::Point: std::fmt::Debug,

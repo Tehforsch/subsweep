@@ -6,11 +6,11 @@ use generational_arena::Index;
 use mpi::traits::Equivalence;
 
 use super::Delaunay;
-use super::DelaunayTriangulation;
 use super::Point;
 use super::PointIndex;
 use super::PointKind;
 use super::TetraIndex;
+use super::Triangulation;
 use crate::voronoi::delaunay::dimension::DimensionTetra;
 use crate::voronoi::delaunay::dimension::DimensionTetraData;
 use crate::voronoi::primitives::point::Vector;
@@ -109,7 +109,7 @@ impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F
 }
 
 pub struct HaloIteration<'a, D: Dimension, F: RadiusSearch<D>> {
-    tri: &'a mut DelaunayTriangulation<D>,
+    tri: &'a mut Triangulation<D>,
     f: F,
     checked_tetras: StableHashSet<TetraIndex>,
 }
@@ -117,16 +117,15 @@ pub struct HaloIteration<'a, D: Dimension, F: RadiusSearch<D>> {
 impl<'a, D, F> HaloIteration<'a, D, F>
 where
     D: Dimension + 'a,
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
     F: RadiusSearch<D>,
 {
     pub fn construct_from_iter<'b, T: Hash + Clone + Eq>(
         iter: impl Iterator<Item = (T, Point<D>)> + 'b,
         f: F,
         extent: Extent<Point<D>>,
-    ) -> (DelaunayTriangulation<D>, BiMap<T, PointIndex>) {
-        let (mut tri, map) =
-            DelaunayTriangulation::<D>::construct_from_iter_custom_extent(iter, &extent);
+    ) -> (Triangulation<D>, BiMap<T, PointIndex>) {
+        let (mut tri, map) = Triangulation::<D>::construct_from_iter_custom_extent(iter, &extent);
         {
             let mut iteration = HaloIteration {
                 tri: &mut tri,
@@ -221,13 +220,13 @@ mod tests {
     use crate::voronoi::primitives::point::Vector;
     use crate::voronoi::utils::get_extent;
     use crate::voronoi::Cell;
-    use crate::voronoi::DelaunayTriangulation;
     use crate::voronoi::Dimension;
     use crate::voronoi::DimensionCell;
     use crate::voronoi::Point;
     use crate::voronoi::Point2d;
     use crate::voronoi::Point3d;
     use crate::voronoi::ThreeD;
+    use crate::voronoi::Triangulation;
     use crate::voronoi::TriangulationData;
     use crate::voronoi::TwoD;
     use crate::voronoi::VoronoiGrid;
@@ -356,7 +355,7 @@ mod tests {
     pub fn voronoi_grid_with_halo_points_is_the_same_as_without<D>()
     where
         D: Dimension + TestableDimension,
-        DelaunayTriangulation<D>: Delaunay<D>,
+        Triangulation<D>: Delaunay<D>,
         Point<D>: Vector,
         Cell<D>: DimensionCell<Dimension = D>,
     {
@@ -365,7 +364,7 @@ mod tests {
         let points = D::get_combined_point_set();
         // First construct the triangulation normally
         let (full_triangulation, full_map) =
-            DelaunayTriangulation::construct_from_iter(points.iter().cloned());
+            Triangulation::construct_from_iter(points.iter().cloned());
         // Now construct the triangulation of the first set using imported
         // halo particles imported from the other set.
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();

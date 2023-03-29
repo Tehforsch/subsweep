@@ -12,9 +12,9 @@ use super::delaunay::TetraIndex;
 use super::visualizer::Visualizable;
 use super::Cell;
 use super::CellIndex;
-use super::DelaunayTriangulation;
 use super::DimensionCell;
 use super::Point;
+use super::Triangulation;
 use super::VoronoiGrid;
 use crate::grid;
 use crate::grid::FaceArea;
@@ -27,7 +27,7 @@ use crate::units::Volume;
 use crate::voronoi::cell::CellConnection;
 
 pub struct TriangulationData<D: Dimension> {
-    pub triangulation: DelaunayTriangulation<D>,
+    pub triangulation: Triangulation<D>,
     pub point_to_cell_map: BiMap<CellIndex, PointIndex>,
     pub point_to_tetras_map: StableHashMap<PointIndex, Vec<TetraIndex>>,
     pub tetra_to_voronoi_point_map: StableHashMap<TetraIndex, Point<D>>,
@@ -35,11 +35,11 @@ pub struct TriangulationData<D: Dimension> {
 
 impl<D: Dimension> TriangulationData<D>
 where
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
 {
     pub fn new(points: impl Iterator<Item = (CellIndex, Point<D>)>) -> Self {
-        let (t, map) = DelaunayTriangulation::construct_from_iter(points);
+        let (t, map) = Triangulation::construct_from_iter(points);
         Self::from_triangulation_and_map(t, map)
     }
 
@@ -53,7 +53,7 @@ where
     }
 
     pub fn from_triangulation_and_map(
-        t: DelaunayTriangulation<D>,
+        t: Triangulation<D>,
         map: BiMap<CellIndex, PointIndex>,
     ) -> Self {
         let tetra_to_voronoi_point_map = t
@@ -89,11 +89,11 @@ where
 }
 
 fn point_to_tetra_map<D: Dimension>(
-    triangulation: &DelaunayTriangulation<D>,
+    triangulation: &Triangulation<D>,
 ) -> StableHashMap<PointIndex, Vec<TetraIndex>>
 where
     D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
 {
     let mut map: StableHashMap<_, _> = triangulation
         .points
@@ -113,14 +113,14 @@ pub fn construct_grid_from_iter<D>(
 ) -> Vec<(Entity, grid::Cell)>
 where
     D: Dimension<Point = MVec>,
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
     Cell<D>: DimensionCell<Dimension = D>,
     <Cell<D> as DimensionCell>::Dimension: Dimension<Point = MVec>,
     VoronoiGrid<D>: for<'a> From<&'a TriangulationData<D>>,
     <D as Dimension>::TetraData: Visualizable,
     <D as Dimension>::Point: Visualizable,
 {
-    let (triangulation, map) = DelaunayTriangulation::<D>::construct_from_iter(
+    let (triangulation, map) = Triangulation::<D>::construct_from_iter(
         iter.map(|(entity, id, point)| ((id, entity), point)),
     );
     let id_to_point_index = map.iter().map(|((i, _), point)| (*i, *point)).collect();

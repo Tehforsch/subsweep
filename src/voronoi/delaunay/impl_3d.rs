@@ -6,12 +6,12 @@ use super::dimension::DimensionTetraData;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
 use super::Delaunay;
-use super::DelaunayTriangulation;
 use super::FaceIndex;
 use super::FlipCheckData;
 use super::PointIndex;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
+use super::Triangulation;
 use crate::voronoi::delaunay::dimension::DimensionFace;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::polygon3d::Polygon3d;
@@ -37,7 +37,7 @@ impl Dimension for ThreeD {
     type VoronoiFaceData = Polygon3d;
 }
 
-impl DelaunayTriangulation<ThreeD> {
+impl Triangulation<ThreeD> {
     fn insert_split_tetra(
         &mut self,
         p_a: PointIndex,
@@ -209,7 +209,7 @@ impl DelaunayTriangulation<ThreeD> {
     }
 }
 
-impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
+impl Delaunay<ThreeD> for Triangulation<ThreeD> {
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
         let tetra_data = TetraData {
             p1: self.points[tetra.p1],
@@ -409,7 +409,7 @@ impl Delaunay<ThreeD> for DelaunayTriangulation<ThreeD> {
     }
 }
 
-impl DelaunayTriangulation<ThreeD> {
+impl Triangulation<ThreeD> {
     fn insert_tetra_and_faces(
         &mut self,
         pa: PointIndex,
@@ -480,11 +480,11 @@ mod tests {
     use crate::voronoi::delaunay::TetraList;
     use crate::voronoi::primitives::triangle::Triangle;
     use crate::voronoi::primitives::Point3d;
-    use crate::voronoi::DelaunayTriangulation;
     use crate::voronoi::ThreeD;
+    use crate::voronoi::Triangulation;
 
     fn insert_tetra_with_neighbours(
-        t: &mut DelaunayTriangulation<ThreeD>,
+        t: &mut Triangulation<ThreeD>,
         neighbours: &[(TetraIndex, PointIndex)],
         p1: PointIndex,
         p2: PointIndex,
@@ -564,7 +564,7 @@ mod tests {
         ];
         let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
 
-        let mut triangulation = DelaunayTriangulation::<ThreeD> {
+        let mut triangulation = Triangulation::<ThreeD> {
             tetras: TetraList::<ThreeD>::default(),
             faces: FaceList::<ThreeD>::default(),
             points: point_list,
@@ -679,7 +679,7 @@ mod tests {
         ];
         let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
 
-        let mut triangulation = DelaunayTriangulation::<ThreeD> {
+        let mut triangulation = Triangulation::<ThreeD> {
             tetras: TetraList::<ThreeD>::default(),
             faces: FaceList::<ThreeD>::default(),
             points: point_list,
@@ -739,7 +739,7 @@ mod tests {
         sanity_checks(&triangulation);
     }
 
-    fn sanity_checks(t: &DelaunayTriangulation<ThreeD>) {
+    fn sanity_checks(t: &Triangulation<ThreeD>) {
         check_opposing_faces_are_symmetric(t);
         check_opposing_point_is_in_other_tetra(t);
     }

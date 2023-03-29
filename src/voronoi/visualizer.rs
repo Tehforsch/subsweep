@@ -9,7 +9,7 @@ use super::primitives::triangle::TriangleData;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::Cell;
-use super::DelaunayTriangulation;
+use super::Triangulation;
 use super::TwoD;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
@@ -137,10 +137,10 @@ impl Visualizable for super::primitives::tetrahedron::TetrahedronData {
     }
 }
 
-impl<D> Visualizable for DelaunayTriangulation<D>
+impl<D> Visualizable for Triangulation<D>
 where
     D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
     <D as Dimension>::TetraData: Visualizable,
 {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
@@ -159,10 +159,10 @@ where
     }
 }
 
-impl<D> Visualizable for (&DelaunayTriangulation<D>, TetraIndex)
+impl<D> Visualizable for (&Triangulation<D>, TetraIndex)
 where
     D: Dimension,
-    DelaunayTriangulation<D>: Delaunay<D>,
+    Triangulation<D>: Delaunay<D>,
     <D as Dimension>::TetraData: Visualizable,
 {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
