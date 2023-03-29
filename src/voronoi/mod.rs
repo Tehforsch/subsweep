@@ -28,10 +28,15 @@ use crate::prelude::ParticleId;
 
 pub type CellIndex = ParticleId;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TwoD;
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ThreeD;
+
+#[cfg(feature = "2d")]
+pub type ActiveDimension = TwoD;
+#[cfg(feature = "3d")]
+pub type ActiveDimension = ThreeD;
 
 type Point<D> = <D as Dimension>::Point;
 

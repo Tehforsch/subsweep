@@ -11,8 +11,7 @@ use crate::voronoi::Point2d;
 
 pub trait TestDimension: Dimension {
     fn num() -> usize;
-    fn get_example_point_set() -> Vec<Self::Point>;
-    fn get_example_point_set_2() -> Vec<Self::Point>;
+    fn get_example_point_set(shift: usize) -> Vec<Self::Point>;
     fn number_of_tetras(num_inserted_points: usize) -> Option<usize>;
     fn number_of_faces(num_inserted_points: usize) -> Option<usize>;
     fn number_of_points(num_inserted_points: usize) -> Option<usize>;
@@ -28,8 +27,8 @@ pub trait TestDimension: Dimension {
         Vec<(ParticleId, Self::Point)>,
     ) {
         let (p1, p2) = (
-            Self::get_example_point_set(),
-            Self::get_example_point_set_2(),
+            Self::get_example_point_set(0),
+            Self::get_example_point_set(1),
         );
         let len_p1 = p1.len();
         (
@@ -62,22 +61,12 @@ impl TestDimension for TwoD {
         2
     }
 
-    fn get_example_point_set() -> Vec<Self::Point> {
-        let mut rng = StdRng::seed_from_u64(1338);
+    fn get_example_point_set(shift: usize) -> Vec<Self::Point> {
+        let mut rng = StdRng::seed_from_u64(1338 + shift as u64);
         (0..100)
             .map(|_| {
-                let x = rng.gen_range(0.1..0.4);
-                let y = rng.gen_range(0.1..0.4);
-                Point2d::new(x, y)
-            })
-            .collect()
-    }
-
-    fn get_example_point_set_2() -> Vec<Self::Point> {
-        let mut rng = StdRng::seed_from_u64(1339);
-        (0..100)
-            .map(|_| {
-                let x = rng.gen_range(0.4..0.7);
+                let offset = 0.3 * shift as f64;
+                let x = rng.gen_range(0.1 + offset..0.4 + offset);
                 let y = rng.gen_range(0.1..0.4);
                 Point2d::new(x, y)
             })
@@ -111,23 +100,12 @@ impl TestDimension for ThreeD {
         Some(4 + num_inserted_points)
     }
 
-    fn get_example_point_set() -> Vec<Point3d> {
-        let mut rng = StdRng::seed_from_u64(1338);
+    fn get_example_point_set(shift: usize) -> Vec<Point3d> {
+        let mut rng = StdRng::seed_from_u64(1338 + shift as u64);
         (0..100)
             .map(|_| {
-                let x = rng.gen_range(0.1..0.4);
-                let y = rng.gen_range(0.1..0.4);
-                let z = rng.gen_range(0.1..0.4);
-                Point3d::new(x, y, z)
-            })
-            .collect()
-    }
-
-    fn get_example_point_set_2() -> Vec<Point3d> {
-        let mut rng = StdRng::seed_from_u64(1339);
-        (0..100)
-            .map(|_| {
-                let x = rng.gen_range(0.4..0.7);
+                let offset = 0.3 * shift as f64;
+                let x = rng.gen_range(0.1 + offset..0.4 + offset);
                 let y = rng.gen_range(0.1..0.4);
                 let z = rng.gen_range(0.1..0.4);
                 Point3d::new(x, y, z)

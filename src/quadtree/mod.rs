@@ -1,7 +1,7 @@
 pub mod config;
 mod index;
 mod node_index;
-mod radius_search;
+pub mod radius_search;
 mod visualization;
 
 use bevy::prelude::Resource;

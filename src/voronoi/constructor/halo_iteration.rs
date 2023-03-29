@@ -22,7 +22,7 @@ use crate::voronoi::Triangulation;
 /// problems due to floating point arithmetic.
 const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SearchData<D: Dimension> {
     pub point: Point<D>,
     pub radius: Float,
@@ -34,6 +34,15 @@ pub struct SearchResult<D: Dimension> {
     /// The index in the Vec of the corresponding RadiusSearchData
     /// that produced this result.
     pub tetra_index: TetraIndex,
+}
+
+impl<D: Dimension> SearchResult<D> {
+    pub fn from_search(data: &SearchData<D>, point: Point<D>) -> Self {
+        Self {
+            tetra_index: data.tetra_index,
+            point,
+        }
+    }
 }
 
 pub struct IndexedSearchResult<D: Dimension, I> {

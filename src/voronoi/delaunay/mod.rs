@@ -300,7 +300,7 @@ pub(super) mod tests {
         D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
-        let points = D::get_example_point_set();
+        let points = D::get_example_point_set(0);
         let extent = get_extent(points.iter().copied()).unwrap();
         let mut triangulation = Triangulation::all_encompassing(&extent);
         for (num_points_inserted, point) in points.iter().enumerate() {
