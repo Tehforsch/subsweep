@@ -62,6 +62,7 @@ pub fn periodic_windows_3<T>(values: &[T]) -> impl Iterator<Item = (&T, &T, &T)>
     PeriodicWindows3 { values, cursor: 0 }
 }
 
+#[derive(Clone)]
 pub struct Extent<P> {
     pub min: P,
     pub max: P,

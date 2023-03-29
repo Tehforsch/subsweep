@@ -7,6 +7,7 @@ use mpi::traits::Equivalence;
 use super::Point;
 use super::TetraIndex;
 use crate::voronoi::primitives::Float;
+use crate::voronoi::utils::Extent;
 use crate::voronoi::Dimension;
 
 #[derive(Equivalence, Clone, Copy)]
@@ -48,6 +49,7 @@ pub struct IndexedSearchResult<D: Dimension, I> {
 
 pub trait RadiusSearch<D: Dimension> {
     fn unique_radius_search(&mut self, data: Vec<SearchData<D>>) -> Vec<SearchResult<D>>;
+    fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
 }
 
 pub trait IndexedRadiusSearch<D: Dimension> {
@@ -56,6 +58,7 @@ pub trait IndexedRadiusSearch<D: Dimension> {
         &mut self,
         data: Vec<SearchData<D>>,
     ) -> Vec<IndexedSearchResult<D, Self::Index>>;
+    fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
 }
 
 pub struct HaloExporter<F, I> {
@@ -91,6 +94,10 @@ impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F
             )
             .collect()
     }
+
+    fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
+        <F as IndexedRadiusSearch<D>>::determine_global_extent(&self.radius_search)
+    }
 }
 
 #[cfg(test)]
@@ -108,6 +115,7 @@ mod tests {
     use crate::voronoi::primitives::point::DVector;
     use crate::voronoi::test_utils::TestDimension;
     use crate::voronoi::utils::get_extent;
+    use crate::voronoi::utils::Extent;
     use crate::voronoi::Cell;
     use crate::voronoi::Dimension;
     use crate::voronoi::DimensionCell;
@@ -124,7 +132,7 @@ mod tests {
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
 
-    pub struct LocalRadiusSearch<D: Dimension>(Vec<(ParticleId, Point<D>)>);
+    pub struct LocalRadiusSearch<D: Dimension>(Vec<(ParticleId, Point<D>)>, Extent<Point<D>>);
 
     impl<D: Dimension> IndexedRadiusSearch<D> for LocalRadiusSearch<D> {
         type Index = ParticleId;
@@ -147,6 +155,10 @@ mod tests {
                         })
                 })
                 .collect()
+        }
+
+        fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
+            Some(self.1.clone())
         }
     }
 
@@ -182,8 +194,7 @@ mod tests {
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();
         let (sub_triangulation, sub_map) = Constructor::construct_from_iter(
             points1.iter().cloned(),
-            HaloExporter::new(LocalRadiusSearch(points2)),
-            extent,
+            HaloExporter::new(LocalRadiusSearch(points2, extent)),
         );
         let cons1 = TriangulationData::from_triangulation_and_map(full_triangulation, full_map);
         let cons2 = TriangulationData::from_triangulation_and_map(sub_triangulation, sub_map);

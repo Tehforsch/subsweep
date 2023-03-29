@@ -9,6 +9,7 @@ use self::halo_iteration::RadiusSearch;
 pub(super) use self::halo_iteration::SearchData;
 use self::halo_iteration::SearchResult;
 use super::delaunay::TetraIndex;
+use super::utils::get_extent;
 use super::Delaunay;
 use super::Point;
 use super::PointIndex;
@@ -26,13 +27,13 @@ use crate::voronoi::Dimension;
 /// problems due to floating point arithmetic.
 const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 
-pub struct Constructor<D: Dimension, F: RadiusSearch<D>> {
+pub struct Constructor<D: Dimension, F> {
     tri: Triangulation<D>,
     f: F,
     checked_tetras: StableHashSet<TetraIndex>,
 }
 
-impl<D, F> Constructor<D, F>
+impl<D, F: RadiusSearch<D>> Constructor<D, F>
 where
     D: Dimension,
     Triangulation<D>: Delaunay<D>,
@@ -41,9 +42,13 @@ where
     pub fn construct_from_iter<'b, T: Hash + Clone + Eq>(
         iter: impl Iterator<Item = (T, Point<D>)> + 'b,
         f: F,
-        extent: Extent<Point<D>>,
     ) -> (Triangulation<D>, BiMap<T, PointIndex>) {
-        let (tri, map) = Triangulation::<D>::construct_from_iter_custom_extent(iter, &extent);
+        let points: Vec<_> = iter.collect();
+        let extent = f
+            .determine_global_extent()
+            .unwrap_or(get_extent(points.iter().map(|p| p.1)).unwrap());
+        let (tri, map) =
+            Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
         let mut constructor = Constructor {
             tri: tri,
             f,
