@@ -4,10 +4,12 @@ use std::path::PathBuf;
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::prelude::*;
 
+use crate::domain::LeafData;
 use crate::prelude::Float;
 use crate::prelude::Simulation;
 use crate::units::Dimension;
 use crate::units::Quantity;
+use crate::units::VecLength;
 
 // This is currently only used in tests with the local communication
 // but will very likely be used more, so prevent dead code warning
@@ -53,4 +55,18 @@ pub fn assert_vec_is_close<const U: Dimension>(
         x.value_unchecked(),
         y.value_unchecked()
     )
+}
+
+pub fn get_particles(n: i32, m: i32) -> Vec<LeafData> {
+    (1..n + 1)
+        .flat_map(move |x| {
+            (1..m + 1).map(move |y| LeafData {
+                entity: Entity::from_raw((x * n + y) as u32),
+                #[cfg(feature = "2d")]
+                pos: VecLength::meters(x as f64, y as f64),
+                #[cfg(feature = "3d")]
+                pos: VecLength::meters(x as f64, y as f64, x as f64 * y as f64),
+            })
+        })
+        .collect()
 }

@@ -13,12 +13,6 @@ then
     exit 1
 fi
 
-if ! cargo test --no-default-features --features 3d --tests -- --ignored
-then
-    echo "There are some test issues."
-    exit 1
-fi
-
 if ! cargo test --no-default-features --features mpi,2d --tests -- --ignored
 then
     echo "There are some 2d test issues."
@@ -42,6 +36,13 @@ then
     echo "There are some doctest issues."
     exit 1
 fi
+
+if ! cargo test --no-default-features --features 3d --tests -- --ignored
+then
+    echo "There are some test issues."
+    exit 1
+fi
+
 
 if [[ ${result} -ne 0 ]] ; then
     cat <<\EOF

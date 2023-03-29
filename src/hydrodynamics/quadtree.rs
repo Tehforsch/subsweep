@@ -172,7 +172,7 @@ mod tests {
     use crate::domain::extent::Extent;
     use crate::parameters::SimulationBox;
     use crate::quadtree::QuadTreeConfig;
-    use crate::simulation_box::tests::get_particles;
+    use crate::test_utils::get_particles;
     use crate::units::Length;
     use crate::units::VecLength;
 
