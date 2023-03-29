@@ -57,6 +57,7 @@ required-features = ["mpi", "3d"]
 
 [[example]]
 name = "voronoi"
+required-features = ["mpi", "3d"]
 
 [[bench]]
 name = "quadtree"
