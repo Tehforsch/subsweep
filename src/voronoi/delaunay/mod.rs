@@ -15,10 +15,10 @@ use derive_more::From;
 use derive_more::Into;
 use generational_arena::Index;
 
-use self::dimension::Dimension;
 use self::dimension::DFace;
 use self::dimension::DTetra;
 use self::dimension::DTetraData;
+use self::dimension::Dimension;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
 use super::primitives::DVector;
@@ -285,14 +285,13 @@ where
 #[cfg(test)]
 #[generic_tests::define]
 pub(super) mod tests {
-    use super::dimension::Dimension;
     use super::dimension::DFace;
     use super::dimension::DTetra;
+    use super::dimension::Dimension;
     use super::Delaunay;
     use super::PointKind;
     use super::Triangulation;
-    use crate::voronoi::primitives::Point2d;
-    use crate::voronoi::primitives::Point3d;
+    use crate::voronoi::test_utils::TestableDimension;
     use crate::voronoi::utils::get_extent;
     use crate::voronoi::ThreeD;
     use crate::voronoi::TwoD;
@@ -302,79 +301,6 @@ pub(super) mod tests {
 
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
-
-    pub trait TestableDimension: Dimension {
-        fn num() -> usize;
-        fn get_example_point_set() -> Vec<Self::Point>;
-        fn number_of_tetras(num_inserted_points: usize) -> Option<usize>;
-        fn number_of_faces(num_inserted_points: usize) -> Option<usize>;
-        fn number_of_points(num_inserted_points: usize) -> Option<usize>;
-    }
-
-    impl TestableDimension for TwoD {
-        fn number_of_tetras(num_inserted_points: usize) -> Option<usize> {
-            Some(1 + 2 * num_inserted_points)
-        }
-
-        fn number_of_faces(num_inserted_points: usize) -> Option<usize> {
-            Some(3 + 3 * num_inserted_points)
-        }
-
-        fn number_of_points(num_inserted_points: usize) -> Option<usize> {
-            Some(3 + num_inserted_points)
-        }
-
-        fn num() -> usize {
-            2
-        }
-
-        fn get_example_point_set() -> Vec<Self::Point> {
-            use rand::Rng;
-            use rand::SeedableRng;
-            let mut rng = rand::rngs::StdRng::seed_from_u64(1338);
-            (0..100)
-                .map(|_| {
-                    let x = rng.gen_range(0.1..0.4);
-                    let y = rng.gen_range(0.1..0.4);
-                    Point2d::new(x, y)
-                })
-                .collect()
-        }
-    }
-
-    impl TestableDimension for ThreeD {
-        fn num() -> usize {
-            3
-        }
-
-        // In 3d we don't know how many tetras/faces there should be at any given level
-        // because of 2-to-3 flips and 3-to-2 flips
-        fn number_of_tetras(_: usize) -> Option<usize> {
-            None
-        }
-
-        fn number_of_faces(_: usize) -> Option<usize> {
-            None
-        }
-
-        fn number_of_points(num_inserted_points: usize) -> Option<usize> {
-            Some(4 + num_inserted_points)
-        }
-
-        fn get_example_point_set() -> Vec<Point3d> {
-            use rand::Rng;
-            use rand::SeedableRng;
-            let mut rng = rand::rngs::StdRng::seed_from_u64(1400);
-            (0..100)
-                .map(|_| {
-                    let x = rng.gen_range(0.1..0.4);
-                    let y = rng.gen_range(0.1..0.4);
-                    let z = rng.gen_range(0.1..0.4);
-                    Point3d::new(x, y, z)
-                })
-                .collect()
-        }
-    }
 
     pub fn perform_triangulation_check_on_each_level_of_construction<D>(
         check: impl Fn(&Triangulation<D>, usize) -> (),

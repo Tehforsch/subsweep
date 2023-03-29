@@ -2,9 +2,9 @@ use bevy::prelude::Entity;
 use bevy::utils::StableHashMap;
 use bimap::BiMap;
 
-use super::delaunay::dimension::Dimension;
 use super::delaunay::dimension::DTetra;
 use super::delaunay::dimension::DTetraData;
+use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
 use super::delaunay::PointIndex;
 use super::delaunay::PointKind;

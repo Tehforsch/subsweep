@@ -4,6 +4,7 @@ mod indexed_arena;
 pub mod math;
 mod precision_error;
 mod primitives;
+mod test_utils;
 pub mod triangulation_data;
 mod utils;
 mod visualizer;
@@ -12,8 +13,8 @@ use bevy::prelude::Resource;
 pub use cell::Cell;
 pub use cell::CellConnection;
 pub use cell::DimensionCell;
-pub use delaunay::dimension::Dimension;
 pub use delaunay::dimension::DTetra;
+pub use delaunay::dimension::Dimension;
 use delaunay::Delaunay;
 use delaunay::PointIndex;
 pub use delaunay::Triangulation;
@@ -55,11 +56,9 @@ mod tests {
 
     use super::delaunay::dimension::Dimension;
     use super::delaunay::tests::perform_triangulation_check_on_each_level_of_construction;
-    use super::delaunay::tests::TestableDimension;
     use super::delaunay::Delaunay;
     use super::delaunay::Triangulation;
-    use super::primitives::Point2d;
-    use super::primitives::Point3d;
+    use super::test_utils::TestableDimension;
     use super::Cell;
     use super::DimensionCell;
     use super::ThreeD;
@@ -74,29 +73,6 @@ mod tests {
 
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
-
-    trait VoronoiTestDimension: Dimension {
-        fn get_lookup_points() -> Vec<Self::Point>;
-    }
-
-    impl VoronoiTestDimension for TwoD {
-        fn get_lookup_points() -> Vec<Point2d> {
-            (0..30)
-                .flat_map(move |i| (0..30).map(move |j| (i, j)))
-                .map(|(i, j)| Point2d::new(0.01 * i as f64, 0.01 * j as f64))
-                .collect()
-        }
-    }
-
-    impl VoronoiTestDimension for ThreeD {
-        fn get_lookup_points() -> Vec<Point3d> {
-            (0..10)
-                .flat_map(move |i| (0..10).map(move |j| (i, j)))
-                .flat_map(move |(i, j)| (0..10).map(move |k| (i, j, k)))
-                .map(|(i, j, k)| Point3d::new(0.1 * i as f64, 0.1 * j as f64, 0.1 * k as f64))
-                .collect()
-        }
-    }
 
     pub fn perform_check_on_each_level_of_construction<D>(
         check: impl Fn(&TriangulationData<D>, usize) -> (),
@@ -120,7 +96,7 @@ mod tests {
     }
 
     #[test]
-    fn voronoi_property<D: VoronoiTestDimension + TestableDimension>()
+    fn voronoi_property<D: TestableDimension>()
     where
         Triangulation<D>: Delaunay<D>,
         Triangulation<D>: super::visualizer::Visualizable,
@@ -156,7 +132,7 @@ mod tests {
 
     fn get_containing_voronoi_cell<D>(grid: &VoronoiGrid<D>, point: D::Point) -> Option<&Cell<D>>
     where
-        D: VoronoiTestDimension,
+        D: TestableDimension,
         Cell<D>: DimensionCell<Dimension = D>,
     {
         grid.cells.iter().find(|cell| cell.contains(point))

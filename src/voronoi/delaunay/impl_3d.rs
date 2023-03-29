@@ -1,8 +1,8 @@
 use glam::DVec3;
 
-use super::dimension::Dimension;
 use super::dimension::DTetra;
 use super::dimension::DTetraData;
+use super::dimension::Dimension;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
 use super::Delaunay;

@@ -218,13 +218,12 @@ mod tests {
     use crate::voronoi::delaunay::halo_iteration::HaloExporter;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::DVector;
+    use crate::voronoi::test_utils::TestableDimension;
     use crate::voronoi::utils::get_extent;
     use crate::voronoi::Cell;
     use crate::voronoi::Dimension;
     use crate::voronoi::DimensionCell;
     use crate::voronoi::Point;
-    use crate::voronoi::Point2d;
-    use crate::voronoi::Point3d;
     use crate::voronoi::ThreeD;
     use crate::voronoi::Triangulation;
     use crate::voronoi::TriangulationData;
@@ -236,81 +235,6 @@ mod tests {
 
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
-
-    pub trait TestableDimension: Dimension {
-        fn get_example_point_sets() -> (Vec<Self::Point>, Vec<Self::Point>);
-
-        fn get_combined_point_set() -> Vec<(ParticleId, Self::Point)> {
-            let (p1, p2) = Self::get_example_point_sets_with_ids();
-            p1.into_iter().chain(p2.into_iter()).collect()
-        }
-
-        fn get_example_point_sets_with_ids() -> (
-            Vec<(ParticleId, Self::Point)>,
-            Vec<(ParticleId, Self::Point)>,
-        ) {
-            let (p1, p2) = Self::get_example_point_sets();
-            let len_p1 = p1.len();
-            (
-                p1.into_iter()
-                    .enumerate()
-                    .map(|(i, p)| (ParticleId(i as u64), p))
-                    .collect(),
-                p2.into_iter()
-                    .enumerate()
-                    .map(|(i, p)| (ParticleId(len_p1 as u64 + i as u64), p))
-                    .collect(),
-            )
-        }
-    }
-
-    impl TestableDimension for TwoD {
-        fn get_example_point_sets() -> (Vec<Self::Point>, Vec<Self::Point>) {
-            use rand::Rng;
-            use rand::SeedableRng;
-            let mut rng = rand::rngs::StdRng::seed_from_u64(1338);
-            let p1 = (0..100)
-                .map(|_| {
-                    let x = rng.gen_range(0.1..0.4);
-                    let y = rng.gen_range(0.1..0.4);
-                    Point2d::new(x, y)
-                })
-                .collect();
-            let p2 = (0..100)
-                .map(|_| {
-                    let x = rng.gen_range(0.4..0.7);
-                    let y = rng.gen_range(0.1..0.4);
-                    Point2d::new(x, y)
-                })
-                .collect();
-            (p1, p2)
-        }
-    }
-
-    impl TestableDimension for ThreeD {
-        fn get_example_point_sets() -> (Vec<Self::Point>, Vec<Self::Point>) {
-            use rand::Rng;
-            use rand::SeedableRng;
-            let mut rng = rand::rngs::StdRng::seed_from_u64(1338);
-            let p1 = (0..100)
-                .map(|_| {
-                    let x = rng.gen_range(0.1..0.4);
-                    let y = rng.gen_range(0.1..0.4);
-                    let z = rng.gen_range(0.1..0.4);
-                    Point3d::new(x, y, z)
-                })
-                .collect();
-            let p2 = (0..100)
-                .map(|_| {
-                    let x = rng.gen_range(0.4..0.7);
-                    let y = rng.gen_range(0.1..0.4);
-                    let z = rng.gen_range(0.1..0.4);
-                    Point3d::new(x, y, z)
-                })
-                .collect();
-            (p1, p2)
-        }
-    }
 
     pub struct LocalRadiusSearch<D: Dimension>(Vec<(ParticleId, Point<D>)>);
 
