@@ -1,5 +1,4 @@
 pub use crate::domain::DomainParameters;
-pub use crate::gravity::GravityParameters;
 pub use crate::hydrodynamics::HydrodynamicsParameters;
 pub use crate::hydrodynamics::InitialGasEnergy;
 pub use crate::io::input::InputParameters;

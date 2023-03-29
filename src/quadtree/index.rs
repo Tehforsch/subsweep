@@ -123,12 +123,11 @@ mod tests {
     use super::super::node_index::NodeIndex;
     use super::QuadTreeIndex;
     use crate::domain::extent::Extent;
-    use crate::gravity::LeafData;
+    use crate::domain::LeafData;
     use crate::quadtree::tests::get_min_depth_quadtree;
     use crate::quadtree::Node;
     use crate::quadtree::QuadTree;
     use crate::quadtree::QuadTreeConfig;
-    use crate::units::Mass;
 
     #[test]
     fn quadtree_index() {
@@ -144,7 +143,6 @@ mod tests {
         for pos in particles.into_iter() {
             let data = LeafData {
                 pos,
-                mass: Mass::zero(),
                 entity: Entity::from_raw(0),
             };
             tree.insert_new(&config, data, 0);

@@ -14,7 +14,6 @@ pub mod communication;
 pub mod components;
 pub(crate) mod config;
 pub(crate) mod domain;
-pub(crate) mod gravity;
 pub mod grid;
 pub mod hydrodynamics;
 pub mod ics;

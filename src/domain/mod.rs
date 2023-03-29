@@ -10,14 +10,14 @@ mod work;
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
-use self::quadtree::LeafData;
+pub use self::quadtree::LeafData;
+pub use self::quadtree::NodeData;
 pub use self::quadtree::QuadTree;
 use self::work::Work;
 use crate::communication::CommunicatedOption;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
 use crate::communication::DataByRank;
-use crate::communication::Rank;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
 use crate::components::Mass;
@@ -202,14 +202,6 @@ fn get_cutoffs(work_counts: &[Work], num_ranks: usize) -> Vec<usize> {
 
 #[derive(Default, Deref, DerefMut, Resource)]
 pub struct TopLevelIndices(DataByRank<Vec<QuadTreeIndex>>);
-
-impl TopLevelIndices {
-    pub fn flat_iter(&self) -> impl Iterator<Item = (Rank, &QuadTreeIndex)> {
-        self.0
-            .iter()
-            .flat_map(|(rank, indices)| indices.iter().map(|index| (*rank, index)))
-    }
-}
 
 fn get_top_level_indices(depth: usize) -> Vec<QuadTreeIndex> {
     QuadTreeIndex::iter_all_nodes_at_depth(depth).collect()

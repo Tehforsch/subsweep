@@ -25,8 +25,8 @@ pub use self::parameters::VisualizationParameters;
 use self::show_box_size::ShowBoxSizePlugin;
 use self::show_halo_particles::ShowHaloParticlesPlugin;
 pub use self::show_particles::ShowParticlesPlugin;
+use crate::domain;
 use crate::domain::determine_global_extent_system;
-use crate::gravity;
 use crate::named::Named;
 use crate::quadtree::QuadTreeVisualizationPlugin;
 use crate::simulation::RaxiomPlugin;
@@ -75,8 +75,8 @@ impl RaxiomPlugin for VisualizationPlugin {
             )
             .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system);
         sim.add_plugin(QuadTreeVisualizationPlugin::<
-            gravity::NodeData,
-            gravity::LeafData,
+            domain::NodeData,
+            domain::LeafData,
         >::default());
     }
 }

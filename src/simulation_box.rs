@@ -96,14 +96,30 @@ impl SimulationBox {
 
 #[cfg(test)]
 #[cfg(not(feature = "2d"))]
-mod tests {
+pub(crate) mod tests {
+    use bevy::prelude::Entity;
+
     use crate::domain::Extent;
-    use crate::gravity::tests::get_particles;
+    use crate::domain::LeafData;
     use crate::parameters::SimulationBox;
     use crate::test_utils::assert_is_close;
     use crate::test_utils::assert_vec_is_close;
     use crate::units::Length;
     use crate::units::VecLength;
+
+    pub(crate) fn get_particles(n: i32, m: i32) -> Vec<LeafData> {
+        (1..n + 1)
+            .flat_map(move |x| {
+                (1..m + 1).map(move |y| LeafData {
+                    entity: Entity::from_raw((x * n + y) as u32),
+                    #[cfg(feature = "2d")]
+                    pos: VecLength::meters(x as f64, y as f64),
+                    #[cfg(not(feature = "2d"))]
+                    pos: VecLength::meters(x as f64, y as f64, x as f64 * y as f64),
+                })
+            })
+            .collect()
+    }
 
     #[test]
     fn periodic_wrap() {

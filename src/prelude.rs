@@ -6,7 +6,6 @@ pub use crate::communication::WorldRank;
 pub use crate::communication::WorldSize;
 pub use crate::domain::Extent;
 pub use crate::domain::GlobalExtent;
-pub use crate::gravity::GravityPlugin;
 pub use crate::hydrodynamics::HaloParticles;
 pub use crate::hydrodynamics::HydroParticles;
 pub use crate::hydrodynamics::HydrodynamicsPlugin;

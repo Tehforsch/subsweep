@@ -170,9 +170,9 @@ mod tests {
     use super::LeafData;
     use super::QuadTree;
     use crate::domain::extent::Extent;
-    use crate::gravity::tests::get_particles;
     use crate::parameters::SimulationBox;
     use crate::quadtree::QuadTreeConfig;
+    use crate::simulation_box::tests::get_particles;
     use crate::units::Length;
     use crate::units::VecLength;
 
