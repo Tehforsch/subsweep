@@ -24,13 +24,13 @@ use crate::voronoi::Dimension;
 /// problems due to floating point arithmetic.
 const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 
-pub struct HaloIteration<D: Dimension, F: RadiusSearch<D>> {
+pub struct Constructor<D: Dimension, F: RadiusSearch<D>> {
     tri: Triangulation<D>,
     f: F,
     checked_tetras: StableHashSet<TetraIndex>,
 }
 
-impl<D, F> HaloIteration<D, F>
+impl<D, F> Constructor<D, F>
 where
     D: Dimension,
     Triangulation<D>: Delaunay<D>,
@@ -42,13 +42,13 @@ where
         extent: Extent<Point<D>>,
     ) -> (Triangulation<D>, BiMap<T, PointIndex>) {
         let (tri, map) = Triangulation::<D>::construct_from_iter_custom_extent(iter, &extent);
-        let mut iteration = HaloIteration {
+        let mut constructor = Constructor {
             tri: tri,
             f,
             checked_tetras: StableHashSet::default(),
         };
-        iteration.run();
-        (iteration.tri, map)
+        constructor.run();
+        (constructor.tri, map)
     }
 
     fn run(&mut self) {

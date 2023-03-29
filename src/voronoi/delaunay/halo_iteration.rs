@@ -102,7 +102,7 @@ mod tests {
     use super::SearchResult;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
-    use crate::voronoi::constructor::HaloIteration;
+    use crate::voronoi::constructor::Constructor;
     use crate::voronoi::delaunay::halo_iteration::HaloExporter;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::DVector;
@@ -180,7 +180,7 @@ mod tests {
         // Now construct the triangulation of the first set using imported
         // halo particles imported from the other set.
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();
-        let (sub_triangulation, sub_map) = HaloIteration::construct_from_iter(
+        let (sub_triangulation, sub_map) = Constructor::construct_from_iter(
             points1.iter().cloned(),
             HaloExporter::new(LocalRadiusSearch(points2)),
             extent,
