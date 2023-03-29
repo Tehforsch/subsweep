@@ -8,4 +8,4 @@ pub type Float = crate::prelude::Float;
 
 pub use point::Point2d;
 pub use point::Point3d;
-pub use point::Vector;
+pub use point::DVector;

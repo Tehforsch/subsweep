@@ -1,6 +1,6 @@
 use super::Point2d;
-use crate::voronoi::delaunay::dimension::DimensionFace;
-use crate::voronoi::delaunay::dimension::DimensionFaceData;
+use crate::voronoi::delaunay::dimension::DFace;
+use crate::voronoi::delaunay::dimension::DFaceData;
 use crate::voronoi::PointIndex;
 use crate::voronoi::TwoD;
 
@@ -10,7 +10,7 @@ pub struct Line {
     pub p2: PointIndex,
 }
 
-impl DimensionFace for Line {
+impl DFace for Line {
     type Dimension = TwoD;
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex>> {
         Box::new([self.p1, self.p2].into_iter())
@@ -39,7 +39,7 @@ pub struct LineData<P> {
     pub p2: P,
 }
 
-impl DimensionFaceData for LineData<Point2d> {
+impl DFaceData for LineData<Point2d> {
     type Dimension = TwoD;
 }
 

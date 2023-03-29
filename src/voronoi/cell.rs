@@ -7,7 +7,7 @@ use super::delaunay::PointIndex;
 use super::primitives::polygon3d::Polygon3d;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
-use super::primitives::Vector;
+use super::primitives::DVector;
 use super::triangulation_data::TriangulationData;
 use super::utils::arrange_cyclic_by;
 use super::utils::periodic_windows_2;
@@ -17,7 +17,7 @@ use super::ThreeD;
 use super::TwoD;
 use crate::prelude::Float;
 use crate::voronoi::delaunay::TetraIndex;
-use crate::voronoi::DimensionTetra;
+use crate::voronoi::DTetra;
 
 pub trait DimensionCell: Sized {
     type Dimension: Dimension;

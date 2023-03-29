@@ -13,7 +13,7 @@ pub use cell::Cell;
 pub use cell::CellConnection;
 pub use cell::DimensionCell;
 pub use delaunay::dimension::Dimension;
-pub use delaunay::dimension::DimensionTetra;
+pub use delaunay::dimension::DTetra;
 use delaunay::Delaunay;
 use delaunay::PointIndex;
 pub use delaunay::Triangulation;
@@ -67,7 +67,7 @@ mod tests {
     use super::TwoD;
     use super::VoronoiGrid;
     use crate::prelude::ParticleId;
-    use crate::voronoi::primitives::point::Vector;
+    use crate::voronoi::primitives::point::DVector;
 
     #[instantiate_tests(<TwoD>)]
     mod two_d {}

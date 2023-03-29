@@ -4,14 +4,14 @@ use std::collections::HashSet;
 
 use ordered_float::OrderedFloat;
 
-use super::dimension::DimensionTetraData;
+use super::dimension::DTetraData;
 use super::Delaunay;
 use super::Point;
 use super::Tetra;
 use super::TetraIndex;
 use super::Triangulation;
-use crate::voronoi::delaunay::dimension::DimensionTetra;
-use crate::voronoi::primitives::Vector;
+use crate::voronoi::delaunay::dimension::DTetra;
+use crate::voronoi::primitives::DVector;
 use crate::voronoi::Dimension;
 
 #[derive(PartialEq, Eq)]
@@ -56,7 +56,7 @@ fn find_breadth_first<D>(
 where
     D: Dimension,
     Triangulation<D>: Delaunay<D>,
-    Point<D>: Vector,
+    Point<D>: DVector,
 {
     let mut already_checked: HashSet<TetraIndex> = HashSet::default();
     let mut to_check: BinaryHeap<CheckData> = BinaryHeap::default();

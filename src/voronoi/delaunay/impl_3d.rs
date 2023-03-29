@@ -1,8 +1,8 @@
 use glam::DVec3;
 
 use super::dimension::Dimension;
-use super::dimension::DimensionTetra;
-use super::dimension::DimensionTetraData;
+use super::dimension::DTetra;
+use super::dimension::DTetraData;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
 use super::Delaunay;
@@ -12,7 +12,7 @@ use super::PointIndex;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
 use super::Triangulation;
-use crate::voronoi::delaunay::dimension::DimensionFace;
+use crate::voronoi::delaunay::dimension::DFace;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::polygon3d::Polygon3d;
 use crate::voronoi::primitives::tetrahedron::Tetrahedron;
@@ -467,8 +467,8 @@ mod tests {
     use bevy::utils::HashMap;
 
     use super::Tetra;
-    use crate::voronoi::delaunay::dimension::DimensionFace;
-    use crate::voronoi::delaunay::dimension::DimensionTetra;
+    use crate::voronoi::delaunay::dimension::DFace;
+    use crate::voronoi::delaunay::dimension::DTetra;
     use crate::voronoi::delaunay::face_info::ConnectionData;
     use crate::voronoi::delaunay::face_info::FaceInfo;
     use crate::voronoi::delaunay::tests::check_opposing_faces_are_symmetric;

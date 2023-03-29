@@ -3,8 +3,8 @@ use bevy::utils::StableHashMap;
 use bimap::BiMap;
 
 use super::delaunay::dimension::Dimension;
-use super::delaunay::dimension::DimensionTetra;
-use super::delaunay::dimension::DimensionTetraData;
+use super::delaunay::dimension::DTetra;
+use super::delaunay::dimension::DTetraData;
 use super::delaunay::Delaunay;
 use super::delaunay::PointIndex;
 use super::delaunay::PointKind;

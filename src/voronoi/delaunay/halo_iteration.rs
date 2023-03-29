@@ -11,9 +11,9 @@ use super::PointIndex;
 use super::PointKind;
 use super::TetraIndex;
 use super::Triangulation;
-use crate::voronoi::delaunay::dimension::DimensionTetra;
-use crate::voronoi::delaunay::dimension::DimensionTetraData;
-use crate::voronoi::primitives::point::Vector;
+use crate::voronoi::delaunay::dimension::DTetra;
+use crate::voronoi::delaunay::dimension::DTetraData;
+use crate::voronoi::primitives::point::DVector;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::Dimension;
@@ -217,7 +217,7 @@ mod tests {
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::delaunay::halo_iteration::HaloExporter;
     use crate::voronoi::delaunay::Delaunay;
-    use crate::voronoi::primitives::point::Vector;
+    use crate::voronoi::primitives::point::DVector;
     use crate::voronoi::utils::get_extent;
     use crate::voronoi::Cell;
     use crate::voronoi::Dimension;
@@ -356,7 +356,7 @@ mod tests {
     where
         D: Dimension + TestableDimension,
         Triangulation<D>: Delaunay<D>,
-        Point<D>: Vector,
+        Point<D>: DVector,
         Cell<D>: DimensionCell<Dimension = D>,
     {
         // Obtain two point sets - the second of them shifted by some offset away from the first

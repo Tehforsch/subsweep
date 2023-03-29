@@ -16,12 +16,12 @@ use derive_more::Into;
 use generational_arena::Index;
 
 use self::dimension::Dimension;
-use self::dimension::DimensionFace;
-use self::dimension::DimensionTetra;
-use self::dimension::DimensionTetraData;
+use self::dimension::DFace;
+use self::dimension::DTetra;
+use self::dimension::DTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
-use super::primitives::Vector;
+use super::primitives::DVector;
 use super::utils::get_extent;
 use super::utils::Extent;
 
@@ -286,8 +286,8 @@ where
 #[generic_tests::define]
 pub(super) mod tests {
     use super::dimension::Dimension;
-    use super::dimension::DimensionFace;
-    use super::dimension::DimensionTetra;
+    use super::dimension::DFace;
+    use super::dimension::DTetra;
     use super::Delaunay;
     use super::PointKind;
     use super::Triangulation;

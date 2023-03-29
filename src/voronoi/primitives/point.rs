@@ -7,7 +7,7 @@ use crate::peano_hilbert::PeanoHilbertKey;
 pub type Point2d = glam::DVec2;
 pub type Point3d = glam::DVec3;
 
-pub trait Vector: Sized + Sub<Self, Output = Self> + Mul<Float, Output = Self> {
+pub trait DVector: Sized + Sub<Self, Output = Self> + Mul<Float, Output = Self> {
     fn distance(&self, p: Self) -> Float;
     fn distance_squared(&self, p: Self) -> Float;
     fn normalize(&self) -> Self;
@@ -17,7 +17,7 @@ pub trait Vector: Sized + Sub<Self, Output = Self> + Mul<Float, Output = Self> {
     fn get_peano_hilbert_key(self, min: Self, max: Self) -> PeanoHilbertKey;
 }
 
-impl Vector for glam::DVec2 {
+impl DVector for glam::DVec2 {
     fn distance(&self, p: Self) -> Float {
         (*self - p).length()
     }
@@ -47,7 +47,7 @@ impl Vector for glam::DVec2 {
     }
 }
 
-impl Vector for glam::DVec3 {
+impl DVector for glam::DVec3 {
     fn distance(&self, p: Self) -> Float {
         (*self - p).length()
     }

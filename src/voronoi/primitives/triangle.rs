@@ -1,10 +1,10 @@
 use super::Float;
 use super::Point2d;
 use super::Point3d;
-use crate::voronoi::delaunay::dimension::DimensionFace;
-use crate::voronoi::delaunay::dimension::DimensionFaceData;
-use crate::voronoi::delaunay::dimension::DimensionTetra;
-use crate::voronoi::delaunay::dimension::DimensionTetraData;
+use crate::voronoi::delaunay::dimension::DFace;
+use crate::voronoi::delaunay::dimension::DFaceData;
+use crate::voronoi::delaunay::dimension::DTetra;
+use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::face_info::FaceInfo;
 use crate::voronoi::math::determinant3x3;
 use crate::voronoi::math::solve_system_of_equations;
@@ -37,7 +37,7 @@ pub struct Triangle {
     pub p3: PointIndex,
 }
 
-impl DimensionFace for Triangle {
+impl DFace for Triangle {
     type Dimension = ThreeD;
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex>> {
         Box::new([self.p1, self.p2, self.p3].into_iter())
@@ -72,7 +72,7 @@ pub struct TriangleWithFaces {
     pub f3: FaceInfo,
 }
 
-impl DimensionTetra for TriangleWithFaces {
+impl DTetra for TriangleWithFaces {
     type Dimension = TwoD;
 
     fn faces(&self) -> Box<dyn Iterator<Item = &FaceInfo> + '_> {
@@ -112,7 +112,7 @@ impl FromIterator<Point3d> for TriangleData<Point3d> {
     }
 }
 
-impl DimensionFaceData for TriangleData<Point3d> {
+impl DFaceData for TriangleData<Point3d> {
     type Dimension = ThreeD;
 }
 
@@ -142,7 +142,7 @@ impl TriangleData<Point2d> {
         (r, s)
     }
 }
-impl DimensionTetraData for TriangleData<Point2d> {
+impl DTetraData for TriangleData<Point2d> {
     type Dimension = TwoD;
     fn all_encompassing<'a>(extent: &Extent<Point2d>) -> Self {
         // An overshooting factor for numerical safety
@@ -333,7 +333,7 @@ mod tests {
     use super::EdgeIdentifier;
     use super::IntersectionType;
     use super::TriangleData;
-    use crate::voronoi::delaunay::dimension::DimensionTetraData;
+    use crate::voronoi::delaunay::dimension::DTetraData;
     use crate::voronoi::precision_error::PrecisionError;
     use crate::voronoi::primitives::Point2d;
     use crate::voronoi::primitives::Point3d;

@@ -2,8 +2,8 @@ use super::super::delaunay::face_info::FaceInfo;
 use super::triangle::TriangleData;
 use super::Float;
 use super::Point3d;
-use crate::voronoi::delaunay::dimension::DimensionTetra;
-use crate::voronoi::delaunay::dimension::DimensionTetraData;
+use crate::voronoi::delaunay::dimension::DTetra;
+use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::math::determinant4x4;
 use crate::voronoi::math::determinant5x5;
 use crate::voronoi::precision_error::is_negative;
@@ -33,7 +33,7 @@ pub struct TetrahedronData {
     pub p4: Point3d,
 }
 
-impl DimensionTetra for Tetrahedron {
+impl DTetra for Tetrahedron {
     type Dimension = ThreeD;
 
     fn faces(&self) -> Box<dyn Iterator<Item = &FaceInfo> + '_> {
@@ -67,7 +67,7 @@ impl FromIterator<Point3d> for TetrahedronData {
     }
 }
 
-impl DimensionTetraData for TetrahedronData {
+impl DTetraData for TetrahedronData {
     type Dimension = ThreeD;
 
     fn all_encompassing<'a>(extent: &Extent<Point3d>) -> Self {
@@ -204,7 +204,7 @@ mod tests {
     use super::super::Point3d;
     use super::TetrahedronData;
     use crate::test_utils::assert_float_is_close;
-    use crate::voronoi::delaunay::dimension::DimensionTetraData;
+    use crate::voronoi::delaunay::dimension::DTetraData;
 
     #[test]
     fn center_of_circumsphere() {

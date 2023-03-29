@@ -3,20 +3,20 @@ use super::FaceIndex;
 use super::PointIndex;
 use crate::prelude::Float;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::primitives::Vector;
+use crate::voronoi::primitives::DVector;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::visualizer::Visualizable;
 
 pub trait Dimension {
-    type Point: Clone + Copy + Vector + Visualizable + std::fmt::Debug;
-    type Face: Clone + DimensionFace<Dimension = Self>;
-    type FaceData: Clone + DimensionFaceData<Dimension = Self>;
-    type Tetra: Clone + DimensionTetra<Dimension = Self>;
-    type TetraData: DimensionTetraData<Dimension = Self> + Clone + Visualizable;
+    type Point: Clone + Copy + DVector + Visualizable + std::fmt::Debug;
+    type Face: Clone + DFace<Dimension = Self>;
+    type FaceData: Clone + DFaceData<Dimension = Self>;
+    type Tetra: Clone + DTetra<Dimension = Self>;
+    type TetraData: DTetraData<Dimension = Self> + Clone + Visualizable;
     type VoronoiFaceData;
 }
 
-pub trait DimensionTetra: core::fmt::Debug {
+pub trait DTetra: core::fmt::Debug {
     type Dimension: Dimension;
 
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_>;
@@ -63,7 +63,7 @@ pub trait DimensionTetra: core::fmt::Debug {
     }
 }
 
-pub trait DimensionTetraData:
+pub trait DTetraData:
     core::fmt::Debug + FromIterator<<Self::Dimension as Dimension>::Point>
 {
     type Dimension: Dimension;
@@ -79,7 +79,7 @@ pub trait DimensionTetraData:
     fn get_center_of_circumcircle(&self) -> <Self::Dimension as Dimension>::Point;
 }
 
-pub trait DimensionFace {
+pub trait DFace {
     type Dimension: Dimension;
 
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex>>;
@@ -89,6 +89,6 @@ pub trait DimensionFace {
     }
 }
 
-pub trait DimensionFaceData: FromIterator<<Self::Dimension as Dimension>::Point> {
+pub trait DFaceData: FromIterator<<Self::Dimension as Dimension>::Point> {
     type Dimension: Dimension;
 }

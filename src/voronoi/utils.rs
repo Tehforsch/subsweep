@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::primitives::Vector;
+use super::primitives::DVector;
 
 pub struct PeriodicWindows2<'a, T> {
     values: &'a [T],
@@ -85,7 +85,7 @@ pub fn get_extent_from_min_and_max_reduce<P: Clone>(
     })
 }
 
-pub fn get_extent<P: Vector>(points: impl Iterator<Item = P>) -> Option<Extent<P>>
+pub fn get_extent<P: DVector>(points: impl Iterator<Item = P>) -> Option<Extent<P>>
 where
     P: Clone,
 {

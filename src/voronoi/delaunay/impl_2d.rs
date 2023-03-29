@@ -1,5 +1,5 @@
 use super::dimension::Dimension;
-use super::dimension::DimensionTetra;
+use super::dimension::DTetra;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
 use super::Delaunay;
@@ -9,8 +9,8 @@ use super::PointKind;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
 use super::Triangulation;
-use crate::voronoi::delaunay::dimension::DimensionFace;
-use crate::voronoi::delaunay::dimension::DimensionTetraData;
+use crate::voronoi::delaunay::dimension::DFace;
+use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::FlipCheckData;
 use crate::voronoi::primitives::line::Line;
 use crate::voronoi::primitives::line::LineData;
