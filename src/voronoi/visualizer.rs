@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use super::constructor::SearchData;
 use super::delaunay::dimension::Dimension;
-use super::delaunay::halo_iteration::SearchData;
 use super::delaunay::Delaunay;
 use super::delaunay::PointKind;
 use super::delaunay::TetraIndex;

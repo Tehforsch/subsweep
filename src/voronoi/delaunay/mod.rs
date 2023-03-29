@@ -1,7 +1,5 @@
 pub(crate) mod dimension;
 pub(crate) mod face_info;
-
-pub(super) mod halo_iteration;
 mod impl_2d;
 mod impl_3d;
 mod point_location;
@@ -26,11 +24,11 @@ use super::utils::get_extent;
 use super::utils::Extent;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct TetraIndex(Index);
+pub struct TetraIndex(pub Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
-pub struct FaceIndex(Index);
+pub struct FaceIndex(pub Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
-pub struct PointIndex(Index);
+pub struct PointIndex(pub Index);
 
 type Point<D> = <D as Dimension>::Point;
 type Face<D> = <D as Dimension>::Face;

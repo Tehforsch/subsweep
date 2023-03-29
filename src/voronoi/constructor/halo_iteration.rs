@@ -96,6 +96,7 @@ impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F
 #[cfg(test)]
 #[generic_tests::define]
 mod tests {
+    use super::HaloExporter;
     use super::IndexedRadiusSearch;
     use super::IndexedSearchResult;
     use super::SearchData;
@@ -103,7 +104,6 @@ mod tests {
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::constructor::Constructor;
-    use crate::voronoi::delaunay::halo_iteration::HaloExporter;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::DVector;
     use crate::voronoi::test_utils::TestDimension;

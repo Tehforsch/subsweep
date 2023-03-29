@@ -1,10 +1,13 @@
+mod halo_iteration;
+
 use std::hash::Hash;
 
 use bevy::utils::StableHashSet;
 use bimap::BiMap;
 
-use super::delaunay::halo_iteration::RadiusSearch;
-use super::delaunay::halo_iteration::SearchData;
+use self::halo_iteration::RadiusSearch;
+pub(super) use self::halo_iteration::SearchData;
+use self::halo_iteration::SearchResult;
 use super::delaunay::TetraIndex;
 use super::Delaunay;
 use super::Point;
@@ -12,7 +15,6 @@ use super::PointIndex;
 use super::Triangulation;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
-use crate::voronoi::delaunay::halo_iteration::SearchResult;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::point::DVector;
 use crate::voronoi::utils::Extent;
