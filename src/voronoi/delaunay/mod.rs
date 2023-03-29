@@ -383,7 +383,7 @@ pub(super) mod tests {
         DelaunayTriangulation<D>: Delaunay<D>,
     {
         let points = D::get_example_point_set();
-        let extent = get_extent(points.iter().map(|p| *p)).unwrap();
+        let extent = get_extent(points.iter().copied()).unwrap();
         let mut triangulation = DelaunayTriangulation::all_encompassing(&extent);
         for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);

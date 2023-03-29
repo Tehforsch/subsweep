@@ -366,10 +366,7 @@ impl Simulation {
     where
         T: RaxiomParameters,
     {
-        if !self
-            .parameter_sections
-            .contains(T::unwrap_section_name().into())
-        {
+        if !self.parameter_sections.contains(T::unwrap_section_name()) {
             self.add_parameter_type::<T>();
         }
         self
@@ -387,10 +384,7 @@ impl Simulation {
     where
         T: RaxiomParameters,
     {
-        if !self
-            .parameter_sections
-            .contains(T::unwrap_section_name().into())
-        {
+        if !self.parameter_sections.contains(T::unwrap_section_name()) {
             self.add_parameter_type::<T>();
         }
         self.unwrap_resource::<T>()

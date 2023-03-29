@@ -511,7 +511,7 @@ mod tests {
             if let Some((face, connection_data)) = corresponding_neighbour {
                 FaceInfo {
                     face: face,
-                    opposing: Some(connection_data.clone()),
+                    opposing: Some(connection_data),
                 }
             } else {
                 FaceInfo {
