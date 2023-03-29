@@ -1,4 +1,6 @@
 mod mpi_types;
+#[cfg(all(test, not(feature = "mpi")))]
+mod tests;
 
 use self::mpi_types::IntoEquivalenceType;
 use super::halo_iteration::RadiusSearch;
@@ -19,7 +21,7 @@ where
     SearchData<D>: IntoEquivalenceType,
 {
     data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
-    result_comm: &'a mut ExchangeCommunicator<SearchResult<D>>,
+    // result_comm: &'a mut ExchangeCommunicator<SearchResult<D>>,
     global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
     indices: &'a TopLevelIndices,
@@ -79,7 +81,8 @@ where
     MpiSearchData<D>: Clone,
 {
     fn unique_radius_search(&mut self, data: Vec<SearchData<D>>) -> Vec<SearchResult<D>> {
-        let outgoing_requests_by_rank = self.get_requests_by_rank(data);
+        let outgoing = self.get_requests_by_rank(data);
+        let incoming = self.exchange_all(outgoing);
         todo!()
     }
 

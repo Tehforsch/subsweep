@@ -5,6 +5,8 @@ use super::SearchData;
 use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::Point2d;
+use crate::voronoi::Point3d;
+use crate::voronoi::ThreeD;
 use crate::voronoi::TwoD;
 
 pub trait IntoEquivalenceType {
@@ -33,7 +35,7 @@ impl From<TetraIndexSend> for TetraIndex {
     }
 }
 
-#[derive(Equivalence)]
+#[derive(Equivalence, Clone)]
 pub struct SearchDataTwoDSend {
     point_x: Float,
     point_y: Float,
@@ -56,6 +58,37 @@ impl IntoEquivalenceType for SearchData<TwoD> {
     fn from_equivalent(equiv: &Self::Equiv) -> Self {
         SearchData::<TwoD> {
             point: Point2d::new(equiv.point_x, equiv.point_y),
+            radius: equiv.radius,
+            tetra_index: equiv.tetra_index.into(),
+        }
+    }
+}
+
+#[derive(Equivalence, Clone)]
+pub struct SearchDataThreeDSend {
+    point_x: Float,
+    point_y: Float,
+    point_z: Float,
+    radius: Float,
+    tetra_index: TetraIndexSend,
+}
+
+impl IntoEquivalenceType for SearchData<ThreeD> {
+    type Equiv = SearchDataThreeDSend;
+
+    fn to_equivalent(&self) -> Self::Equiv {
+        SearchDataThreeDSend {
+            point_x: self.point.x,
+            point_y: self.point.y,
+            point_z: self.point.z,
+            radius: self.radius,
+            tetra_index: self.tetra_index.into(),
+        }
+    }
+
+    fn from_equivalent(equiv: &Self::Equiv) -> Self {
+        SearchData::<ThreeD> {
+            point: Point3d::new(equiv.point_x, equiv.point_y, equiv.point_z),
             radius: equiv.radius,
             tetra_index: equiv.tetra_index.into(),
         }

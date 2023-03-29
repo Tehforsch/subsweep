@@ -66,6 +66,7 @@ fn default_domain_tree_params() -> QuadTreeConfig {
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStartupStages {
+    DetermineGlobalExtents,
     TopLevelTreeConstruction,
     Decomposition,
     Exchange,
@@ -95,11 +96,11 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
             DomainStage::None => {}
             DomainStage::Startup => {
                 sim.add_startup_system_to_stage(
-                    SimulationStartupStages::InsertComponents,
+                    SimulationStartupStages::InsertDerivedComponents,
                     determine_particle_ids_system,
                 )
                 .add_startup_system_to_stage(
-                    StartupStage::PostStartup,
+                    DomainDecompositionStartupStages::DetermineGlobalExtents,
                     determine_global_extent_system,
                 )
                 .add_startup_system_to_stage(
