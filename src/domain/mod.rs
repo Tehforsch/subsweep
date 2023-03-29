@@ -32,18 +32,26 @@ use crate::quadtree::QuadTreeIndex;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
+#[raxiom_parameters]
+#[derive(Copy)]
+pub enum DomainStage {
+    Startup,
+    Update,
+}
+
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
 #[raxiom_parameters("domain")]
-#[derive(Deref, DerefMut)]
 pub struct DomainParameters {
     #[serde(default)]
     tree: QuadTreeConfig,
+    stage: DomainStage,
 }
 
 impl Default for DomainParameters {
     fn default() -> Self {
         Self {
             tree: default_domain_tree_params(),
+            stage: DomainStage::Startup,
         }
     }
 }
@@ -53,6 +61,13 @@ fn default_domain_tree_params() -> QuadTreeConfig {
         min_depth: 4,
         ..Default::default()
     }
+}
+
+#[derive(StageLabel)]
+pub enum DomainDecompositionStartupStages {
+    TopLevelTreeConstruction,
+    Decomposition,
+    Exchange,
 }
 
 #[derive(StageLabel)]
@@ -69,7 +84,7 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(GlobalExtent(Extent::default()))
             .insert_resource(TopLevelIndices::default())
-            .add_parameter_type::<DomainParameters>()
+            .try_add_parameter_type::<DomainParameters>()
             .insert_resource(QuadTree::make_empty_leaf_from_extent(Extent::default()))
             .add_startup_system_to_stage(
                 SimulationStartupStages::InsertComponents,
@@ -77,18 +92,35 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
             )
             .add_startup_system_to_stage(StartupStage::PostStartup, determine_global_extent_system)
             .add_startup_system_to_stage(
-                DomainDecompositionStages::TopLevelTreeConstruction,
+                DomainDecompositionStartupStages::TopLevelTreeConstruction,
                 construct_quad_tree_system,
             )
             .add_startup_system_to_stage(
-                DomainDecompositionStages::TopLevelTreeConstruction,
+                DomainDecompositionStartupStages::TopLevelTreeConstruction,
                 communicate_work_system.after(construct_quad_tree_system),
             )
             .add_startup_system_to_stage(
-                DomainDecompositionStages::Decomposition,
+                DomainDecompositionStartupStages::Decomposition,
                 distribute_top_level_nodes_system,
             )
             .add_startup_system_to_stage(
+                DomainDecompositionStartupStages::Decomposition,
+                domain_decomposition_system.after(distribute_top_level_nodes_system),
+            )
+            .add_system_to_stage(CoreStage::PostUpdate, determine_global_extent_system)
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                construct_quad_tree_system,
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::TopLevelTreeConstruction,
+                communicate_work_system.after(construct_quad_tree_system),
+            )
+            .add_system_to_stage(
+                DomainDecompositionStages::Decomposition,
+                distribute_top_level_nodes_system,
+            )
+            .add_system_to_stage(
                 DomainDecompositionStages::Decomposition,
                 domain_decomposition_system.after(distribute_top_level_nodes_system),
             )
@@ -148,7 +180,7 @@ pub fn construct_quad_tree_system(
         .iter()
         .map(|(entity, pos)| LeafData { entity, pos: pos.0 })
         .collect();
-    *quadtree = QuadTree::new(&config, particles, &extent);
+    *quadtree = QuadTree::new(&config.tree, particles, &extent);
 }
 
 fn sum_vecs(mut data: DataByRank<Vec<Work>>) -> Vec<Work> {
@@ -215,7 +247,7 @@ pub fn communicate_work_system(
     // Use the work at depth config.min_depth for
     // decomposition for now. This obviously needs to be fixed and
     // replaced by a proper peano hilbert curve on an actual tree
-    let top_level_tree_leaf_indices = get_top_level_indices(config.min_depth);
+    let top_level_tree_leaf_indices = get_top_level_indices(config.tree.min_depth);
     let work: Vec<_> = top_level_tree_leaf_indices
         .iter()
         .map(|index| tree[index].data.work)
@@ -233,7 +265,7 @@ fn distribute_top_level_nodes_system(
     num_ranks: Res<WorldSize>,
     mut indices: ResMut<TopLevelIndices>,
 ) {
-    let top_level_tree_leaf_indices = get_top_level_indices(config.min_depth);
+    let top_level_tree_leaf_indices = get_top_level_indices(config.tree.min_depth);
     let work_per_leaf: Vec<Work> = top_level_tree_leaf_indices
         .iter()
         .map(|index| tree[index].data.work)

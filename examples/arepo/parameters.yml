@@ -27,6 +27,7 @@ input:
   paths:
     - data/ics_16.hdf5
 domain:
+  stage: startup
   tree:
     min_depth: 4
     max_depth: 10

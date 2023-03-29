@@ -4,6 +4,7 @@ use bevy::prelude::Res;
 use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::grid::init_cartesian_grid_system;
 use crate::grid::NumCellsSpec;
+use crate::parameters::DomainParameters;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
 use crate::parameters::SweepParameters;
@@ -27,6 +28,7 @@ fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation, num_cells:
     let cell_size = Length::meters(0.1);
     let simulation_box = SimulationBox::cube_from_side_length(cell_size * num_cells as f64);
     sim.add_parameter_file_contents("".into())
+        .add_parameters_explicitly(DomainParameters::default())
         .add_plugin(SimulationStagesPlugin)
         .add_parameters_explicitly(simulation_box)
         .add_parameters_explicitly(SweepParameters {

@@ -2,6 +2,7 @@ use bevy::ecs::schedule::StageLabelId;
 use bevy::prelude::*;
 
 use crate::domain::DomainDecompositionStages;
+use crate::domain::DomainDecompositionStartupStages;
 use crate::hydrodynamics::HydrodynamicsStages;
 use crate::io::output::OutputStages;
 use crate::named::Named;
@@ -18,6 +19,9 @@ impl RaxiomPlugin for SimulationStagesPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),
+            DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
+            DomainDecompositionStages::Decomposition.as_label(),
+            DomainDecompositionStages::Exchange.as_label(),
             SimulationStages::SetTimestep.as_label(),
             HydrodynamicsStages::BeforeForceCalculation.as_label(),
             SimulationStages::ForceCalculation.as_label(),
@@ -41,9 +45,9 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             StartupStage::PostStartup.as_label(),
             SimulationStartupStages::InsertComponents.as_label(),
             SimulationStartupStages::InsertDerivedComponents.as_label(),
-            DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
-            DomainDecompositionStages::Decomposition.as_label(),
-            DomainDecompositionStages::Exchange.as_label(),
+            DomainDecompositionStartupStages::TopLevelTreeConstruction.as_label(),
+            DomainDecompositionStartupStages::Decomposition.as_label(),
+            DomainDecompositionStartupStages::Exchange.as_label(),
             SimulationStartupStages::InsertGrid.as_label(),
         ];
         for window in startup_stages.windows(2) {

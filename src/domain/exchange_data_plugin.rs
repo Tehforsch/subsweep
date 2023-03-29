@@ -14,6 +14,8 @@ use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 
 use super::DomainDecompositionStages;
+use super::DomainDecompositionStartupStages;
+use super::DomainParameters;
 use crate::communication::CommunicationPlugin;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
@@ -29,6 +31,8 @@ use crate::simulation::Simulation;
 
 #[derive(Named)]
 struct ExchangeDataOrder;
+#[derive(Named)]
+struct ExchangeDataStartupOrder;
 
 #[derive(Default, Deref, DerefMut, Resource)]
 pub(super) struct OutgoingEntities(DataByRank<Vec<Entity>>);
@@ -77,54 +81,106 @@ where
     }
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
+        let stage = sim
+            .try_add_parameter_type_and_get_result::<DomainParameters>()
+            .stage;
         let rank = **sim.unwrap_resource::<WorldRank>();
         let size = **sim.unwrap_resource::<WorldSize>();
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
-            .add_plugin(CommunicationPlugin::<NumEntities>::exchange())
-            .add_startup_system_to_stage(
-                DomainDecompositionStages::Exchange,
-                send_num_outgoing_entities_system,
-            )
-            .add_startup_system_to_stage(
-                DomainDecompositionStages::Exchange,
-                despawn_outgoing_entities_system,
-            )
-            .add_startup_system_to_stage(
-                DomainDecompositionStages::Exchange,
-                reset_outgoing_entities_system
-                    .after(send_num_outgoing_entities_system)
-                    .after(despawn_outgoing_entities_system),
-            )
-            .add_startup_system_to_stage(
-                DomainDecompositionStages::Exchange,
-                spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
-            );
+            .add_plugin(CommunicationPlugin::<NumEntities>::exchange());
+        match stage {
+            super::DomainStage::Startup => {
+                sim.add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::Exchange,
+                    send_num_outgoing_entities_system,
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::Exchange,
+                    despawn_outgoing_entities_system,
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::Exchange,
+                    reset_outgoing_entities_system
+                        .after(send_num_outgoing_entities_system)
+                        .after(despawn_outgoing_entities_system),
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::Exchange,
+                    spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
+                );
+            }
+            super::DomainStage::Update => {
+                sim.add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    send_num_outgoing_entities_system,
+                )
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    despawn_outgoing_entities_system,
+                )
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    reset_outgoing_entities_system
+                        .after(send_num_outgoing_entities_system)
+                        .after(despawn_outgoing_entities_system),
+                )
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
+                );
+            }
+        }
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
+        let stage = sim
+            .try_add_parameter_type_and_get_result::<DomainParameters>()
+            .stage;
         let rank = **sim.unwrap_resource::<WorldRank>();
         let size = **sim.unwrap_resource::<WorldSize>();
         sim.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
             size, rank,
         )))
-        .add_well_ordered_system_to_startup_stage::<_, ExchangeDataOrder>(
-            DomainDecompositionStages::Exchange,
-            Self::exchange_buffers_system
-                .after(Self::fill_buffers_system)
-                .after(spawn_incoming_entities_system)
-                .before(reset_outgoing_entities_system),
-            Self::exchange_buffers_system.as_system_label(),
-        )
-        .add_plugin(CommunicationPlugin::<T>::exchange())
-        .add_startup_system_to_stage(
-            DomainDecompositionStages::Exchange,
-            Self::fill_buffers_system,
-        )
-        .add_startup_system_to_stage(
-            DomainDecompositionStages::Exchange,
-            Self::reset_buffers_system.after(Self::exchange_buffers_system),
-        );
+        .add_plugin(CommunicationPlugin::<T>::exchange());
+        match stage {
+            super::DomainStage::Startup => {
+                sim.add_well_ordered_system_to_startup_stage::<_, ExchangeDataStartupOrder>(
+                    DomainDecompositionStartupStages::Exchange,
+                    Self::exchange_buffers_system
+                        .after(Self::fill_buffers_system)
+                        .after(spawn_incoming_entities_system)
+                        .before(reset_outgoing_entities_system),
+                    Self::exchange_buffers_system.as_system_label(),
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::Exchange,
+                    Self::fill_buffers_system,
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::Exchange,
+                    Self::reset_buffers_system.after(Self::exchange_buffers_system),
+                );
+            }
+            super::DomainStage::Update => {
+                sim.add_well_ordered_system_to_stage::<_, ExchangeDataOrder>(
+                    DomainDecompositionStages::Exchange,
+                    Self::exchange_buffers_system
+                        .after(Self::fill_buffers_system)
+                        .after(spawn_incoming_entities_system)
+                        .before(reset_outgoing_entities_system),
+                    Self::exchange_buffers_system.as_system_label(),
+                )
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    Self::fill_buffers_system,
+                )
+                .add_system_to_stage(
+                    DomainDecompositionStages::Exchange,
+                    Self::reset_buffers_system.after(Self::exchange_buffers_system),
+                );
+            }
+        }
     }
 }
 
@@ -225,6 +281,8 @@ mod tests {
     use crate::communication::WorldRank;
     use crate::domain::exchange_data_plugin::ExchangeDataPlugin;
     use crate::domain::exchange_data_plugin::OutgoingEntities;
+    use crate::parameters::DomainParameters;
+    use crate::parameters::DomainStage;
     use crate::prelude::LocalParticle;
     use crate::simulation::Simulation;
     use crate::stages::SimulationStagesPlugin;
@@ -295,8 +353,12 @@ mod tests {
     }
 
     fn build_sim(sim: &mut Simulation) {
-        sim.add_plugin(SimulationStagesPlugin)
-            .add_plugin(ExchangeDataPlugin::<A>::default())
-            .add_plugin(ExchangeDataPlugin::<B>::default());
+        sim.add_parameters_explicitly(DomainParameters {
+            stage: DomainStage::Update,
+            ..Default::default()
+        })
+        .add_plugin(SimulationStagesPlugin)
+        .add_plugin(ExchangeDataPlugin::<A>::default())
+        .add_plugin(ExchangeDataPlugin::<B>::default());
     }
 }

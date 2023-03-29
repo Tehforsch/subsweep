@@ -362,11 +362,37 @@ impl Simulation {
         self
     }
 
+    pub fn try_add_parameter_type<T>(&mut self) -> &mut Self
+    where
+        T: RaxiomParameters,
+    {
+        if !self
+            .parameter_sections
+            .contains(T::unwrap_section_name().into())
+        {
+            self.add_parameter_type::<T>();
+        }
+        self
+    }
+
     pub fn add_parameter_type_and_get_result<T>(&mut self) -> &T
     where
         T: RaxiomParameters,
     {
         self.add_parameter_type::<T>();
+        self.unwrap_resource::<T>()
+    }
+
+    pub fn try_add_parameter_type_and_get_result<T>(&mut self) -> &T
+    where
+        T: RaxiomParameters,
+    {
+        if !self
+            .parameter_sections
+            .contains(T::unwrap_section_name().into())
+        {
+            self.add_parameter_type::<T>();
+        }
         self.unwrap_resource::<T>()
     }
 
