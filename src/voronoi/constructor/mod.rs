@@ -1,7 +1,6 @@
 mod halo_iteration;
 mod local;
-
-use bevy::utils::StableHashSet;
+mod parallel;
 
 use self::halo_iteration::HaloIteration;
 use self::halo_iteration::RadiusSearch;

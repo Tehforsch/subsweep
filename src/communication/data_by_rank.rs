@@ -62,18 +62,28 @@ where
                 .collect(),
         )
     }
-}
 
-impl<T> DataByRank<T>
-where
-    T: Default,
-{
     pub fn drain_all(&mut self) -> impl Iterator<Item = (Rank, T)> + '_ {
         self.0.iter_mut().map(|(k, v)| {
             let mut swapped = T::default();
             std::mem::swap(&mut swapped, v);
             (*k, swapped)
         })
+    }
+}
+
+impl<T: Clone> DataByRank<T> {
+    pub fn same_from_size_and_rank(t: T, size: usize, this_rank: Rank) -> Self {
+        Self(
+            (0..size)
+                .filter(|rank| *rank != this_rank as usize)
+                .map(|rank| (rank as Rank, t.clone()))
+                .collect(),
+        )
+    }
+
+    pub fn same_for_all_ranks_in_communicator(t: T, communicator: &impl SizedCommunicator) -> Self {
+        Self::same_from_size_and_rank(t, communicator.size(), communicator.rank())
     }
 }
 

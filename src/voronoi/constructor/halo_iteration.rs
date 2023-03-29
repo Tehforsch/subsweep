@@ -1,8 +1,6 @@
 use std::hash::Hash;
 
 use bevy::utils::StableHashSet;
-use generational_arena::Index;
-use mpi::traits::Equivalence;
 
 use super::super::delaunay::dimension::DTetra;
 use super::super::delaunay::dimension::DTetraData;
@@ -24,36 +22,18 @@ use crate::voronoi::Triangulation;
 /// problems due to floating point arithmetic.
 const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 
-#[derive(Equivalence, Clone, Copy)]
-pub struct TetraIndexSend {
-    gen: usize,
-    index: u64,
-}
-
-impl From<TetraIndex> for TetraIndexSend {
-    fn from(value: TetraIndex) -> Self {
-        let (gen, index) = value.0.into_raw_parts();
-        Self { gen, index }
-    }
-}
-
-impl From<TetraIndexSend> for TetraIndex {
-    fn from(value: TetraIndexSend) -> Self {
-        TetraIndex(Index::from_raw_parts(value.gen, value.index))
-    }
-}
-
+#[derive(Clone)]
 pub struct SearchData<D: Dimension> {
     pub point: Point<D>,
     pub radius: Float,
-    pub tetra_index: TetraIndexSend,
+    pub tetra_index: TetraIndex,
 }
 
 pub struct SearchResult<D: Dimension> {
     pub point: Point<D>,
     /// The index in the Vec of the corresponding RadiusSearchData
     /// that produced this result.
-    pub tetra_index: TetraIndexSend,
+    pub tetra_index: TetraIndex,
 }
 
 pub struct IndexedSearchResult<D: Dimension, I> {
@@ -133,7 +113,7 @@ where
                      tetra_index: search_index,
                  }| {
                     self.triangulation.insert(point, PointKind::Halo);
-                    search_index.into()
+                    search_index
                 },
             )
             .collect();
@@ -153,7 +133,7 @@ where
                 SearchData::<D> {
                     radius,
                     point: center,
-                    tetra_index: t.into(),
+                    tetra_index: t,
                 }
             })
             .collect()
