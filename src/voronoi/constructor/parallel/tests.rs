@@ -36,7 +36,7 @@ fn parallel_voronoi_construction() {
 }
 
 fn build_sim(sim: &mut Simulation) {
-    let simulation_box = SimulationBox::cube_from_side_length(Length::meters(1.0));
+    let simulation_box = SimulationBox::cube_from_side_length(Length::meters(10.0));
     sim.add_parameter_file_contents("".into())
         .add_parameters_explicitly(DomainParameters {
             stage: DomainStage::Startup,

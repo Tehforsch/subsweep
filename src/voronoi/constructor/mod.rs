@@ -49,10 +49,11 @@ where
         let extent = search
             .determine_global_extent()
             .unwrap_or_else(|| get_extent(points.iter().map(|p| p.1)).unwrap());
-        let (triangulation, map) =
+        let (triangulation, mut map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
         let mut iteration = HaloIteration::new(triangulation, search);
         iteration.run();
+        map.extend(iteration.haloes);
         let data = TriangulationData::from_triangulation_and_map(iteration.triangulation, map);
         Self { data }
     }

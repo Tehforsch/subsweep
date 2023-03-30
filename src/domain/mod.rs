@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bimap::BiMap;
 use derive_custom::raxiom_parameters;
 use mpi::traits::Equivalence;
 
@@ -24,7 +25,6 @@ use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Velocity;
 use crate::named::Named;
-use crate::parameters::SimulationBox;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::SimulationStartupStages;
@@ -64,6 +64,9 @@ fn default_domain_tree_params() -> QuadTreeConfig {
         ..Default::default()
     }
 }
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct IdEntityMap(BiMap<ParticleId, Entity>);
 
 #[derive(StageLabel)]
 pub enum DomainDecompositionStartupStages {
@@ -156,7 +159,6 @@ pub(super) fn determine_global_extent_system(
     particles: Particles<&Position>,
     mut extent_communicator: Communicator<CommunicatedOption<Extent>>,
     mut global_extent: ResMut<GlobalExtent>,
-    simulation_box: Res<SimulationBox>,
 ) {
     let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
     let all_extents = (*extent_communicator).all_gather(&extent.into());
@@ -166,7 +168,6 @@ pub(super) fn determine_global_extent_system(
             .expect("Failed to find simulation extent - are there no particles?")
             .pad(),
     );
-    assert!(simulation_box.contains_extent(&global_extent), "Found particles outside the simulation box.\nSimulation box {:?}\nGlobal particle extent: {:?}!", &**simulation_box, &**global_extent);
 }
 
 fn determine_particle_ids_system(
@@ -179,10 +180,14 @@ fn determine_particle_ids_system(
     if particles.iter().count() as u64 > MAX_NUM_PARTICLES_PER_RANK {
         panic!("Too many particles on rank - change ID scheme to account for this");
     }
+    let mut map = BiMap::default();
     for (i, entity) in particles.iter().enumerate() {
         let id: u64 = MAX_NUM_PARTICLES_PER_RANK * (**world_rank as u64) + i as u64;
-        commands.entity(entity).insert(ParticleId(id));
+        let id = ParticleId(id);
+        commands.entity(entity).insert(id);
+        map.insert(id, entity);
     }
+    commands.insert_resource(IdEntityMap(map))
 }
 
 #[derive(Equivalence, Clone)]
@@ -194,13 +199,16 @@ pub(super) struct ParticleExchangeData {
 
 pub fn construct_quad_tree_system(
     config: Res<DomainParameters>,
-    particles: Particles<(Entity, &Position)>,
+    particles: Particles<(&ParticleId, &Position)>,
     extent: Res<GlobalExtent>,
     mut quadtree: ResMut<QuadTree>,
 ) {
     let particles: Vec<_> = particles
         .iter()
-        .map(|(entity, pos)| LeafData { entity, pos: pos.0 })
+        .map(|(id, pos)| LeafData {
+            id: *id,
+            pos: pos.0,
+        })
         .collect();
     *quadtree = QuadTree::new(&config.tree, particles, &extent);
 }
@@ -312,13 +320,14 @@ fn domain_decomposition_system(
     tree: Res<QuadTree>,
     indices: Res<TopLevelIndices>,
     world_rank: Res<WorldRank>,
+    map: Res<IdEntityMap>,
 ) {
     for (rank, indices) in indices.iter() {
         if *rank != **world_rank {
             for index in indices.iter() {
                 tree[index].depth_first_map_leaf(&mut |_, leaf| {
                     for particle in leaf.iter() {
-                        outgoing_entities.add(*rank, particle.entity);
+                        outgoing_entities.add(*rank, *map.get_by_left(&particle.id).unwrap());
                     }
                 });
             }

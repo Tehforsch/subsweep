@@ -118,12 +118,11 @@ impl<N, L> QuadTree<N, L> {
 
 #[cfg(test)]
 mod tests {
-    use bevy::prelude::Entity;
-
     use super::super::node_index::NodeIndex;
     use super::QuadTreeIndex;
     use crate::domain::extent::Extent;
     use crate::domain::LeafData;
+    use crate::prelude::ParticleId;
     use crate::quadtree::tests::get_min_depth_quadtree;
     use crate::quadtree::Node;
     use crate::quadtree::QuadTree;
@@ -143,7 +142,7 @@ mod tests {
         for pos in particles.into_iter() {
             let data = LeafData {
                 pos,
-                entity: Entity::from_raw(0),
+                id: ParticleId(0),
             };
             tree.insert_new(&config, data, 0);
         }

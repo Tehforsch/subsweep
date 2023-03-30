@@ -58,11 +58,12 @@ pub fn assert_vec_is_close<const U: Dimension>(
 #[cfg(feature = "3d")]
 pub fn get_particles(n: i32, m: i32) -> Vec<crate::domain::LeafData> {
     use crate::domain::LeafData;
+    use crate::prelude::ParticleId;
     use crate::units::VecLength;
     (1..n + 1)
         .flat_map(move |x| {
             (1..m + 1).map(move |y| LeafData {
-                entity: Entity::from_raw((x * n + y) as u32),
+                id: ParticleId((x * n + y) as u64),
                 #[cfg(feature = "2d")]
                 pos: VecLength::meters(x as f64, y as f64),
                 #[cfg(feature = "3d")]

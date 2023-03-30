@@ -1,4 +1,5 @@
 use bevy::utils::StableHashSet;
+use bimap::BiMap;
 
 use super::super::delaunay::dimension::DTetra;
 use super::super::delaunay::dimension::DTetraData;
@@ -9,6 +10,8 @@ use super::DimensionCell;
 use super::Point;
 use super::TetraIndex;
 use crate::communication::DataByRank;
+use crate::prelude::ParticleId;
+use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::utils::Extent;
@@ -32,14 +35,16 @@ pub struct SearchResult<D: Dimension> {
     pub point: Point<D>,
     /// The index in the Vec of the corresponding RadiusSearchData
     /// that produced this result.
-    pub tetra_index: TetraIndex,
+    pub search_index: TetraIndex,
+    pub id: ParticleId,
 }
 
 impl<D: Dimension> SearchResult<D> {
-    pub fn from_search(data: &SearchData<D>, point: Point<D>) -> Self {
+    pub fn from_search(data: &SearchData<D>, point: Point<D>, particle_id: ParticleId) -> Self {
         Self {
-            tetra_index: data.tetra_index,
+            search_index: data.tetra_index,
             point,
+            id: particle_id,
         }
     }
 }
@@ -57,6 +62,7 @@ pub(super) struct HaloIteration<D: Dimension, F> {
     pub triangulation: Triangulation<D>,
     search: F,
     checked_tetras: StableHashSet<TetraIndex>,
+    pub haloes: BiMap<ParticleId, PointIndex>,
 }
 
 impl<D, F: RadiusSearch<D>> HaloIteration<D, F>
@@ -71,6 +77,7 @@ where
             triangulation,
             search,
             checked_tetras: StableHashSet::default(),
+            haloes: BiMap::default(),
         }
     }
 
@@ -91,10 +98,12 @@ where
         for (rank, results) in newly_imported.drain_all() {
             for SearchResult {
                 point,
-                tetra_index: search_index,
+                search_index,
+                id: particle_id,
             } in results.into_iter()
             {
-                self.triangulation.insert(point, PointKind::Halo(rank));
+                let point_index = self.triangulation.insert(point, PointKind::Halo(rank));
+                self.haloes.insert(particle_id, point_index);
                 tetras_with_new_points_in_vicinity.insert(search_index);
             }
         }
@@ -192,9 +201,10 @@ mod tests {
                         .iter()
                         .filter(|(_, p)| data.point.distance(*p) < data.radius)
                         .filter(|(j, _)| self.already_sent.insert(*j))
-                        .map(move |(_, p)| SearchResult {
+                        .map(move |(id, p)| SearchResult {
                             point: *p,
-                            tetra_index: data.tetra_index,
+                            search_index: data.tetra_index,
+                            id: *id,
                         }),
                 )
             }

@@ -4,7 +4,6 @@ mod plugin;
 mod tests;
 
 use bevy::prelude::info;
-use bevy::prelude::Entity;
 use bevy::utils::StableHashSet;
 use derive_more::Add;
 use derive_more::Sum;
@@ -22,6 +21,7 @@ use crate::communication::SizedCommunicator;
 use crate::domain::QuadTree;
 use crate::domain::TopLevelIndices;
 use crate::parameters::SimulationBox;
+use crate::prelude::ParticleId;
 use crate::quadtree::radius_search::bounding_boxes_overlap_periodic;
 use crate::units::Length;
 use crate::units::MVec;
@@ -49,7 +49,7 @@ where
     tree: &'a QuadTree,
     indices: &'a TopLevelIndices,
     box_: SimulationBox,
-    already_sent: DataByRank<StableHashSet<Entity>>,
+    already_sent: DataByRank<StableHashSet<ParticleId>>,
 }
 
 type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
@@ -109,9 +109,9 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                 outgoing[*rank].extend(
                     particles
                         .into_iter()
-                        .filter(|p| self.already_sent[*rank].insert(p.entity))
+                        .filter(|p| self.already_sent[*rank].insert(p.id))
                         .map(|p| {
-                            SearchResult::from_search(search, p.pos.value_unchecked())
+                            SearchResult::from_search(search, p.pos.value_unchecked(), p.id)
                                 .to_equivalent()
                         }),
                 );

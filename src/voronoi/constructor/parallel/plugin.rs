@@ -1,7 +1,6 @@
 use bevy::prelude::Commands;
 use bevy::prelude::Entity;
 use bevy::prelude::Res;
-use bevy::utils::StableHashMap;
 use derive_custom::Named;
 
 use super::super::Constructor;
@@ -13,6 +12,7 @@ use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
 use crate::domain::GlobalExtent;
+use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
 use crate::domain::TopLevelIndices;
 use crate::parameters::SimulationBox;
@@ -51,6 +51,7 @@ fn construct_grid_system(
     indices: Res<TopLevelIndices>,
     global_extent: Res<GlobalExtent>,
     box_: Res<SimulationBox>,
+    map: Res<IdEntityMap>,
 ) {
     let extent = Extent {
         min: global_extent.min.value_unchecked(),
@@ -71,12 +72,8 @@ fn construct_grid_system(
         particles.iter().map(|(_, i, p)| (*i, p.value_unchecked())),
         search,
     );
-    let id_entity_map: StableHashMap<_, _> = particles
-        .iter()
-        .map(|(entity, id, _)| (id, entity))
-        .collect();
     for (id, cell) in cons.sweep_grid() {
-        let entity = id_entity_map[&id];
-        commands.entity(entity).insert(cell);
+        let entity = map.get_by_left(&id).unwrap();
+        commands.entity(*entity).insert(cell);
     }
 }

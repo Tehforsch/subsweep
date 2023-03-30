@@ -1,6 +1,5 @@
-use bevy::prelude::Entity;
-
 use super::work::Work;
+use crate::prelude::ParticleId;
 use crate::quadtree::LeafDataType;
 use crate::quadtree::NodeDataType;
 use crate::quadtree::{self};
@@ -10,7 +9,7 @@ pub type QuadTree = quadtree::QuadTree<NodeData, LeafData>;
 
 #[derive(Debug, Clone)]
 pub struct LeafData {
-    pub entity: Entity,
+    pub id: ParticleId,
     pub pos: VecLength,
 }
 

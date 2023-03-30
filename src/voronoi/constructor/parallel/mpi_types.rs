@@ -2,6 +2,7 @@ use generational_arena::Index;
 use mpi::traits::Equivalence;
 
 use super::SearchData;
+use crate::prelude::ParticleId;
 use crate::voronoi::constructor::halo_iteration::SearchResult;
 use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::primitives::Float;
@@ -102,6 +103,7 @@ pub struct SearchResultThreeDSend {
     point_y: Float,
     point_z: Float,
     tetra_index: TetraIndexSend,
+    id: ParticleId,
 }
 
 impl IntoEquivalenceType for SearchResult<ThreeD> {
@@ -112,14 +114,16 @@ impl IntoEquivalenceType for SearchResult<ThreeD> {
             point_x: self.point.x,
             point_y: self.point.y,
             point_z: self.point.z,
-            tetra_index: self.tetra_index.into(),
+            tetra_index: self.search_index.into(),
+            id: self.id,
         }
     }
 
     fn from_equivalent(equiv: &Self::Equiv) -> Self {
         SearchResult {
             point: Point3d::new(equiv.point_x, equiv.point_y, equiv.point_z),
-            tetra_index: equiv.tetra_index.into(),
+            search_index: equiv.tetra_index.into(),
+            id: equiv.id,
         }
     }
 }
