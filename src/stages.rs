@@ -47,6 +47,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainDecompositionStartupStages::TopLevelTreeConstruction.as_label(),
             DomainDecompositionStartupStages::Decomposition.as_label(),
             DomainDecompositionStartupStages::Exchange.as_label(),
+            DomainDecompositionStartupStages::SecondTopLevelTreeConstruction.as_label(),
             SimulationStartupStages::InsertGrid.as_label(),
         ];
         for window in startup_stages.windows(2) {

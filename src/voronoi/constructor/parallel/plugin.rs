@@ -22,7 +22,6 @@ use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::SimulationStartupStages;
-use crate::prelude::WorldRank;
 use crate::simulation::RaxiomPlugin;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::ThreeD;
@@ -52,7 +51,6 @@ fn construct_grid_system(
     indices: Res<TopLevelIndices>,
     global_extent: Res<GlobalExtent>,
     box_: Res<SimulationBox>,
-    rank: Res<WorldRank>,
 ) {
     let extent = Extent {
         min: global_extent.min.value_unchecked(),
@@ -66,7 +64,6 @@ fn construct_grid_system(
         tree: &*tree,
         indices: &*indices,
         box_: box_.clone(),
-        rank: **rank,
     };
     let halo_exporter = HaloExporter::new(search);
     let cons = Constructor::<ThreeD>::construct_from_iter(

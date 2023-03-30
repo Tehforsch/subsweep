@@ -19,9 +19,10 @@ use super::SearchData;
 use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
-use crate::communication::Rank;
+use crate::communication::SizedCommunicator;
 use crate::domain::QuadTree;
 use crate::domain::TopLevelIndices;
+use crate::mpidbg;
 use crate::parameters::SimulationBox;
 use crate::quadtree::radius_search::bounding_boxes_overlap_periodic;
 use crate::units::Length;
@@ -48,9 +49,9 @@ where
     finished_comm: &'a mut Communicator<NumUndecided>,
     global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
+
     indices: &'a TopLevelIndices,
     box_: SimulationBox,
-    rank: Rank,
 }
 
 type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
@@ -78,16 +79,16 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         data: Vec<SearchData<ActiveDimension>>,
     ) -> OutgoingRequests<ActiveDimension> {
         let mut outgoing = DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.data_comm);
-        for (rank, indices_this_rank) in self.indices.iter() {
-            if *rank == self.rank {
-                continue;
-            }
-            for i in indices_this_rank.iter() {
-                let subtree = &self.tree[i];
-                for search in data.iter() {
-                    if self.tree_node_and_search_overlap(subtree, search) {
-                        outgoing[*rank].push(search.to_equivalent());
-                    }
+        let rank_owns_part_of_search_radius = |rank, search| {
+            self.indices[rank].iter().any(|index| {
+                let subtree = &self.tree[index];
+                self.tree_node_and_search_overlap(subtree, search)
+            })
+        };
+        for rank in self.data_comm.other_ranks() {
+            for search in data.iter() {
+                if rank_owns_part_of_search_radius(rank, search) {
+                    outgoing[rank].push(search.to_equivalent());
                 }
             }
         }

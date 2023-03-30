@@ -71,6 +71,7 @@ pub enum DomainDecompositionStartupStages {
     TopLevelTreeConstruction,
     Decomposition,
     Exchange,
+    SecondTopLevelTreeConstruction,
 }
 
 #[derive(StageLabel)]
@@ -119,6 +120,10 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
                 .add_startup_system_to_stage(
                     DomainDecompositionStartupStages::Decomposition,
                     domain_decomposition_system.after(distribute_top_level_nodes_system),
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::SecondTopLevelTreeConstruction,
+                    construct_quad_tree_system,
                 );
             }
             DomainStage::Update => {

@@ -171,7 +171,13 @@ pub(crate) mod tests {
                 let p2 = box_.periodic_wrap(p2.pos);
                 let d1 = box_.periodic_distance_vec(&p1, &p2);
                 let d2 = box_.periodic_distance_vec(&p2, &p1);
-                assert_vec_is_close(d1, -d2);
+                let component_at_boundary = |v, l: Length| v == l / 2.0 || v == -l / 2.0;
+                if !component_at_boundary(d1.x(), box_.side_lengths().x())
+                    && !component_at_boundary(d1.y(), box_.side_lengths().y())
+                    && !component_at_boundary(d1.z(), box_.side_lengths().z())
+                {
+                    assert_vec_is_close(d1, -d2);
+                }
             }
         }
     }
