@@ -40,6 +40,7 @@ fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation, num_cells:
             num_timestep_levels: 1,
             significant_flux_treshold: PhotonFlux::zero(),
             timestep_safety_factor: Dimensionless::dimensionless(0.0),
+            deadlock_detection: false,
         })
         .add_parameters_explicitly(SimulationParameters { final_time: None })
         .add_parameters_explicitly(TimestepParameters {

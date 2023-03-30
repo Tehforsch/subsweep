@@ -18,7 +18,9 @@ use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::simulation::RaxiomPlugin;
 
-#[derive(Component, Clone, Debug, PartialEq, Eq, Hash, Equivalence, Copy, Display, Named)]
+#[derive(
+    Component, Clone, Debug, PartialEq, Eq, Hash, Equivalence, Copy, Display, Named, PartialOrd, Ord,
+)]
 #[name = "id"]
 pub struct ParticleId(pub u64);
 

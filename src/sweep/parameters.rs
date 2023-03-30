@@ -10,6 +10,7 @@ pub struct SweepParameters {
     pub num_timestep_levels: usize,
     pub significant_flux_treshold: PhotonFlux,
     pub timestep_safety_factor: Dimensionless,
+    pub check_deadlock: bool,
 }
 
 #[raxiom_parameters]

@@ -3,6 +3,8 @@ mod chemistry_solver;
 mod communicator;
 pub mod components;
 mod count_by_dir;
+#[cfg(feature = "mpi")]
+mod deadlock_detection;
 mod direction;
 mod parameters;
 mod site;
@@ -122,6 +124,7 @@ struct Sweep<'a> {
     communicator: SweepCommunicator<'a>,
     count_communicator: Communicator<'a, CellCount>,
     num_timestep_levels: usize,
+    check_deadlock: bool,
 }
 
 impl<'a> Sweep<'a> {
@@ -155,6 +158,7 @@ impl<'a> Sweep<'a> {
             communicator,
             count_communicator,
             num_timestep_levels: parameters.num_timestep_levels,
+            check_deadlock: parameters.check_deadlock,
         };
         solver.run_sweeps();
         solver.sites
@@ -250,6 +254,9 @@ impl<'a> Sweep<'a> {
     fn single_sweep(&mut self) {
         self.init_counts();
         self.to_solve = self.get_initial_tasks();
+        if self.check_deadlock {
+            self.check_deadlock();
+        }
         self.solve();
         self.update_chemistry();
         for site in self.sites.iter() {
