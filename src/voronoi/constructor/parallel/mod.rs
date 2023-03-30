@@ -82,7 +82,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
             for i in indices_this_rank.iter() {
                 let subtree = &self.tree[i];
                 for search in data.iter() {
-                    if self.tree_node_and_search_overlap(subtree, &search) {
+                    if self.tree_node_and_search_overlap(subtree, search) {
                         outgoing[*rank].push(search.to_equivalent());
                     }
                 }
@@ -105,7 +105,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                     &Length::new_unchecked(search.radius),
                 );
                 outgoing[*rank].extend(particles.into_iter().map(|p| {
-                    let result = SearchResult::from_search(&search, p.pos.value_unchecked());
+                    let result = SearchResult::from_search(search, p.pos.value_unchecked());
                     let indexed_result = IndexedSearchResult {
                         result,
                         point_index: p.entity,
