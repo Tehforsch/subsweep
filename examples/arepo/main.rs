@@ -21,8 +21,6 @@ use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::SourceRate;
 use raxiom::units::VecLength;
-use raxiom::voronoi::triangulation_data::construct_grid_from_iter;
-use raxiom::voronoi::ThreeD;
 use unit_reader::ArepoUnitReader;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
@@ -58,10 +56,7 @@ fn main() {
             SimulationStartupStages::InsertDerivedComponents,
             initialize_source_system,
         )
-        .add_startup_system_to_stage(
-            SimulationStartupStages::InsertGrid,
-            insert_grid_components_system,
-        )
+        .add_plugin(ParallelVoronoiGridConstruction)
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
             InputDatasetDescriptor::<Position>::new(
                 DatasetDescriptor {
@@ -87,20 +82,6 @@ fn main() {
         .run();
 }
 
-fn insert_grid_components_system(
-    mut commands: Commands,
-    particles: Particles<(Entity, &ParticleId, &Position)>,
-) {
-    let cells = construct_grid_from_iter::<ThreeD>(
-        particles
-            .into_iter()
-            .map(|(entity, id, pos)| (entity, *id, pos.value_unchecked())),
-    );
-    for (entity, cell) in cells.into_iter() {
-        commands.entity(entity).insert(cell);
-    }
-}
-
 fn insert_missing_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
@@ -119,8 +100,10 @@ fn initialize_source_system(
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
     box_size: Res<SimulationBox>,
+    global: Res<GlobalExtent>,
     mut comm: Communicator<CommunicatedOption<Identified<DistanceToSourceData>>>,
 ) {
+    dbg!(&box_size, &global);
     let closest = particles
         .iter()
         .map(|(entity, pos)| {

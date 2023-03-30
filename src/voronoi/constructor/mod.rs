@@ -2,6 +2,8 @@ mod halo_iteration;
 mod local;
 pub(super) mod parallel;
 
+pub use parallel::ParallelVoronoiGridConstruction;
+
 use self::halo_iteration::HaloIteration;
 use self::halo_iteration::RadiusSearch;
 pub(super) use self::halo_iteration::SearchData;
@@ -9,7 +11,9 @@ use self::local::Local;
 use super::delaunay::PointIndex;
 use super::delaunay::TetraIndex;
 use super::utils::get_extent;
+use super::ActiveDimension;
 use super::Cell;
+use super::CellConnection;
 use super::CellIndex;
 use super::Delaunay;
 use super::DimensionCell;
@@ -17,7 +21,13 @@ use super::Point;
 use super::Triangulation;
 use super::TriangulationData;
 use super::VoronoiGrid;
+use crate::grid;
+use crate::grid::FaceArea;
+use crate::grid::ParticleType;
 use crate::prelude::ParticleId;
+use crate::units::Length;
+use crate::units::VecDimensionless;
+use crate::units::Volume;
 use crate::voronoi::Dimension;
 
 pub struct Constructor<D: Dimension> {
@@ -64,10 +74,58 @@ where
         self.data.construct_voronoi()
     }
 
+    pub fn get_particle_id_by_point(&self, point_index: PointIndex) -> Option<ParticleId> {
+        self.data
+            .point_to_cell_map
+            .get_by_right(&point_index)
+            .copied()
+    }
     pub fn get_point_by_particle_id(&self, particle_id: ParticleId) -> Option<PointIndex> {
         self.data
             .point_to_cell_map
             .get_by_left(&particle_id)
             .copied()
+    }
+}
+
+impl Constructor<ActiveDimension> {
+    pub fn sweep_grid(&self) -> Vec<(CellIndex, grid::Cell)> {
+        let voronoi = self.voronoi();
+        voronoi
+            .cells
+            .iter()
+            .filter_map(|voronoi_cell| {
+                let id = self
+                    .get_particle_id_by_point(voronoi_cell.delaunay_point)
+                    .unwrap();
+                if !voronoi_cell.is_infinite {
+                    Some((
+                        id,
+                        grid::Cell {
+                            neighbours: voronoi_cell
+                                .faces
+                                .iter()
+                                .map(|face| {
+                                    let neigh = face.connection;
+                                    let face = crate::grid::Face {
+                                        area: FaceArea::new_unchecked(face.area),
+                                        normal: VecDimensionless::new_unchecked(face.normal),
+                                    };
+                                    if let CellConnection::ToInner(neigh) = neigh {
+                                        (face, ParticleType::Local(neigh))
+                                    } else {
+                                        (face, ParticleType::Boundary)
+                                    }
+                                })
+                                .collect(),
+                            size: Length::new_unchecked(voronoi_cell.size()),
+                            volume: Volume::new_unchecked(voronoi_cell.volume()),
+                        },
+                    ))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }

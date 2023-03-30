@@ -8,6 +8,7 @@ use bevy::prelude::Entity;
 use derive_more::Add;
 use derive_more::Sum;
 use mpi::traits::Equivalence;
+pub use plugin::ParallelVoronoiGridConstruction;
 
 use self::mpi_types::IntoEquivalenceType;
 pub use super::halo_iteration::HaloExporter;

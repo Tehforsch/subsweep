@@ -131,6 +131,10 @@ impl Extent {
             && pos.y() <= self.max.y()
     }
 
+    pub fn contains_extent(&self, other: &Extent) -> bool {
+        self.contains(&other.min) && self.contains(&other.max)
+    }
+
     pub fn volume(&self) -> Volume {
         let side_lengths = self.side_lengths();
         #[cfg(feature = "2d")]

@@ -1,4 +1,3 @@
-use bevy::prelude::Entity;
 use bevy::utils::StableHashMap;
 use bimap::BiMap;
 
@@ -9,21 +8,12 @@ use super::delaunay::Delaunay;
 use super::delaunay::PointIndex;
 use super::delaunay::PointKind;
 use super::delaunay::TetraIndex;
-use super::visualizer::Visualizable;
 use super::Cell;
 use super::CellIndex;
 use super::DimensionCell;
 use super::Point;
 use super::Triangulation;
 use super::VoronoiGrid;
-use crate::grid;
-use crate::grid::FaceArea;
-use crate::grid::ParticleType;
-use crate::prelude::MVec;
-use crate::prelude::ParticleId;
-use crate::units::Length;
-use crate::units::VecDimensionless;
-use crate::units::Volume;
 use crate::voronoi::cell::CellConnection;
 
 pub struct TriangulationData<D: Dimension> {
@@ -101,57 +91,4 @@ where
         }
     }
     map
-}
-
-pub fn construct_grid_from_iter<D>(
-    iter: impl Iterator<Item = (Entity, ParticleId, <D as Dimension>::Point)>,
-) -> Vec<(Entity, grid::Cell)>
-where
-    D: Dimension<Point = MVec>,
-    Triangulation<D>: Delaunay<D>,
-    Cell<D>: DimensionCell<Dimension = D>,
-    <Cell<D> as DimensionCell>::Dimension: Dimension<Point = MVec>,
-    VoronoiGrid<D>: for<'a> From<&'a TriangulationData<D>>,
-    <D as Dimension>::TetraData: Visualizable,
-    <D as Dimension>::Point: Visualizable,
-{
-    let (triangulation, map) = Triangulation::<D>::construct_from_iter(
-        iter.map(|(entity, id, point)| ((id, entity), point)),
-    );
-    let id_to_point_index = map.iter().map(|((i, _), point)| (*i, *point)).collect();
-    let entity_to_point_index: BiMap<_, _> = map
-        .iter()
-        .map(|((_, entity), point)| (*entity, *point))
-        .collect();
-    let cons = TriangulationData::from_triangulation_and_map(triangulation, id_to_point_index);
-    let grid = cons.construct_voronoi();
-    grid.cells
-        .iter()
-        .filter_map(|voronoi_cell| {
-            let entity = entity_to_point_index.get_by_right(&voronoi_cell.delaunay_point);
-            entity.map(|entity| {
-                let grid_cell = grid::Cell {
-                    neighbours: voronoi_cell
-                        .faces
-                        .iter()
-                        .map(|face| {
-                            let neigh = face.connection;
-                            let face = crate::grid::Face {
-                                area: FaceArea::new_unchecked(face.area),
-                                normal: VecDimensionless::new_unchecked(face.normal),
-                            };
-                            if let CellConnection::ToInner(neigh) = neigh {
-                                (face, ParticleType::Local(neigh))
-                            } else {
-                                (face, ParticleType::Boundary)
-                            }
-                        })
-                        .collect(),
-                    size: Length::new_unchecked(voronoi_cell.size()),
-                    volume: Volume::new_unchecked(voronoi_cell.volume()),
-                };
-                (*entity, grid_cell)
-            })
-        })
-        .collect()
 }

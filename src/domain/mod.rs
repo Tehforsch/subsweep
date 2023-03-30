@@ -24,6 +24,7 @@ use crate::components::Mass;
 use crate::components::Position;
 use crate::components::Velocity;
 use crate::named::Named;
+use crate::parameters::SimulationBox;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::SimulationStartupStages;
@@ -150,6 +151,7 @@ pub(super) fn determine_global_extent_system(
     particles: Particles<&Position>,
     mut extent_communicator: Communicator<CommunicatedOption<Extent>>,
     mut global_extent: ResMut<GlobalExtent>,
+    simulation_box: Res<SimulationBox>,
 ) {
     let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
     let all_extents = (*extent_communicator).all_gather(&extent.into());
@@ -159,6 +161,7 @@ pub(super) fn determine_global_extent_system(
             .expect("Failed to find simulation extent - are there no particles?")
             .pad(),
     );
+    assert!(simulation_box.contains_extent(&global_extent), "Found particles outside the simulation box.\nSimulation box {:?}\nGlobal particle extent: {:?}!", &**simulation_box, &**global_extent);
 }
 
 fn determine_particle_ids_system(

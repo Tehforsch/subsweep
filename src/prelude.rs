@@ -26,3 +26,5 @@ pub use crate::visualization::CameraTransform;
 pub use crate::visualization::DrawCircle;
 pub use crate::visualization::DrawRect;
 pub use crate::visualization::RColor;
+pub use crate::voronoi::constructor::Constructor;
+pub use crate::voronoi::constructor::ParallelVoronoiGridConstruction;

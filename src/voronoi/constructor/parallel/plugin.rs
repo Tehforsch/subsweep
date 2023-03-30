@@ -1,4 +1,7 @@
+use bevy::prelude::Commands;
+use bevy::prelude::Entity;
 use bevy::prelude::Res;
+use bevy::utils::StableHashMap;
 use derive_custom::Named;
 
 use super::super::Constructor;
@@ -29,8 +32,7 @@ pub struct ParallelVoronoiGridConstruction;
 
 impl RaxiomPlugin for ParallelVoronoiGridConstruction {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_required_component::<Position>()
-            .add_plugin(CommunicationPlugin::<MpiSearchData<ThreeD>>::exchange())
+        sim.add_plugin(CommunicationPlugin::<MpiSearchData<ThreeD>>::exchange())
             .add_plugin(CommunicationPlugin::<MpiSearchResult<ThreeD>>::exchange())
             .add_plugin(CommunicationPlugin::<NumUndecided>::default())
             .add_startup_system_to_stage(
@@ -41,7 +43,8 @@ impl RaxiomPlugin for ParallelVoronoiGridConstruction {
 }
 
 fn construct_grid_system(
-    particles: Particles<(&ParticleId, &Position)>,
+    mut commands: Commands,
+    particles: Particles<(Entity, &ParticleId, &Position)>,
     mut data_comm: ExchangeCommunicator<MpiSearchData<ThreeD>>,
     mut result_comm: ExchangeCommunicator<MpiSearchResult<ThreeD>>,
     mut finished_comm: Communicator<NumUndecided>,
@@ -67,8 +70,15 @@ fn construct_grid_system(
     };
     let halo_exporter = HaloExporter::new(search);
     let cons = Constructor::<ThreeD>::construct_from_iter(
-        particles.iter().map(|(i, p)| (*i, p.value_unchecked())),
+        particles.iter().map(|(_, i, p)| (*i, p.value_unchecked())),
         halo_exporter,
     );
-    let voronoi = cons.voronoi();
+    let id_entity_map: StableHashMap<_, _> = particles
+        .iter()
+        .map(|(entity, id, _)| (id, entity))
+        .collect();
+    for (id, cell) in cons.sweep_grid() {
+        let entity = id_entity_map[&id];
+        commands.entity(entity).insert(cell);
+    }
 }
