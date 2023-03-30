@@ -14,7 +14,7 @@ use super::DimensionCell;
 use super::Point;
 use super::Triangulation;
 use super::VoronoiGrid;
-use crate::grid::NeighbourType;
+use crate::grid::ParticleType;
 use crate::grid::RemoteNeighbour;
 
 pub struct TriangulationData<D: Dimension> {
@@ -60,14 +60,14 @@ where
         VoronoiGrid {
             cells: self
                 .triangulation
-                .iter_inner_points()
+                .iter_non_boundary_points()
                 .map(|p| Cell::<D>::new(self, p))
                 .collect(),
         }
     }
 
-    pub fn get_neighbour_type(&self, p: PointIndex) -> NeighbourType {
-        use NeighbourType::*;
+    pub fn get_particle_type(&self, p: PointIndex) -> ParticleType {
+        use ParticleType::*;
         use PointKind::*;
         match self.triangulation.point_kinds[&p] {
             Inner => Local(*self.point_to_cell_map.get_by_right(&p).unwrap()),

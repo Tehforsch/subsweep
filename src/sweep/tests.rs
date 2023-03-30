@@ -60,7 +60,7 @@ fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation, num_cells:
             },
         )
         .add_startup_system_to_stage(
-            SimulationStartupStages::InsertDerivedComponents,
+            SimulationStartupStages::InsertComponentsAfterGrid,
             initialize_sweep_components_system,
         )
         .add_plugin(SweepPlugin);

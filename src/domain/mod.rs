@@ -126,6 +126,10 @@ impl RaxiomPlugin for DomainDecompositionPlugin {
                 )
                 .add_startup_system_to_stage(
                     DomainDecompositionStartupStages::SecondTopLevelTreeConstruction,
+                    update_id_entity_map_system,
+                )
+                .add_startup_system_to_stage(
+                    DomainDecompositionStartupStages::SecondTopLevelTreeConstruction,
                     construct_quad_tree_system,
                 );
             }
@@ -188,6 +192,10 @@ fn determine_particle_ids_system(
         map.insert(id, entity);
     }
     commands.insert_resource(IdEntityMap(map))
+}
+
+fn update_id_entity_map_system(query: Query<(&ParticleId, Entity)>, mut map: ResMut<IdEntityMap>) {
+    map.0 = query.iter().map(|(id, entity)| (*id, entity)).collect();
 }
 
 #[derive(Equivalence, Clone)]

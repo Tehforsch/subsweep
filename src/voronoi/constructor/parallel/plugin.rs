@@ -15,7 +15,9 @@ use crate::domain::GlobalExtent;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
 use crate::domain::TopLevelIndices;
+use crate::grid::ParticleType;
 use crate::parameters::SimulationBox;
+use crate::particle::HaloParticle;
 use crate::prelude::CommunicationPlugin;
 use crate::prelude::Communicator;
 use crate::prelude::ParticleId;
@@ -23,6 +25,7 @@ use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::SimulationStartupStages;
 use crate::simulation::RaxiomPlugin;
+use crate::units::VecLength;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::ThreeD;
 
@@ -72,8 +75,23 @@ fn construct_grid_system(
         particles.iter().map(|(_, i, p)| (*i, p.value_unchecked())),
         search,
     );
-    for (id, cell) in cons.sweep_grid() {
-        let entity = map.get_by_left(&id).unwrap();
-        commands.entity(*entity).insert(cell);
+    for (id, type_, cell) in cons.sweep_grid() {
+        match type_ {
+            ParticleType::Local(_) => {
+                let entity = map.get_by_left(&id).unwrap();
+                commands.entity(*entity).insert(cell);
+            }
+            ParticleType::Remote(remote) => {
+                let pos = cons.get_position_for_particle_id(id);
+                let pos = VecLength::new_unchecked(pos);
+                commands.spawn((
+                    HaloParticle { rank: remote.rank },
+                    Position(pos),
+                    cell,
+                    remote.id,
+                ));
+            }
+            ParticleType::Boundary => unreachable!(),
+        }
     }
 }

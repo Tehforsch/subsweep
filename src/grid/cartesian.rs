@@ -5,7 +5,7 @@ use derive_custom::raxiom_parameters;
 use super::cell::Face;
 use super::cell::FaceArea;
 use super::Cell;
-use super::NeighbourType;
+use super::ParticleType;
 use super::RemoteNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
@@ -257,18 +257,18 @@ impl GridConstructor {
                     };
                     if neighbour.contained(&self.num_cells()) {
                         if rank == neighbour_rank {
-                            (face, NeighbourType::Local(self.ids[&neighbour]))
+                            (face, ParticleType::Local(self.ids[&neighbour]))
                         } else {
                             (
                                 face,
-                                NeighbourType::Remote(RemoteNeighbour {
+                                ParticleType::Remote(RemoteNeighbour {
                                     id: self.ids[&neighbour],
                                     rank: self.get_rank(neighbour),
                                 }),
                             )
                         }
                     } else {
-                        (face, NeighbourType::Boundary)
+                        (face, ParticleType::Boundary)
                     }
                 })
                 .collect();
@@ -303,7 +303,7 @@ impl GridConstructor {
             if rank == self.rank {
                 commands.spawn((LocalParticle, Position(pos), cell, particle_id));
             } else if cell.neighbours.iter().any(|(_, neighbour)| {
-                if let NeighbourType::Remote(neighbour) = neighbour {
+                if let ParticleType::Remote(neighbour) = neighbour {
                     neighbour.rank == self.rank
                 } else {
                     false

@@ -15,7 +15,7 @@ use super::CellIndex;
 use super::Point;
 use super::ThreeD;
 use super::TwoD;
-use crate::grid::NeighbourType;
+use crate::grid::ParticleType;
 use crate::prelude::Float;
 use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::DTetra;
@@ -38,7 +38,7 @@ pub struct Cell<D: Dimension> {
 }
 
 pub struct VoronoiFace<D: Dimension> {
-    pub connection: NeighbourType,
+    pub connection: ParticleType,
     pub normal: Point<D>,
     pub area: Float,
     pub data: D::VoronoiFaceData,
@@ -94,7 +94,7 @@ impl Cell<TwoD> {
                 let area = vp1.distance(vp2);
                 let normal = get_normal(data, p, p2_index);
                 VoronoiFace {
-                    connection: data.get_neighbour_type(p2_index),
+                    connection: data.get_particle_type(p2_index),
                     normal,
                     area,
                     data: (),
@@ -233,7 +233,7 @@ fn get_face_polygon_perpendicular_to_line(
     let normal = get_normal(data, p1, p2);
     let poly = Polygon3d { points };
     VoronoiFace {
-        connection: data.get_neighbour_type(p2),
+        connection: data.get_particle_type(p2),
         normal,
         area: poly.area(),
         data: poly,

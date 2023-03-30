@@ -22,6 +22,7 @@ use super::TriangulationData;
 use super::VoronoiGrid;
 use crate::grid;
 use crate::grid::FaceArea;
+use crate::grid::ParticleType;
 use crate::prelude::ParticleId;
 use crate::units::Length;
 use crate::units::VecDimensionless;
@@ -79,16 +80,21 @@ where
             .get_by_right(&point_index)
             .copied()
     }
+
     pub fn get_point_by_particle_id(&self, particle_id: ParticleId) -> Option<PointIndex> {
         self.data
             .point_to_cell_map
             .get_by_left(&particle_id)
             .copied()
     }
+
+    pub fn get_position_for_particle_id(&self, id: ParticleId) -> Point<D> {
+        self.data.triangulation.points[self.get_point_by_particle_id(id).unwrap()]
+    }
 }
 
 impl Constructor<ActiveDimension> {
-    pub fn sweep_grid(&self) -> Vec<(CellIndex, grid::Cell)> {
+    pub fn sweep_grid(&self) -> Vec<(CellIndex, ParticleType, grid::Cell)> {
         let voronoi = self.voronoi();
         voronoi
             .cells
@@ -97,8 +103,10 @@ impl Constructor<ActiveDimension> {
                 let id = self
                     .get_particle_id_by_point(voronoi_cell.delaunay_point)
                     .unwrap();
+                let neighbour_type = self.data.get_particle_type(voronoi_cell.delaunay_point);
                 (
                     id,
+                    neighbour_type,
                     grid::Cell {
                         neighbours: voronoi_cell
                             .faces

@@ -39,7 +39,7 @@ use crate::communication::SizedCommunicator;
 use crate::components::Density;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
-use crate::grid::NeighbourType;
+use crate::grid::ParticleType;
 use crate::grid::RemoteNeighbour;
 use crate::parameters::TimestepParameters;
 use crate::particle::AllParticles;
@@ -88,7 +88,12 @@ impl RaxiomPlugin for SweepPlugin {
         .add_component_no_io::<TimestepLevel>()
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
-            initialize_timestep_levels_system,
+            initialize_timestep_levels_system::<LocalParticle>,
+        )
+        // For haloes
+        .add_startup_system_to_stage(
+            SimulationStartupStages::InsertComponentsAfterGrid,
+            initialize_timestep_levels_system::<HaloParticle>,
         )
         .add_system_to_stage(SimulationStages::ForceCalculation, sweep_system)
         .add_system_to_stage(
@@ -202,7 +207,7 @@ impl<'a> Sweep<'a> {
                         continue;
                     }
                     site.num_missing_upwind[dir_index] += 1;
-                    if let NeighbourType::Remote(neighbour) = neighbour {
+                    if let ParticleType::Remote(neighbour) = neighbour {
                         self.to_receive_count[neighbour.rank] += 1;
                     }
                 }
@@ -325,15 +330,15 @@ impl<'a> Sweep<'a> {
                 let flux_correction_this_cell =
                     outgoing_flux_correction * (effective_area / total_effective_area);
                 match neighbour {
-                    NeighbourType::Local(neighbour_id) => self.handle_local_neighbour(
+                    ParticleType::Local(neighbour_id) => self.handle_local_neighbour(
                         flux_correction_this_cell,
                         task.dir,
                         *neighbour_id,
                     ),
-                    NeighbourType::Remote(remote) => {
+                    ParticleType::Remote(remote) => {
                         self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
                     }
-                    NeighbourType::Boundary => {}
+                    ParticleType::Boundary => {}
                 }
             }
         }
@@ -478,7 +483,7 @@ fn communicate_levels_system(
     let mut data: DataByRank<Vec<TimestepLevelData>> = DataByRank::from_communicator(&*levels_comm);
     for (id, level, cell) in local_levels.iter() {
         for (_, n) in cell.neighbours.iter() {
-            if let NeighbourType::Remote(n) = n {
+            if let ParticleType::Remote(n) = n {
                 data[n.rank].push(TimestepLevelData {
                     id: *id,
                     level: *level,
@@ -523,9 +528,9 @@ pub fn initialize_sweep_components_system(
     }
 }
 
-pub fn initialize_timestep_levels_system(
+pub fn initialize_timestep_levels_system<F: Component>(
     mut commands: Commands,
-    particles: Query<Entity, Or<(With<LocalParticle>, With<HaloParticle>)>>,
+    particles: Query<Entity, With<F>>,
     sweep_parameters: Res<SweepParameters>,
 ) {
     for entity in particles.iter() {

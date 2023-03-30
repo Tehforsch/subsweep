@@ -163,15 +163,15 @@ where
 
     /// Iterate over the inner points of the triangulation, i.e. every
     /// point that is not on the boundary of the all-encompassing
-    /// tetra (and not a halo).  This only gives valid results if the
+    /// tetra.  This only gives valid results if the
     /// triangulation was constructed via incremental insertion, not
     /// if it has been manually constructed from tetras, as is done in
     /// some of the test code.
-    pub fn iter_inner_points(&self) -> impl Iterator<Item = PointIndex> + '_ {
-        self.points
-            .iter()
-            .map(|(i, _)| i)
-            .filter(|p| self.point_kinds[p] == PointKind::Inner)
+    pub fn iter_non_boundary_points(&self) -> impl Iterator<Item = PointIndex> + '_ {
+        self.points.iter().map(|(i, _)| i).filter(|p| {
+            let kind = self.point_kinds[p];
+            matches!(kind, PointKind::Inner | PointKind::Halo(_))
+        })
     }
 
     fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
@@ -507,7 +507,7 @@ pub(super) mod tests {
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(
             |triangulation, num_inserted| {
-                let num_inner_points = triangulation.iter_inner_points().count();
+                let num_inner_points = triangulation.iter_non_boundary_points().count();
                 assert_eq!(num_inner_points, num_inserted);
             },
         );

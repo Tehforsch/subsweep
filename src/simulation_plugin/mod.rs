@@ -42,6 +42,7 @@ pub enum SimulationStartupStages {
     InsertComponents,
     InsertDerivedComponents,
     InsertGrid,
+    InsertComponentsAfterGrid,
 }
 
 #[derive(Equivalence, Clone)]
