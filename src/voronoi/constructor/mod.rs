@@ -13,7 +13,6 @@ use super::delaunay::TetraIndex;
 use super::utils::get_extent;
 use super::ActiveDimension;
 use super::Cell;
-use super::CellConnection;
 use super::CellIndex;
 use super::Delaunay;
 use super::DimensionCell;
@@ -23,7 +22,6 @@ use super::TriangulationData;
 use super::VoronoiGrid;
 use crate::grid;
 use crate::grid::FaceArea;
-use crate::grid::ParticleType;
 use crate::prelude::ParticleId;
 use crate::units::Length;
 use crate::units::VecDimensionless;
@@ -105,16 +103,13 @@ impl Constructor<ActiveDimension> {
                             .faces
                             .iter()
                             .map(|face| {
-                                let neigh = face.connection;
-                                let face = crate::grid::Face {
-                                    area: FaceArea::new_unchecked(face.area),
-                                    normal: VecDimensionless::new_unchecked(face.normal),
-                                };
-                                let p_type = match neigh {
-                                    CellConnection::ToInner(neigh) => ParticleType::Local(neigh),
-                                    CellConnection::ToOuter => ParticleType::Boundary,
-                                };
-                                (face, p_type)
+                                (
+                                    crate::grid::Face {
+                                        area: FaceArea::new_unchecked(face.area),
+                                        normal: VecDimensionless::new_unchecked(face.normal),
+                                    },
+                                    face.connection.clone(),
+                                )
                             })
                             .collect(),
                         size: Length::new_unchecked(voronoi_cell.size()),

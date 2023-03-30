@@ -39,7 +39,7 @@ use crate::communication::SizedCommunicator;
 use crate::components::Density;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
-use crate::grid::ParticleType;
+use crate::grid::NeighbourType;
 use crate::grid::RemoteNeighbour;
 use crate::parameters::TimestepParameters;
 use crate::particle::AllParticles;
@@ -202,7 +202,7 @@ impl<'a> Sweep<'a> {
                         continue;
                     }
                     site.num_missing_upwind[dir_index] += 1;
-                    if let ParticleType::Remote(neighbour) = neighbour {
+                    if let NeighbourType::Remote(neighbour) = neighbour {
                         self.to_receive_count[neighbour.rank] += 1;
                     }
                 }
@@ -325,15 +325,15 @@ impl<'a> Sweep<'a> {
                 let flux_correction_this_cell =
                     outgoing_flux_correction * (effective_area / total_effective_area);
                 match neighbour {
-                    ParticleType::Local(neighbour_id) => self.handle_local_neighbour(
+                    NeighbourType::Local(neighbour_id) => self.handle_local_neighbour(
                         flux_correction_this_cell,
                         task.dir,
                         *neighbour_id,
                     ),
-                    ParticleType::Remote(remote) => {
+                    NeighbourType::Remote(remote) => {
                         self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
                     }
-                    ParticleType::Boundary => {}
+                    NeighbourType::Boundary => {}
                 }
             }
         }
@@ -478,7 +478,7 @@ fn communicate_levels_system(
     let mut data: DataByRank<Vec<TimestepLevelData>> = DataByRank::from_communicator(&*levels_comm);
     for (id, level, cell) in local_levels.iter() {
         for (_, n) in cell.neighbours.iter() {
-            if let ParticleType::Remote(n) = n {
+            if let NeighbourType::Remote(n) = n {
                 data[n.rank].push(TimestepLevelData {
                     id: *id,
                     level: *level,

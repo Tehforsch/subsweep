@@ -21,7 +21,6 @@ use crate::communication::DataByRank;
 use crate::communication::SizedCommunicator;
 use crate::domain::QuadTree;
 use crate::domain::TopLevelIndices;
-use crate::mpidbg;
 use crate::parameters::SimulationBox;
 use crate::quadtree::radius_search::bounding_boxes_overlap_periodic;
 use crate::units::Length;

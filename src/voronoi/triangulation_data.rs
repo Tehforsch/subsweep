@@ -14,7 +14,8 @@ use super::DimensionCell;
 use super::Point;
 use super::Triangulation;
 use super::VoronoiGrid;
-use crate::voronoi::cell::CellConnection;
+use crate::grid::NeighbourType;
+use crate::grid::RemoteNeighbour;
 
 pub struct TriangulationData<D: Dimension> {
     pub triangulation: Triangulation<D>,
@@ -65,11 +66,17 @@ where
         }
     }
 
-    pub fn get_connection(&self, p: PointIndex) -> CellConnection {
-        self.point_to_cell_map
-            .get_by_right(&p)
-            .map(|i| CellConnection::ToInner(*i))
-            .unwrap_or(CellConnection::ToOuter)
+    pub fn get_neighbour_type(&self, p: PointIndex) -> NeighbourType {
+        use NeighbourType::*;
+        use PointKind::*;
+        match self.triangulation.point_kinds[&p] {
+            Inner => Local(*self.point_to_cell_map.get_by_right(&p).unwrap()),
+            Outer => Boundary,
+            Halo(rank) => Remote(RemoteNeighbour {
+                id: *self.point_to_cell_map.get_by_right(&p).unwrap(),
+                rank: rank,
+            }),
+        }
     }
 }
 

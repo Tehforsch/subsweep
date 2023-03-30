@@ -12,7 +12,6 @@ mod visualizer;
 
 use bevy::prelude::Resource;
 pub use cell::Cell;
-pub use cell::CellConnection;
 pub use cell::DimensionCell;
 pub use constructor::Constructor;
 pub use delaunay::dimension::DTetra;
@@ -151,9 +150,9 @@ mod quantitative_tests {
     use super::primitives::Point2d;
     use super::TwoD;
     use super::VoronoiGrid;
+    use crate::grid::NeighbourType;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close;
-    use crate::voronoi::cell::CellConnection;
     use crate::voronoi::primitives::Point3d;
     use crate::voronoi::Constructor;
     use crate::voronoi::DimensionCell;
@@ -180,15 +179,15 @@ mod quantitative_tests {
             .unwrap();
         assert_float_is_close(cell.volume(), 0.3968809165232358);
         for face in cell.faces.iter() {
-            if face.connection == CellConnection::ToInner(ParticleId(0)) {
+            if face.connection == NeighbourType::Local(ParticleId(0)) {
                 assert_float_is_close(face.area, 1.0846512947129363);
                 assert_float_is_close(face.normal.x, -0.5f64.sqrt());
                 assert_float_is_close(face.normal.y, -0.5f64.sqrt());
-            } else if face.connection == CellConnection::ToInner(ParticleId(1)) {
+            } else if face.connection == NeighbourType::Local(ParticleId(1)) {
                 assert_float_is_close(face.area, 0.862988661979256);
                 assert_float_is_close(face.normal.x, -0.22485950669875832);
                 assert_float_is_close(face.normal.y, 0.9743911956946198);
-            } else if face.connection == CellConnection::ToInner(ParticleId(2)) {
+            } else if face.connection == NeighbourType::Local(ParticleId(2)) {
                 assert_float_is_close(face.area, 0.9638545380497548);
                 assert_float_is_close(face.normal.x, 0.9970544855015816);
                 assert_float_is_close(face.normal.y, -0.07669649888473688);
@@ -222,22 +221,22 @@ mod quantitative_tests {
         assert_eq!(cell.points.len(), 4);
         assert_float_is_close(cell.volume(), 0.0703125);
         for face in cell.faces.iter() {
-            if face.connection == CellConnection::ToInner(ParticleId(0)) {
+            if face.connection == NeighbourType::Local(ParticleId(0)) {
                 assert_float_is_close(face.area, 0.4871392896287468);
                 assert_float_is_close(face.normal.x, -(1.0f64 / 3.0).sqrt());
                 assert_float_is_close(face.normal.y, -(1.0f64 / 3.0).sqrt());
                 assert_float_is_close(face.normal.z, -(1.0f64 / 3.0).sqrt());
-            } else if face.connection == CellConnection::ToInner(ParticleId(1)) {
+            } else if face.connection == NeighbourType::Local(ParticleId(1)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 1.0);
                 assert_float_is_close(face.normal.y, 0.0);
                 assert_float_is_close(face.normal.z, 0.0);
-            } else if face.connection == CellConnection::ToInner(ParticleId(2)) {
+            } else if face.connection == NeighbourType::Local(ParticleId(2)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 0.0);
                 assert_float_is_close(face.normal.y, 1.0);
                 assert_float_is_close(face.normal.z, 0.0);
-            } else if face.connection == CellConnection::ToInner(ParticleId(3)) {
+            } else if face.connection == NeighbourType::Local(ParticleId(3)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 0.0);
                 assert_float_is_close(face.normal.y, 0.0);
