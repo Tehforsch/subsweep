@@ -12,9 +12,7 @@ use mpi::traits::Equivalence;
 pub use plugin::ParallelVoronoiGridConstruction;
 
 use self::mpi_types::IntoEquivalenceType;
-pub use super::halo_iteration::HaloExporter;
-use super::halo_iteration::IndexedRadiusSearch;
-use super::halo_iteration::IndexedSearchResult;
+use super::halo_iteration::RadiusSearch;
 use super::halo_iteration::SearchResult;
 use super::SearchData;
 use crate::communication::communicator::Communicator;
@@ -35,7 +33,7 @@ use crate::voronoi::Dimension;
 use crate::voronoi::Point;
 
 type MpiSearchData<D> = <SearchData<D> as IntoEquivalenceType>::Equiv;
-type MpiSearchResult<D> = <IndexedSearchResult<D, Entity> as IntoEquivalenceType>::Equiv;
+type MpiSearchResult<D> = <SearchResult<D> as IntoEquivalenceType>::Equiv;
 
 #[derive(Clone, Add, Sum, Equivalence)]
 pub struct NumUndecided(pub usize);
@@ -43,7 +41,7 @@ pub struct NumUndecided(pub usize);
 pub struct ParallelSearch<'a, D: Dimension + 'static>
 where
     SearchData<D>: IntoEquivalenceType,
-    IndexedSearchResult<D, Entity>: IntoEquivalenceType,
+    SearchResult<D>: IntoEquivalenceType,
 {
     data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
     result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<D>>,
@@ -58,7 +56,7 @@ where
 type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
 type IncomingRequests<D> = DataByRank<Vec<SearchData<D>>>;
 type OutgoingResults<D> = DataByRank<Vec<MpiSearchResult<D>>>;
-type IncomingResults<D> = DataByRank<Vec<IndexedSearchResult<D, Entity>>>;
+type IncomingResults<D> = DataByRank<Vec<SearchResult<D>>>;
 
 impl<'a> ParallelSearch<'a, ActiveDimension> {
     fn tree_node_and_search_overlap(
@@ -114,12 +112,8 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                         .into_iter()
                         .filter(|p| self.already_sent[*rank].insert(p.entity))
                         .map(|p| {
-                            let result = SearchResult::from_search(search, p.pos.value_unchecked());
-                            let indexed_result = IndexedSearchResult {
-                                result,
-                                point_index: p.entity,
-                            };
-                            indexed_result.to_equivalent()
+                            SearchResult::from_search(search, p.pos.value_unchecked())
+                                .to_equivalent()
                         }),
                 );
             }
@@ -158,11 +152,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                     rank,
                     requests
                         .into_iter()
-                        .map(|request| {
-                            IndexedSearchResult::<ActiveDimension, Entity>::from_equivalent(
-                                &request,
-                            )
-                        })
+                        .map(|request| SearchResult::<ActiveDimension>::from_equivalent(&request))
                         .collect(),
                 )
             })
@@ -170,19 +160,14 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
     }
 }
 
-impl<'a> IndexedRadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
-    type Index = Entity;
-
-    fn radius_search(
+impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
+    fn unique_radius_search(
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
-    ) -> DataByRank<Vec<IndexedSearchResult<ActiveDimension, Entity>>> {
+    ) -> DataByRank<Vec<SearchResult<ActiveDimension>>> {
         let outgoing = self.get_outgoing_searches(data);
-        mpidbg!(outgoing.size());
         let incoming = self.exchange_all_searches(outgoing);
-        mpidbg!(incoming.size());
         let outgoing_results = self.get_outgoing_results(incoming);
-        mpidbg!(outgoing_results.size());
         self.exchange_all_results(outgoing_results)
     }
 

@@ -1,10 +1,7 @@
-use bevy::prelude::Entity;
 use generational_arena::Index;
 use mpi::traits::Equivalence;
 
 use super::SearchData;
-use crate::communication::EntityKey;
-use crate::voronoi::constructor::halo_iteration::IndexedSearchResult;
 use crate::voronoi::constructor::halo_iteration::SearchResult;
 use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::primitives::Float;
@@ -100,34 +97,29 @@ impl IntoEquivalenceType for SearchData<ThreeD> {
 }
 
 #[derive(Equivalence, Clone, Debug)]
-pub struct IndexedSearchResultThreeDSend {
+pub struct SearchResultThreeDSend {
     point_x: Float,
     point_y: Float,
     point_z: Float,
     tetra_index: TetraIndexSend,
-    entity: EntityKey,
 }
 
-impl IntoEquivalenceType for IndexedSearchResult<ThreeD, Entity> {
-    type Equiv = IndexedSearchResultThreeDSend;
+impl IntoEquivalenceType for SearchResult<ThreeD> {
+    type Equiv = SearchResultThreeDSend;
 
     fn to_equivalent(&self) -> Self::Equiv {
-        IndexedSearchResultThreeDSend {
-            point_x: self.result.point.x,
-            point_y: self.result.point.y,
-            point_z: self.result.point.z,
-            tetra_index: self.result.tetra_index.into(),
-            entity: self.point_index.to_bits(),
+        SearchResultThreeDSend {
+            point_x: self.point.x,
+            point_y: self.point.y,
+            point_z: self.point.z,
+            tetra_index: self.tetra_index.into(),
         }
     }
 
     fn from_equivalent(equiv: &Self::Equiv) -> Self {
-        IndexedSearchResult::<ThreeD, Entity> {
-            result: SearchResult {
-                point: Point3d::new(equiv.point_x, equiv.point_y, equiv.point_z),
-                tetra_index: equiv.tetra_index.into(),
-            },
-            point_index: Entity::from_bits(equiv.entity),
+        SearchResult {
+            point: Point3d::new(equiv.point_x, equiv.point_y, equiv.point_z),
+            tetra_index: equiv.tetra_index.into(),
         }
     }
 }

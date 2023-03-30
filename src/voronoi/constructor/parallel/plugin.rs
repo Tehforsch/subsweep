@@ -5,7 +5,6 @@ use bevy::utils::StableHashMap;
 use derive_custom::Named;
 
 use super::super::Constructor;
-use super::HaloExporter;
 use super::MpiSearchData;
 use super::MpiSearchResult;
 use super::NumUndecided;
@@ -68,10 +67,9 @@ fn construct_grid_system(
         box_: box_.clone(),
         already_sent,
     };
-    let halo_exporter = HaloExporter::new(search);
     let cons = Constructor::<ThreeD>::construct_from_iter(
         particles.iter().map(|(_, i, p)| (*i, p.value_unchecked())),
-        halo_exporter,
+        search,
     );
     let id_entity_map: StableHashMap<_, _> = particles
         .iter()

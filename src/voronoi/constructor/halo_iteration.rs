@@ -1,5 +1,3 @@
-use std::hash::Hash;
-
 use bevy::utils::StableHashSet;
 
 use super::super::delaunay::dimension::DTetra;
@@ -11,7 +9,6 @@ use super::DimensionCell;
 use super::Point;
 use super::TetraIndex;
 use crate::communication::DataByRank;
-use crate::communication::Rank;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::utils::Extent;
@@ -47,11 +44,6 @@ impl<D: Dimension> SearchResult<D> {
     }
 }
 
-pub struct IndexedSearchResult<D: Dimension, I> {
-    pub result: SearchResult<D>,
-    pub point_index: I,
-}
-
 pub trait RadiusSearch<D: Dimension> {
     fn unique_radius_search(
         &mut self,
@@ -59,71 +51,6 @@ pub trait RadiusSearch<D: Dimension> {
     ) -> DataByRank<Vec<SearchResult<D>>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
     fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
-}
-
-pub trait IndexedRadiusSearch<D: Dimension> {
-    type Index: PartialEq + Eq + Hash;
-    fn radius_search(
-        &mut self,
-        data: Vec<SearchData<D>>,
-    ) -> DataByRank<Vec<IndexedSearchResult<D, Self::Index>>>;
-    fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
-    fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
-}
-
-pub struct HaloExporter<F, I> {
-    radius_search: F,
-    already_exported: StableHashSet<(Rank, I)>,
-}
-
-impl<F, I> HaloExporter<F, I> {
-    pub fn new(radius_search: F) -> Self {
-        Self {
-            radius_search,
-            already_exported: StableHashSet::default(),
-        }
-    }
-}
-
-impl<D: Dimension, F: IndexedRadiusSearch<D>> RadiusSearch<D> for HaloExporter<F, F::Index> {
-    fn unique_radius_search(
-        &mut self,
-        data: Vec<SearchData<D>>,
-    ) -> DataByRank<Vec<SearchResult<D>>> {
-        let indexed_results = self.radius_search.radius_search(data);
-        indexed_results
-            .into_iter()
-            .map(|(rank, results)| {
-                (
-                    rank,
-                    results
-                        .into_iter()
-                        .filter_map(
-                            |IndexedSearchResult {
-                                 result,
-                                 point_index,
-                             }| {
-                                if self.already_exported.insert((rank, point_index)) {
-                                    Some(result)
-                                } else {
-                                    None
-                                }
-                            },
-                        )
-                        .collect(),
-                )
-            })
-            .collect()
-    }
-
-    fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
-        <F as IndexedRadiusSearch<D>>::determine_global_extent(&self.radius_search)
-    }
-
-    fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool {
-        self.radius_search
-            .everyone_finished(num_undecided_this_rank)
-    }
 }
 
 pub(super) struct HaloIteration<D: Dimension, F> {
@@ -215,9 +142,9 @@ where
 #[cfg(test)]
 #[generic_tests::define]
 mod tests {
-    use super::HaloExporter;
-    use super::IndexedRadiusSearch;
-    use super::IndexedSearchResult;
+    use bevy::utils::StableHashSet;
+
+    use super::RadiusSearch;
     use super::SearchData;
     use super::SearchResult;
     use crate::communication::DataByRank;
@@ -245,38 +172,38 @@ mod tests {
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
 
-    pub struct TestRadiusSearch<D: Dimension>(Vec<(ParticleId, Point<D>)>, Extent<Point<D>>);
+    pub struct TestRadiusSearch<D: Dimension> {
+        points: Vec<(ParticleId, Point<D>)>,
+        extent: Extent<Point<D>>,
+        already_sent: StableHashSet<ParticleId>,
+    }
 
-    impl<D: Dimension> IndexedRadiusSearch<D> for TestRadiusSearch<D> {
-        type Index = ParticleId;
-
-        fn radius_search(
+    impl<D: Dimension> RadiusSearch<D> for TestRadiusSearch<D> {
+        fn unique_radius_search(
             &mut self,
             data: Vec<SearchData<D>>,
-        ) -> DataByRank<Vec<IndexedSearchResult<D, Self::Index>>> {
+        ) -> DataByRank<Vec<SearchResult<D>>> {
             let fake_rank = 1;
             let mut d = DataByRank::empty();
-            let results: Vec<_> = data
-                .iter()
-                .flat_map(|data| {
-                    self.0
+            let mut results = vec![];
+            for data in data.iter() {
+                results.extend(
+                    self.points
                         .iter()
                         .filter(|(_, p)| data.point.distance(*p) < data.radius)
-                        .map(move |(j, p)| IndexedSearchResult {
-                            point_index: *j,
-                            result: SearchResult {
-                                point: *p,
-                                tetra_index: data.tetra_index,
-                            },
-                        })
-                })
-                .collect();
+                        .filter(|(j, _)| self.already_sent.insert(*j))
+                        .map(move |(_, p)| SearchResult {
+                            point: *p,
+                            tetra_index: data.tetra_index,
+                        }),
+                )
+            }
             d.insert(fake_rank, results);
             d
         }
 
         fn determine_global_extent(&self) -> Option<Extent<Point<D>>> {
-            Some(self.1.clone())
+            Some(self.extent.clone())
         }
 
         fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool {
@@ -315,7 +242,11 @@ mod tests {
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();
         let sub_constructor = Constructor::construct_from_iter(
             points1.iter().cloned(),
-            HaloExporter::new(TestRadiusSearch(points2, extent)),
+            TestRadiusSearch {
+                points: points2,
+                extent,
+                already_sent: StableHashSet::default(),
+            },
         );
         let data1 = full_constructor.data;
         let data2 = sub_constructor.data;

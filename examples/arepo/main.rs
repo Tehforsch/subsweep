@@ -100,7 +100,6 @@ fn initialize_source_system(
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
     box_size: Res<SimulationBox>,
-    global: Res<GlobalExtent>,
     mut comm: Communicator<CommunicatedOption<Identified<DistanceToSourceData>>>,
 ) {
     let closest = particles
