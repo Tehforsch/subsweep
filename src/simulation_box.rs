@@ -21,18 +21,7 @@ fn periodic_wrap_component(v: Float, min: Float, max: Float) -> Float {
 }
 
 fn minimize_component(v: Float, length: Float) -> Float {
-    // The following only works if v is within [-3/2 L, 3/2 L].
-    // where L = (box_end - box_start)
-    // The debug assertion below will fail if the particle falls out of this range.
-    // Since periodic_wrap always takes all particles to [box_start, box_end],
-    // distances should always fulfill |v| <= 3/2 L = 3/2
-    let v = if v >= length / 2.0 {
-        v - length
-    } else if v <= -length / 2.0 {
-        v + length
-    } else {
-        v
-    };
+    let v = (v + length / 2.0).rem_euclid(length) - length / 2.0;
     debug_assert!(v.abs() <= length / 2.0);
     v
 }

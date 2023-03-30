@@ -1,4 +1,6 @@
-box_size: 12.8 kpc
+box_size:
+  min: (-0.1 -0.1 -0.1) kpc
+  max: (12.9 12.9 12.9) kpc
 timestep:
   max_timestep: 1e-1 Myr
 postprocess:

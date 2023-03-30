@@ -94,37 +94,33 @@ impl Constructor<ActiveDimension> {
         voronoi
             .cells
             .iter()
-            .filter_map(|voronoi_cell| {
+            .map(|voronoi_cell| {
                 let id = self
                     .get_particle_id_by_point(voronoi_cell.delaunay_point)
                     .unwrap();
-                if !voronoi_cell.is_infinite {
-                    Some((
-                        id,
-                        grid::Cell {
-                            neighbours: voronoi_cell
-                                .faces
-                                .iter()
-                                .map(|face| {
-                                    let neigh = face.connection;
-                                    let face = crate::grid::Face {
-                                        area: FaceArea::new_unchecked(face.area),
-                                        normal: VecDimensionless::new_unchecked(face.normal),
-                                    };
-                                    if let CellConnection::ToInner(neigh) = neigh {
-                                        (face, ParticleType::Local(neigh))
-                                    } else {
-                                        (face, ParticleType::Boundary)
-                                    }
-                                })
-                                .collect(),
-                            size: Length::new_unchecked(voronoi_cell.size()),
-                            volume: Volume::new_unchecked(voronoi_cell.volume()),
-                        },
-                    ))
-                } else {
-                    None
-                }
+                (
+                    id,
+                    grid::Cell {
+                        neighbours: voronoi_cell
+                            .faces
+                            .iter()
+                            .map(|face| {
+                                let neigh = face.connection;
+                                let face = crate::grid::Face {
+                                    area: FaceArea::new_unchecked(face.area),
+                                    normal: VecDimensionless::new_unchecked(face.normal),
+                                };
+                                let p_type = match neigh {
+                                    CellConnection::ToInner(neigh) => ParticleType::Local(neigh),
+                                    CellConnection::ToOuter => ParticleType::Boundary,
+                                };
+                                (face, p_type)
+                            })
+                            .collect(),
+                        size: Length::new_unchecked(voronoi_cell.size()),
+                        volume: Volume::new_unchecked(voronoi_cell.volume()),
+                    },
+                )
             })
             .collect()
     }

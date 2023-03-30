@@ -103,7 +103,6 @@ fn initialize_source_system(
     global: Res<GlobalExtent>,
     mut comm: Communicator<CommunicatedOption<Identified<DistanceToSourceData>>>,
 ) {
-    dbg!(&box_size, &global);
     let closest = particles
         .iter()
         .map(|(entity, pos)| {
