@@ -13,25 +13,26 @@ fn relative_bounding_box_overlap(dist: VecLength, total_size: VecLength) -> bool
 /// Returns whether the two bounding boxes given by
 /// the center coordinates pos1 and pos2 and the side lengths
 /// size1 and size2 overlap in a periodic box of size box_size
-pub fn bounding_boxes_overlap_periodic(
-    box_: &SimulationBox,
+pub fn bounding_boxes_overlap(
+    _box_: &SimulationBox,
     pos1: &VecLength,
     size1: &VecLength,
     pos2: &VecLength,
     size2: &VecLength,
 ) -> bool {
-    let dist = box_.periodic_distance_vec(pos1, pos2);
+    let dist = *pos1 - *pos2;
     let total_size = *size1 + *size2;
     relative_bounding_box_overlap(dist, total_size)
 }
 
 fn within_radius(
-    box_: &SimulationBox,
+    _box_: &SimulationBox,
     pos1: &VecLength,
     pos2: &VecLength,
     radius: &Length,
 ) -> bool {
-    box_.periodic_distance(pos1, pos2) < *radius
+    pos1.distance(pos2) < *radius
+    // box_.periodic_distance(pos1, pos2) < *radius
 }
 
 impl<N, L: LeafDataType> QuadTree<N, L> {
@@ -43,7 +44,7 @@ impl<N, L: LeafDataType> QuadTree<N, L> {
         side_length: &Length,
     ) {
         let node_extent = self.extent.side_lengths();
-        if bounding_boxes_overlap_periodic(
+        if bounding_boxes_overlap(
             box_size,
             &self.extent.center(),
             &node_extent,

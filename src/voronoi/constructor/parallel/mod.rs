@@ -22,7 +22,7 @@ use crate::domain::QuadTree;
 use crate::domain::TopLevelIndices;
 use crate::parameters::SimulationBox;
 use crate::prelude::ParticleId;
-use crate::quadtree::radius_search::bounding_boxes_overlap_periodic;
+use crate::quadtree::radius_search::bounding_boxes_overlap;
 use crate::units::Length;
 use crate::units::MVec;
 use crate::units::VecLength;
@@ -63,7 +63,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         tree: &QuadTree,
         search: &SearchData<ActiveDimension>,
     ) -> bool {
-        bounding_boxes_overlap_periodic(
+        bounding_boxes_overlap(
             &self.box_,
             &tree.extent.center,
             &tree.extent.side_lengths(),
