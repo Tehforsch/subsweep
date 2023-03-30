@@ -5,6 +5,7 @@ mod tests;
 
 use bevy::prelude::info;
 use bevy::prelude::Entity;
+use bevy::utils::StableHashSet;
 use derive_more::Add;
 use derive_more::Sum;
 use mpi::traits::Equivalence;
@@ -49,9 +50,9 @@ where
     finished_comm: &'a mut Communicator<NumUndecided>,
     global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
-
     indices: &'a TopLevelIndices,
     box_: SimulationBox,
+    already_sent: DataByRank<StableHashSet<Entity>>,
 }
 
 type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
@@ -96,7 +97,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
     }
 
     fn get_outgoing_results(
-        &self,
+        &mut self,
         incoming: IncomingRequests<ActiveDimension>,
     ) -> OutgoingResults<ActiveDimension> {
         let mut outgoing =
@@ -108,14 +109,19 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                     &VecLength::new_unchecked(search.point),
                     &Length::new_unchecked(search.radius),
                 );
-                outgoing[*rank].extend(particles.into_iter().map(|p| {
-                    let result = SearchResult::from_search(search, p.pos.value_unchecked());
-                    let indexed_result = IndexedSearchResult {
-                        result,
-                        point_index: p.entity,
-                    };
-                    indexed_result.to_equivalent()
-                }));
+                outgoing[*rank].extend(
+                    particles
+                        .into_iter()
+                        .filter(|p| self.already_sent[*rank].insert(p.entity))
+                        .map(|p| {
+                            let result = SearchResult::from_search(search, p.pos.value_unchecked());
+                            let indexed_result = IndexedSearchResult {
+                                result,
+                                point_index: p.entity,
+                            };
+                            indexed_result.to_equivalent()
+                        }),
+                );
             }
         }
         outgoing
@@ -172,8 +178,11 @@ impl<'a> IndexedRadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimen
         data: Vec<SearchData<ActiveDimension>>,
     ) -> DataByRank<Vec<IndexedSearchResult<ActiveDimension, Entity>>> {
         let outgoing = self.get_outgoing_searches(data);
+        mpidbg!(outgoing.size());
         let incoming = self.exchange_all_searches(outgoing);
+        mpidbg!(incoming.size());
         let outgoing_results = self.get_outgoing_results(incoming);
+        mpidbg!(outgoing_results.size());
         self.exchange_all_results(outgoing_results)
     }
 

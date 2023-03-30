@@ -10,6 +10,7 @@ use super::MpiSearchData;
 use super::MpiSearchResult;
 use super::NumUndecided;
 use super::ParallelSearch;
+use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
 use crate::domain::GlobalExtent;
@@ -56,6 +57,7 @@ fn construct_grid_system(
         min: global_extent.min.value_unchecked(),
         max: global_extent.max.value_unchecked(),
     };
+    let already_sent = DataByRank::from_communicator(&*data_comm);
     let search = ParallelSearch {
         data_comm: &mut *data_comm,
         result_comm: &mut *result_comm,
@@ -64,6 +66,7 @@ fn construct_grid_system(
         tree: &*tree,
         indices: &*indices,
         box_: box_.clone(),
+        already_sent,
     };
     let halo_exporter = HaloExporter::new(search);
     let cons = Constructor::<ThreeD>::construct_from_iter(
