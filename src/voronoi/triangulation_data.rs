@@ -10,7 +10,7 @@ use super::delaunay::PointKind;
 use super::delaunay::TetraIndex;
 use super::Cell;
 use super::CellIndex;
-use super::DimensionCell;
+use super::DCell;
 use super::Point;
 use super::Triangulation;
 use super::VoronoiGrid;
@@ -27,7 +27,7 @@ pub struct TriangulationData<D: Dimension> {
 impl<D: Dimension> TriangulationData<D>
 where
     Triangulation<D>: Delaunay<D>,
-    Cell<D>: DimensionCell<Dimension = D>,
+    Cell<D>: DCell<Dimension = D>,
 {
     pub fn is_infinite_cell(&self, p: PointIndex) -> bool {
         let tetras = &self.point_to_tetras_map[&p];

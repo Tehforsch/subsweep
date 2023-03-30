@@ -14,8 +14,8 @@ use super::utils::get_extent;
 use super::ActiveDimension;
 use super::Cell;
 use super::CellIndex;
+use super::DCell;
 use super::Delaunay;
-use super::DimensionCell;
 use super::Point;
 use super::Triangulation;
 use super::TriangulationData;
@@ -37,7 +37,7 @@ impl<D> Constructor<D>
 where
     D: Dimension,
     Triangulation<D>: Delaunay<D>,
-    Cell<D>: DimensionCell<Dimension = D>,
+    Cell<D>: DCell<Dimension = D>,
 {
     pub fn construct_from_iter<'b, F>(
         iter: impl Iterator<Item = (CellIndex, Point<D>)> + 'b,

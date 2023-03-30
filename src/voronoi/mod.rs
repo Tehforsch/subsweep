@@ -12,7 +12,7 @@ mod visualizer;
 
 use bevy::prelude::Resource;
 pub use cell::Cell;
-pub use cell::DimensionCell;
+pub use cell::DCell;
 pub use constructor::Constructor;
 pub use delaunay::dimension::DTetra;
 pub use delaunay::dimension::Dimension;
@@ -47,7 +47,7 @@ pub struct VoronoiGrid<D: Dimension> {
 impl<D: Dimension> From<&TriangulationData<D>> for VoronoiGrid<D>
 where
     Triangulation<D>: Delaunay<D>,
-    Cell<D>: DimensionCell<Dimension = D>,
+    Cell<D>: DCell<Dimension = D>,
 {
     fn from(c: &TriangulationData<D>) -> Self {
         c.construct_voronoi()
@@ -66,7 +66,7 @@ mod tests {
     use super::delaunay::Triangulation;
     use super::test_utils::TestDimension;
     use super::Cell;
-    use super::DimensionCell;
+    use super::DCell;
     use super::ThreeD;
     use super::TriangulationData;
     use super::TwoD;
@@ -85,7 +85,7 @@ mod tests {
     ) where
         D: Dimension + TestDimension + Clone,
         Triangulation<D>: Delaunay<D> + Clone,
-        Cell<D>: DimensionCell<Dimension = D>,
+        Cell<D>: DCell<Dimension = D>,
     {
         perform_triangulation_check_on_each_level_of_construction(|t, num| {
             let map: BiMap<_, _> = t
@@ -106,7 +106,7 @@ mod tests {
     where
         Triangulation<D>: Delaunay<D>,
         Triangulation<D>: super::visualizer::Visualizable,
-        Cell<D>: DimensionCell<Dimension = D>,
+        Cell<D>: DCell<Dimension = D>,
         VoronoiGrid<D>: for<'a> From<&'a TriangulationData<D>>,
         <D as Dimension>::Point: std::fmt::Debug,
         D: Clone,
@@ -139,7 +139,7 @@ mod tests {
     fn get_containing_voronoi_cell<D>(grid: &VoronoiGrid<D>, point: D::Point) -> Option<&Cell<D>>
     where
         D: TestDimension,
-        Cell<D>: DimensionCell<Dimension = D>,
+        Cell<D>: DCell<Dimension = D>,
     {
         grid.cells.iter().find(|cell| cell.contains(point))
     }
@@ -155,7 +155,7 @@ mod quantitative_tests {
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::primitives::Point3d;
     use crate::voronoi::Constructor;
-    use crate::voronoi::DimensionCell;
+    use crate::voronoi::DCell;
     use crate::voronoi::ThreeD;
 
     #[test]

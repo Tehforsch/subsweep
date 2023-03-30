@@ -20,7 +20,7 @@ use crate::prelude::Float;
 use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::DTetra;
 
-pub trait DimensionCell: Sized {
+pub trait DCell: Sized {
     type Dimension: Dimension;
     fn size(&self) -> Float;
     fn volume(&self) -> Float;
@@ -104,7 +104,7 @@ impl Cell<TwoD> {
     }
 }
 
-impl DimensionCell for Cell<TwoD> {
+impl DCell for Cell<TwoD> {
     type Dimension = TwoD;
 
     fn contains(&self, point: Point2d) -> bool {
@@ -172,7 +172,7 @@ impl Cell<ThreeD> {
     }
 }
 
-impl DimensionCell for Cell<ThreeD> {
+impl DCell for Cell<ThreeD> {
     type Dimension = ThreeD;
 
     fn contains(&self, point: Point3d) -> bool {

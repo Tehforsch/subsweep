@@ -5,8 +5,8 @@ use super::super::delaunay::dimension::DTetra;
 use super::super::delaunay::dimension::DTetraData;
 use super::super::primitives::DVector;
 use super::Cell;
+use super::DCell;
 use super::Delaunay;
-use super::DimensionCell;
 use super::Point;
 use super::TetraIndex;
 use crate::communication::DataByRank;
@@ -70,7 +70,7 @@ where
     D: Dimension,
     Triangulation<D>: Delaunay<D>,
     F: RadiusSearch<D>,
-    Cell<D>: DimensionCell<Dimension = D>,
+    Cell<D>: DCell<Dimension = D>,
 {
     pub fn new(triangulation: Triangulation<D>, search: F) -> Self {
         Self {
@@ -166,8 +166,8 @@ mod tests {
     use crate::voronoi::utils::get_extent;
     use crate::voronoi::utils::Extent;
     use crate::voronoi::Cell;
+    use crate::voronoi::DCell;
     use crate::voronoi::Dimension;
-    use crate::voronoi::DimensionCell;
     use crate::voronoi::Point;
     use crate::voronoi::ThreeD;
     use crate::voronoi::Triangulation;
@@ -240,7 +240,7 @@ mod tests {
         D: Dimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
         Point<D>: DVector,
-        Cell<D>: DimensionCell<Dimension = D>,
+        Cell<D>: DCell<Dimension = D>,
     {
         // Obtain two point sets - the second of them shifted by some offset away from the first
         let (points1, points2) = D::get_example_point_sets_with_ids();
