@@ -1,4 +1,5 @@
 mod mpi_types;
+mod plugin;
 #[cfg(all(test, not(feature = "mpi")))]
 mod tests;
 
@@ -9,6 +10,7 @@ use derive_more::Sum;
 use mpi::traits::Equivalence;
 
 use self::mpi_types::IntoEquivalenceType;
+pub use super::halo_iteration::HaloExporter;
 use super::halo_iteration::IndexedRadiusSearch;
 use super::halo_iteration::IndexedSearchResult;
 use super::halo_iteration::SearchResult;

@@ -1,6 +1,6 @@
 mod halo_iteration;
 mod local;
-mod parallel;
+pub(super) mod parallel;
 
 use self::halo_iteration::HaloIteration;
 use self::halo_iteration::RadiusSearch;

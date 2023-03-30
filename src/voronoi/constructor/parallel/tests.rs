@@ -1,25 +1,14 @@
 use bevy::ecs::system::Commands;
 use bevy::prelude::Res;
 
-use super::MpiSearchData;
-use super::MpiSearchResult;
-use super::ParallelSearch;
 use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
-use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
 use crate::domain::DomainDecompositionPlugin;
-use crate::domain::GlobalExtent;
-use crate::domain::QuadTree;
-use crate::domain::TopLevelIndices;
 use crate::parameters::DomainParameters;
 use crate::parameters::DomainStage;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
-use crate::prelude::CommunicationPlugin;
-use crate::prelude::Communicator;
 use crate::prelude::LocalParticle;
-use crate::prelude::ParticleId;
-use crate::prelude::Particles;
 use crate::prelude::WorldRank;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationStartupStages;
@@ -27,11 +16,8 @@ use crate::stages::SimulationStagesPlugin;
 use crate::units::Length;
 use crate::units::Time;
 use crate::units::VecLength;
-use crate::voronoi::constructor::halo_iteration::HaloExporter;
-use crate::voronoi::constructor::parallel::NumUndecided;
+use crate::voronoi::constructor::parallel::plugin::ParallelVoronoiGridConstruction;
 use crate::voronoi::test_utils::TestDimension;
-use crate::voronoi::utils::Extent;
-use crate::voronoi::Constructor;
 use crate::voronoi::ThreeD;
 
 #[test]
@@ -57,11 +43,9 @@ fn build_sim(sim: &mut Simulation) {
             ..Default::default()
         })
         .add_plugin(SimulationStagesPlugin)
+        .add_plugin(ParallelVoronoiGridConstruction)
         .add_required_component::<Position>()
         .add_plugin(DomainDecompositionPlugin)
-        .add_plugin(CommunicationPlugin::<MpiSearchData<ThreeD>>::exchange())
-        .add_plugin(CommunicationPlugin::<MpiSearchResult<ThreeD>>::exchange())
-        .add_plugin(CommunicationPlugin::<NumUndecided>::default())
         .add_parameters_explicitly(simulation_box)
         .add_parameters_explicitly(SimulationParameters {
             final_time: Some(Time::zero()),
@@ -69,45 +53,11 @@ fn build_sim(sim: &mut Simulation) {
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertComponents,
             spawn_particles_system,
-        )
-        .add_startup_system_to_stage(SimulationStartupStages::InsertGrid, construct_grid_system);
+        );
 }
 
 fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
     for p in ThreeD::get_example_point_set_num(20, **rank as usize) {
         commands.spawn((LocalParticle, Position(VecLength::new_unchecked(p))));
     }
-}
-
-fn construct_grid_system(
-    particles: Particles<(&ParticleId, &Position)>,
-    mut data_comm: ExchangeCommunicator<MpiSearchData<ThreeD>>,
-    mut result_comm: ExchangeCommunicator<MpiSearchResult<ThreeD>>,
-    mut finished_comm: Communicator<NumUndecided>,
-    tree: Res<QuadTree>,
-    indices: Res<TopLevelIndices>,
-    global_extent: Res<GlobalExtent>,
-    box_: Res<SimulationBox>,
-    rank: Res<WorldRank>,
-) {
-    let extent = Extent {
-        min: global_extent.min.value_unchecked(),
-        max: global_extent.max.value_unchecked(),
-    };
-    let search = ParallelSearch {
-        data_comm: &mut *data_comm,
-        result_comm: &mut *result_comm,
-        finished_comm: &mut *finished_comm,
-        global_extent: extent,
-        tree: &*tree,
-        indices: &*indices,
-        box_: box_.clone(),
-        rank: **rank,
-    };
-    let halo_exporter = HaloExporter::new(search);
-    let cons = Constructor::<ThreeD>::construct_from_iter(
-        particles.iter().map(|(i, p)| (*i, p.value_unchecked())),
-        halo_exporter,
-    );
-    let voronoi = cons.voronoi();
 }
