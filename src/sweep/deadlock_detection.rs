@@ -67,12 +67,25 @@ impl<'a> Sweep<'a> {
             for (_, neighbour) in cell.neighbours.iter() {
                 match neighbour {
                     ParticleType::Remote(neigh) => {
-                        let dep = if neigh.rank > self.communicator.rank() {
-                            self.get_dependency(*id, self.communicator.rank(), neigh.id, neigh.rank)
-                        } else {
-                            self.get_dependency(neigh.id, neigh.rank, *id, self.communicator.rank())
-                        };
-                        dependencies[neigh.rank].push(dep);
+                        assert!(self.is_active(*id));
+                        if self.is_active(neigh.id) {
+                            let dep = if neigh.rank > self.communicator.rank() {
+                                self.get_dependency(
+                                    *id,
+                                    self.communicator.rank(),
+                                    neigh.id,
+                                    neigh.rank,
+                                )
+                            } else {
+                                self.get_dependency(
+                                    neigh.id,
+                                    neigh.rank,
+                                    *id,
+                                    self.communicator.rank(),
+                                )
+                            };
+                            dependencies[neigh.rank].push(dep);
+                        }
                     }
                     _ => {}
                 }

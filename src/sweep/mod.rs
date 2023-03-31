@@ -70,7 +70,7 @@ type Sites = ActiveList<Site>;
 #[derive(Named)]
 pub struct SweepPlugin;
 
-#[derive(Equivalence, PartialEq, Eq, Hash)]
+#[derive(Debug, Equivalence, PartialEq, Eq, Hash)]
 pub struct TimestepLevelData {
     level: TimestepLevel,
     id: ParticleId,
@@ -498,6 +498,7 @@ fn communicate_levels_system(
             }
         }
     }
+
     let id_to_entity: StableHashMap<ParticleId, Entity> = halo_levels
         .iter()
         .map(|(entity, id, _)| (*id, entity))
