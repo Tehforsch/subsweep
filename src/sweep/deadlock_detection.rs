@@ -6,6 +6,7 @@ use super::Sweep;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::MpiWorld;
+use crate::communication::SizedCommunicator;
 use crate::grid::ParticleType;
 use crate::prelude::ParticleId;
 
@@ -52,12 +53,21 @@ impl<'a> Sweep<'a> {
             let d1: StableHashSet<_> = data.iter().cloned().collect();
             let d2: StableHashSet<_> = dependencies[*rank].iter().cloned().collect();
             if d1 != d2 {
+                if self.communicator.rank() < *rank {
+                    println!("On rank {}:", self.communicator.rank());
+                    for dep in d1.difference(&d2) {
+                        println!("{:<6} <-> {:<6}", dep.p1, dep.p2);
+                    }
+                    println!("On rank {}:", rank);
+                    for dep in d2.difference(&d1) {
+                        println!("{:<6} <-> {:<6}", dep.p1, dep.p2);
+                    }
+                }
                 panic!(
-                    "Found different dependencies: {}",
+                    "Found {} different dependencies",
                     d1.symmetric_difference(&d2).count()
                 );
             }
-            assert_eq!(d1, d2);
         }
     }
 }
