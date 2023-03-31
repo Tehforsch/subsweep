@@ -90,12 +90,7 @@ fn construct_grid_system(
                 if has_local_neighbours {
                     let pos = cons.get_position_for_particle_id(id);
                     let pos = VecLength::new_unchecked(pos);
-                    commands.spawn((
-                        HaloParticle { rank: remote.rank },
-                        Position(pos),
-                        cell,
-                        remote.id,
-                    ));
+                    commands.spawn((HaloParticle { rank: remote.rank }, Position(pos), remote.id));
                 }
             }
             ParticleType::Boundary => unreachable!(),
