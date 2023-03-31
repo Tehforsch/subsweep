@@ -103,10 +103,10 @@ impl Constructor<ActiveDimension> {
                 let id = self
                     .get_particle_id_by_point(voronoi_cell.delaunay_point)
                     .unwrap();
-                let neighbour_type = self.data.get_particle_type(voronoi_cell.delaunay_point);
+                let particle_type = self.data.get_particle_type(voronoi_cell.delaunay_point);
                 (
                     id,
-                    neighbour_type,
+                    particle_type,
                     grid::Cell {
                         neighbours: voronoi_cell
                             .faces

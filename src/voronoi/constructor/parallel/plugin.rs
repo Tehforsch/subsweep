@@ -82,14 +82,21 @@ fn construct_grid_system(
                 commands.entity(*entity).insert(cell);
             }
             ParticleType::Remote(remote) => {
-                let pos = cons.get_position_for_particle_id(id);
-                let pos = VecLength::new_unchecked(pos);
-                commands.spawn((
-                    HaloParticle { rank: remote.rank },
-                    Position(pos),
-                    cell,
-                    remote.id,
-                ));
+                let has_local_neighbours =
+                    cell.neighbours.iter().any(|(_, type_)| type_.is_local());
+                // If this cell does not have local neighbours, it was imported by "accident"
+                // during the delaunay construction and then turned out not to be relevant.
+                // We don't need to spawn a halo particle in this case.
+                if has_local_neighbours {
+                    let pos = cons.get_position_for_particle_id(id);
+                    let pos = VecLength::new_unchecked(pos);
+                    commands.spawn((
+                        HaloParticle { rank: remote.rank },
+                        Position(pos),
+                        cell,
+                        remote.id,
+                    ));
+                }
             }
             ParticleType::Boundary => unreachable!(),
         }

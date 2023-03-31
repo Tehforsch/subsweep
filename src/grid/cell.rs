@@ -28,6 +28,13 @@ impl ParticleType {
         }
     }
 
+    pub fn is_local(&self) -> bool {
+        match self {
+            Self::Local(_) => true,
+            Self::Boundary => false,
+            Self::Remote(_) => false,
+        }
+    }
     pub fn unwrap_id(&self) -> ParticleId {
         match self {
             Self::Local(particle_id) => *particle_id,
