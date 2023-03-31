@@ -21,6 +21,7 @@ impl CameraTransform {
     pub fn position_to_pixels(&self, pos: VecLength) -> Vec2 {
         #[cfg(feature = "2d")]
         {
+            dbg!(self.scale);
             pos.in_units(self.scale).as_vec2()
         }
         #[cfg(not(feature = "2d"))]

@@ -50,6 +50,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainDecompositionStartupStages::SecondTopLevelTreeConstruction.as_label(),
             SimulationStartupStages::InsertGrid.as_label(),
             SimulationStartupStages::InsertComponentsAfterGrid.as_label(),
+            VisualizationStage::Startup.as_label(),
         ];
         for window in startup_stages.windows(2) {
             sim.add_startup_stage_after(

@@ -26,7 +26,6 @@ use self::show_box_size::ShowBoxSizePlugin;
 use self::show_halo_particles::ShowHaloParticlesPlugin;
 pub use self::show_particles::ShowParticlesPlugin;
 use crate::domain;
-use crate::domain::determine_global_extent_system;
 use crate::named::Named;
 use crate::quadtree::QuadTreeVisualizationPlugin;
 use crate::simulation::RaxiomPlugin;
@@ -41,6 +40,7 @@ pub enum VisualizationStage {
     AddDrawComponentsOnMainRank,
     DrawOnMainRank,
     AppExit,
+    Startup,
 }
 
 #[derive(Named)]
@@ -61,16 +61,12 @@ impl RaxiomPlugin for VisualizationPlugin {
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
         sim.insert_resource(CameraTransform::default())
-            .add_startup_system(setup_camera_system)
+            .add_startup_system_to_stage(StartupStage::PostStartup, setup_camera_system)
+            .add_startup_system_to_stage(VisualizationStage::Startup, camera_scale_system)
             .add_startup_system_to_stage(
-                StartupStage::PostStartup,
-                camera_scale_system.after(determine_global_extent_system),
-            )
-            .add_startup_system_to_stage(
-                StartupStage::PostStartup,
+                VisualizationStage::Startup,
                 camera_translation_system
                     .after(transform_propagate_system)
-                    .after(determine_global_extent_system)
                     .after(camera_scale_system),
             )
             .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system);

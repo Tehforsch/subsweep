@@ -86,7 +86,7 @@ pub struct ShowParticlesPlugin;
 struct ColorParticlesLabel;
 
 impl RaxiomPlugin for ShowParticlesPlugin {
-    fn build_everywhere(&self, sim: &mut Simulation) {
+    fn build_on_main_rank(&self, sim: &mut Simulation) {
         sim.add_system_to_stage(VisualizationStage::AddVisualization, show_particles_system)
             .add_system_to_stage(
                 VisualizationStage::DrawOnMainRank,
