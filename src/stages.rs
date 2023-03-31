@@ -51,6 +51,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             SimulationStartupStages::InsertGrid.as_label(),
             SimulationStartupStages::InsertComponentsAfterGrid.as_label(),
             VisualizationStage::Startup.as_label(),
+            SimulationStartupStages::Final.as_label(),
         ];
         for window in startup_stages.windows(2) {
             sim.add_startup_stage_after(

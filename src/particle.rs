@@ -5,7 +5,6 @@ use bevy::prelude::Bundle;
 use bevy::prelude::Component;
 use bevy::prelude::Or;
 use bevy::prelude::Query;
-use bevy::prelude::StartupStage;
 use bevy::prelude::With;
 use derive_more::Display;
 use mpi::traits::Equivalence;
@@ -16,6 +15,7 @@ use crate::components::Position;
 use crate::components::Velocity;
 use crate::named::Named;
 use crate::prelude::Simulation;
+use crate::prelude::SimulationStartupStages;
 use crate::simulation::RaxiomPlugin;
 
 #[derive(
@@ -66,7 +66,7 @@ pub struct ParticlePlugin;
 
 impl RaxiomPlugin for ParticlePlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_startup_system_to_stage(StartupStage::PostStartup, count_types_system);
+        sim.add_startup_system_to_stage(SimulationStartupStages::Final, count_types_system);
     }
 }
 
