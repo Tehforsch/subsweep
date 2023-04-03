@@ -3,6 +3,7 @@ mod plugin;
 #[cfg(all(test, not(feature = "mpi")))]
 mod tests;
 
+use bevy::prelude::debug;
 use bevy::prelude::info;
 use bevy::utils::StableHashSet;
 use derive_more::Add;
@@ -35,7 +36,7 @@ type MpiSearchData<D> = <SearchData<D> as IntoEquivalenceType>::Equiv;
 type MpiSearchResult<D> = <SearchResult<D> as IntoEquivalenceType>::Equiv;
 
 #[derive(Clone, Add, Sum, Equivalence)]
-pub struct NumUndecided(pub usize);
+struct SendNum(pub usize);
 
 pub struct ParallelSearch<'a, D: Dimension + 'static>
 where
@@ -44,7 +45,7 @@ where
 {
     data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
     result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<D>>,
-    finished_comm: &'a mut Communicator<NumUndecided>,
+    finished_comm: &'a mut Communicator<SendNum>,
     global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
     indices: &'a TopLevelIndices,
@@ -157,6 +158,11 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
             })
             .collect()
     }
+
+    fn print_num_new_haloes(&mut self, num_new_haloes: usize) {
+        let num_new_haloes: SendNum = self.finished_comm.all_gather_sum(&SendNum(num_new_haloes));
+        debug!("{} new haloes imported.", num_new_haloes.0);
+    }
 }
 
 impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
@@ -167,6 +173,7 @@ impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
         let outgoing = self.get_outgoing_searches(data);
         let incoming = self.exchange_all_searches(outgoing);
         let outgoing_results = self.get_outgoing_results(incoming);
+        self.print_num_new_haloes(outgoing_results.size());
         self.exchange_all_results(outgoing_results)
     }
 
@@ -175,9 +182,9 @@ impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
     }
 
     fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool {
-        let total_undecided: NumUndecided = self
+        let total_undecided: SendNum = self
             .finished_comm
-            .all_gather_sum(&NumUndecided(num_undecided_this_rank));
+            .all_gather_sum(&SendNum(num_undecided_this_rank));
         info!("{} tetras undecided", total_undecided.0);
         total_undecided.0 == 0
     }

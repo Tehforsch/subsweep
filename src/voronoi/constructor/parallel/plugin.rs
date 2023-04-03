@@ -6,8 +6,8 @@ use derive_custom::Named;
 use super::super::Constructor;
 use super::MpiSearchData;
 use super::MpiSearchResult;
-use super::NumUndecided;
 use super::ParallelSearch;
+use super::SendNum;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
@@ -36,7 +36,7 @@ impl RaxiomPlugin for ParallelVoronoiGridConstruction {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_plugin(CommunicationPlugin::<MpiSearchData<ThreeD>>::exchange())
             .add_plugin(CommunicationPlugin::<MpiSearchResult<ThreeD>>::exchange())
-            .add_plugin(CommunicationPlugin::<NumUndecided>::default())
+            .add_plugin(CommunicationPlugin::<SendNum>::default())
             .add_startup_system_to_stage(
                 SimulationStartupStages::InsertGrid,
                 construct_grid_system,
@@ -49,7 +49,7 @@ fn construct_grid_system(
     particles: Particles<(Entity, &ParticleId, &Position)>,
     mut data_comm: ExchangeCommunicator<MpiSearchData<ThreeD>>,
     mut result_comm: ExchangeCommunicator<MpiSearchResult<ThreeD>>,
-    mut finished_comm: Communicator<NumUndecided>,
+    mut finished_comm: Communicator<SendNum>,
     tree: Res<QuadTree>,
     indices: Res<TopLevelIndices>,
     global_extent: Res<GlobalExtent>,
