@@ -375,12 +375,14 @@ impl<'a> Sweep<'a> {
         flux_correction: PhotonFlux,
         remote: &RemoteNeighbour,
     ) {
-        let flux_data = FluxData {
-            dir: task.dir,
-            flux: flux_correction,
-            id: remote.id,
-        };
-        self.to_send[remote.rank].push(flux_data);
+        if self.is_active(remote.id) {
+            let flux_data = FluxData {
+                dir: task.dir,
+                flux: flux_correction,
+                id: remote.id,
+            };
+            self.to_send[remote.rank].push(flux_data);
+        }
     }
 
     fn update_chemistry(&mut self) {
