@@ -255,6 +255,7 @@ impl<'a> Sweep<'a> {
         self.init_counts();
         self.to_solve = self.get_initial_tasks();
         if self.check_deadlock {
+            #[cfg(feature = "mpi")]
             self.check_deadlock();
         }
         self.solve();
