@@ -3,6 +3,7 @@ mod tests;
 
 use std::path::PathBuf;
 
+use bevy::prelude::debug;
 use bevy::prelude::info;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
@@ -178,6 +179,7 @@ fn spawn_entities_system(
             );
         }
     }
+    debug!("Spawned {} new entities", num_entities);
     assert_eq!(spawned_entities.len(), 0);
     spawned_entities.0 = (0..num_entities)
         .map(|_| commands.spawn((LocalParticle,)).id())
@@ -191,6 +193,7 @@ fn read_dataset_system<T: ToDataset + Component>(
     spawned_entities: Res<SpawnedEntities>,
 ) {
     let name = descriptor.dataset_name();
+    debug!("Reading dataset {}", name);
     let data = files.iter().map(|file| {
         let set = file
             .dataset(name)
@@ -225,4 +228,5 @@ fn read_dataset_system<T: ToDataset + Component>(
             .entity(*entity)
             .insert(item.convert_base_units(factor_written / factor_read));
     }
+    debug!("Finished reading dataset {}", name);
 }

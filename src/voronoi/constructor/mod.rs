@@ -2,6 +2,7 @@ mod halo_iteration;
 mod local;
 pub(super) mod parallel;
 
+use bevy::prelude::debug;
 pub use parallel::ParallelVoronoiGridConstruction;
 
 use self::halo_iteration::HaloIteration;
@@ -46,12 +47,14 @@ where
     where
         F: RadiusSearch<D>,
     {
+        debug!("Beginning local Delaunay construction.");
         let points: Vec<_> = iter.collect();
         let extent = search
             .determine_global_extent()
             .unwrap_or_else(|| get_extent(points.iter().map(|p| p.1)).unwrap());
         let (triangulation, mut map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
+        debug!("Finished local Delaunay construction, starting halo iteration.");
         let mut iteration = HaloIteration::new(triangulation, search);
         iteration.run();
         map.extend(iteration.haloes);
@@ -71,6 +74,7 @@ where
     }
 
     pub fn voronoi(&self) -> VoronoiGrid<D> {
+        debug!("Constructing voronoi grid.");
         self.data.construct_voronoi()
     }
 
@@ -96,6 +100,7 @@ where
 impl Constructor<ActiveDimension> {
     pub fn sweep_grid(&self) -> Vec<(CellIndex, ParticleType, grid::Cell)> {
         let voronoi = self.voronoi();
+        debug!("Constructing sweep grid.");
         voronoi
             .cells
             .iter()

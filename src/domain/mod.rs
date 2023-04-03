@@ -211,6 +211,7 @@ pub fn construct_quad_tree_system(
     extent: Res<GlobalExtent>,
     mut quadtree: ResMut<QuadTree>,
 ) {
+    debug!("Constructing top level tree");
     let particles: Vec<_> = particles
         .iter()
         .map(|(id, pos)| LeafData {
@@ -233,6 +234,7 @@ fn sum_vecs(mut data: DataByRank<Vec<Work>>) -> Vec<Work> {
 }
 
 fn get_cutoffs(work_counts: &[Work], num_ranks: usize) -> Vec<usize> {
+    debug!("Computing cutoffs for domain decomposition");
     let total_work: Work = work_counts.iter().cloned().sum();
     let mut work_per_rank = total_work / num_ranks as f64;
     let mut key_cutoffs_by_rank = vec![0];
