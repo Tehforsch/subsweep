@@ -3,16 +3,16 @@ use rand::Rng;
 use rand::SeedableRng;
 use raxiom::prelude::ParticleId;
 use raxiom::voronoi::Constructor;
-use raxiom::voronoi::Point2d;
-use raxiom::voronoi::TwoD;
+use raxiom::voronoi::Point3d;
+use raxiom::voronoi::ThreeD;
 
 pub fn main() {
-    let p = setup_particles_2d(20000);
-    construct_voronoi_2d(p);
+    let p = setup_particles_3d(100000);
+    construct_voronoi_3d(p);
 }
 
-fn construct_voronoi_2d(points: Vec<Point2d>) {
-    let _ = Constructor::<TwoD>::new(
+fn construct_voronoi_3d(points: Vec<Point3d>) {
+    let _ = Constructor::<ThreeD>::new(
         points
             .iter()
             .enumerate()
@@ -21,13 +21,14 @@ fn construct_voronoi_2d(points: Vec<Point2d>) {
     .voronoi();
 }
 
-fn setup_particles_2d(num_particles: usize) -> Vec<Point2d> {
+fn setup_particles_3d(num_particles: usize) -> Vec<Point3d> {
     let mut rng = StdRng::seed_from_u64(1338);
     (0..num_particles)
         .map(|_| {
             let x = rng.gen_range(0.0..1.0e5);
             let y = rng.gen_range(0.0..1.0e5);
-            Point2d::new(x, y)
+            let z = rng.gen_range(0.0..1.0e5);
+            Point3d::new(x, y, z)
         })
         .collect()
 }
