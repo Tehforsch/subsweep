@@ -74,7 +74,7 @@ where
             Outer => Boundary,
             Halo(rank) => Remote(RemoteNeighbour {
                 id: *self.point_to_cell_map.get_by_right(&p).unwrap(),
-                rank: rank,
+                rank,
             }),
         }
     }

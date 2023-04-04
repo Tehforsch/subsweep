@@ -64,10 +64,10 @@ fn construct_grid_system(
     let search = ParallelSearch {
         data_comm: &mut *data_comm,
         result_comm: &mut *result_comm,
-        finished_comm: &mut *finished_comm,
+        finished_comm: &mut finished_comm,
         global_extent: extent,
-        tree: &*tree,
-        indices: &*indices,
+        tree: &tree,
+        indices: &indices,
         box_: box_.clone(),
         already_sent,
     };
