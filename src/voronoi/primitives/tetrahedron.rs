@@ -74,7 +74,7 @@ impl DTetraData for TetrahedronData {
         // An overshooting factor for numerical safety
         let alpha = 0.01;
         let dir = extent.max - extent.min;
-        let projected = extent.max + dir * (3.0 + alpha);
+        let projected = extent.max + dir * (2.1 + alpha);
         let p1 = extent.min - dir * alpha;
         let p2 = Point3d::new(projected.x, extent.min.y, extent.min.z);
         let p3 = Point3d::new(extent.min.x, projected.y, extent.min.z);

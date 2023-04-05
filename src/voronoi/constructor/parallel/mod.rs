@@ -5,15 +5,18 @@ mod tests;
 
 use bevy::prelude::debug;
 use bevy::prelude::info;
-use bevy::utils::StableHashSet;
 use derive_more::Add;
 use derive_more::Sum;
 use mpi::traits::Equivalence;
 pub use plugin::ParallelVoronoiGridConstruction;
 
 use self::mpi_types::IntoEquivalenceType;
+use self::mpi_types::TetraIndexSend;
+use super::halo_cache::CachedSearchResult;
+use super::halo_cache::HaloCache;
 use super::halo_iteration::RadiusSearch;
 use super::halo_iteration::SearchResult;
+use super::halo_iteration::SearchResults;
 use super::SearchData;
 use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
@@ -22,7 +25,6 @@ use crate::communication::SizedCommunicator;
 use crate::domain::QuadTree;
 use crate::domain::TopLevelIndices;
 use crate::parameters::SimulationBox;
-use crate::prelude::ParticleId;
 use crate::quadtree::radius_search::bounding_boxes_overlap;
 use crate::units::Length;
 use crate::units::MVec;
@@ -45,18 +47,22 @@ where
 {
     data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
     result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<D>>,
+    tetra_index_comm: &'a mut ExchangeCommunicator<TetraIndexSend>,
     finished_comm: &'a mut Communicator<SendNum>,
     global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
     indices: &'a TopLevelIndices,
     box_: SimulationBox,
-    already_sent: DataByRank<StableHashSet<ParticleId>>,
+    halo_cache: HaloCache,
 }
 
 type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
 type IncomingRequests<D> = DataByRank<Vec<SearchData<D>>>;
-type OutgoingResults<D> = DataByRank<Vec<MpiSearchResult<D>>>;
-type IncomingResults<D> = DataByRank<Vec<SearchResult<D>>>;
+type OutgoingResults<D> = (
+    DataByRank<Vec<MpiSearchResult<D>>>,
+    DataByRank<Vec<TetraIndexSend>>,
+);
+type IncomingResults<D> = DataByRank<SearchResults<D>>;
 
 impl<'a> ParallelSearch<'a, ActiveDimension> {
     fn tree_node_and_search_overlap(
@@ -98,8 +104,11 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         &mut self,
         incoming: IncomingRequests<ActiveDimension>,
     ) -> OutgoingResults<ActiveDimension> {
-        let mut outgoing =
+        let mut new_haloes =
             DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.result_comm);
+        let mut undecided_tetras =
+            DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.result_comm);
+
         for (rank, data) in incoming.iter() {
             for search in data {
                 let particles = self.tree.get_particles_in_radius(
@@ -107,18 +116,27 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                     &VecLength::new_unchecked(search.point),
                     &Length::new_unchecked(search.radius),
                 );
-                outgoing[*rank].extend(
+                let result = self.halo_cache.get_closest_new::<ActiveDimension>(
+                    *rank,
+                    search.point,
                     particles
                         .into_iter()
-                        .filter(|p| self.already_sent[*rank].insert(p.id))
-                        .map(|p| {
-                            SearchResult::from_search(search, p.pos.value_unchecked(), p.id)
-                                .to_equivalent()
-                        }),
+                        .map(|p| (p.pos.value_unchecked(), p.id)),
                 );
+                match result {
+                    CachedSearchResult::NothingNew => {}
+                    CachedSearchResult::NewPoint(result) => {
+                        new_haloes[*rank].push(result.to_equivalent());
+                        undecided_tetras[*rank].push(search.tetra_index.into());
+                    }
+                    CachedSearchResult::NewPointThatHasJustBeenExported => {
+                        undecided_tetras[*rank].push(search.tetra_index.into());
+                    }
+                }
             }
         }
-        outgoing
+        self.halo_cache.flush();
+        (new_haloes, undecided_tetras)
     }
 
     fn exchange_all_searches(
@@ -144,16 +162,28 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         &mut self,
         outgoing: OutgoingResults<ActiveDimension>,
     ) -> IncomingResults<ActiveDimension> {
-        let mut incoming = self.result_comm.exchange_all(outgoing);
-        incoming
+        let mut incoming_new_haloes = self.result_comm.exchange_all(outgoing.0);
+        let mut incoming_undecided_tetras = self.tetra_index_comm.exchange_all(outgoing.1);
+        incoming_new_haloes
             .drain_all()
-            .map(|(rank, requests)| {
+            .map(|(rank, results)| {
+                let undecided_tetras = incoming_undecided_tetras
+                    .remove(&rank)
+                    .unwrap()
+                    .into_iter()
+                    .map(|t| t.into())
+                    .collect();
                 (
                     rank,
-                    requests
-                        .into_iter()
-                        .map(|request| SearchResult::<ActiveDimension>::from_equivalent(&request))
-                        .collect(),
+                    SearchResults {
+                        new_haloes: results
+                            .into_iter()
+                            .map(|request| {
+                                SearchResult::<ActiveDimension>::from_equivalent(&request)
+                            })
+                            .collect(),
+                        undecided_tetras,
+                    },
                 )
             })
             .collect()
@@ -166,14 +196,14 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
 }
 
 impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
-    fn unique_radius_search(
+    fn radius_search(
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
-    ) -> DataByRank<Vec<SearchResult<ActiveDimension>>> {
+    ) -> DataByRank<SearchResults<ActiveDimension>> {
         let outgoing = self.get_outgoing_searches(data);
         let incoming = self.exchange_all_searches(outgoing);
         let outgoing_results = self.get_outgoing_results(incoming);
-        self.print_num_new_haloes(outgoing_results.size());
+        self.print_num_new_haloes(outgoing_results.0.size());
         self.exchange_all_results(outgoing_results)
     }
 

@@ -102,7 +102,6 @@ pub struct SearchResultThreeDSend {
     point_x: Float,
     point_y: Float,
     point_z: Float,
-    tetra_index: TetraIndexSend,
     id: ParticleId,
 }
 
@@ -114,7 +113,6 @@ impl IntoEquivalenceType for SearchResult<ThreeD> {
             point_x: self.point.x,
             point_y: self.point.y,
             point_z: self.point.z,
-            tetra_index: self.search_index.into(),
             id: self.id,
         }
     }
@@ -122,7 +120,6 @@ impl IntoEquivalenceType for SearchResult<ThreeD> {
     fn from_equivalent(equiv: &Self::Equiv) -> Self {
         SearchResult {
             point: Point3d::new(equiv.point_x, equiv.point_y, equiv.point_z),
-            search_index: equiv.tetra_index.into(),
             id: equiv.id,
         }
     }

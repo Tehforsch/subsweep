@@ -1,5 +1,5 @@
 use super::halo_iteration::RadiusSearch;
-use super::halo_iteration::SearchResult;
+use super::halo_iteration::SearchResults;
 use super::SearchData;
 use crate::communication::DataByRank;
 use crate::voronoi::utils::Extent;
@@ -9,7 +9,7 @@ use crate::voronoi::Point;
 pub struct Local;
 
 impl<D: Dimension> RadiusSearch<D> for Local {
-    fn unique_radius_search(&mut self, _: Vec<SearchData<D>>) -> DataByRank<Vec<SearchResult<D>>> {
+    fn radius_search(&mut self, _: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>> {
         DataByRank::empty()
     }
 

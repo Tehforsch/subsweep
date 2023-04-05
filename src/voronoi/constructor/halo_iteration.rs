@@ -31,29 +31,19 @@ pub struct SearchData<D: Dimension> {
     pub tetra_index: TetraIndex,
 }
 
+#[derive(Debug)]
 pub struct SearchResult<D: Dimension> {
     pub point: Point<D>,
-    /// The index in the Vec of the corresponding RadiusSearchData
-    /// that produced this result.
-    pub search_index: TetraIndex,
     pub id: ParticleId,
 }
 
-impl<D: Dimension> SearchResult<D> {
-    pub fn from_search(data: &SearchData<D>, point: Point<D>, particle_id: ParticleId) -> Self {
-        Self {
-            search_index: data.tetra_index,
-            point,
-            id: particle_id,
-        }
-    }
+pub struct SearchResults<D: Dimension> {
+    pub new_haloes: Vec<SearchResult<D>>,
+    pub undecided_tetras: Vec<TetraIndex>,
 }
 
 pub trait RadiusSearch<D: Dimension> {
-    fn unique_radius_search(
-        &mut self,
-        data: Vec<SearchData<D>>,
-    ) -> DataByRank<Vec<SearchResult<D>>>;
+    fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
     fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
 }
@@ -61,7 +51,7 @@ pub trait RadiusSearch<D: Dimension> {
 pub(super) struct HaloIteration<D: Dimension, F> {
     pub triangulation: Triangulation<D>,
     search: F,
-    checked_tetras: StableHashSet<TetraIndex>,
+    decided_tetras: StableHashSet<TetraIndex>,
     pub haloes: BiMap<ParticleId, PointIndex>,
 }
 
@@ -76,7 +66,7 @@ where
         Self {
             triangulation,
             search,
-            checked_tetras: StableHashSet::default(),
+            decided_tetras: StableHashSet::default(),
             haloes: BiMap::default(),
         }
     }
@@ -84,7 +74,7 @@ where
     pub fn run(&mut self) {
         while !self
             .search
-            .everyone_finished(self.iter_remaining_tetras().count())
+            .everyone_finished(self.iter_undecided_tetras().count())
         {
             self.iterate();
         }
@@ -92,27 +82,28 @@ where
 
     fn iterate(&mut self) {
         let search_data = self.get_radius_search_data();
-        let mut newly_imported = self.search.unique_radius_search(search_data);
-        let checked: StableHashSet<TetraIndex> = self.iter_remaining_tetras().collect();
-        let mut tetras_with_new_points_in_vicinity = StableHashSet::default();
-        for (rank, results) in newly_imported.drain_all() {
+        let mut newly_decided: StableHashSet<TetraIndex> =
+            search_data.iter().map(|d| d.tetra_index).collect();
+        let search_results = self.search.radius_search(search_data);
+        for (rank, results) in search_results.into_iter() {
             for SearchResult {
                 point,
-                search_index,
                 id: particle_id,
-            } in results.into_iter()
+            } in results.new_haloes
             {
+                assert!(self.haloes.get_by_left(&particle_id).is_none());
                 let point_index = self.triangulation.insert(point, PointKind::Halo(rank));
                 self.haloes.insert(particle_id, point_index);
-                tetras_with_new_points_in_vicinity.insert(search_index);
+            }
+            for t in results.undecided_tetras.into_iter() {
+                newly_decided.remove(&t);
             }
         }
-        self.checked_tetras
-            .extend(checked.difference(&tetras_with_new_points_in_vicinity));
+        self.decided_tetras.extend(newly_decided);
     }
 
     fn get_radius_search_data(&self) -> Vec<SearchData<D>> {
-        self.iter_remaining_tetras()
+        self.iter_undecided_tetras()
             .map(|t| {
                 let tetra = &self.triangulation.tetras[t];
                 let tetra_data = self.triangulation.get_tetra_data(tetra);
@@ -134,31 +125,31 @@ where
         tetra
             .points()
             .any(|p| self.triangulation.point_kinds[&p] == PointKind::Inner)
-            && tetra
-                .points()
-                .all(|p| self.triangulation.point_kinds[&p] != PointKind::Outer)
     }
 
-    fn iter_remaining_tetras(&self) -> impl Iterator<Item = TetraIndex> + '_ {
+    fn iter_undecided_tetras(&self) -> impl Iterator<Item = TetraIndex> + '_ {
         self.triangulation
             .tetras
             .iter()
             .map(|(t, _)| t)
-            .filter(|t| !self.checked_tetras.contains(t) && self.tetra_should_be_checked(*t))
+            .filter(|t| !self.decided_tetras.contains(t) && self.tetra_should_be_checked(*t))
     }
 }
 
 #[cfg(test)]
 #[generic_tests::define]
 mod tests {
-    use bevy::utils::StableHashSet;
+    use std::fmt::Debug;
 
+    use super::HaloIteration;
     use super::RadiusSearch;
     use super::SearchData;
-    use super::SearchResult;
+    use super::SearchResults;
     use crate::communication::DataByRank;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
+    use crate::voronoi::constructor::halo_cache::CachedSearchResult;
+    use crate::voronoi::constructor::halo_cache::HaloCache;
     use crate::voronoi::constructor::Constructor;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::DVector;
@@ -181,34 +172,47 @@ mod tests {
     #[instantiate_tests(<ThreeD>)]
     mod three_d {}
 
+    #[derive(Clone)]
     pub struct TestRadiusSearch<D: Dimension> {
         points: Vec<(ParticleId, Point<D>)>,
         extent: Extent<Point<D>>,
-        already_sent: StableHashSet<ParticleId>,
+        cache: HaloCache,
     }
 
-    impl<D: Dimension> RadiusSearch<D> for TestRadiusSearch<D> {
-        fn unique_radius_search(
-            &mut self,
-            data: Vec<SearchData<D>>,
-        ) -> DataByRank<Vec<SearchResult<D>>> {
+    impl<D: Dimension + Debug> RadiusSearch<D> for TestRadiusSearch<D> {
+        fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>> {
             let fake_rank = 1;
             let mut d = DataByRank::empty();
-            let mut results = vec![];
-            for data in data.iter() {
-                results.extend(
+            let mut new_haloes = vec![];
+            let mut undecided_tetras = vec![];
+            for search in data.iter() {
+                let result = self.cache.get_closest_new::<D>(
+                    fake_rank,
+                    search.point,
                     self.points
                         .iter()
-                        .filter(|(_, p)| data.point.distance(*p) < data.radius)
-                        .filter(|(j, _)| self.already_sent.insert(*j))
-                        .map(move |(id, p)| SearchResult {
-                            point: *p,
-                            search_index: data.tetra_index,
-                            id: *id,
-                        }),
-                )
+                        .filter(|(_, p)| search.point.distance(*p) < search.radius)
+                        .map(|(j, p)| (*p, *j)),
+                );
+                match result {
+                    CachedSearchResult::NothingNew => {}
+                    CachedSearchResult::NewPoint(result) => {
+                        new_haloes.push(result);
+                        undecided_tetras.push(search.tetra_index);
+                    }
+                    CachedSearchResult::NewPointThatHasJustBeenExported => {
+                        undecided_tetras.push(search.tetra_index);
+                    }
+                }
             }
-            d.insert(fake_rank, results);
+            self.cache.flush();
+            d.insert(
+                fake_rank,
+                SearchResults {
+                    new_haloes: new_haloes,
+                    undecided_tetras,
+                },
+            );
             d
         }
 
@@ -234,16 +238,52 @@ mod tests {
             .unwrap()
     }
 
-    #[test]
-    pub fn voronoi_grid_with_halo_points_is_the_same_as_without<D>()
-    where
-        D: Dimension + TestDimension,
+    fn all_points_in_radius_imported<D>(
+        sub_triangulation_data: &TriangulationData<D>,
+        points: Vec<(ParticleId, Point<D>)>,
+        extent: Extent<Point<D>>,
+    ) where
+        D: Dimension + TestDimension + Clone + Debug,
         Triangulation<D>: Delaunay<D>,
         Point<D>: DVector,
         Cell<D>: DCell<Dimension = D>,
     {
+        let search = TestRadiusSearch {
+            points: vec![],
+            extent,
+            cache: HaloCache::default(),
+        };
+        let halo_iteration =
+            HaloIteration::new(sub_triangulation_data.triangulation.clone(), search.clone());
+        for data in halo_iteration.get_radius_search_data() {
+            let points_in_radius = points
+                .iter()
+                .filter(|(_, p)| p.distance(data.point) < data.radius);
+            for (id, _) in points_in_radius {
+                assert!(sub_triangulation_data
+                    .triangulation
+                    .points
+                    .iter()
+                    .any(|(p_index, _)| {
+                        sub_triangulation_data
+                            .point_to_cell_map
+                            .get_by_right(&p_index)
+                            == Some(id)
+                    }));
+            }
+        }
+    }
+
+    #[test]
+    pub fn voronoi_grid_with_halo_points_is_the_same_as_without<D>()
+    where
+        D: Dimension + TestDimension + Clone + Debug,
+        Triangulation<D>: Delaunay<D>,
+        Point<D>: DVector,
+        Cell<D>: DCell<Dimension = D> + Debug,
+    {
         // Obtain two point sets - the second of them shifted by some offset away from the first
-        let (points1, points2) = D::get_example_point_sets_with_ids();
+        let (local_points, remote_points) = D::get_example_point_sets_with_ids();
         let points = D::get_combined_point_set();
         // First construct the triangulation normally
         let full_constructor = Constructor::new(points.iter().cloned());
@@ -251,25 +291,28 @@ mod tests {
         // halo particles imported from the other set.
         let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();
         let sub_constructor = Constructor::construct_from_iter(
-            points1.iter().cloned(),
+            local_points.iter().cloned(),
             TestRadiusSearch {
-                points: points2,
-                extent,
-                already_sent: StableHashSet::default(),
+                points: remote_points.clone(),
+                extent: extent.clone(),
+                cache: HaloCache::default(),
             },
         );
-        let data1 = full_constructor.data;
-        let data2 = sub_constructor.data;
-        let voronoi1 = data1.construct_voronoi();
-        let voronoi2 = data2.construct_voronoi();
-        for (id, _) in points1.iter() {
-            let c1 = get_cell_for_particle(&voronoi1, &data1, *id);
-            let c2 = get_cell_for_particle(&voronoi2, &data2, *id);
+        let full_data = full_constructor.data;
+        let sub_data = sub_constructor.data;
+        let full_voronoi = full_data.construct_voronoi();
+        let sub_voronoi = sub_data.construct_voronoi();
+        dbg!(full_data.triangulation.points.len());
+        dbg!(sub_data.triangulation.points.len());
+        all_points_in_radius_imported(&sub_data, points.clone(), extent);
+        for (id, _) in local_points.iter() {
+            let c1 = get_cell_for_particle(&full_voronoi, &full_data, *id);
+            let c2 = get_cell_for_particle(&sub_voronoi, &sub_data, *id);
+            assert_eq!(c1.is_infinite, c2.is_infinite);
             // Infinite cells (i.e. those neighbouring the boundary) might very well
             // differ in exact shape because of the different encompassing tetras,
             // but this doesn't matter since they cannot be used anyways.
             if c1.is_infinite {
-                assert!(c2.is_infinite);
                 continue;
             }
             assert_eq!(c1.faces.len(), c2.faces.len());

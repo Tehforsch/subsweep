@@ -28,6 +28,7 @@ pub trait DCell: Sized {
     fn new(data: &TriangulationData<Self::Dimension>, point: PointIndex) -> Self;
 }
 
+#[derive(Debug)]
 pub struct Cell<D: Dimension> {
     pub delaunay_point: PointIndex,
     pub index: CellIndex,
@@ -37,6 +38,7 @@ pub struct Cell<D: Dimension> {
     pub is_infinite: bool,
 }
 
+#[derive(Debug)]
 pub struct VoronoiFace<D: Dimension> {
     pub connection: ParticleType,
     pub normal: Point<D>,

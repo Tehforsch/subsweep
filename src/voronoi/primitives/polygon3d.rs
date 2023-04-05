@@ -2,6 +2,7 @@ use super::Float;
 use super::Point3d;
 use crate::voronoi::utils::periodic_windows_2;
 
+#[derive(Debug)]
 pub struct Polygon3d {
     pub points: Vec<Point3d>,
 }

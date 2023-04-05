@@ -13,7 +13,7 @@ pub trait Dimension {
     type FaceData: Clone + DFaceData<Dimension = Self>;
     type Tetra: Clone + DTetra<Dimension = Self>;
     type TetraData: DTetraData<Dimension = Self> + Clone + Visualizable;
-    type VoronoiFaceData;
+    type VoronoiFaceData: std::fmt::Debug;
 }
 
 pub trait DTetra: core::fmt::Debug {

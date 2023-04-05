@@ -1,3 +1,4 @@
+mod halo_cache;
 mod halo_iteration;
 mod local;
 pub(super) mod parallel;
