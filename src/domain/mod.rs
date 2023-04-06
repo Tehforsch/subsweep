@@ -260,7 +260,16 @@ fn get_cutoffs(work_counts: &[Work], num_ranks: usize) -> Vec<usize> {
     let min_load = *loads.iter().min().unwrap();
     let load_imbalance = (max_load - min_load) / max_load;
     if num_ranks != 1 {
-        debug!("Load imbalance: {:.1}%", (load_imbalance.0 * 100.0));
+        if load_imbalance.0 > 0.1 {
+            warn!(
+                "Load imbalance: {:.1}%, max load: {:.0}, min load: {:.0}",
+                (load_imbalance.0 * 100.0),
+                max_load.0,
+                min_load.0
+            );
+        } else {
+            debug!("Load imbalance: {:.1}%", (load_imbalance.0 * 100.0));
+        }
     }
     let num_entries_to_fill = num_ranks as i32 - key_cutoffs_by_rank.len() as i32;
     if num_entries_to_fill > 0 {
