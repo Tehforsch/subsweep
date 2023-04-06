@@ -13,6 +13,12 @@ then
     exit 1
 fi
 
+if ! cargo test --no-default-features --features 3d --tests -- --ignored
+then
+    echo "There are some local test issues."
+    exit 1
+fi
+
 if ! cargo test --no-default-features --features mpi,2d --tests -- --ignored
 then
     echo "There are some 2d test issues."
