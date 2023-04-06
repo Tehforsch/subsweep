@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::utils::HashMap;
 use derive_custom::raxiom_parameters;
 
 use super::cell::Face;
@@ -10,6 +9,7 @@ use super::RemoteNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
 use crate::config::NUM_DIMENSIONS;
+use crate::hash_map::HashMap;
 use crate::parameters::SimulationBox;
 use crate::particle::HaloParticle;
 use crate::particle::ParticleId;

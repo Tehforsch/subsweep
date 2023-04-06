@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::collections::HashSet;
-
 use bevy::prelude::Commands;
 use bevy::prelude::Entity;
 use mpi::traits::Equivalence;
@@ -12,6 +9,8 @@ use super::DataByRank;
 use super::Identified;
 use super::Rank;
 use super::SizedCommunicator;
+use crate::hash_map::HashMap;
+use crate::hash_map::HashSet;
 
 pub struct SyncResult<T> {
     pub updated: DataByRank<Vec<(Entity, T)>>,

@@ -1,6 +1,5 @@
-use std::collections::HashSet;
-
 use super::primitives::DVector;
+use crate::hash_map::HashSet;
 
 pub struct PeriodicWindows2<'a, T> {
     values: &'a [T],
@@ -151,8 +150,8 @@ impl<'a, T> Iterator for Cyclic<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
 
+    use crate::hash_map::HashSet;
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::primitives::Point2d;
 

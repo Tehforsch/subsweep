@@ -1,6 +1,3 @@
-use bevy::utils::StableHashMap;
-use bimap::BiMap;
-
 use super::delaunay::dimension::DTetra;
 use super::delaunay::dimension::DTetraData;
 use super::delaunay::dimension::Dimension;
@@ -16,12 +13,14 @@ use super::Triangulation;
 use super::VoronoiGrid;
 use crate::grid::ParticleType;
 use crate::grid::RemoteNeighbour;
+use crate::hash_map::BiMap;
+use crate::hash_map::HashMap;
 
 pub struct TriangulationData<D: Dimension> {
     pub triangulation: Triangulation<D>,
     pub point_to_cell_map: BiMap<CellIndex, PointIndex>,
-    pub point_to_tetras_map: StableHashMap<PointIndex, Vec<TetraIndex>>,
-    pub tetra_to_voronoi_point_map: StableHashMap<TetraIndex, Point<D>>,
+    pub point_to_tetras_map: HashMap<PointIndex, Vec<TetraIndex>>,
+    pub tetra_to_voronoi_point_map: HashMap<TetraIndex, Point<D>>,
 }
 
 impl<D: Dimension> TriangulationData<D>
@@ -82,12 +81,12 @@ where
 
 fn point_to_tetra_map<D: Dimension>(
     triangulation: &Triangulation<D>,
-) -> StableHashMap<PointIndex, Vec<TetraIndex>>
+) -> HashMap<PointIndex, Vec<TetraIndex>>
 where
     D: Dimension,
     Triangulation<D>: Delaunay<D>,
 {
-    let mut map: StableHashMap<_, _> = triangulation
+    let mut map: HashMap<_, _> = triangulation
         .points
         .iter()
         .map(|(i, _)| (i, vec![]))

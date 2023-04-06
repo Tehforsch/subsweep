@@ -1,8 +1,5 @@
 mod raxiom_plugin;
 
-use std::collections::HashMap;
-use std::collections::HashSet;
-
 use bevy::ecs::event::Event;
 use bevy::ecs::schedule::IntoSystemDescriptor;
 use bevy::ecs::schedule::StateData;
@@ -27,6 +24,8 @@ pub use raxiom_plugin::RaxiomPlugin;
 
 use crate::communication::WorldRank;
 use crate::domain::ExchangeDataPlugin;
+use crate::hash_map::HashMap;
+use crate::hash_map::HashSet;
 use crate::io::input::ComponentInput;
 use crate::io::input::DatasetInputPlugin;
 use crate::io::output::OutputPlugin;

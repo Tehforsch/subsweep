@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use bevy::prelude::*;
@@ -7,6 +6,7 @@ use mpi::traits::Equivalence;
 
 use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
+use crate::hash_map::HashMap;
 use crate::io::output::OutputStages;
 use crate::named::Named;
 use crate::prelude::Particles;

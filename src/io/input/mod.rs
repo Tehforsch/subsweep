@@ -16,7 +16,6 @@ use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 use bevy::prelude::Resource;
 use bevy::prelude::SystemLabel;
-use bevy::utils::HashMap;
 use derive_custom::raxiom_parameters;
 use hdf5::File;
 
@@ -24,6 +23,7 @@ use super::to_dataset::ToDataset;
 use super::InputDatasetDescriptor;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
+use crate::hash_map::HashMap;
 use crate::io::DatasetShape;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;

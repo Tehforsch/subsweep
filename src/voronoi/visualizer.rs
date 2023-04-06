@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::constructor::SearchData;
 use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
@@ -11,6 +9,7 @@ use super::primitives::Point3d;
 use super::Cell;
 use super::Triangulation;
 use super::TwoD;
+use crate::hash_map::HashMap;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
 pub struct Statement {

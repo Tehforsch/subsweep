@@ -1,5 +1,4 @@
 use bevy::prelude::warn;
-use bevy::utils::StableHashSet;
 use mpi::traits::Equivalence;
 
 use super::timestep_level::TimestepLevel;
@@ -10,6 +9,7 @@ use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::grid::ParticleType;
+use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
 
 const DEADLOCK_DETECTION_TAG: i32 = 99123151;
@@ -88,8 +88,8 @@ impl<'a> Sweep<'a> {
         let received = ex.exchange_all(dependencies.clone());
         warn!("Checking for deadlocks at level: {}", self.current_level.0);
         for (rank, data) in received.iter() {
-            let d1: StableHashSet<_> = data.iter().cloned().collect();
-            let d2: StableHashSet<_> = dependencies[*rank].iter().cloned().collect();
+            let d1: HashSet<_> = data.iter().cloned().collect();
+            let d2: HashSet<_> = dependencies[*rank].iter().cloned().collect();
             if d1 != d2 {
                 if self.communicator.rank() < *rank {
                     println!("On rank {}:", self.communicator.rank());
@@ -106,7 +106,7 @@ impl<'a> Sweep<'a> {
     }
 }
 
-fn print_diff(set1: &StableHashSet<Dependency>, set2: &StableHashSet<Dependency>) {
+fn print_diff(set1: &HashSet<Dependency>, set2: &HashSet<Dependency>) {
     let mut diff: Vec<_> = set1.difference(set2).cloned().collect();
     diff.sort();
     for dep in diff.into_iter() {

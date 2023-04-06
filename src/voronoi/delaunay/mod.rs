@@ -7,8 +7,6 @@ mod point_location;
 use std::hash::Hash;
 
 use bevy::prelude::Resource;
-use bevy::utils::HashMap;
-use bimap::BiMap;
 use derive_more::From;
 use derive_more::Into;
 use generational_arena::Index;
@@ -23,6 +21,8 @@ use super::primitives::DVector;
 use super::utils::get_extent;
 use super::utils::Extent;
 use crate::communication::Rank;
+use crate::hash_map::BiMap;
+use crate::hash_map::HashMap;
 
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TetraIndex(pub Index);

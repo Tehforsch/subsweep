@@ -6,7 +6,6 @@ use std::marker::PhantomData;
 use bevy::ecs::system::AsSystemLabel;
 use bevy::prelude::*;
 use bevy::sprite::Mesh2dHandle;
-use bevy::utils::HashMap;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 
@@ -16,6 +15,7 @@ use super::remote::send_items_to_main_thread_system;
 use super::RColor;
 use super::VisualizationStage;
 use crate::communication::CommunicationPlugin;
+use crate::hash_map::HashMap;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;

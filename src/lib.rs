@@ -15,6 +15,7 @@ pub mod components;
 pub(crate) mod config;
 pub(crate) mod domain;
 pub mod grid;
+pub(crate) mod hash_map;
 pub mod io;
 pub(crate) mod memory;
 pub(crate) mod parameter_plugin;

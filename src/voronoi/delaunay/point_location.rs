@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::collections::HashSet;
 
 use ordered_float::OrderedFloat;
 
@@ -10,6 +9,7 @@ use super::Point;
 use super::Tetra;
 use super::TetraIndex;
 use super::Triangulation;
+use crate::hash_map::HashSet;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::primitives::DVector;
 use crate::voronoi::Dimension;

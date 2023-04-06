@@ -1,8 +1,8 @@
-use bevy::utils::StableHashSet;
 use ordered_float::OrderedFloat;
 
 use super::halo_iteration::SearchResult;
 use crate::communication::Rank;
+use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
 use crate::voronoi::primitives::DVector;
 use crate::voronoi::Dimension;
@@ -10,8 +10,8 @@ use crate::voronoi::Point;
 
 #[derive(Default, Clone)]
 pub struct HaloCache {
-    sent_previously: StableHashSet<(Rank, ParticleId)>,
-    sent_now: StableHashSet<(Rank, ParticleId)>,
+    sent_previously: HashSet<(Rank, ParticleId)>,
+    sent_now: HashSet<(Rank, ParticleId)>,
 }
 
 pub enum CachedSearchResult<D: Dimension> {

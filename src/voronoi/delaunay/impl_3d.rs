@@ -464,9 +464,8 @@ impl Triangulation<ThreeD> {
 
 #[cfg(test)]
 mod tests {
-    use bevy::utils::HashMap;
-
     use super::Tetra;
+    use crate::hash_map::HashMap;
     use crate::voronoi::delaunay::dimension::DFace;
     use crate::voronoi::delaunay::dimension::DTetra;
     use crate::voronoi::delaunay::face_info::ConnectionData;

@@ -1,12 +1,11 @@
 use core::fmt::Debug;
-use std::collections::hash_map;
-use std::collections::HashMap;
 use std::ops::Index;
 use std::ops::IndexMut;
 
 use mpi::Rank;
 
 use super::SizedCommunicator;
+use crate::hash_map::HashMap;
 
 pub struct DataByRank<T>(HashMap<Rank, T>);
 
@@ -36,7 +35,7 @@ where
 
 impl<T> DataByRank<T> {
     pub fn empty() -> Self {
-        Self(HashMap::new())
+        Self(HashMap::default())
     }
 }
 
@@ -136,7 +135,7 @@ impl<T> DataByRank<T> {
 impl<T> IntoIterator for DataByRank<T> {
     type Item = (Rank, T);
 
-    type IntoIter = hash_map::IntoIter<Rank, T>;
+    type IntoIter = <HashMap<Rank, T> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()

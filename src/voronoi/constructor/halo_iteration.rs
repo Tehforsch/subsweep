@@ -1,6 +1,3 @@
-use bevy::utils::StableHashSet;
-use bimap::BiMap;
-
 use super::super::delaunay::dimension::DTetra;
 use super::super::delaunay::dimension::DTetraData;
 use super::super::primitives::DVector;
@@ -10,6 +7,8 @@ use super::Delaunay;
 use super::Point;
 use super::TetraIndex;
 use crate::communication::DataByRank;
+use crate::hash_map::BiMap;
+use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
 use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
@@ -51,7 +50,7 @@ pub trait RadiusSearch<D: Dimension> {
 pub(super) struct HaloIteration<D: Dimension, F> {
     pub triangulation: Triangulation<D>,
     search: F,
-    decided_tetras: StableHashSet<TetraIndex>,
+    decided_tetras: HashSet<TetraIndex>,
     pub haloes: BiMap<ParticleId, PointIndex>,
 }
 
@@ -66,7 +65,7 @@ where
         Self {
             triangulation,
             search,
-            decided_tetras: StableHashSet::default(),
+            decided_tetras: HashSet::default(),
             haloes: BiMap::default(),
         }
     }
@@ -82,7 +81,7 @@ where
 
     fn iterate(&mut self) {
         let search_data = self.get_radius_search_data();
-        let mut newly_decided: StableHashSet<TetraIndex> =
+        let mut newly_decided: HashSet<TetraIndex> =
             search_data.iter().map(|d| d.tetra_index).collect();
         let search_results = self.search.radius_search(search_data);
         for (rank, results) in search_results.into_iter() {

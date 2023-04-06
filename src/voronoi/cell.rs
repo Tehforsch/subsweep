@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::f64::consts::PI;
 
 use super::delaunay::dimension::Dimension;
@@ -16,6 +15,7 @@ use super::Point;
 use super::ThreeD;
 use super::TwoD;
 use crate::grid::ParticleType;
+use crate::hash_map::HashSet;
 use crate::prelude::Float;
 use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::DTetra;

@@ -15,7 +15,6 @@ mod tests;
 pub mod timestep_level;
 
 use bevy::prelude::*;
-use bevy::utils::StableHashMap;
 use derive_more::Into;
 use mpi::traits::Equivalence;
 pub use parameters::DirectionsSpecification;
@@ -43,6 +42,7 @@ use crate::grid::Cell;
 use crate::grid::FaceArea;
 use crate::grid::ParticleType;
 use crate::grid::RemoteNeighbour;
+use crate::hash_map::HashMap;
 use crate::parameters::TimestepParameters;
 use crate::particle::AllParticles;
 use crate::particle::HaloParticle;
@@ -113,7 +113,7 @@ struct Sweep<'a> {
     directions: Directions,
     cells: Cells,
     sites: Sites,
-    levels: StableHashMap<ParticleId, TimestepLevel>,
+    levels: HashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
     to_send: DataByRank<Queue<FluxData>>,
     to_solve_count: CountByDir,
@@ -130,9 +130,9 @@ struct Sweep<'a> {
 impl<'a> Sweep<'a> {
     fn run(
         directions: &Directions,
-        cells: StableHashMap<ParticleId, Cell>,
-        sites: StableHashMap<ParticleId, Site>,
-        levels: StableHashMap<ParticleId, TimestepLevel>,
+        cells: HashMap<ParticleId, Cell>,
+        sites: HashMap<ParticleId, Site>,
+        levels: HashMap<ParticleId, TimestepLevel>,
         max_timestep: Time,
         parameters: &SweepParameters,
         world_size: usize,
@@ -423,11 +423,11 @@ pub fn sweep_system(
     mut comm: Communicator<FluxData>,
     count_comm: Communicator<CellCount>,
 ) {
-    let cells: StableHashMap<_, _> = cells_query
+    let cells: HashMap<_, _> = cells_query
         .iter()
         .map(|(id, cell)| (*id, cell.clone()))
         .collect();
-    let sites: StableHashMap<_, _> = sites_query
+    let sites: HashMap<_, _> = sites_query
         .iter()
         .map(|(_, id, density, ionized_hydrogen_fraction, source)| {
             (
@@ -441,7 +441,7 @@ pub fn sweep_system(
             )
         })
         .collect();
-    let levels: StableHashMap<_, _> = levels_query
+    let levels: HashMap<_, _> = levels_query
         .iter()
         .map(|(id, level)| (*id, *level))
         .collect();
@@ -502,7 +502,7 @@ fn communicate_levels_system(
         }
     }
 
-    let id_to_entity: StableHashMap<ParticleId, Entity> = halo_levels
+    let id_to_entity: HashMap<ParticleId, Entity> = halo_levels
         .iter()
         .map(|(entity, id, _)| (*id, entity))
         .collect();

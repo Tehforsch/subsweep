@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
@@ -19,12 +18,13 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::communication::WorldRank;
 use crate::communication::WorldSize;
+use crate::hash_map::HashMap;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
 #[cfg(test)]
 fn drain_filter_by_rank<T>(rank: Rank, items: &mut HashMap<Comm, T>) -> HashMap<Comm, T> {
-    let mut drained = HashMap::new();
+    let mut drained = HashMap::default();
     std::mem::swap(&mut drained, items);
     let (removed, remaining): (HashMap<Comm, _>, HashMap<Comm, _>) = drained
         .into_iter()
@@ -63,8 +63,8 @@ pub fn build_local_communication_sim_with_custom_logic<
 ) {
     let mut sim = create_and_build_sim(
         build_sim,
-        Receivers(HashMap::new()),
-        Senders(HashMap::new()),
+        Receivers(HashMap::default()),
+        Senders(HashMap::default()),
         num_threads,
         0,
     );
@@ -180,8 +180,8 @@ pub fn get_senders_and_receivers(
     HashMap<Comm, Sender<Payload>>,
     HashMap<Comm, Receiver<Payload>>,
 ) {
-    let mut senders = HashMap::new();
-    let mut receivers = HashMap::new();
+    let mut senders = HashMap::default();
+    let mut receivers = HashMap::default();
     for rank1 in 0i32..num_threads as i32 {
         for rank2 in 0i32..num_threads as i32 {
             if rank1 == rank2 {
