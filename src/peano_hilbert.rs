@@ -1,6 +1,9 @@
 use glam::DVec2;
 use mpi::traits::Equivalence;
 
+use crate::domain::Extent;
+use crate::units::VecLength;
+
 // These values are for 3d, but I'll use them for 2D as well, since it
 // doesn't really matter there anyways
 pub const NUM_BITS_PER_DIMENSION: u32 = 21;
@@ -21,6 +24,15 @@ impl PeanoHilbertKey {
         let min_padded = min - (max - min) * 0.001;
         let max_padded = max + (max - min) * 0.001;
         Self::new((pos - min_padded) / (max_padded - min_padded))
+    }
+
+    pub fn from_point_and_extent_3d(pos: VecLength, extent: Extent) -> Self {
+        let min_padded = extent.min - (extent.max - extent.min) * 0.001;
+        let max_padded = extent.max + (extent.max - extent.min) * 0.001;
+        // todo: properly implement 3d
+        let vec3d =
+            (pos - min_padded).value_unchecked() / (max_padded - min_padded).value_unchecked();
+        Self::new(DVec2::new(vec3d.x, vec3d.y))
     }
 
     fn new(pos: DVec2) -> Self {

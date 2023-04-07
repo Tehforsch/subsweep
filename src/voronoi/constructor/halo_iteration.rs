@@ -301,8 +301,6 @@ mod tests {
         let sub_data = sub_constructor.data;
         let full_voronoi = full_data.construct_voronoi();
         let sub_voronoi = sub_data.construct_voronoi();
-        dbg!(full_data.triangulation.points.len());
-        dbg!(sub_data.triangulation.points.len());
         all_points_in_radius_imported(&sub_data, points.clone(), extent);
         for (id, _) in local_points.iter() {
             let c1 = get_cell_for_particle(&full_voronoi, &full_data, *id);

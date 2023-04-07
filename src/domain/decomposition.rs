@@ -123,6 +123,10 @@ mod tests {
     use super::Decomposer;
     use super::Key;
     use super::Load;
+    use crate::domain::Extent;
+    use crate::peano_hilbert::PeanoHilbertKey;
+    use crate::test_utils::get_particles;
+    use crate::units::VecLength;
 
     #[derive(PartialOrd, Ord, Copy, Clone, PartialEq, Eq, Debug)]
     struct Key1d(pub u64);
@@ -137,11 +141,11 @@ mod tests {
         }
     }
 
-    pub struct Counter1d {
-        keys: Vec<Key1d>,
+    pub struct KeyCounter<K: Key> {
+        keys: Vec<K>,
     }
 
-    impl Counter1d {
+    impl KeyCounter<Key1d> {
         fn new(vals: Vec<f64>) -> Self {
             let min = *vals
                 .iter()
@@ -160,8 +164,8 @@ mod tests {
         }
     }
 
-    impl Counter<Key1d> for Counter1d {
-        fn load_in_range(&mut self, start: Key1d, end: Key1d) -> Load {
+    impl<K: Key> Counter<K> for KeyCounter<K> {
+        fn load_in_range(&mut self, start: K, end: K) -> Load {
             let start = self.keys.binary_search(&start).unwrap_or_else(|e| e);
             let end = self
                 .keys
@@ -197,13 +201,49 @@ mod tests {
     }
 
     #[test]
-    fn domain_decomp() {
+    fn domain_decomp_1d() {
         let num_points_per_rank = 5000;
         for get_point_set in [get_point_set_1, get_point_set_2, get_point_set_3] {
             for num_ranks in 1..100 {
                 let num_points = num_points_per_rank * num_ranks;
                 let vals = get_point_set(num_points);
-                let counter = &mut Counter1d::new(vals);
+                let counter = &mut KeyCounter::<Key1d>::new(vals);
+                let decomposition = Decomposer::new(counter, num_ranks);
+                let loads: Vec<_> = decomposition
+                    .segments
+                    .iter()
+                    .map(|s| counter.load_in_range(s.start, s.end))
+                    .collect();
+                println!("{} {:.5}%", num_ranks, load_imbalance(&loads) * 100.0);
+                assert!(load_imbalance(&loads) < 0.05);
+            }
+        }
+    }
+
+    impl KeyCounter<PeanoHilbertKey> {
+        fn new(vals: Vec<VecLength>) -> Self {
+            let extent = Extent::from_positions(vals.iter()).unwrap();
+            let mut keys: Vec<_> = vals
+                .into_iter()
+                .map(|val| PeanoHilbertKey::from_point_and_extent_3d(val, extent.clone()))
+                .collect();
+            keys.sort();
+            Self { keys }
+        }
+    }
+
+    fn get_point_set_3d_1(num_points: usize) -> Vec<VecLength> {
+        get_particles(100, 100).into_iter().map(|p| p.pos).collect()
+    }
+
+    #[test]
+    fn domain_decomp_3d() {
+        let num_points_per_rank = 5000;
+        for get_point_set in [get_point_set_3d_1] {
+            for num_ranks in 1..100 {
+                let num_points = num_points_per_rank * num_ranks;
+                let vals = get_point_set(num_points);
+                let counter = &mut KeyCounter::<PeanoHilbertKey>::new(vals);
                 let decomposition = Decomposer::new(counter, num_ranks);
                 let loads: Vec<_> = decomposition
                     .segments
