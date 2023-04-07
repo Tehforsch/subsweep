@@ -42,6 +42,12 @@ impl Extent {
         Self::new(min, max)
     }
 
+    pub fn cube_around_sphere(center: VecLength, radius: Length) -> Self {
+        let min = center - MVec::ONE * radius;
+        let max = center + MVec::ONE * radius;
+        Self { center, min, max }
+    }
+
     pub fn get_all_encompassing<'a>(extent: impl Iterator<Item = &'a Extent>) -> Option<Self> {
         Self::from_positions(
             extent.flat_map(|extent: &Extent| [&extent.min, &extent.max].into_iter()),

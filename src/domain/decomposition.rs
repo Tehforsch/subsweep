@@ -152,10 +152,10 @@ impl<'a, K: Key> LoadCounter<K> for ParallelCounter<'a, K> {
 
 #[cfg(test)]
 mod tests {
-    use super::LoadCounter;
     use super::Decomposition;
     use super::Key;
     use super::KeyCounter;
+    use super::LoadCounter;
     use crate::domain::work::Work;
     use crate::domain::Extent;
     use crate::peano_hilbert::PeanoHilbertKey;
@@ -184,7 +184,7 @@ mod tests {
             .iter()
             .max_by(|x, y| x.partial_cmp(y).unwrap())
             .unwrap();
-        let mut keys: Vec<_> = vals
+        let keys: Vec<_> = vals
             .into_iter()
             .map(|val| Key1d(((val - min) / (max - min) * u64::MAX as f64) as u64))
             .collect();
@@ -198,21 +198,22 @@ mod tests {
     }
 
     fn get_point_set_1(num_points: usize) -> Vec<f64> {
-        let mut vals: Vec<_> = (0..num_points).map(|x| x as f64).collect();
-        vals
+        (0..num_points).map(|x| x as f64).collect()
     }
 
     fn get_point_set_2(num_points: usize) -> Vec<f64> {
-        let mut vals: Vec<_> = (0..num_points / 2).map(|x| x as f64).collect();
-        vals.extend((0..num_points / 2).map(|x| x as f64 * 1e-5));
-        vals
+        (0..num_points / 2)
+            .map(|x| x as f64)
+            .chain((0..num_points / 2).map(|x| x as f64 * 1e-5))
+            .collect()
     }
 
     fn get_point_set_3(num_points: usize) -> Vec<f64> {
-        let mut vals: Vec<_> = (0..num_points / 3).map(|x| x as f64 * 0.64).collect();
-        vals.extend((0..num_points / 3).map(|x| x as f64 * 0.0000001));
-        vals.extend((0..num_points / 3).map(|x| x as f64 * 1e-15));
-        vals
+        (0..num_points / 3)
+            .map(|x| x as f64 * 0.64)
+            .chain((0..num_points / 3).map(|x| x as f64 * 0.0000001))
+            .chain((0..num_points / 3).map(|x| x as f64 * 1e-15))
+            .collect()
     }
 
     #[test]
@@ -237,7 +238,7 @@ mod tests {
 
     fn get_counter_3d(vals: Vec<VecLength>) -> KeyCounter<PeanoHilbertKey> {
         let extent = Extent::from_positions(vals.iter()).unwrap();
-        let mut keys: Vec<_> = vals
+        let keys: Vec<_> = vals
             .into_iter()
             .map(|val| PeanoHilbertKey::from_point_and_extent_3d(val, extent.clone()))
             .collect();
@@ -245,12 +246,13 @@ mod tests {
     }
 
     fn get_point_set_3d_1(num_points: usize) -> Vec<VecLength> {
-        get_particles(100, 100).into_iter().map(|p| p.pos).collect()
+        let n = (num_points as f64).sqrt() as i32;
+        get_particles(n, n).into_iter().map(|p| p.pos).collect()
     }
 
     #[test]
     fn domain_decomp_3d() {
-        let num_points_per_rank = 5000;
+        let num_points_per_rank = 50;
         for get_point_set in [get_point_set_3d_1] {
             for num_ranks in 1..100 {
                 let num_points = num_points_per_rank * num_ranks;

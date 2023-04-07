@@ -22,12 +22,11 @@ use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::SizedCommunicator;
+use crate::domain;
 use crate::domain::Decomposition;
 use crate::domain::QuadTree;
 use crate::parameters::SimulationBox;
-use crate::quadtree::radius_search::bounding_boxes_overlap;
 use crate::units::Length;
-use crate::units::MVec;
 use crate::units::VecLength;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::ActiveDimension;
@@ -65,20 +64,6 @@ type OutgoingResults<D> = (
 type IncomingResults<D> = DataByRank<SearchResults<D>>;
 
 impl<'a> ParallelSearch<'a, ActiveDimension> {
-    fn tree_node_and_search_overlap(
-        &self,
-        tree: &QuadTree,
-        search: &SearchData<ActiveDimension>,
-    ) -> bool {
-        bounding_boxes_overlap(
-            &self.box_,
-            &tree.extent.center,
-            &tree.extent.side_lengths(),
-            &VecLength::new_unchecked(search.point),
-            &VecLength::from_vector_and_scale(MVec::ONE, Length::new_unchecked(search.radius)),
-        )
-    }
-
     fn get_outgoing_searches(
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
@@ -86,7 +71,10 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         let mut outgoing = DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.data_comm);
         for rank in self.data_comm.other_ranks() {
             for search in data.iter() {
-                let extent = todo!();
+                let extent = domain::Extent::cube_around_sphere(
+                    VecLength::new_unchecked(search.point),
+                    Length::new_unchecked(search.radius),
+                );
                 if self
                     .decomposition
                     .rank_owns_part_of_search_radius(rank, extent)
