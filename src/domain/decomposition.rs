@@ -47,6 +47,7 @@ fn binary_search<T: Key>(
 #[derive(Resource)]
 pub struct Decomposition<K> {
     segments: Vec<Segment<K>>,
+    cuts: Vec<K>,
 }
 
 impl<K: Key> Decomposition<K> {
@@ -60,11 +61,20 @@ impl<K: Key> Decomposition<K> {
             load_per_segment,
             _marker: PhantomData,
         };
-        dd.run()
+        let segments = dd.run();
+        let cuts = segments.iter().map(|seg| seg.end).collect();
+        Self { segments, cuts }
     }
 
     pub(crate) fn rank_owns_part_of_search_radius(&self, _rank: Rank, _extent: Extent) -> bool {
         todo!()
+    }
+
+    pub(crate) fn get_owning_rank(&self, key: K) -> Rank {
+        self.cuts
+            .binary_search(&key)
+            .map(|x| x + 1)
+            .unwrap_or_else(|e| e) as i32
     }
 }
 
@@ -76,9 +86,9 @@ struct Decomposer<'a, K: Key, C: LoadCounter<K>> {
 }
 
 impl<'a, K: Key, C: LoadCounter<K>> Decomposer<'a, K, C> {
-    fn run(&mut self) -> Decomposition<K> {
+    fn run(&mut self) -> Vec<Segment<K>> {
         let segments = self.find_segments();
-        Decomposition { segments }
+        segments
     }
 
     fn find_segments(&mut self) -> Vec<Segment<K>> {
@@ -240,7 +250,7 @@ mod tests {
         let extent = Extent::from_positions(vals.iter()).unwrap();
         let keys: Vec<_> = vals
             .into_iter()
-            .map(|val| PeanoHilbertKey::from_point_and_extent_3d(val, extent.clone()))
+            .map(|val| PeanoHilbertKey::from_point_and_extent_3d(val, &extent))
             .collect();
         KeyCounter::new(keys)
     }

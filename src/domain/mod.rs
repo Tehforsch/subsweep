@@ -63,10 +63,10 @@ pub struct IdEntityMap(BiMap<ParticleId, Entity>);
 #[derive(StageLabel)]
 pub enum DomainStartupStages {
     DetermineGlobalExtents,
-    TopLevelTreeConstruction,
     Decomposition,
+    SetOutgoingEntities,
     Exchange,
-    SecondTopLevelTreeConstruction,
+    TreeConstruction,
 }
 
 #[derive(StageLabel)]
@@ -95,14 +95,18 @@ impl RaxiomPlugin for DomainPlugin {
         )
         .add_startup_system_to_stage(
             DomainStartupStages::Decomposition,
+            domain_decomposition_system,
+        )
+        .add_startup_system_to_stage(
+            DomainStartupStages::SetOutgoingEntities,
             set_outgoing_entities_system,
         )
         .add_startup_system_to_stage(
-            DomainStartupStages::SecondTopLevelTreeConstruction,
+            DomainStartupStages::TreeConstruction,
             update_id_entity_map_system,
         )
         .add_startup_system_to_stage(
-            DomainStartupStages::SecondTopLevelTreeConstruction,
+            DomainStartupStages::TreeConstruction,
             construct_quad_tree_system,
         );
     }
@@ -112,10 +116,10 @@ impl RaxiomPlugin for DomainPlugin {
 pub struct GlobalExtent(Extent);
 
 pub fn construct_quad_tree_system(
+    mut commands: Commands,
     config: Res<TreeParameters>,
     particles: Particles<(&ParticleId, &Position)>,
     extent: Res<GlobalExtent>,
-    mut quadtree: ResMut<QuadTree>,
 ) {
     debug!("Constructing top level tree");
     let particles: Vec<_> = particles
@@ -125,7 +129,7 @@ pub fn construct_quad_tree_system(
             pos: pos.0,
         })
         .collect();
-    *quadtree = QuadTree::new(&config.tree, particles, &extent);
+    commands.insert_resource(QuadTree::new(&config.tree, particles, &extent));
 }
 
 pub(super) fn determine_global_extent_system(
@@ -167,26 +171,6 @@ fn update_id_entity_map_system(query: Query<(&ParticleId, Entity)>, mut map: Res
     map.0 = query.iter().map(|(id, entity)| (*id, entity)).collect();
 }
 
-fn set_outgoing_entities_system(
-    mut _outgoing_entities: ResMut<OutgoingEntities>,
-    _tree: Res<QuadTree>,
-    _decomposition: Res<Decomposition>,
-    _world_rank: Res<WorldRank>,
-    _map: Res<IdEntityMap>,
-) {
-    // for (rank, indices) in indices.iter() {
-    //     if *rank != **world_rank {
-    //         for index in indices.iter() {
-    //             tree[index].depth_first_map_leaf(&mut |_, leaf| {
-    //                 for particle in leaf.iter() {
-    //                     outgoing_entities.add(*rank, *map.get_by_left(&particle.id).unwrap());
-    //                 }
-    //             });
-    //         }
-    //     }
-    // }
-}
-
 fn domain_decomposition_system(
     mut commands: Commands,
     global_extent: Res<GlobalExtent>,
@@ -196,7 +180,7 @@ fn domain_decomposition_system(
 ) {
     let local_keys = particles
         .iter()
-        .map(|p| PeanoHilbertKey::from_point_and_extent_3d(**p, global_extent.0.clone()))
+        .map(|p| PeanoHilbertKey::from_point_and_extent_3d(**p, &global_extent.0))
         .collect();
     let local_counter = KeyCounter::new(local_keys);
     let mut counter = ParallelCounter {
@@ -205,4 +189,20 @@ fn domain_decomposition_system(
     };
     let decomp = Decomposition::new(&mut counter, **world_size);
     commands.insert_resource(decomp);
+}
+
+fn set_outgoing_entities_system(
+    mut outgoing_entities: ResMut<OutgoingEntities>,
+    decomposition: Res<Decomposition>,
+    world_rank: Res<WorldRank>,
+    global_extent: Res<GlobalExtent>,
+    particles: Particles<(Entity, &Position)>,
+) {
+    for (entity, pos) in particles.iter() {
+        let key = PeanoHilbertKey::from_point_and_extent_3d(**pos, &global_extent.0);
+        let rank = decomposition.get_owning_rank(key);
+        if rank != **world_rank {
+            outgoing_entities.add(rank, entity);
+        }
+    }
 }

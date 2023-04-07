@@ -26,7 +26,7 @@ impl PeanoHilbertKey {
         Self::new((pos - min_padded) / (max_padded - min_padded))
     }
 
-    pub fn from_point_and_extent_3d(pos: VecLength, extent: Extent) -> Self {
+    pub fn from_point_and_extent_3d(pos: VecLength, extent: &Extent) -> Self {
         let min_padded = extent.min - (extent.max - extent.min) * 0.001;
         let max_padded = extent.max + (extent.max - extent.min) * 0.001;
         // todo: properly implement 3d
