@@ -188,6 +188,7 @@ fn domain_decomposition_system(
         comm: &mut *comm,
     };
     let decomp = Decomposition::new(&mut counter, **world_size);
+    decomp.log_imbalance();
     commands.insert_resource(decomp);
 }
 

@@ -29,9 +29,7 @@ output:
 input:
   paths:
     - data/ics_16.hdf5
-domain:
-  stage: startup
+tree:
   tree:
-    min_depth: 4
     max_depth: 10
     max_num_particles_per_leaf: 20

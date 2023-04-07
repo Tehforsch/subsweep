@@ -2,6 +2,8 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+use bevy::prelude::debug;
+use bevy::prelude::warn;
 use bevy::prelude::Resource;
 
 use super::key::Key;
@@ -9,6 +11,8 @@ use super::work::Work;
 use super::Extent;
 use crate::communication::communicator::Communicator;
 use crate::communication::Rank;
+
+const LOAD_IMBALANCE_WARN_THRESHOLD: f64 = 0.1;
 
 struct Segment<K> {
     start: K,
@@ -46,8 +50,9 @@ fn binary_search<T: Key>(
 
 #[derive(Resource)]
 pub struct Decomposition<K> {
-    segments: Vec<Segment<K>>,
+    num_ranks: usize,
     cuts: Vec<K>,
+    loads: Vec<Work>,
 }
 
 impl<K: Key> Decomposition<K> {
@@ -62,8 +67,13 @@ impl<K: Key> Decomposition<K> {
             _marker: PhantomData,
         };
         let segments = dd.run();
+        let loads = dd.get_loads(&segments);
         let cuts = segments.iter().map(|seg| seg.end).collect();
-        Self { segments, cuts }
+        Self {
+            cuts,
+            loads,
+            num_ranks,
+        }
     }
 
     pub(crate) fn rank_owns_part_of_search_radius(&self, _rank: Rank, _extent: Extent) -> bool {
@@ -75,6 +85,36 @@ impl<K: Key> Decomposition<K> {
             .binary_search(&key)
             .map(|x| x + 1)
             .unwrap_or_else(|e| e) as i32
+    }
+
+    pub fn get_imbalance(&self) -> f64 {
+        let min_load = self.min_load();
+        let max_load = self.max_load();
+        ((max_load - min_load) / max_load).0
+    }
+
+    fn min_load(&self) -> Work {
+        *self.loads.iter().min().unwrap()
+    }
+
+    fn max_load(&self) -> Work {
+        *self.loads.iter().max().unwrap()
+    }
+
+    pub(crate) fn log_imbalance(&self) {
+        let load_imbalance = self.get_imbalance();
+        if self.num_ranks != 1 {
+            if load_imbalance > LOAD_IMBALANCE_WARN_THRESHOLD {
+                warn!(
+                    "Load imbalance: {:.1}%, max load: {:.0}, min load: {:.0}",
+                    (load_imbalance * 100.0),
+                    self.max_load().0,
+                    self.min_load().0
+                );
+            } else {
+                debug!("Load imbalance: {:.1}%", (load_imbalance * 100.0));
+            }
+        }
     }
 }
 
@@ -122,6 +162,13 @@ impl<'a, K: Key, C: LoadCounter<K>> Decomposer<'a, K, C> {
             load.partial_cmp(&self.load_per_segment).unwrap()
         }
     }
+
+    fn get_loads(&mut self, segments: &[Segment<K>]) -> Vec<Work> {
+        segments
+            .iter()
+            .map(|s| self.counter.load_in_range(s.start, s.end))
+            .collect()
+    }
 }
 
 pub struct KeyCounter<K> {
@@ -165,8 +212,6 @@ mod tests {
     use super::Decomposition;
     use super::Key;
     use super::KeyCounter;
-    use super::LoadCounter;
-    use crate::domain::work::Work;
     use crate::domain::Extent;
     use crate::peano_hilbert::PeanoHilbertKey;
     use crate::test_utils::get_particles;
@@ -201,12 +246,6 @@ mod tests {
         KeyCounter::new(keys)
     }
 
-    fn load_imbalance(loads: &[Work]) -> f64 {
-        let min_load = loads.iter().min().unwrap();
-        let max_load = loads.iter().max().unwrap();
-        ((*max_load - *min_load) / *max_load).0
-    }
-
     fn get_point_set_1(num_points: usize) -> Vec<f64> {
         (0..num_points).map(|x| x as f64).collect()
     }
@@ -235,13 +274,9 @@ mod tests {
                 let vals = get_point_set(num_points);
                 let mut counter = get_counter_1d(vals);
                 let decomposition = Decomposition::new(&mut counter, num_ranks);
-                let loads: Vec<_> = decomposition
-                    .segments
-                    .iter()
-                    .map(|s| counter.load_in_range(s.start, s.end))
-                    .collect();
-                println!("{} {:.5}%", num_ranks, load_imbalance(&loads) * 100.0);
-                assert!(load_imbalance(&loads) < 0.05);
+                let imbalance = decomposition.get_imbalance();
+                println!("{} {:.3}%", num_ranks, imbalance * 100.0);
+                assert!(imbalance < 0.05);
             }
         }
     }
@@ -262,20 +297,16 @@ mod tests {
 
     #[test]
     fn domain_decomp_3d() {
-        let num_points_per_rank = 50;
+        let num_points_per_rank = 1000;
         for get_point_set in [get_point_set_3d_1] {
             for num_ranks in 1..100 {
                 let num_points = num_points_per_rank * num_ranks;
                 let vals = get_point_set(num_points);
                 let mut counter = get_counter_3d(vals);
                 let decomposition = Decomposition::new(&mut counter, num_ranks);
-                let loads: Vec<_> = decomposition
-                    .segments
-                    .iter()
-                    .map(|s| counter.load_in_range(s.start, s.end))
-                    .collect();
-                println!("{} {:.5}%", num_ranks, load_imbalance(&loads) * 100.0);
-                assert!(load_imbalance(&loads) < 0.05);
+                let imbalance = decomposition.get_imbalance();
+                println!("{} {:.3}%", num_ranks, imbalance * 100.0);
+                assert!(imbalance < 0.05);
             }
         }
     }
