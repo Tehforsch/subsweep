@@ -21,7 +21,7 @@ impl<K: Debug> Debug for Segment<K> {
     }
 }
 
-pub trait Counter<K: Key> {
+pub trait LoadCounter<K: Key> {
     fn load_in_range(&mut self, start: K, end: K) -> Work;
 
     fn total_load(&mut self) -> Work {
@@ -50,7 +50,7 @@ pub struct Decomposition<K> {
 }
 
 impl<K: Key> Decomposition<K> {
-    pub fn new<'a, C: Counter<K>>(counter: &'a mut C, num_ranks: usize) -> Self {
+    pub fn new<'a, C: LoadCounter<K>>(counter: &'a mut C, num_ranks: usize) -> Self {
         let total_load = counter.total_load();
         let num_segments = num_ranks;
         let load_per_segment = total_load / (num_segments as f64);
@@ -68,14 +68,14 @@ impl<K: Key> Decomposition<K> {
     }
 }
 
-struct Decomposer<'a, K: Key, C: Counter<K>> {
+struct Decomposer<'a, K: Key, C: LoadCounter<K>> {
     counter: &'a mut C,
     num_segments: usize,
     load_per_segment: Work,
     _marker: PhantomData<K>,
 }
 
-impl<'a, K: Key, C: Counter<K>> Decomposer<'a, K, C> {
+impl<'a, K: Key, C: LoadCounter<K>> Decomposer<'a, K, C> {
     fn run(&mut self) -> Decomposition<K> {
         let segments = self.find_segments();
         Decomposition { segments }
@@ -125,7 +125,7 @@ impl<K: Key> KeyCounter<K> {
     }
 }
 
-impl<K: Key> Counter<K> for KeyCounter<K> {
+impl<K: Key> LoadCounter<K> for KeyCounter<K> {
     fn load_in_range(&mut self, start: K, end: K) -> Work {
         let start = self.keys.binary_search(&start).unwrap_or_else(|e| e);
         let end = self
@@ -142,7 +142,7 @@ pub struct ParallelCounter<'a, K> {
     pub comm: &'a mut Communicator<Work>,
 }
 
-impl<'a, K: Key> Counter<K> for ParallelCounter<'a, K> {
+impl<'a, K: Key> LoadCounter<K> for ParallelCounter<'a, K> {
     fn load_in_range(&mut self, start: K, end: K) -> Work {
         let local_work = self.local_counter.load_in_range(start, end);
         let all_work = self.comm.all_gather(&local_work);
@@ -152,7 +152,7 @@ impl<'a, K: Key> Counter<K> for ParallelCounter<'a, K> {
 
 #[cfg(test)]
 mod tests {
-    use super::Counter;
+    use super::LoadCounter;
     use super::Decomposition;
     use super::Key;
     use super::KeyCounter;
