@@ -1,13 +1,9 @@
 pub mod config;
-mod index;
 mod node_index;
 pub mod radius_search;
-mod visualization;
 
 use bevy::prelude::Resource;
 pub use config::QuadTreeConfig;
-pub use index::QuadTreeIndex;
-pub use visualization::QuadTreeVisualizationPlugin;
 
 use crate::config::TWO_TO_NUM_DIMENSIONS;
 use crate::domain::extent::Extent;
@@ -53,24 +49,10 @@ pub struct QuadTree<N, L> {
 impl<N: NodeDataType<L>, L: LeafDataType> QuadTree<N, L> {
     pub fn new(config: &QuadTreeConfig, particles: Vec<L>, extent: &Extent) -> Self {
         let mut tree = Self::make_empty_leaf_from_extent(extent.clone());
-        tree.subdivide_to_depth(config, config.min_depth);
         for particle in particles.iter() {
             tree.insert_new(config, particle.clone(), 0);
         }
         tree
-    }
-
-    fn subdivide_to_depth(&mut self, config: &QuadTreeConfig, depth: usize) {
-        if depth > 0 {
-            self.subdivide(config, depth);
-            if let Node::Tree(ref mut children) = self.node {
-                for child in children.iter_mut() {
-                    child.subdivide_to_depth(config, depth - 1);
-                }
-            } else {
-                unreachable!()
-            }
-        }
     }
 
     fn insert_new(&mut self, config: &QuadTreeConfig, leaf_data: L, depth: usize) {
@@ -154,34 +136,5 @@ pub mod tests {
         };
         let extent = Extent::from_positions(positions.iter()).unwrap();
         QuadTree::<(), VecLength>::new(&config, positions.into_iter().collect(), &extent);
-    }
-
-    pub fn get_min_depth_quadtree<N: NodeDataType<L>, L: LeafDataType>(
-        min_depth: usize,
-    ) -> QuadTree<N, L> {
-        let positions = [];
-        let config = QuadTreeConfig {
-            min_depth,
-            max_depth: 10,
-            ..Default::default()
-        };
-        let extent = Extent::new(
-            VecLength::from_vector_and_scale(MVec::ONE, Length::meters(0.0)),
-            VecLength::from_vector_and_scale(MVec::ONE, Length::meters(1.0)),
-        );
-        QuadTree::new(&config, positions.into_iter().collect(), &extent)
-    }
-
-    #[test]
-    fn min_depth_works() {
-        for min_depth in 0..4 {
-            let tree: QuadTree<(), VecLength> = get_min_depth_quadtree(min_depth);
-            let mut num_nodes = 0;
-            let mut count = |_, _| {
-                num_nodes += 1;
-            };
-            tree.depth_first_map_leaf(&mut count);
-            assert_eq!(num_nodes, TWO_TO_NUM_DIMENSIONS.pow(min_depth as u32));
-        }
     }
 }

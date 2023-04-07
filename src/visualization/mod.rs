@@ -25,9 +25,7 @@ pub use self::parameters::VisualizationParameters;
 use self::show_box_size::ShowBoxSizePlugin;
 use self::show_halo_particles::ShowHaloParticlesPlugin;
 pub use self::show_particles::ShowParticlesPlugin;
-use crate::domain;
 use crate::named::Named;
-use crate::quadtree::QuadTreeVisualizationPlugin;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::StopSimulationEvent;
@@ -70,10 +68,6 @@ impl RaxiomPlugin for VisualizationPlugin {
                     .after(camera_scale_system),
             )
             .add_system_to_stage(VisualizationStage::AppExit, keyboard_app_exit_system);
-        sim.add_plugin(QuadTreeVisualizationPlugin::<
-            domain::NodeData,
-            domain::LeafData,
-        >::default());
     }
 }
 

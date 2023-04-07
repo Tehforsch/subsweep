@@ -14,7 +14,7 @@ use bevy::winit::WinitSettings;
 use clap::Parser;
 
 use super::command_line_options::CommandLineOptions;
-use super::domain::DomainDecompositionPlugin;
+use super::domain::DomainPlugin;
 use super::simulation_plugin::SimulationPlugin;
 use super::visualization::VisualizationPlugin;
 use crate::communication::BaseCommunicationPlugin;
@@ -164,7 +164,7 @@ impl SimulationBuilder {
         }
         sim.add_plugin(SimulationStagesPlugin)
             .add_plugin(SimulationPlugin)
-            .add_plugin(DomainDecompositionPlugin)
+            .add_plugin(DomainPlugin)
             .insert_resource(ReportExecutionOrderAmbiguities);
         self.add_default_bevy_plugins(sim);
         if !self.headless {

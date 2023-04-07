@@ -3,7 +3,6 @@ use derive_custom::raxiom_parameters;
 /// Parameters controlling the construction of a tree.
 #[raxiom_parameters]
 pub struct QuadTreeConfig {
-    pub min_depth: usize,
     /// The maximum depth of the tree. Should be high enough to ensure
     /// that the tree can keep an approximately constant number of
     /// particles per leaf node. Should not be too high in order to
@@ -20,7 +19,6 @@ pub struct QuadTreeConfig {
 impl Default for QuadTreeConfig {
     fn default() -> Self {
         Self {
-            min_depth: 1,
             max_depth: 20,
             max_num_particles_per_leaf: 30,
         }

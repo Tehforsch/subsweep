@@ -1,8 +1,8 @@
 use bevy::ecs::schedule::StageLabelId;
 use bevy::prelude::*;
 
-use crate::domain::DomainDecompositionStages;
-use crate::domain::DomainDecompositionStartupStages;
+use crate::domain::DomainStages;
+use crate::domain::DomainStartupStages;
 use crate::io::output::OutputStages;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
@@ -18,9 +18,9 @@ impl RaxiomPlugin for SimulationStagesPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),
-            DomainDecompositionStages::TopLevelTreeConstruction.as_label(),
-            DomainDecompositionStages::Decomposition.as_label(),
-            DomainDecompositionStages::Exchange.as_label(),
+            DomainStages::TopLevelTreeConstruction.as_label(),
+            DomainStages::Decomposition.as_label(),
+            DomainStages::Exchange.as_label(),
             SimulationStages::SetTimestep.as_label(),
             SimulationStages::ForceCalculation.as_label(),
             SimulationStages::Integration.as_label(),
@@ -43,11 +43,11 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             StartupStage::PostStartup.as_label(),
             SimulationStartupStages::InsertComponents.as_label(),
             SimulationStartupStages::InsertDerivedComponents.as_label(),
-            DomainDecompositionStartupStages::DetermineGlobalExtents.as_label(),
-            DomainDecompositionStartupStages::TopLevelTreeConstruction.as_label(),
-            DomainDecompositionStartupStages::Decomposition.as_label(),
-            DomainDecompositionStartupStages::Exchange.as_label(),
-            DomainDecompositionStartupStages::SecondTopLevelTreeConstruction.as_label(),
+            DomainStartupStages::DetermineGlobalExtents.as_label(),
+            DomainStartupStages::TopLevelTreeConstruction.as_label(),
+            DomainStartupStages::Decomposition.as_label(),
+            DomainStartupStages::Exchange.as_label(),
+            DomainStartupStages::SecondTopLevelTreeConstruction.as_label(),
             SimulationStartupStages::InsertGrid.as_label(),
             SimulationStartupStages::InsertComponentsAfterGrid.as_label(),
             VisualizationStage::Startup.as_label(),

@@ -22,8 +22,8 @@ use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::SizedCommunicator;
+use crate::domain::decomposition::Decomposition;
 use crate::domain::QuadTree;
-use crate::domain::TopLevelIndices;
 use crate::parameters::SimulationBox;
 use crate::quadtree::radius_search::bounding_boxes_overlap;
 use crate::units::Length;
@@ -51,7 +51,7 @@ where
     finished_comm: &'a mut Communicator<SendNum>,
     global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
-    indices: &'a TopLevelIndices,
+    decomposition: &'a Decomposition,
     box_: SimulationBox,
     halo_cache: HaloCache,
 }
@@ -84,15 +84,13 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         data: Vec<SearchData<ActiveDimension>>,
     ) -> OutgoingRequests<ActiveDimension> {
         let mut outgoing = DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.data_comm);
-        let rank_owns_part_of_search_radius = |rank, search| {
-            self.indices[rank].iter().any(|index| {
-                let subtree = &self.tree[index];
-                self.tree_node_and_search_overlap(subtree, search)
-            })
-        };
         for rank in self.data_comm.other_ranks() {
             for search in data.iter() {
-                if rank_owns_part_of_search_radius(rank, search) {
+                let extent = todo!();
+                if self
+                    .decomposition
+                    .rank_owns_part_of_search_radius(rank, extent)
+                {
                     outgoing[rank].push(search.to_equivalent());
                 }
             }

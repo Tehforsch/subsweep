@@ -11,10 +11,10 @@ use super::ParallelSearch;
 use super::SendNum;
 use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
+use crate::domain::decomposition::Decomposition;
 use crate::domain::GlobalExtent;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
-use crate::domain::TopLevelIndices;
 use crate::grid::ParticleType;
 use crate::parameters::SimulationBox;
 use crate::particle::HaloParticle;
@@ -54,7 +54,7 @@ fn construct_grid_system(
     mut tetra_index_comm: ExchangeCommunicator<TetraIndexSend>,
     mut finished_comm: Communicator<SendNum>,
     tree: Res<QuadTree>,
-    indices: Res<TopLevelIndices>,
+    decomposition: Res<Decomposition>,
     global_extent: Res<GlobalExtent>,
     box_: Res<SimulationBox>,
     map: Res<IdEntityMap>,
@@ -70,7 +70,7 @@ fn construct_grid_system(
         tetra_index_comm: &mut tetra_index_comm,
         global_extent: extent,
         tree: &tree,
-        indices: &indices,
+        decomposition: &decomposition,
         box_: box_.clone(),
         halo_cache: HaloCache::default(),
     };
