@@ -3,13 +3,12 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use bevy::prelude::Resource;
-use ordered_float::OrderedFloat;
 
 use super::key::Key;
+use super::work::Work;
 use super::Extent;
+use crate::communication::communicator::Communicator;
 use crate::communication::Rank;
-
-pub type Load = OrderedFloat<f64>;
 
 struct Segment<K> {
     start: K,
@@ -22,10 +21,10 @@ impl<K: Debug> Debug for Segment<K> {
     }
 }
 
-trait Counter<K: Key> {
-    fn load_in_range(&mut self, start: K, end: K) -> Load;
+pub trait Counter<K: Key> {
+    fn load_in_range(&mut self, start: K, end: K) -> Work;
 
-    fn total_load(&mut self) -> Load {
+    fn total_load(&mut self) -> Work {
         self.load_in_range(K::MIN_VALUE, K::MAX_VALUE)
     }
 }
@@ -51,24 +50,11 @@ pub struct Decomposition<K> {
 }
 
 impl<K: Key> Decomposition<K> {
-    pub(crate) fn rank_owns_part_of_search_radius(&self, _rank: Rank, _extent: Extent) -> bool {
-        todo!()
-    }
-}
-
-struct Decomposer<'a, K: Key, C: Counter<K>> {
-    counter: &'a mut C,
-    num_segments: usize,
-    load_per_segment: Load,
-    _marker: PhantomData<K>,
-}
-
-impl<'a, K: Key, C: Counter<K>> Decomposer<'a, K, C> {
-    fn new(counter: &'a mut C, num_ranks: usize) -> Decomposition<K> {
+    pub fn new<'a, C: Counter<K>>(counter: &'a mut C, num_ranks: usize) -> Self {
         let total_load = counter.total_load();
         let num_segments = num_ranks;
         let load_per_segment = total_load / (num_segments as f64);
-        let mut dd = Self {
+        let mut dd = Decomposer {
             counter,
             num_segments,
             load_per_segment,
@@ -77,6 +63,19 @@ impl<'a, K: Key, C: Counter<K>> Decomposer<'a, K, C> {
         dd.run()
     }
 
+    pub(crate) fn rank_owns_part_of_search_radius(&self, _rank: Rank, _extent: Extent) -> bool {
+        todo!()
+    }
+}
+
+struct Decomposer<'a, K: Key, C: Counter<K>> {
+    counter: &'a mut C,
+    num_segments: usize,
+    load_per_segment: Work,
+    _marker: PhantomData<K>,
+}
+
+impl<'a, K: Key, C: Counter<K>> Decomposer<'a, K, C> {
     fn run(&mut self) -> Decomposition<K> {
         let segments = self.find_segments();
         Decomposition { segments }
@@ -106,7 +105,7 @@ impl<'a, K: Key, C: Counter<K>> Decomposer<'a, K, C> {
         cut
     }
 
-    fn get_search_result(&self, load: Load, depth: usize) -> Ordering {
+    fn get_search_result(&self, load: Work, depth: usize) -> Ordering {
         if depth == K::MAX_DEPTH {
             Ordering::Equal
         } else {
@@ -115,14 +114,49 @@ impl<'a, K: Key, C: Counter<K>> Decomposer<'a, K, C> {
     }
 }
 
+pub struct KeyCounter<K> {
+    keys: Vec<K>,
+}
+
+impl<K: Key> KeyCounter<K> {
+    pub fn new(mut keys: Vec<K>) -> Self {
+        keys.sort();
+        Self { keys }
+    }
+}
+
+impl<K: Key> Counter<K> for KeyCounter<K> {
+    fn load_in_range(&mut self, start: K, end: K) -> Work {
+        let start = self.keys.binary_search(&start).unwrap_or_else(|e| e);
+        let end = self
+            .keys
+            .binary_search(&end)
+            .map(|x| x + 1)
+            .unwrap_or_else(|e| e);
+        Work(end as f64 - start as f64)
+    }
+}
+
+pub struct ParallelCounter<'a, K> {
+    pub local_counter: KeyCounter<K>,
+    pub comm: &'a mut Communicator<Work>,
+}
+
+impl<'a, K: Key> Counter<K> for ParallelCounter<'a, K> {
+    fn load_in_range(&mut self, start: K, end: K) -> Work {
+        let local_work = self.local_counter.load_in_range(start, end);
+        let all_work = self.comm.all_gather(&local_work);
+        all_work.into_iter().sum()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use ordered_float::OrderedFloat;
-
     use super::Counter;
-    use super::Decomposer;
+    use super::Decomposition;
     use super::Key;
-    use super::Load;
+    use super::KeyCounter;
+    use crate::domain::work::Work;
     use crate::domain::Extent;
     use crate::peano_hilbert::PeanoHilbertKey;
     use crate::test_utils::get_particles;
@@ -141,45 +175,26 @@ mod tests {
         }
     }
 
-    pub struct KeyCounter<K: Key> {
-        keys: Vec<K>,
+    fn get_counter_1d(vals: Vec<f64>) -> KeyCounter<Key1d> {
+        let min = *vals
+            .iter()
+            .min_by(|x, y| x.partial_cmp(y).unwrap())
+            .unwrap();
+        let max = *vals
+            .iter()
+            .max_by(|x, y| x.partial_cmp(y).unwrap())
+            .unwrap();
+        let mut keys: Vec<_> = vals
+            .into_iter()
+            .map(|val| Key1d(((val - min) / (max - min) * u64::MAX as f64) as u64))
+            .collect();
+        KeyCounter::new(keys)
     }
 
-    impl KeyCounter<Key1d> {
-        fn new(vals: Vec<f64>) -> Self {
-            let min = *vals
-                .iter()
-                .min_by(|x, y| x.partial_cmp(y).unwrap())
-                .unwrap();
-            let max = *vals
-                .iter()
-                .max_by(|x, y| x.partial_cmp(y).unwrap())
-                .unwrap();
-            let mut keys: Vec<_> = vals
-                .into_iter()
-                .map(|val| Key1d(((val - min) / (max - min) * u64::MAX as f64) as u64))
-                .collect();
-            keys.sort();
-            Self { keys }
-        }
-    }
-
-    impl<K: Key> Counter<K> for KeyCounter<K> {
-        fn load_in_range(&mut self, start: K, end: K) -> Load {
-            let start = self.keys.binary_search(&start).unwrap_or_else(|e| e);
-            let end = self
-                .keys
-                .binary_search(&end)
-                .map(|x| x + 1)
-                .unwrap_or_else(|e| e);
-            OrderedFloat((end - start) as f64)
-        }
-    }
-
-    fn load_imbalance(loads: &[Load]) -> f64 {
+    fn load_imbalance(loads: &[Work]) -> f64 {
         let min_load = loads.iter().min().unwrap();
         let max_load = loads.iter().max().unwrap();
-        *((*max_load - *min_load) / max_load)
+        ((*max_load - *min_load) / *max_load).0
     }
 
     fn get_point_set_1(num_points: usize) -> Vec<f64> {
@@ -207,8 +222,8 @@ mod tests {
             for num_ranks in 1..100 {
                 let num_points = num_points_per_rank * num_ranks;
                 let vals = get_point_set(num_points);
-                let counter = &mut KeyCounter::<Key1d>::new(vals);
-                let decomposition = Decomposer::new(counter, num_ranks);
+                let mut counter = get_counter_1d(vals);
+                let decomposition = Decomposition::new(&mut counter, num_ranks);
                 let loads: Vec<_> = decomposition
                     .segments
                     .iter()
@@ -220,16 +235,13 @@ mod tests {
         }
     }
 
-    impl KeyCounter<PeanoHilbertKey> {
-        fn new(vals: Vec<VecLength>) -> Self {
-            let extent = Extent::from_positions(vals.iter()).unwrap();
-            let mut keys: Vec<_> = vals
-                .into_iter()
-                .map(|val| PeanoHilbertKey::from_point_and_extent_3d(val, extent.clone()))
-                .collect();
-            keys.sort();
-            Self { keys }
-        }
+    fn get_counter_3d(vals: Vec<VecLength>) -> KeyCounter<PeanoHilbertKey> {
+        let extent = Extent::from_positions(vals.iter()).unwrap();
+        let mut keys: Vec<_> = vals
+            .into_iter()
+            .map(|val| PeanoHilbertKey::from_point_and_extent_3d(val, extent.clone()))
+            .collect();
+        KeyCounter::new(keys)
     }
 
     fn get_point_set_3d_1(num_points: usize) -> Vec<VecLength> {
@@ -243,8 +255,8 @@ mod tests {
             for num_ranks in 1..100 {
                 let num_points = num_points_per_rank * num_ranks;
                 let vals = get_point_set(num_points);
-                let counter = &mut KeyCounter::<PeanoHilbertKey>::new(vals);
-                let decomposition = Decomposer::new(counter, num_ranks);
+                let mut counter = get_counter_3d(vals);
+                let decomposition = Decomposition::new(&mut counter, num_ranks);
                 let loads: Vec<_> = decomposition
                     .segments
                     .iter()

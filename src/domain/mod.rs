@@ -9,6 +9,8 @@ mod key;
 mod quadtree;
 mod work;
 
+use self::decomposition::KeyCounter;
+use self::decomposition::ParallelCounter;
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
@@ -18,14 +20,15 @@ pub use self::quadtree::QuadTree;
 use self::work::Work;
 use crate::communication::CommunicatedOption;
 use crate::communication::CommunicationPlugin;
-use crate::communication::Communicator;
 use crate::communication::WorldRank;
 use crate::components::Position;
 use crate::named::Named;
 use crate::peano_hilbert::PeanoHilbertKey;
+use crate::prelude::Communicator;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::SimulationStartupStages;
+use crate::prelude::WorldSize;
 use crate::quadtree::QuadTreeConfig;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -91,12 +94,8 @@ impl RaxiomPlugin for DomainPlugin {
             determine_global_extent_system,
         )
         .add_startup_system_to_stage(
-            DomainStartupStages::TopLevelTreeConstruction,
-            construct_quad_tree_system,
-        )
-        .add_startup_system_to_stage(
             DomainStartupStages::Decomposition,
-            domain_decomposition_system,
+            set_outgoing_entities_system,
         )
         .add_startup_system_to_stage(
             DomainStartupStages::SecondTopLevelTreeConstruction,
@@ -168,14 +167,13 @@ fn update_id_entity_map_system(query: Query<(&ParticleId, Entity)>, mut map: Res
     map.0 = query.iter().map(|(id, entity)| (*id, entity)).collect();
 }
 
-fn domain_decomposition_system(
+fn set_outgoing_entities_system(
     mut _outgoing_entities: ResMut<OutgoingEntities>,
     _tree: Res<QuadTree>,
     _decomposition: Res<Decomposition>,
     _world_rank: Res<WorldRank>,
     _map: Res<IdEntityMap>,
 ) {
-    todo!()
     // for (rank, indices) in indices.iter() {
     //     if *rank != **world_rank {
     //         for index in indices.iter() {
@@ -187,4 +185,23 @@ fn domain_decomposition_system(
     //         }
     //     }
     // }
+}
+
+fn domain_decomposition_system(
+    mut commands: Commands,
+    global_extent: Res<GlobalExtent>,
+    particles: Particles<&Position>,
+    world_size: Res<WorldSize>,
+    mut comm: Communicator<Work>,
+) {
+    let local_keys = particles
+        .iter()
+        .map(|p| PeanoHilbertKey::from_point_and_extent_3d(**p, global_extent.0.clone()))
+        .collect();
+    let local_counter = KeyCounter::new(local_keys);
+    let mut counter = ParallelCounter {
+        local_counter,
+        comm: &mut *comm,
+    };
+    let decomp = Decomposition::new(&mut counter, **world_size);
 }
