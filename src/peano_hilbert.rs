@@ -3,7 +3,7 @@ use mpi::traits::Equivalence;
 
 // These values are for 3d, but I'll use them for 2D as well, since it
 // doesn't really matter there anyways
-const NUM_BITS_PER_DIMENSION: u32 = 21;
+pub const NUM_BITS_PER_DIMENSION: u32 = 21;
 const NUM_SUBDIVISIONS: u64 = 2u64.pow(NUM_BITS_PER_DIMENSION);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Equivalence)]

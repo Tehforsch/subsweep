@@ -5,10 +5,10 @@ use derive_custom::raxiom_parameters;
 pub mod decomposition;
 mod exchange_data_plugin;
 pub mod extent;
+mod key;
 mod quadtree;
 mod work;
 
-use self::decomposition::Decomposition;
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
@@ -22,12 +22,16 @@ use crate::communication::Communicator;
 use crate::communication::WorldRank;
 use crate::components::Position;
 use crate::named::Named;
+use crate::peano_hilbert::PeanoHilbertKey;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::SimulationStartupStages;
 use crate::quadtree::QuadTreeConfig;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+
+pub type DomainKey = PeanoHilbertKey;
+pub type Decomposition = decomposition::Decomposition<DomainKey>;
 
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
 #[raxiom_parameters("tree")]
@@ -85,6 +89,10 @@ impl RaxiomPlugin for DomainPlugin {
         .add_startup_system_to_stage(
             DomainStartupStages::DetermineGlobalExtents,
             determine_global_extent_system,
+        )
+        .add_startup_system_to_stage(
+            DomainStartupStages::TopLevelTreeConstruction,
+            construct_quad_tree_system,
         )
         .add_startup_system_to_stage(
             DomainStartupStages::Decomposition,

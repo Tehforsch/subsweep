@@ -22,7 +22,7 @@ use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::SizedCommunicator;
-use crate::domain::decomposition::Decomposition;
+use crate::domain::Decomposition;
 use crate::domain::QuadTree;
 use crate::parameters::SimulationBox;
 use crate::quadtree::radius_search::bounding_boxes_overlap;

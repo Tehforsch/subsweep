@@ -11,7 +11,7 @@ use super::ParallelSearch;
 use super::SendNum;
 use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
-use crate::domain::decomposition::Decomposition;
+use crate::domain::Decomposition;
 use crate::domain::GlobalExtent;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
