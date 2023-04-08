@@ -1,5 +1,5 @@
+use super::dimension::DDimension;
 use super::dimension::DTetra;
-use super::dimension::Dimension;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
 use super::Delaunay;
@@ -26,7 +26,7 @@ type FaceData = LineData<Point2d>;
 type Tetra = TriangleWithFaces;
 type TetraData = TriangleData<Point2d>;
 
-impl Dimension for TwoD {
+impl DDimension for TwoD {
     type Point = Point;
     type Face = Face;
     type FaceData = FaceData;

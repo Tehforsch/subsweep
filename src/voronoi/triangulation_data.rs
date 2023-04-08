@@ -1,6 +1,6 @@
+use super::delaunay::dimension::DDimension;
 use super::delaunay::dimension::DTetra;
 use super::delaunay::dimension::DTetraData;
-use super::delaunay::dimension::Dimension;
 use super::delaunay::Delaunay;
 use super::delaunay::PointIndex;
 use super::delaunay::PointKind;
@@ -16,14 +16,14 @@ use crate::grid::RemoteNeighbour;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashMap;
 
-pub struct TriangulationData<D: Dimension> {
+pub struct TriangulationData<D: DDimension> {
     pub triangulation: Triangulation<D>,
     pub point_to_cell_map: BiMap<CellIndex, PointIndex>,
     pub point_to_tetras_map: HashMap<PointIndex, Vec<TetraIndex>>,
     pub tetra_to_voronoi_point_map: HashMap<TetraIndex, Point<D>>,
 }
 
-impl<D: Dimension> TriangulationData<D>
+impl<D: DDimension> TriangulationData<D>
 where
     Triangulation<D>: Delaunay<D>,
     Cell<D>: DCell<Dimension = D>,
@@ -79,11 +79,11 @@ where
     }
 }
 
-fn point_to_tetra_map<D: Dimension>(
+fn point_to_tetra_map<D: DDimension>(
     triangulation: &Triangulation<D>,
 ) -> HashMap<PointIndex, Vec<TetraIndex>>
 where
-    D: Dimension,
+    D: DDimension,
     Triangulation<D>: Delaunay<D>,
 {
     let mut map: HashMap<_, _> = triangulation

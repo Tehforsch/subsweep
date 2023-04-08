@@ -2,14 +2,14 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 
-use super::Dimension;
+use super::DDimension;
 use super::Point3d;
 use super::ThreeD;
 use super::TwoD;
 use crate::prelude::ParticleId;
 use crate::voronoi::Point2d;
 
-pub trait TestDimension: Dimension {
+pub trait TestDimension: DDimension {
     fn num() -> usize;
     fn get_example_point_set(shift: usize) -> Vec<Self::Point> {
         Self::get_example_point_set_num(100, shift)

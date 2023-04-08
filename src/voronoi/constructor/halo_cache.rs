@@ -5,7 +5,7 @@ use crate::communication::Rank;
 use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
 use crate::voronoi::primitives::DVector;
-use crate::voronoi::Dimension;
+use crate::voronoi::DDimension;
 use crate::voronoi::Point;
 
 #[derive(Default, Clone)]
@@ -14,7 +14,7 @@ pub struct HaloCache {
     sent_now: HashSet<(Rank, ParticleId)>,
 }
 
-pub enum CachedSearchResult<D: Dimension> {
+pub enum CachedSearchResult<D: DDimension> {
     NewPoint(SearchResult<D>),
     NewPointThatHasJustBeenExported,
     NothingNew,
@@ -26,7 +26,7 @@ impl HaloCache {
     /// hasn't been sent to this rank in some previous halo
     /// iteration. If there is no such point (that is, all haloes in
     /// the search radius have been sent to this rank already),
-    pub fn get_closest_new<D: Dimension>(
+    pub fn get_closest_new<D: DDimension>(
         &mut self,
         rank: Rank,
         search_origin: Point<D>,

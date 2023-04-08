@@ -29,15 +29,15 @@ use crate::prelude::ParticleId;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
-use crate::voronoi::Dimension;
+use crate::voronoi::DDimension;
 
-pub struct Constructor<D: Dimension> {
+pub struct Constructor<D: DDimension> {
     data: TriangulationData<D>,
 }
 
 impl<D> Constructor<D>
 where
-    D: Dimension,
+    D: DDimension,
     Triangulation<D>: Delaunay<D>,
     Cell<D>: DCell<Dimension = D>,
 {

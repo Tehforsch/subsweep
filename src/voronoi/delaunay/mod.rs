@@ -11,10 +11,10 @@ use derive_more::From;
 use derive_more::Into;
 use generational_arena::Index;
 
+use self::dimension::DDimension;
 use self::dimension::DFace;
 use self::dimension::DTetra;
 use self::dimension::DTetraData;
-use self::dimension::Dimension;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
 use super::primitives::DVector;
@@ -31,11 +31,11 @@ pub struct FaceIndex(pub Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
 pub struct PointIndex(pub Index);
 
-type Point<D> = <D as Dimension>::Point;
-type Face<D> = <D as Dimension>::Face;
-type FaceData<D> = <D as Dimension>::FaceData;
-type Tetra<D> = <D as Dimension>::Tetra;
-type TetraData<D> = <D as Dimension>::TetraData;
+type Point<D> = <D as DDimension>::Point;
+type Face<D> = <D as DDimension>::Face;
+type FaceData<D> = <D as DDimension>::FaceData;
+type Tetra<D> = <D as DDimension>::Tetra;
+type TetraData<D> = <D as DDimension>::TetraData;
 
 type TetraList<D> = IndexedArena<TetraIndex, Tetra<D>>;
 type FaceList<D> = IndexedArena<FaceIndex, Face<D>>;
@@ -76,7 +76,7 @@ impl FlipCheckStack {
 }
 
 #[derive(Resource, Clone)]
-pub struct Triangulation<D: Dimension> {
+pub struct Triangulation<D: DDimension> {
     pub tetras: TetraList<D>,
     pub faces: FaceList<D>,
     pub points: PointList<D>,
@@ -84,14 +84,14 @@ pub struct Triangulation<D: Dimension> {
     last_insertion_tetra: Option<TetraIndex>,
 }
 
-pub trait Delaunay<D: Dimension> {
+pub trait Delaunay<D: DDimension> {
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> Tetra<D>;
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> TetrasRequiringCheck;
     fn flip(&mut self, check: FlipCheckData) -> TetrasRequiringCheck;
     fn insert_basic_tetra(&mut self, tetra: TetraData<D>);
 }
 
-impl<D: Dimension> Triangulation<D>
+impl<D: DDimension> Triangulation<D>
 where
     Triangulation<D>: Delaunay<D>,
 {
@@ -278,9 +278,9 @@ where
 #[cfg(test)]
 #[generic_tests::define]
 pub(super) mod tests {
+    use super::dimension::DDimension;
     use super::dimension::DFace;
     use super::dimension::DTetra;
-    use super::dimension::Dimension;
     use super::Delaunay;
     use super::PointKind;
     use super::Triangulation;
@@ -298,7 +298,7 @@ pub(super) mod tests {
     pub fn perform_triangulation_check_on_each_level_of_construction<D>(
         check: impl Fn(&Triangulation<D>, usize) -> (),
     ) where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         let points = D::get_example_point_set(0);
@@ -314,7 +314,7 @@ pub(super) mod tests {
     #[test]
     fn correct_number_of_objects<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction(
@@ -343,7 +343,7 @@ pub(super) mod tests {
     #[test]
     fn first_insertion_creates_correct_number_of_opposing_faces<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(
@@ -368,7 +368,7 @@ pub(super) mod tests {
     /// necessary nonetheless)
     pub fn check_opposing_point_is_in_other_tetra<D>(triangulation: &Triangulation<D>)
     where
-        D: Dimension,
+        D: DDimension,
         Triangulation<D>: Delaunay<D>,
     {
         for (_, tetra) in triangulation.tetras.iter() {
@@ -383,7 +383,7 @@ pub(super) mod tests {
     #[test]
     fn opposing_point_is_in_other_tetra<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -393,7 +393,7 @@ pub(super) mod tests {
 
     pub fn check_opposing_faces_are_symmetric<D>(triangulation: &Triangulation<D>)
     where
-        D: Dimension,
+        D: DDimension,
         Triangulation<D>: Delaunay<D>,
     {
         for (i, t) in triangulation.tetras.iter() {
@@ -415,7 +415,7 @@ pub(super) mod tests {
     #[test]
     fn opposing_faces_are_symmetric<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -426,7 +426,7 @@ pub(super) mod tests {
     #[test]
     fn opposing_faces_contain_valid_indices<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -442,7 +442,7 @@ pub(super) mod tests {
 
     pub fn check_faces_share_points_with_tetra<D>(triangulation: &Triangulation<D>)
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         for (_, tetra) in triangulation.tetras.iter() {
@@ -457,7 +457,7 @@ pub(super) mod tests {
     #[test]
     fn faces_share_points_with_tetra<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -468,7 +468,7 @@ pub(super) mod tests {
     #[test]
     fn global_delaunayhood<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -485,7 +485,7 @@ pub(super) mod tests {
     #[test]
     fn local_delaunayhood<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
@@ -502,7 +502,7 @@ pub(super) mod tests {
     #[test]
     fn inner_points_contains_right_number_of_points<D>()
     where
-        D: Dimension + TestDimension,
+        D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(

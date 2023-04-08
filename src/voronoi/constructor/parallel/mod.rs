@@ -30,7 +30,7 @@ use crate::units::Length;
 use crate::units::VecLength;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::ActiveDimension;
-use crate::voronoi::Dimension;
+use crate::voronoi::DDimension;
 use crate::voronoi::Point;
 
 type MpiSearchData<D> = <SearchData<D> as IntoEquivalenceType>::Equiv;
@@ -39,7 +39,7 @@ type MpiSearchResult<D> = <SearchResult<D> as IntoEquivalenceType>::Equiv;
 #[derive(Clone, Add, Sum, Equivalence)]
 struct SendNum(pub usize);
 
-pub struct ParallelSearch<'a, D: Dimension + 'static>
+pub struct ParallelSearch<'a, D: DDimension + 'static>
 where
     SearchData<D>: IntoEquivalenceType,
     SearchResult<D>: IntoEquivalenceType,

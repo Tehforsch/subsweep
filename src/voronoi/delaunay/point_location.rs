@@ -12,7 +12,7 @@ use super::Triangulation;
 use crate::hash_map::HashSet;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::primitives::DVector;
-use crate::voronoi::Dimension;
+use crate::voronoi::DDimension;
 
 #[derive(PartialEq, Eq)]
 struct CheckData {
@@ -39,7 +39,7 @@ impl Ord for CheckData {
 
 fn tetra_contains_point<D>(t: &Triangulation<D>, tetra: &Tetra<D>, point: Point<D>) -> bool
 where
-    D: Dimension,
+    D: DDimension,
     Triangulation<D>: Delaunay<D>,
 {
     let tetra_data = t.get_tetra_data(tetra);
@@ -54,7 +54,7 @@ fn find_breadth_first<D>(
     first_to_check: TetraIndex,
 ) -> Option<TetraIndex>
 where
-    D: Dimension,
+    D: DDimension,
     Triangulation<D>: Delaunay<D>,
     Point<D>: DVector,
 {
@@ -93,7 +93,7 @@ where
 
 pub fn find_containing_tetra<D>(t: &Triangulation<D>, point: D::Point) -> Option<TetraIndex>
 where
-    D: Dimension,
+    D: DDimension,
     Triangulation<D>: Delaunay<D>,
 {
     if let Some(last_insertion_tetra) = t.last_insertion_tetra {

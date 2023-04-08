@@ -14,7 +14,7 @@ use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::utils::Extent;
-use crate::voronoi::Dimension;
+use crate::voronoi::DDimension;
 use crate::voronoi::Triangulation;
 
 /// Determines by how much the search radius is increased beyond the
@@ -24,30 +24,30 @@ use crate::voronoi::Triangulation;
 const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 
 #[derive(Clone, Debug)]
-pub struct SearchData<D: Dimension> {
+pub struct SearchData<D: DDimension> {
     pub point: Point<D>,
     pub radius: Float,
     pub tetra_index: TetraIndex,
 }
 
 #[derive(Debug)]
-pub struct SearchResult<D: Dimension> {
+pub struct SearchResult<D: DDimension> {
     pub point: Point<D>,
     pub id: ParticleId,
 }
 
-pub struct SearchResults<D: Dimension> {
+pub struct SearchResults<D: DDimension> {
     pub new_haloes: Vec<SearchResult<D>>,
     pub undecided_tetras: Vec<TetraIndex>,
 }
 
-pub trait RadiusSearch<D: Dimension> {
+pub trait RadiusSearch<D: DDimension> {
     fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
     fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
 }
 
-pub(super) struct HaloIteration<D: Dimension, F> {
+pub(super) struct HaloIteration<D: DDimension, F> {
     pub triangulation: Triangulation<D>,
     search: F,
     decided_tetras: HashSet<TetraIndex>,
@@ -56,7 +56,7 @@ pub(super) struct HaloIteration<D: Dimension, F> {
 
 impl<D, F: RadiusSearch<D>> HaloIteration<D, F>
 where
-    D: Dimension,
+    D: DDimension,
     Triangulation<D>: Delaunay<D>,
     F: RadiusSearch<D>,
     Cell<D>: DCell<Dimension = D>,
@@ -157,7 +157,7 @@ mod tests {
     use crate::voronoi::utils::Extent;
     use crate::voronoi::Cell;
     use crate::voronoi::DCell;
-    use crate::voronoi::Dimension;
+    use crate::voronoi::DDimension;
     use crate::voronoi::Point;
     use crate::voronoi::ThreeD;
     use crate::voronoi::Triangulation;
@@ -172,13 +172,13 @@ mod tests {
     mod three_d {}
 
     #[derive(Clone)]
-    pub struct TestRadiusSearch<D: Dimension> {
+    pub struct TestRadiusSearch<D: DDimension> {
         points: Vec<(ParticleId, Point<D>)>,
         extent: Extent<Point<D>>,
         cache: HaloCache,
     }
 
-    impl<D: Dimension + Debug> RadiusSearch<D> for TestRadiusSearch<D> {
+    impl<D: DDimension + Debug> RadiusSearch<D> for TestRadiusSearch<D> {
         fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>> {
             let fake_rank = 1;
             let mut d = DataByRank::empty();
@@ -224,7 +224,7 @@ mod tests {
         }
     }
 
-    fn get_cell_for_particle<D: Dimension, 'a>(
+    fn get_cell_for_particle<D: DDimension, 'a>(
         grid: &'a VoronoiGrid<D>,
         cons: &'a TriangulationData<D>,
         particle: ParticleId,
@@ -242,7 +242,7 @@ mod tests {
         points: Vec<(ParticleId, Point<D>)>,
         extent: Extent<Point<D>>,
     ) where
-        D: Dimension + TestDimension + Clone + Debug,
+        D: DDimension + TestDimension + Clone + Debug,
         Triangulation<D>: Delaunay<D>,
         Point<D>: DVector,
         Cell<D>: DCell<Dimension = D>,
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     pub fn voronoi_grid_with_halo_points_is_the_same_as_without<D>()
     where
-        D: Dimension + TestDimension + Clone + Debug,
+        D: DDimension + TestDimension + Clone + Debug,
         Triangulation<D>: Delaunay<D>,
         Point<D>: DVector,
         Cell<D>: DCell<Dimension = D> + Debug,

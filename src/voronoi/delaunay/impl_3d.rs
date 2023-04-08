@@ -1,8 +1,8 @@
 use glam::DVec3;
 
+use super::dimension::DDimension;
 use super::dimension::DTetra;
 use super::dimension::DTetraData;
-use super::dimension::Dimension;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
 use super::Delaunay;
@@ -28,7 +28,7 @@ type FaceData = TriangleData<DVec3>;
 type Tetra = Tetrahedron;
 type TetraData = TetrahedronData;
 
-impl Dimension for ThreeD {
+impl DDimension for ThreeD {
     type Point = Point;
     type Face = Face;
     type FaceData = FaceData;

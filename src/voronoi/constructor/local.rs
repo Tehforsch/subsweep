@@ -3,12 +3,12 @@ use super::halo_iteration::SearchResults;
 use super::SearchData;
 use crate::communication::DataByRank;
 use crate::voronoi::utils::Extent;
-use crate::voronoi::Dimension;
+use crate::voronoi::DDimension;
 use crate::voronoi::Point;
 
 pub struct Local;
 
-impl<D: Dimension> RadiusSearch<D> for Local {
+impl<D: DDimension> RadiusSearch<D> for Local {
     fn radius_search(&mut self, _: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>> {
         DataByRank::empty()
     }

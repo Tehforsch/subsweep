@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use super::delaunay::dimension::Dimension;
+use super::delaunay::dimension::DDimension;
 use super::delaunay::FaceIndex;
 use super::delaunay::PointIndex;
 use super::primitives::polygon3d::Polygon3d;
@@ -21,7 +21,7 @@ use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::DTetra;
 
 pub trait DCell: Sized {
-    type Dimension: Dimension;
+    type Dimension: DDimension;
     fn size(&self) -> Float;
     fn volume(&self) -> Float;
     fn contains(&self, point: Point<Self::Dimension>) -> bool;
@@ -29,7 +29,7 @@ pub trait DCell: Sized {
 }
 
 #[derive(Debug)]
-pub struct Cell<D: Dimension> {
+pub struct Cell<D: DDimension> {
     pub delaunay_point: PointIndex,
     pub index: CellIndex,
     pub points: Vec<Point<D>>,
@@ -39,7 +39,7 @@ pub struct Cell<D: Dimension> {
 }
 
 #[derive(Debug)]
-pub struct VoronoiFace<D: Dimension> {
+pub struct VoronoiFace<D: DDimension> {
     pub connection: ParticleType,
     pub normal: Point<D>,
     pub area: Float,
@@ -50,7 +50,7 @@ fn sign(p1: Point2d, p2: Point2d, p3: Point2d) -> Float {
     (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
 }
 
-fn get_common_face<D: Dimension>(
+fn get_common_face<D: DDimension>(
     data: &TriangulationData<D>,
     t1: &TetraIndex,
     t2: &TetraIndex,
@@ -60,7 +60,7 @@ fn get_common_face<D: Dimension>(
     t1_data.get_common_face_with(t2_data)
 }
 
-fn get_normal<D: Dimension>(
+fn get_normal<D: DDimension>(
     data: &TriangulationData<D>,
     p1: PointIndex,
     p2: PointIndex,

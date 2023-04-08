@@ -14,8 +14,8 @@ use bevy::prelude::Resource;
 pub use cell::Cell;
 pub use cell::DCell;
 pub use constructor::Constructor;
+pub use delaunay::dimension::DDimension;
 pub use delaunay::dimension::DTetra;
-pub use delaunay::dimension::Dimension;
 use delaunay::Delaunay;
 use delaunay::PointIndex;
 pub use delaunay::Triangulation;
@@ -37,14 +37,14 @@ pub type ActiveDimension = TwoD;
 #[cfg(feature = "3d")]
 pub type ActiveDimension = ThreeD;
 
-type Point<D> = <D as Dimension>::Point;
+type Point<D> = <D as DDimension>::Point;
 
 #[derive(Resource)]
-pub struct VoronoiGrid<D: Dimension> {
+pub struct VoronoiGrid<D: DDimension> {
     pub cells: Vec<Cell<D>>,
 }
 
-impl<D: Dimension> From<&TriangulationData<D>> for VoronoiGrid<D>
+impl<D: DDimension> From<&TriangulationData<D>> for VoronoiGrid<D>
 where
     Triangulation<D>: Delaunay<D>,
     Cell<D>: DCell<Dimension = D>,
@@ -60,7 +60,7 @@ mod tests {
     use bimap::BiMap;
     use ordered_float::OrderedFloat;
 
-    use super::delaunay::dimension::Dimension;
+    use super::delaunay::dimension::DDimension;
     use super::delaunay::tests::perform_triangulation_check_on_each_level_of_construction;
     use super::delaunay::Delaunay;
     use super::delaunay::Triangulation;
@@ -83,7 +83,7 @@ mod tests {
     pub fn perform_check_on_each_level_of_construction<D>(
         check: impl Fn(&TriangulationData<D>, usize) -> (),
     ) where
-        D: Dimension + TestDimension + Clone,
+        D: DDimension + TestDimension + Clone,
         Triangulation<D>: Delaunay<D> + Clone,
         Cell<D>: DCell<Dimension = D>,
     {
@@ -108,7 +108,7 @@ mod tests {
         Triangulation<D>: super::visualizer::Visualizable,
         Cell<D>: DCell<Dimension = D>,
         VoronoiGrid<D>: for<'a> From<&'a TriangulationData<D>>,
-        <D as Dimension>::Point: std::fmt::Debug,
+        <D as DDimension>::Point: std::fmt::Debug,
         D: Clone,
     {
         perform_check_on_each_level_of_construction(|data, num_inserted_points| {

@@ -1,5 +1,5 @@
 use super::constructor::SearchData;
-use super::delaunay::dimension::Dimension;
+use super::delaunay::dimension::DDimension;
 use super::delaunay::Delaunay;
 use super::delaunay::PointKind;
 use super::delaunay::TetraIndex;
@@ -138,9 +138,9 @@ impl Visualizable for super::primitives::tetrahedron::TetrahedronData {
 
 impl<D> Visualizable for Triangulation<D>
 where
-    D: Dimension,
+    D: DDimension,
     Triangulation<D>: Delaunay<D>,
-    <D as Dimension>::TetraData: Visualizable,
+    <D as DDimension>::TetraData: Visualizable,
 {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         self.points.iter().for_each(|(index, point)| {
@@ -160,9 +160,9 @@ where
 
 impl<D> Visualizable for (&Triangulation<D>, TetraIndex)
 where
-    D: Dimension,
+    D: DDimension,
     Triangulation<D>: Delaunay<D>,
-    <D as Dimension>::TetraData: Visualizable,
+    <D as DDimension>::TetraData: Visualizable,
 {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         self.0
@@ -196,7 +196,7 @@ impl Visualizable for Point2d {
 
 impl<D> Visualizable for SearchData<D>
 where
-    D: Dimension,
+    D: DDimension,
 {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         let s: String = self.point.get_statements(visualizer)[0].clone().into();

@@ -7,7 +7,7 @@ use crate::voronoi::primitives::DVector;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::visualizer::Visualizable;
 
-pub trait Dimension {
+pub trait DDimension {
     type Point: Clone + Copy + DVector + Visualizable + std::fmt::Debug;
     type Face: Clone + DFace<Dimension = Self>;
     type FaceData: Clone + DFaceData<Dimension = Self>;
@@ -17,7 +17,7 @@ pub trait Dimension {
 }
 
 pub trait DTetra: core::fmt::Debug {
-    type Dimension: Dimension;
+    type Dimension: DDimension;
 
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_>;
     fn faces(&self) -> Box<dyn Iterator<Item = &FaceInfo> + '_>;
@@ -64,23 +64,23 @@ pub trait DTetra: core::fmt::Debug {
 }
 
 pub trait DTetraData:
-    core::fmt::Debug + FromIterator<<Self::Dimension as Dimension>::Point>
+    core::fmt::Debug + FromIterator<<Self::Dimension as DDimension>::Point>
 {
-    type Dimension: Dimension;
+    type Dimension: DDimension;
 
-    fn all_encompassing(extent: &Extent<<Self::Dimension as Dimension>::Point>) -> Self;
-    fn contains(&self, p: <Self::Dimension as Dimension>::Point) -> Result<bool, PrecisionError>;
-    fn distance_to_point(&self, p: <Self::Dimension as Dimension>::Point) -> Float;
+    fn all_encompassing(extent: &Extent<<Self::Dimension as DDimension>::Point>) -> Self;
+    fn contains(&self, p: <Self::Dimension as DDimension>::Point) -> Result<bool, PrecisionError>;
+    fn distance_to_point(&self, p: <Self::Dimension as DDimension>::Point) -> Float;
     fn circumcircle_contains(
         &self,
-        point: <Self::Dimension as Dimension>::Point,
+        point: <Self::Dimension as DDimension>::Point,
     ) -> Result<bool, PrecisionError>;
     fn is_positively_oriented(&self) -> Result<bool, PrecisionError>;
-    fn get_center_of_circumcircle(&self) -> <Self::Dimension as Dimension>::Point;
+    fn get_center_of_circumcircle(&self) -> <Self::Dimension as DDimension>::Point;
 }
 
 pub trait DFace {
-    type Dimension: Dimension;
+    type Dimension: DDimension;
 
     fn points(&self) -> Box<dyn Iterator<Item = PointIndex>>;
 
@@ -89,6 +89,6 @@ pub trait DFace {
     }
 }
 
-pub trait DFaceData: FromIterator<<Self::Dimension as Dimension>::Point> {
-    type Dimension: Dimension;
+pub trait DFaceData: FromIterator<<Self::Dimension as DDimension>::Point> {
+    type Dimension: DDimension;
 }
