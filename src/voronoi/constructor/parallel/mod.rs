@@ -23,7 +23,7 @@ use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::SizedCommunicator;
 use crate::dimension::ActiveDimension;
-use crate::domain;
+use crate::dimension::Point;
 use crate::domain::Decomposition;
 use crate::domain::QuadTree;
 use crate::extent::Extent;
@@ -31,7 +31,6 @@ use crate::parameters::SimulationBox;
 use crate::units::Length;
 use crate::units::VecLength;
 use crate::voronoi::DDimension;
-use crate::voronoi::Point;
 
 type MpiSearchData<D> = <SearchData<D> as IntoEquivalenceType>::Equiv;
 type MpiSearchResult<D> = <SearchResult<D> as IntoEquivalenceType>::Equiv;
@@ -71,9 +70,9 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         let mut outgoing = DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.data_comm);
         for rank in self.data_comm.other_ranks() {
             for search in data.iter() {
-                let extent = domain::Extent::cube_around_sphere(
-                    VecLength::new_unchecked(search.point),
-                    Length::new_unchecked(search.radius),
+                let extent = Extent::<Point<ActiveDimension>>::cube_around_sphere(
+                    search.point,
+                    search.radius,
                 );
                 if self
                     .decomposition

@@ -20,16 +20,14 @@ use delaunay::Delaunay;
 use delaunay::PointIndex;
 pub use delaunay::Triangulation;
 pub use primitives::point::DVector;
+pub use primitives::point::MinMax;
 pub use primitives::Point2d;
 pub use primitives::Point3d;
 pub use triangulation_data::TriangulationData;
 
-use crate::dimension::Dimension;
 use crate::prelude::ParticleId;
 
 pub type CellIndex = ParticleId;
-
-type Point<D> = <D as Dimension>::Point;
 
 #[derive(Resource)]
 pub struct VoronoiGrid<D: DDimension> {

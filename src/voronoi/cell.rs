@@ -11,7 +11,7 @@ use super::triangulation_data::TriangulationData;
 use super::utils::arrange_cyclic_by;
 use super::utils::periodic_windows_2;
 use super::CellIndex;
-use super::Point;
+use crate::dimension::Point;
 use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
 use crate::grid::ParticleType;

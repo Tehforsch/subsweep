@@ -7,9 +7,9 @@ use super::primitives::triangle::TriangleData;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::Cell;
-use super::Point;
 use super::Triangulation;
 use crate::dimension::Dimension;
+use crate::dimension::Point;
 use crate::dimension::TwoD;
 use crate::hash_map::HashMap;
 

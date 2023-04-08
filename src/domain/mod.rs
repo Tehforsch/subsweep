@@ -9,6 +9,8 @@ mod key;
 mod quadtree;
 mod work;
 
+pub use key::IntoKey;
+
 use self::decomposition::KeyCounter;
 use self::decomposition::ParallelCounter;
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
@@ -181,11 +183,10 @@ fn domain_decomposition_system(
     world_size: Res<WorldSize>,
     mut comm: Communicator<Work>,
 ) {
-    let local_keys = particles
-        .iter()
-        .map(|p| PeanoKey3d::from_point_and_extent(**p, &global_extent.0))
-        .collect();
-    let local_counter = KeyCounter::new(local_keys);
+    let local_counter = KeyCounter::from_points_and_extent(
+        particles.iter().map(|x| **x).collect(),
+        &global_extent.0,
+    );
     let mut counter = ParallelCounter {
         local_counter,
         comm: &mut *comm,
@@ -203,7 +204,7 @@ fn set_outgoing_entities_system(
     particles: Particles<(Entity, &Position)>,
 ) {
     for (entity, pos) in particles.iter() {
-        let key = PeanoKey3d::from_point_and_extent(**pos, &global_extent.0);
+        let key = pos.into_key(&global_extent.0);
         let rank = decomposition.get_owning_rank(key);
         if rank != **world_rank {
             outgoing_entities.add(rank, entity);

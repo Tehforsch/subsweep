@@ -1,3 +1,4 @@
+use crate::domain::IntoKey;
 use crate::units::Length;
 use crate::units::MVec2;
 use crate::units::MVec3;
@@ -7,9 +8,12 @@ use crate::voronoi::DVector;
 
 pub trait Dimension {
     type Length;
-    type Point: Clone + Copy + DVector + std::fmt::Debug;
-    type UnitPoint: Clone + Copy + std::fmt::Debug;
+    type Point: Clone + Copy + DVector + IntoKey + std::fmt::Debug;
+    type UnitPoint: Clone + Copy + IntoKey + std::fmt::Debug;
 }
+
+pub type Point<D> = <D as Dimension>::Point;
+pub type UnitPoint<D> = <D as Dimension>::UnitPoint;
 
 #[derive(Clone, Debug)]
 pub struct TwoD;

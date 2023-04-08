@@ -7,7 +7,7 @@ use mpi::traits::Equivalence;
 use mpi::Address;
 use serde::Serialize;
 
-use crate::voronoi::DVector;
+use crate::voronoi::MinMax;
 
 #[derive(Clone, Serialize, Default)]
 pub struct Extent<P> {
@@ -43,7 +43,7 @@ pub fn get_extent_from_min_and_max_reduce<
 
 pub fn get_extent<P>(points: impl Iterator<Item = P>) -> Option<Extent<P>>
 where
-    P: Clone + DVector,
+    P: MinMax + Clone + Div<f64, Output = P> + Add<P, Output = P> + Clone + Copy,
 {
     get_extent_from_min_and_max_reduce(points, |p1, p2| P::min(p1, p2), |p1, p2| P::max(p1, p2))
 }

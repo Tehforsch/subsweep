@@ -17,9 +17,9 @@ use self::dimension::DTetra;
 use self::dimension::DTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
-use super::primitives::DVector;
 use crate::communication::Rank;
 use crate::dimension::Dimension;
+use crate::domain::IntoKey;
 use crate::extent::get_extent;
 use crate::extent::Extent;
 use crate::hash_map::BiMap;
@@ -100,7 +100,7 @@ where
         mut points: Vec<(T, Point<D>)>,
         extent: &Extent<Point<D>>,
     ) -> (Self, BiMap<T, PointIndex>) {
-        points.sort_by_key(|(_, p)| p.get_peano_hilbert_key(extent.min, extent.max));
+        points.sort_by_key(|(_, p)| p.into_key(&extent));
         let mut triangulation = Self::all_encompassing(extent);
         let indices = points
             .iter()

@@ -145,6 +145,7 @@ mod tests {
     use super::SearchData;
     use super::SearchResults;
     use crate::communication::DataByRank;
+    use crate::dimension::Point;
     use crate::dimension::ThreeD;
     use crate::dimension::TwoD;
     use crate::extent::get_extent;
@@ -160,7 +161,6 @@ mod tests {
     use crate::voronoi::Cell;
     use crate::voronoi::DCell;
     use crate::voronoi::DDimension;
-    use crate::voronoi::Point;
     use crate::voronoi::Triangulation;
     use crate::voronoi::TriangulationData;
     use crate::voronoi::VoronoiGrid;

@@ -2,9 +2,9 @@ use super::halo_iteration::RadiusSearch;
 use super::halo_iteration::SearchResults;
 use super::SearchData;
 use crate::communication::DataByRank;
+use crate::dimension::Point;
 use crate::extent::Extent;
 use crate::voronoi::DDimension;
-use crate::voronoi::Point;
 
 pub struct Local;
 

@@ -8,9 +8,11 @@ use bevy::prelude::Resource;
 
 use super::key::Key;
 use super::work::Work;
-use super::Extent;
+use super::IntoKey;
 use crate::communication::communicator::Communicator;
 use crate::communication::Rank;
+use crate::dimension::Point;
+use crate::extent::Extent;
 
 const LOAD_IMBALANCE_WARN_THRESHOLD: f64 = 0.1;
 
@@ -76,7 +78,11 @@ impl<K: Key> Decomposition<K> {
         }
     }
 
-    pub(crate) fn rank_owns_part_of_search_radius(&self, _rank: Rank, _extent: Extent) -> bool {
+    pub(crate) fn rank_owns_part_of_search_radius(
+        &self,
+        _rank: Rank,
+        _extent: Extent<Point<K::Dimension>>,
+    ) -> bool {
         todo!()
     }
 
@@ -176,6 +182,31 @@ pub struct KeyCounter<K> {
 }
 
 impl<K: Key> KeyCounter<K> {
+    #[cfg(test)]
+    pub fn from_points<P>(points: Vec<P>) -> Self
+    where
+        P: IntoKey<Key = K>
+            + crate::voronoi::MinMax
+            + Clone
+            + std::ops::Div<f64, Output = P>
+            + std::ops::Add<P, Output = P>
+            + Clone
+            + Copy,
+    {
+        use crate::extent::get_extent;
+
+        let extent = get_extent(points.iter().copied()).unwrap();
+        Self::from_points_and_extent(points, &extent)
+    }
+
+    pub fn from_points_and_extent<P: IntoKey<Key = K> + Copy>(
+        points: Vec<P>,
+        extent: &Extent<P>,
+    ) -> Self {
+        let keys = points.iter().map(|p| p.into_key(extent)).collect();
+        Self::new(keys)
+    }
+
     pub fn new(mut keys: Vec<K>) -> Self {
         keys.sort();
         Self { keys }
@@ -212,38 +243,53 @@ mod tests {
     use super::Decomposition;
     use super::Key;
     use super::KeyCounter;
-    use crate::domain::Extent;
-    use crate::peano_hilbert::PeanoKey3d;
+    use crate::dimension::Dimension;
+    use crate::domain::IntoKey;
+    use crate::extent::Extent;
     use crate::test_utils::get_particles;
+    use crate::units::Length;
     use crate::units::VecLength;
 
+    pub struct OneD;
+    impl Dimension for OneD {
+        type Length = Length;
+        type Point = f64;
+        type UnitPoint = Length;
+    }
+
     #[derive(PartialOrd, Ord, Copy, Clone, PartialEq, Eq, Debug)]
-    struct Key1d(pub u64);
+    pub struct Key1d(pub u64);
 
     impl Key for Key1d {
         const MIN_VALUE: Key1d = Key1d(0u64);
         const MAX_VALUE: Key1d = Key1d(u64::MAX);
         const MAX_DEPTH: usize = 64;
 
+        type Dimension = OneD;
+
         fn middle(start: Self, end: Self) -> Self {
             Self(end.0 / 2 + start.0 / 2)
         }
     }
 
-    fn get_counter_1d(vals: Vec<f64>) -> KeyCounter<Key1d> {
-        let min = *vals
-            .iter()
-            .min_by(|x, y| x.partial_cmp(y).unwrap())
-            .unwrap();
-        let max = *vals
-            .iter()
-            .max_by(|x, y| x.partial_cmp(y).unwrap())
-            .unwrap();
-        let keys: Vec<_> = vals
-            .into_iter()
-            .map(|val| Key1d(((val - min) / (max - min) * u64::MAX as f64) as u64))
-            .collect();
-        KeyCounter::new(keys)
+    impl IntoKey for f64 {
+        type Key = Key1d;
+
+        fn into_key(self, extent: &Extent<Self>) -> Self::Key {
+            Key1d(((self - extent.min) / (extent.max - extent.min) * u64::MAX as f64) as u64)
+        }
+    }
+
+    impl IntoKey for Length {
+        type Key = Key1d;
+
+        fn into_key(self, extent: &Extent<Self>) -> Self::Key {
+            Key1d(
+                ((self.value_unchecked() - extent.min.value_unchecked())
+                    / (extent.max.value_unchecked() - extent.min.value_unchecked())
+                    * u64::MAX as f64) as u64,
+            )
+        }
     }
 
     fn get_point_set_1(num_points: usize) -> Vec<f64> {
@@ -272,22 +318,13 @@ mod tests {
             for num_ranks in 1..100 {
                 let num_points = num_points_per_rank * num_ranks;
                 let vals = get_point_set(num_points);
-                let mut counter = get_counter_1d(vals);
+                let mut counter = KeyCounter::from_points(vals);
                 let decomposition = Decomposition::new(&mut counter, num_ranks);
                 let imbalance = decomposition.get_imbalance();
                 println!("{} {:.3}%", num_ranks, imbalance * 100.0);
                 assert!(imbalance < 0.05);
             }
         }
-    }
-
-    fn get_counter_3d(vals: Vec<VecLength>) -> KeyCounter<PeanoKey3d> {
-        let extent = Extent::from_positions(vals.iter()).unwrap();
-        let keys: Vec<_> = vals
-            .into_iter()
-            .map(|val| PeanoKey3d::from_point_and_extent(val, &extent))
-            .collect();
-        KeyCounter::new(keys)
     }
 
     fn get_point_set_3d_1(num_points: usize) -> Vec<VecLength> {
@@ -302,7 +339,7 @@ mod tests {
             for num_ranks in 1..100 {
                 let num_points = num_points_per_rank * num_ranks;
                 let vals = get_point_set(num_points);
-                let mut counter = get_counter_3d(vals);
+                let mut counter = KeyCounter::from_points(vals);
                 let decomposition = Decomposition::new(&mut counter, num_ranks);
                 let imbalance = decomposition.get_imbalance();
                 println!("{} {:.3}%", num_ranks, imbalance * 100.0);

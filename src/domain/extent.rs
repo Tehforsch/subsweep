@@ -17,32 +17,18 @@ pub type Extent = Extent2d;
 pub type Extent = Extent3d;
 
 macro_rules! impl_extent {
-    ($extent: ident, $spec: ident, $unit_vec: ident, $vec: ident) => {
+    ($extent: ident, $spec: ident, $unit_vec: ident, $vec: ident, $length: ident) => {
         impl $extent {
-            pub fn new(min: $unit_vec, max: $unit_vec) -> Self {
-                Self {
-                    min,
-                    max,
-                    center: (min + max) * 0.5,
-                }
-            }
-
-            pub fn cube_from_side_length(side_length: Length) -> Self {
+            pub fn cube_from_side_length(side_length: $length) -> Self {
                 let min = $unit_vec::zero();
                 let max = $vec::ONE * side_length;
-                Self::new(min, max)
+                Self::from_min_max(min, max)
             }
 
-            pub fn cube_from_side_length_centered(side_length: Length) -> Self {
+            pub fn cube_from_side_length_centered(side_length: $length) -> Self {
                 let min = -$vec::ONE * side_length / 2.0;
                 let max = $vec::ONE * side_length / 2.0;
-                Self::new(min, max)
-            }
-
-            pub fn cube_around_sphere(center: $unit_vec, radius: Length) -> Self {
-                let min = center - $vec::ONE * radius;
-                let max = center + $vec::ONE * radius;
-                Self { center, min, max }
+                Self::from_min_max(min, max)
             }
 
             pub fn get_all_encompassing<'a>(
@@ -74,7 +60,7 @@ macro_rules! impl_extent {
                 self.max - self.min
             }
 
-            pub fn max_side_length(&self) -> Length {
+            pub fn max_side_length(&self) -> $length {
                 let side_length = self.side_lengths();
                 side_length.x().max(side_length.y())
             }
@@ -102,7 +88,7 @@ macro_rules! impl_extent {
                     update_min(&mut min, *pos);
                     update_max(&mut max, *pos);
                 }
-                Some(Self::new(min?, max?))
+                Some(Self::from_min_max(min?, max?))
             }
 
             pub fn contains(&self, pos: &$unit_vec) -> bool {
@@ -123,14 +109,14 @@ macro_rules! impl_extent {
         enum $spec {
             MinMax { min: $unit_vec, max: $unit_vec },
             Size($unit_vec),
-            SideLength(Length),
+            SideLength($length),
         }
 
         impl From<$spec> for $extent {
             fn from(value: $spec) -> Self {
                 match value {
-                    $spec::MinMax { min, max } => Self::new(min, max),
-                    $spec::Size(size) => Self::new($unit_vec::zero(), size),
+                    $spec::MinMax { min, max } => Self::from_min_max(min, max),
+                    $spec::Size(size) => Self::from_min_max($unit_vec::zero(), size),
                     $spec::SideLength(side_length) => $extent::cube_from_side_length(side_length),
                 }
             }
@@ -153,8 +139,24 @@ macro_rules! impl_extent {
     };
 }
 
-impl_extent!(Extent2d, ExtentSpecification2d, Vec2Length, MVec2);
-impl_extent!(Extent3d, ExtentSpecification3d, Vec3Length, MVec3);
+impl_extent!(Extent2d, ExtentSpecification2d, Vec2Length, MVec2, Length);
+impl_extent!(Extent3d, ExtentSpecification3d, Vec3Length, MVec3, Length);
+
+impl VExtent<MVec2> {
+    pub fn cube_around_sphere(center: MVec2, radius: f64) -> Self {
+        let min = center - MVec2::ONE * radius;
+        let max = center + MVec2::ONE * radius;
+        Self { center, min, max }
+    }
+}
+
+impl VExtent<MVec3> {
+    pub fn cube_around_sphere(center: MVec3, radius: f64) -> Self {
+        let min = center - MVec3::ONE * radius;
+        let max = center + MVec3::ONE * radius;
+        Self { center, min, max }
+    }
+}
 
 impl Extent2d {
     pub fn get_quadrant_index(&self, pos: &Vec2Length) -> usize {
@@ -176,10 +178,10 @@ impl Extent2d {
         let max_01 = Vec2Length::new(self.center.x(), self.max.y());
         let max_11 = Vec2Length::new(self.max.x(), self.max.y());
         [
-            Self::new(min_00, max_00),
-            Self::new(min_10, max_10),
-            Self::new(min_01, max_01),
-            Self::new(min_11, max_11),
+            Self::from_min_max(min_00, max_00),
+            Self::from_min_max(min_10, max_10),
+            Self::from_min_max(min_01, max_01),
+            Self::from_min_max(min_11, max_11),
         ]
     }
 }
@@ -219,14 +221,14 @@ impl Extent3d {
         let max_011 = Vec3Length::new(self.center.x(), self.max.y(), self.max.z());
         let max_111 = Vec3Length::new(self.max.x(), self.max.y(), self.max.z());
         [
-            Self::new(min_000, max_000),
-            Self::new(min_100, max_100),
-            Self::new(min_010, max_010),
-            Self::new(min_110, max_110),
-            Self::new(min_001, max_001),
-            Self::new(min_101, max_101),
-            Self::new(min_011, max_011),
-            Self::new(min_111, max_111),
+            Self::from_min_max(min_000, max_000),
+            Self::from_min_max(min_100, max_100),
+            Self::from_min_max(min_010, max_010),
+            Self::from_min_max(min_110, max_110),
+            Self::from_min_max(min_001, max_001),
+            Self::from_min_max(min_101, max_101),
+            Self::from_min_max(min_011, max_011),
+            Self::from_min_max(min_111, max_111),
         ]
     }
 }
@@ -254,7 +256,7 @@ mod tests {
     #[ignore]
     fn extent_quadrants_2d() {
         let root_extent =
-            Extent2d::new(Vec2Length::meters(-1.0, -2.0), Vec2Length::meters(1.0, 2.0));
+            Extent2d::from_min_max(Vec2Length::meters(-1.0, -2.0), Vec2Length::meters(1.0, 2.0));
         let quadrants = root_extent.get_quadrants();
         assert_is_close_2d(quadrants[0].min, MVec2::new(-1.0, -2.0));
         assert_is_close_2d(quadrants[0].max, MVec2::new(0.0, 0.0));
@@ -287,7 +289,7 @@ mod tests {
     #[ignore]
     fn quadrant_index_2d() {
         let root_extent =
-            Extent2d::new(Vec2Length::meters(-1.0, -2.0), Vec2Length::meters(1.0, 2.0));
+            Extent2d::from_min_max(Vec2Length::meters(-1.0, -2.0), Vec2Length::meters(1.0, 2.0));
         for (i, quadrant) in root_extent.get_quadrants().iter().enumerate() {
             assert_eq!(i, root_extent.get_quadrant_index(&quadrant.center));
         }
@@ -308,7 +310,7 @@ mod tests {
 
     #[test]
     fn extent_quadrants_3d() {
-        let root_extent = Extent3d::new(
+        let root_extent = Extent3d::from_min_max(
             Vec3Length::meters(-1.0, -2.0, -3.0),
             Vec3Length::meters(1.0, 2.0, 3.0),
         );
@@ -345,7 +347,7 @@ mod tests {
 
     #[test]
     fn quadrant_index() {
-        let root_extent = Extent3d::new(
+        let root_extent = Extent3d::from_min_max(
             Vec3Length::meters(-1.0, -2.0, -3.0),
             Vec3Length::meters(1.0, 2.0, 3.0),
         );

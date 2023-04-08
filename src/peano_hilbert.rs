@@ -4,9 +4,6 @@ use mpi::datatype::UserDatatype;
 use mpi::traits::Equivalence;
 use mpi::Address;
 
-use crate::domain::Extent;
-use crate::units::VecLength;
-
 pub const NUM_BITS_PER_DIMENSION_2D: u32 = 64 / 2;
 const NUM_SUBDIVISIONS_2D: u64 = 2u64.pow(NUM_BITS_PER_DIMENSION_2D);
 
@@ -48,13 +45,13 @@ fn get_integer_position_3d(pos: DVec3) -> (u128, u128, u128) {
 }
 
 impl PeanoKey2d {
-    pub fn from_point_and_min_max_2d(pos: DVec2, min: DVec2, max: DVec2) -> Self {
+    pub fn from_point_and_min_max(pos: DVec2, min: DVec2, max: DVec2) -> Self {
         let min_padded = min - (max - min) * 0.001;
         let max_padded = max + (max - min) * 0.001;
-        Self::new((pos - min_padded) / (max_padded - min_padded))
+        Self::from_scaled_vec((pos - min_padded) / (max_padded - min_padded))
     }
 
-    fn new(pos: DVec2) -> Self {
+    fn from_scaled_vec(pos: DVec2) -> Self {
         let integer_pos = get_integer_position_2d(pos);
         Self::from_integer_pos(integer_pos)
     }
@@ -85,15 +82,13 @@ impl PeanoKey2d {
 }
 
 impl PeanoKey3d {
-    pub fn from_point_and_extent(pos: VecLength, extent: &Extent) -> Self {
-        let min_padded = extent.min - (extent.max - extent.min) * 0.001;
-        let max_padded = extent.max + (extent.max - extent.min) * 0.001;
-        let vec3d =
-            (pos - min_padded).value_unchecked() / (max_padded - min_padded).value_unchecked();
-        Self::new(vec3d)
+    pub fn from_point_and_min_max(pos: DVec3, min: DVec3, max: DVec3) -> Self {
+        let min_padded = min - (max - min) * 0.001;
+        let max_padded = max + (max - min) * 0.001;
+        Self::from_scaled_vec((pos - min_padded) / (max_padded - min_padded))
     }
 
-    fn new(pos: DVec3) -> Self {
+    fn from_scaled_vec(pos: DVec3) -> Self {
         let integer_pos = get_integer_position_3d(pos);
         Self::from_integer_pos(integer_pos)
     }

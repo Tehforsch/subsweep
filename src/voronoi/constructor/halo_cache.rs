@@ -2,11 +2,11 @@ use ordered_float::OrderedFloat;
 
 use super::halo_iteration::SearchResult;
 use crate::communication::Rank;
+use crate::dimension::Point;
 use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
 use crate::voronoi::primitives::DVector;
 use crate::voronoi::DDimension;
-use crate::voronoi::Point;
 
 #[derive(Default, Clone)]
 pub struct HaloCache {

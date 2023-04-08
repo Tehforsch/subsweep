@@ -101,7 +101,7 @@ pub(crate) mod tests {
             let v = box_.periodic_wrap(VecLength::meters(x, y, z));
             assert_vec_is_close(v, VecLength::meters(x_wrapped, y_wrapped, z_wrapped));
         };
-        let box_: SimulationBox = Extent::new(
+        let box_: SimulationBox = Extent::from_min_max(
             VecLength::meters(0.0, 0.0, 0.0),
             VecLength::meters(1.0, 2.0, 3.0),
         )
@@ -112,7 +112,7 @@ pub(crate) mod tests {
         check_wrap(&box_, (0.5, 0.5, 3.5), (0.5, 0.5, 0.5));
         check_wrap(&box_, (1.5, 2.5, 3.5), (0.5, 0.5, 0.5));
         check_wrap(&box_, (-0.5, -0.5, -0.5), (0.5, 1.5, 2.5));
-        let box_: SimulationBox = Extent::new(
+        let box_: SimulationBox = Extent::from_min_max(
             VecLength::meters(-1.0, -1.0, -1.0),
             VecLength::meters(1.0, 2.0, 3.0),
         )
@@ -130,7 +130,7 @@ pub(crate) mod tests {
             let v2 = VecLength::meters(x2, y2, z2);
             assert_is_close(box_.periodic_distance(&v1, &v2), Length::meters(distance));
         };
-        let box_: SimulationBox = Extent::new(
+        let box_: SimulationBox = Extent::from_min_max(
             VecLength::meters(0.0, 0.0, 0.0),
             VecLength::meters(1.0, 2.0, 3.0),
         )
@@ -142,7 +142,7 @@ pub(crate) mod tests {
         check_dist(&box_, (0.0, 0.0, -0.1), (0.0, 0.0, 0.1), 0.2);
         check_dist(&box_, (0.0, 0.0, 0.0), (0.5, 0.0, 0.0), 0.5);
         check_dist(&box_, (0.2, 0.0, 0.0), (0.7, 0.0, 0.0), 0.5);
-        let box_: SimulationBox = Extent::new(
+        let box_: SimulationBox = Extent::from_min_max(
             VecLength::meters(-1.0, -1.0, -1.0),
             VecLength::meters(1.0, 2.0, 3.0),
         )
@@ -159,7 +159,7 @@ pub(crate) mod tests {
     #[test]
     fn periodic_distance_is_symmetric() {
         let particles = get_particles(5, 5);
-        let box_: SimulationBox = Extent::new(
+        let box_: SimulationBox = Extent::from_min_max(
             VecLength::meters(-1.0, -1.0, -1.0),
             VecLength::meters(1.0, 2.0, 3.0),
         )
