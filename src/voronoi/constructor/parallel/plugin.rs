@@ -59,10 +59,10 @@ fn construct_grid_system(
     box_: Res<SimulationBox>,
     map: Res<IdEntityMap>,
 ) {
-    let extent = Extent {
-        min: global_extent.min.value_unchecked(),
-        max: global_extent.max.value_unchecked(),
-    };
+    let extent = Extent::from_min_max(
+        global_extent.min.value_unchecked(),
+        global_extent.max.value_unchecked(),
+    );
     let search = ParallelSearch {
         data_comm: &mut *data_comm,
         result_comm: &mut *result_comm,

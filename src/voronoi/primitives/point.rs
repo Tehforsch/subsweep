@@ -1,3 +1,5 @@
+use std::ops::Add;
+use std::ops::Div;
 use std::ops::Mul;
 use std::ops::Sub;
 
@@ -7,7 +9,15 @@ use crate::peano_hilbert::PeanoKey2d;
 pub type Point2d = glam::DVec2;
 pub type Point3d = glam::DVec3;
 
-pub trait DVector: Sized + Sub<Self, Output = Self> + Mul<Float, Output = Self> {
+pub trait DVector:
+    Sized
+    + Sub<Self, Output = Self>
+    + Add<Self, Output = Self>
+    + Mul<Float, Output = Self>
+    + Div<Float, Output = Self>
+    + Copy
+    + Clone
+{
     fn distance(&self, p: Self) -> Float;
     fn distance_squared(&self, p: Self) -> Float;
     fn normalize(&self) -> Self;

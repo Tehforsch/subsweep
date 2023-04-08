@@ -1,119 +1,191 @@
-use mpi::traits::Equivalence;
 use serde::Deserialize;
 use serde::Deserializer;
-use serde::Serialize;
 
-use crate::config::TWO_TO_NUM_DIMENSIONS;
-use crate::prelude::MVec;
+use crate::extent::Extent as VExtent;
 use crate::units::Length;
-use crate::units::VecLength;
-use crate::units::Volume;
+use crate::units::MVec2;
+use crate::units::MVec3;
+use crate::units::Vec2Length;
+use crate::units::Vec3Length;
 
-#[derive(Default, Clone, Serialize, Equivalence, PartialEq)]
-pub struct Extent {
-    pub min: VecLength,
-    pub max: VecLength,
-    #[serde(skip_serializing)]
-    pub center: VecLength,
+#[cfg(feature = "2d")]
+pub type Extent = VExtent<Vec2Length>;
+#[cfg(feature = "3d")]
+pub type Extent = VExtent<Vec3Length>;
+
+pub type Extent3d = VExtent<Vec3Length>;
+pub type Extent2d = VExtent<Vec2Length>;
+
+macro_rules! impl_extent {
+    ($extent: ident, $spec: ident, $unit_vec: ident, $vec: ident) => {
+        impl $extent {
+            pub fn new(min: $unit_vec, max: $unit_vec) -> Self {
+                Self {
+                    min,
+                    max,
+                    center: (min + max) * 0.5,
+                }
+            }
+
+            pub fn cube_from_side_length(side_length: Length) -> Self {
+                let min = $unit_vec::zero();
+                let max = $vec::ONE * side_length;
+                Self::new(min, max)
+            }
+
+            pub fn cube_from_side_length_centered(side_length: Length) -> Self {
+                let min = -$vec::ONE * side_length / 2.0;
+                let max = $vec::ONE * side_length / 2.0;
+                Self::new(min, max)
+            }
+
+            pub fn cube_around_sphere(center: $unit_vec, radius: Length) -> Self {
+                let min = center - $vec::ONE * radius;
+                let max = center + $vec::ONE * radius;
+                Self { center, min, max }
+            }
+
+            pub fn get_all_encompassing<'a>(
+                extent: impl Iterator<Item = &'a Self>,
+            ) -> Option<Self> {
+                Self::from_positions(
+                    extent.flat_map(|extent: &Self| [&extent.min, &extent.max].into_iter()),
+                )
+            }
+
+            /// Return an extent with slightly increased size
+            /// but the same center
+            pub fn pad(self) -> Self {
+                let dist_to_min = self.min - self.center;
+                let dist_to_max = self.max - self.center;
+                const PADDING_FRACTION: f64 = 0.01;
+                Self {
+                    min: self.center + dist_to_min * (1.0 + PADDING_FRACTION),
+                    max: self.center + dist_to_max * (1.0 + PADDING_FRACTION),
+                    center: self.center,
+                }
+            }
+
+            pub fn center(&self) -> $unit_vec {
+                self.center
+            }
+
+            pub fn side_lengths(&self) -> $unit_vec {
+                self.max - self.min
+            }
+
+            pub fn max_side_length(&self) -> Length {
+                let side_length = self.side_lengths();
+                side_length.x().max(side_length.y())
+            }
+
+            pub fn from_positions<'a>(
+                positions: impl Iterator<Item = &'a $unit_vec>,
+            ) -> Option<Self> {
+                let mut min = None;
+                let mut max = None;
+                let update_min = |min: &mut Option<$unit_vec>, pos: $unit_vec| {
+                    if let Some(ref mut min) = min {
+                        *min = min.min(pos);
+                    } else {
+                        *min = Some(pos);
+                    }
+                };
+                let update_max = |max: &mut Option<$unit_vec>, pos: $unit_vec| {
+                    if let Some(ref mut max) = max {
+                        *max = max.max(pos);
+                    } else {
+                        *max = Some(pos);
+                    }
+                };
+                for pos in positions {
+                    update_min(&mut min, *pos);
+                    update_max(&mut max, *pos);
+                }
+                Some(Self::new(min?, max?))
+            }
+
+            pub fn contains(&self, pos: &$unit_vec) -> bool {
+                self.min.x() <= pos.x()
+                    && pos.x() <= self.max.x()
+                    && self.min.y() <= pos.y()
+                    && pos.y() <= self.max.y()
+            }
+
+            pub fn contains_extent(&self, other: &Self) -> bool {
+                self.contains(&other.min) && self.contains(&other.max)
+            }
+        }
+
+        /// A helper struct to enable deserialization of extents.
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum $spec {
+            MinMax { min: $unit_vec, max: $unit_vec },
+            Size($unit_vec),
+            SideLength(Length),
+        }
+
+        impl From<$spec> for $extent {
+            fn from(value: $spec) -> Self {
+                match value {
+                    $spec::MinMax { min, max } => Self::new(min, max),
+                    $spec::Size(size) => Self::new($unit_vec::zero(), size),
+                    $spec::SideLength(side_length) => $extent::cube_from_side_length(side_length),
+                }
+            }
+        }
+
+        impl<'de> Deserialize<'de> for $extent {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                Ok($spec::deserialize(deserializer)?.into())
+            }
+        }
+
+        impl std::fmt::Debug for $extent {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "Extent({:.3?} {:.3?})", self.min, self.max)
+            }
+        }
+    };
 }
 
-impl Extent {
-    pub fn new(min: VecLength, max: VecLength) -> Self {
-        debug_assert!(min.x() <= max.x());
-        debug_assert!(min.y() <= max.y());
-        #[cfg(not(feature = "2d"))]
-        debug_assert!(min.z() <= max.z());
-        Self {
-            min,
-            max,
-            center: (min + max) * 0.5,
-        }
-    }
+impl_extent!(Extent2d, ExtentSpecification2d, Vec2Length, MVec2);
+impl_extent!(Extent3d, ExtentSpecification3d, Vec3Length, MVec3);
 
-    pub fn cube_from_side_length(side_length: Length) -> Self {
-        let min = VecLength::zero();
-        let max = MVec::ONE * side_length;
-        Self::new(min, max)
-    }
-
-    pub fn cube_from_side_length_centered(side_length: Length) -> Self {
-        let min = -MVec::ONE * side_length / 2.0;
-        let max = MVec::ONE * side_length / 2.0;
-        Self::new(min, max)
-    }
-
-    pub fn cube_around_sphere(center: VecLength, radius: Length) -> Self {
-        let min = center - MVec::ONE * radius;
-        let max = center + MVec::ONE * radius;
-        Self { center, min, max }
-    }
-
-    pub fn get_all_encompassing<'a>(extent: impl Iterator<Item = &'a Extent>) -> Option<Self> {
-        Self::from_positions(
-            extent.flat_map(|extent: &Extent| [&extent.min, &extent.max].into_iter()),
-        )
-    }
-
-    /// Return an extent with slightly increased size
-    /// but the same center
-    pub fn pad(self) -> Self {
-        let dist_to_min = self.min - self.center;
-        let dist_to_max = self.max - self.center;
-        const PADDING_FRACTION: f64 = 0.01;
-        Self {
-            min: self.center + dist_to_min * (1.0 + PADDING_FRACTION),
-            max: self.center + dist_to_max * (1.0 + PADDING_FRACTION),
-            center: self.center,
-        }
-    }
-
-    pub fn center(&self) -> VecLength {
-        self.center
-    }
-
-    pub fn side_lengths(&self) -> VecLength {
-        self.max - self.min
-    }
-
-    pub fn max_side_length(&self) -> Length {
-        let side_length = self.side_lengths();
-        side_length.x().max(side_length.y())
-    }
-
-    pub fn from_positions<'a>(positions: impl Iterator<Item = &'a VecLength>) -> Option<Self> {
-        let mut min = None;
-        let mut max = None;
-        let update_min = |min: &mut Option<VecLength>, pos: VecLength| {
-            if let Some(ref mut min) = min {
-                *min = min.min(pos);
-            } else {
-                *min = Some(pos);
-            }
-        };
-        let update_max = |max: &mut Option<VecLength>, pos: VecLength| {
-            if let Some(ref mut max) = max {
-                *max = max.max(pos);
-            } else {
-                *max = Some(pos);
-            }
-        };
-        for pos in positions {
-            update_min(&mut min, *pos);
-            update_max(&mut max, *pos);
-        }
-        Some(Self::new(min?, max?))
-    }
-
-    pub fn get_quadrant_index(&self, pos: &VecLength) -> usize {
+impl Extent2d {
+    pub fn get_quadrant_index(&self, pos: &Vec2Length) -> usize {
         debug_assert!(self.contains(pos));
-        #[cfg(feature = "2d")]
         match (pos.x() < self.center.x(), pos.y() < self.center.y()) {
             (true, true) => 0,
             (false, true) => 1,
             (true, false) => 2,
             (false, false) => 3,
         }
-        #[cfg(not(feature = "2d"))]
+    }
+    pub fn get_quadrants(&self) -> [Self; 4] {
+        let min_00 = Vec2Length::new(self.min.x(), self.min.y());
+        let min_10 = Vec2Length::new(self.center.x(), self.min.y());
+        let min_01 = Vec2Length::new(self.min.x(), self.center.y());
+        let min_11 = Vec2Length::new(self.center.x(), self.center.y());
+        let max_00 = Vec2Length::new(self.center.x(), self.center.y());
+        let max_10 = Vec2Length::new(self.max.x(), self.center.y());
+        let max_01 = Vec2Length::new(self.center.x(), self.max.y());
+        let max_11 = Vec2Length::new(self.max.x(), self.max.y());
+        [
+            Self::new(min_00, max_00),
+            Self::new(min_10, max_10),
+            Self::new(min_01, max_01),
+            Self::new(min_11, max_11),
+        ]
+    }
+}
+
+impl Extent3d {
+    pub fn get_quadrant_index(&self, pos: &Vec3Length) -> usize {
         match (
             pos.x() < self.center.x(),
             pos.y() < self.center.y(),
@@ -129,62 +201,23 @@ impl Extent {
             (false, false, false) => 7,
         }
     }
-
-    pub fn contains(&self, pos: &VecLength) -> bool {
-        self.min.x() <= pos.x()
-            && pos.x() <= self.max.x()
-            && self.min.y() <= pos.y()
-            && pos.y() <= self.max.y()
-    }
-
-    pub fn contains_extent(&self, other: &Extent) -> bool {
-        self.contains(&other.min) && self.contains(&other.max)
-    }
-
-    pub fn volume(&self) -> Volume {
-        let side_lengths = self.side_lengths();
-        #[cfg(feature = "2d")]
-        return side_lengths.x() * side_lengths.y();
-        #[cfg(not(feature = "2d"))]
-        return side_lengths.x() * side_lengths.y() * side_lengths.z();
-    }
-
-    #[cfg(feature = "2d")]
-    pub fn get_quadrants(&self) -> [Self; TWO_TO_NUM_DIMENSIONS] {
-        let min_00 = VecLength::new(self.min.x(), self.min.y());
-        let min_10 = VecLength::new(self.center.x(), self.min.y());
-        let min_01 = VecLength::new(self.min.x(), self.center.y());
-        let min_11 = VecLength::new(self.center.x(), self.center.y());
-        let max_00 = VecLength::new(self.center.x(), self.center.y());
-        let max_10 = VecLength::new(self.max.x(), self.center.y());
-        let max_01 = VecLength::new(self.center.x(), self.max.y());
-        let max_11 = VecLength::new(self.max.x(), self.max.y());
-        [
-            Self::new(min_00, max_00),
-            Self::new(min_10, max_10),
-            Self::new(min_01, max_01),
-            Self::new(min_11, max_11),
-        ]
-    }
-
-    #[cfg(not(feature = "2d"))]
-    pub fn get_quadrants(&self) -> [Self; TWO_TO_NUM_DIMENSIONS] {
-        let min_000 = VecLength::new(self.min.x(), self.min.y(), self.min.z());
-        let min_100 = VecLength::new(self.center.x(), self.min.y(), self.min.z());
-        let min_010 = VecLength::new(self.min.x(), self.center.y(), self.min.z());
-        let min_110 = VecLength::new(self.center.x(), self.center.y(), self.min.z());
-        let min_001 = VecLength::new(self.min.x(), self.min.y(), self.center.z());
-        let min_101 = VecLength::new(self.center.x(), self.min.y(), self.center.z());
-        let min_011 = VecLength::new(self.min.x(), self.center.y(), self.center.z());
-        let min_111 = VecLength::new(self.center.x(), self.center.y(), self.center.z());
-        let max_000 = VecLength::new(self.center.x(), self.center.y(), self.center.z());
-        let max_100 = VecLength::new(self.max.x(), self.center.y(), self.center.z());
-        let max_010 = VecLength::new(self.center.x(), self.max.y(), self.center.z());
-        let max_110 = VecLength::new(self.max.x(), self.max.y(), self.center.z());
-        let max_001 = VecLength::new(self.center.x(), self.center.y(), self.max.z());
-        let max_101 = VecLength::new(self.max.x(), self.center.y(), self.max.z());
-        let max_011 = VecLength::new(self.center.x(), self.max.y(), self.max.z());
-        let max_111 = VecLength::new(self.max.x(), self.max.y(), self.max.z());
+    pub fn get_quadrants(&self) -> [Self; 8] {
+        let min_000 = Vec3Length::new(self.min.x(), self.min.y(), self.min.z());
+        let min_100 = Vec3Length::new(self.center.x(), self.min.y(), self.min.z());
+        let min_010 = Vec3Length::new(self.min.x(), self.center.y(), self.min.z());
+        let min_110 = Vec3Length::new(self.center.x(), self.center.y(), self.min.z());
+        let min_001 = Vec3Length::new(self.min.x(), self.min.y(), self.center.z());
+        let min_101 = Vec3Length::new(self.center.x(), self.min.y(), self.center.z());
+        let min_011 = Vec3Length::new(self.min.x(), self.center.y(), self.center.z());
+        let min_111 = Vec3Length::new(self.center.x(), self.center.y(), self.center.z());
+        let max_000 = Vec3Length::new(self.center.x(), self.center.y(), self.center.z());
+        let max_100 = Vec3Length::new(self.max.x(), self.center.y(), self.center.z());
+        let max_010 = Vec3Length::new(self.center.x(), self.max.y(), self.center.z());
+        let max_110 = Vec3Length::new(self.max.x(), self.max.y(), self.center.z());
+        let max_001 = Vec3Length::new(self.center.x(), self.center.y(), self.max.z());
+        let max_101 = Vec3Length::new(self.max.x(), self.center.y(), self.max.z());
+        let max_011 = Vec3Length::new(self.center.x(), self.max.y(), self.max.z());
+        let max_111 = Vec3Length::new(self.max.x(), self.max.y(), self.max.z());
         [
             Self::new(min_000, max_000),
             Self::new(min_100, max_100),
@@ -195,42 +228,6 @@ impl Extent {
             Self::new(min_011, max_011),
             Self::new(min_111, max_111),
         ]
-    }
-}
-
-/// A helper struct to enable deserialization of extents.
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum ExtentSpecification {
-    MinMax { min: VecLength, max: VecLength },
-    Size(VecLength),
-    SideLength(Length),
-}
-
-impl From<ExtentSpecification> for Extent {
-    fn from(value: ExtentSpecification) -> Self {
-        match value {
-            ExtentSpecification::MinMax { min, max } => Self::new(min, max),
-            ExtentSpecification::Size(size) => Self::new(VecLength::zero(), size),
-            ExtentSpecification::SideLength(side_length) => {
-                Extent::cube_from_side_length(side_length)
-            }
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Extent {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(ExtentSpecification::deserialize(deserializer)?.into())
-    }
-}
-
-impl std::fmt::Debug for Extent {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Extent({:.3?} {:.3?})", self.min, self.max)
     }
 }
 
