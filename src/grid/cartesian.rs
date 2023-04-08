@@ -26,7 +26,6 @@ use crate::units::Volume;
 #[serde(untagged)]
 pub enum NumCellsSpec {
     CellSize(Length),
-    NumCellsX(usize),
 }
 
 impl NumCellsSpec {
@@ -35,25 +34,16 @@ impl NumCellsSpec {
             NumCellsSpec::CellSize(cell_size) => {
                 IntegerPosition::from_position_and_side_length(box_size.side_lengths(), *cell_size)
             }
-            NumCellsSpec::NumCellsX(num_cells_x) => IntegerPosition {
-                x: *num_cells_x as i32,
-                y: 1,
-                #[cfg(not(feature = "2d"))]
-                z: 1,
-            },
         }
     }
 
-    fn cell_size(&self, box_size: &SimulationBox) -> Length {
+    fn cell_size(&self) -> Length {
         match self {
             NumCellsSpec::CellSize(cell_size) => *cell_size,
-            NumCellsSpec::NumCellsX(num_cells_x) => {
-                box_size.side_lengths().x() / *num_cells_x as f64
-            }
         }
     }
 
-    fn face_area(&self, box_size: &SimulationBox) -> FaceArea {
+    fn face_area(&self) -> FaceArea {
         match self {
             NumCellsSpec::CellSize(cell_size) => {
                 #[cfg(feature = "2d")]
@@ -65,23 +55,12 @@ impl NumCellsSpec {
                     cell_size.powi::<2>()
                 }
             }
-            NumCellsSpec::NumCellsX(_) => {
-                #[cfg(feature = "2d")]
-                {
-                    box_size.side_lengths().y()
-                }
-                #[cfg(not(feature = "2d"))]
-                {
-                    box_size.side_lengths().y() * box_size.side_lengths().z()
-                }
-            }
         }
     }
 
-    fn volume(&self, box_size: &SimulationBox) -> Volume {
+    fn volume(&self) -> Volume {
         match self {
             NumCellsSpec::CellSize(cell_size) => cell_size.powi::<{ NUM_DIMENSIONS as i32 }>(),
-            NumCellsSpec::NumCellsX(num_cells_x) => box_size.volume() / *num_cells_x as f64,
         }
     }
 }
@@ -231,15 +210,15 @@ impl GridConstructor {
     }
 
     fn volume(&self) -> Volume {
-        self.resolution.volume(&self.box_size)
+        self.resolution.volume()
     }
 
     fn face_area(&self) -> FaceArea {
-        self.resolution.face_area(&self.box_size)
+        self.resolution.face_area()
     }
 
     fn cell_size(&self) -> Length {
-        self.resolution.cell_size(&self.box_size)
+        self.resolution.cell_size()
     }
 
     fn construct_neighbours(&mut self) {
