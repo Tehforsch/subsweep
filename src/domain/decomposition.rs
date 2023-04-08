@@ -21,6 +21,12 @@ struct Segment<K> {
     end: K,
 }
 
+impl<K: Key> Segment<K> {
+    fn overlaps(&self, min: K, max: K) -> bool {
+        !(self.end <= min || self.start >= max)
+    }
+}
+
 impl<K: Debug> Debug for Segment<K> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}-{:?}", self.start, self.end)
@@ -55,6 +61,7 @@ pub struct Decomposition<K> {
     num_ranks: usize,
     cuts: Vec<K>,
     loads: Vec<Work>,
+    segments: Vec<Segment<K>>,
 }
 
 impl<K: Key> Decomposition<K> {
@@ -75,15 +82,18 @@ impl<K: Key> Decomposition<K> {
             cuts,
             loads,
             num_ranks,
+            segments,
         }
     }
 
     pub(crate) fn rank_owns_part_of_search_radius(
         &self,
-        _rank: Rank,
-        _extent: Extent<Point<K::Dimension>>,
+        rank: Rank,
+        extent: Extent<Point<K::Dimension>>,
     ) -> bool {
         todo!()
+        // let (min, max) = Extent::get_min_and_max_key(&extent);
+        // self.segments[rank as usize].overlaps(min, max)
     }
 
     pub(crate) fn get_owning_rank(&self, key: K) -> Rank {
