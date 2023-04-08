@@ -8,13 +8,13 @@ use crate::units::MVec3;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
 
-#[cfg(feature = "2d")]
-pub type Extent = VExtent<Vec2Length>;
-#[cfg(feature = "3d")]
-pub type Extent = VExtent<Vec3Length>;
-
-pub type Extent3d = VExtent<Vec3Length>;
 pub type Extent2d = VExtent<Vec2Length>;
+pub type Extent3d = VExtent<Vec3Length>;
+
+#[cfg(feature = "2d")]
+pub type Extent = Extent2d;
+#[cfg(feature = "3d")]
+pub type Extent = Extent3d;
 
 macro_rules! impl_extent {
     ($extent: ident, $spec: ident, $unit_vec: ident, $vec: ident) => {
@@ -233,159 +233,147 @@ impl Extent3d {
 
 #[cfg(test)]
 mod tests {
-    use crate::prelude::MVec;
-    use crate::units::VecLength;
+    use crate::domain::extent::Extent3d;
 
-    fn assert_is_close(a: VecLength, b: MVec) {
+    fn assert_is_close_2d(a: Vec2Length, b: MVec2) {
         assert!((a.in_meters() - b).length() < f64::EPSILON)
     }
 
-    #[cfg(all(test, feature = "2d"))]
-    mod two_d {
-        use glam::DVec2;
+    fn assert_is_close_3d(a: Vec3Length, b: MVec3) {
+        assert!((a.in_meters() - b).length() < f64::EPSILON)
+    }
 
-        use super::assert_is_close;
-        use crate::domain::Extent;
-        use crate::prelude::MVec;
-        use crate::units::VecLength;
+    use super::Extent2d;
+    use crate::units::Length;
+    use crate::units::MVec2;
+    use crate::units::MVec3;
+    use crate::units::Vec2Length;
+    use crate::units::Vec3Length;
 
-        #[test]
-        #[ignore]
-        fn extent_quadrants() {
-            let root_extent =
-                Extent::new(VecLength::meters(-1.0, -2.0), VecLength::meters(1.0, 2.0));
-            let quadrants = root_extent.get_quadrants();
-            assert_is_close(quadrants[0].min, MVec::new(-1.0, -2.0));
-            assert_is_close(quadrants[0].max, MVec::new(0.0, 0.0));
+    #[test]
+    #[ignore]
+    fn extent_quadrants_2d() {
+        let root_extent =
+            Extent2d::new(Vec2Length::meters(-1.0, -2.0), Vec2Length::meters(1.0, 2.0));
+        let quadrants = root_extent.get_quadrants();
+        assert_is_close_2d(quadrants[0].min, MVec2::new(-1.0, -2.0));
+        assert_is_close_2d(quadrants[0].max, MVec2::new(0.0, 0.0));
 
-            assert_is_close(quadrants[1].min, MVec::new(0.0, -2.0));
-            assert_is_close(quadrants[1].max, MVec::new(1.0, 0.0));
+        assert_is_close_2d(quadrants[1].min, MVec2::new(0.0, -2.0));
+        assert_is_close_2d(quadrants[1].max, MVec2::new(1.0, 0.0));
 
-            assert_is_close(quadrants[2].min, MVec::new(-1.0, 0.0));
-            assert_is_close(quadrants[2].max, MVec::new(0.0, 2.0));
+        assert_is_close_2d(quadrants[2].min, MVec2::new(-1.0, 0.0));
+        assert_is_close_2d(quadrants[2].max, MVec2::new(0.0, 2.0));
 
-            assert_is_close(quadrants[3].min, MVec::new(0.0, 0.0));
-            assert_is_close(quadrants[3].max, MVec::new(1.0, 2.0));
-        }
+        assert_is_close_2d(quadrants[3].min, MVec2::new(0.0, 0.0));
+        assert_is_close_2d(quadrants[3].max, MVec2::new(1.0, 2.0));
+    }
 
-        #[test]
-        #[ignore]
-        fn extent_from_positions() {
-            let positions = &[
-                VecLength::meters(1.0, 0.0),
-                VecLength::meters(-1.0, 0.0),
-                VecLength::meters(0.0, -2.0),
-                VecLength::meters(0.0, 2.0),
-            ];
-            let extent = Extent::from_positions(positions.iter()).unwrap();
-            assert_is_close(extent.min, DVec2::new(-1.0, -2.0));
-            assert_is_close(extent.max, DVec2::new(1.0, 2.0));
-        }
+    #[test]
+    #[ignore]
+    fn extent_from_positions_2d() {
+        let positions = &[
+            Vec2Length::meters(1.0, 0.0),
+            Vec2Length::meters(-1.0, 0.0),
+            Vec2Length::meters(0.0, -2.0),
+            Vec2Length::meters(0.0, 2.0),
+        ];
+        let extent = Extent2d::from_positions(positions.iter()).unwrap();
+        assert_is_close_2d(extent.min, MVec2::new(-1.0, -2.0));
+        assert_is_close_2d(extent.max, MVec2::new(1.0, 2.0));
+    }
 
-        #[test]
-        #[ignore]
-        fn quadrant_index() {
-            let root_extent =
-                Extent::new(VecLength::meters(-1.0, -2.0), VecLength::meters(1.0, 2.0));
-            for (i, quadrant) in root_extent.get_quadrants().iter().enumerate() {
-                assert_eq!(i, root_extent.get_quadrant_index(&quadrant.center));
-            }
+    #[test]
+    #[ignore]
+    fn quadrant_index_2d() {
+        let root_extent =
+            Extent2d::new(Vec2Length::meters(-1.0, -2.0), Vec2Length::meters(1.0, 2.0));
+        for (i, quadrant) in root_extent.get_quadrants().iter().enumerate() {
+            assert_eq!(i, root_extent.get_quadrant_index(&quadrant.center));
         }
     }
 
-    #[cfg(all(test, not(feature = "2d")))]
-    mod three_d {
-        use glam::DVec3;
+    #[test]
+    fn extent_from_positions_3d() {
+        let positions = &[
+            Vec3Length::meters(1.0, 0.0, -1.0),
+            Vec3Length::meters(-1.0, 0.0, 0.0),
+            Vec3Length::meters(0.0, -2.0, 0.0),
+            Vec3Length::meters(0.0, 2.0, 1.0),
+        ];
+        let extent = Extent3d::from_positions(positions.iter()).unwrap();
+        assert_is_close_3d(extent.min, MVec3::new(-1.0, -2.0, -1.0));
+        assert_is_close_3d(extent.max, MVec3::new(1.0, 2.0, 1.0));
+    }
 
-        use super::super::Extent;
-        use super::assert_is_close;
-        use crate::prelude::MVec;
-        use crate::units::Length;
-        use crate::units::VecLength;
+    #[test]
+    fn extent_quadrants_3d() {
+        let root_extent = Extent3d::new(
+            Vec3Length::meters(-1.0, -2.0, -3.0),
+            Vec3Length::meters(1.0, 2.0, 3.0),
+        );
+        let quadrants = root_extent.get_quadrants();
+        assert_is_close_3d(quadrants[0].min, MVec3::new(-1.0, -2.0, -3.0));
+        assert_is_close_3d(quadrants[0].max, MVec3::new(0.0, 0.0, 0.0));
 
-        #[test]
-        fn extent_from_positions() {
-            let positions = &[
-                VecLength::meters(1.0, 0.0, -1.0),
-                VecLength::meters(-1.0, 0.0, 0.0),
-                VecLength::meters(0.0, -2.0, 0.0),
-                VecLength::meters(0.0, 2.0, 1.0),
-            ];
-            let extent = Extent::from_positions(positions.iter()).unwrap();
-            assert_is_close(extent.min, DVec3::new(-1.0, -2.0, -1.0));
-            assert_is_close(extent.max, DVec3::new(1.0, 2.0, 1.0));
+        assert_is_close_3d(quadrants[1].min, MVec3::new(0.0, -2.0, -3.0));
+        assert_is_close_3d(quadrants[1].max, MVec3::new(1.0, 0.0, 0.0));
+
+        assert_is_close_3d(quadrants[2].min, MVec3::new(-1.0, 0.0, -3.0));
+        assert_is_close_3d(quadrants[2].max, MVec3::new(0.0, 2.0, 0.0));
+
+        assert_is_close_3d(quadrants[3].min, MVec3::new(0.0, 0.0, -3.0));
+        assert_is_close_3d(quadrants[3].max, MVec3::new(1.0, 2.0, 0.0));
+
+        assert_is_close_3d(quadrants[4].min, MVec3::new(-1.0, -2.0, 0.0));
+        assert_is_close_3d(quadrants[4].max, MVec3::new(0.0, 0.0, 3.0));
+
+        assert_is_close_3d(quadrants[5].min, MVec3::new(0.0, -2.0, 0.0));
+        assert_is_close_3d(quadrants[5].max, MVec3::new(1.0, 0.0, 3.0));
+
+        assert_is_close_3d(quadrants[6].min, MVec3::new(-1.0, 0.0, 0.0));
+        assert_is_close_3d(quadrants[6].max, MVec3::new(0.0, 2.0, 3.0));
+
+        assert_is_close_3d(quadrants[7].min, MVec3::new(0.0, 0.0, 0.0));
+        assert_is_close_3d(quadrants[7].max, MVec3::new(1.0, 2.0, 3.0));
+    }
+
+    #[test]
+    fn extent_from_positions_is_none_with_zero_positions() {
+        assert!(Extent3d::from_positions([].iter()).is_none());
+    }
+
+    #[test]
+    fn quadrant_index() {
+        let root_extent = Extent3d::new(
+            Vec3Length::meters(-1.0, -2.0, -3.0),
+            Vec3Length::meters(1.0, 2.0, 3.0),
+        );
+        for (i, quadrant) in root_extent.get_quadrants().iter().enumerate() {
+            assert_eq!(i, root_extent.get_quadrant_index(&quadrant.center));
         }
+    }
 
-        #[test]
-        fn extent_quadrants() {
-            let root_extent = Extent::new(
-                VecLength::meters(-1.0, -2.0, -3.0),
-                VecLength::meters(1.0, 2.0, 3.0),
-            );
-            let quadrants = root_extent.get_quadrants();
-            assert_is_close(quadrants[0].min, MVec::new(-1.0, -2.0, -3.0));
-            assert_is_close(quadrants[0].max, MVec::new(0.0, 0.0, 0.0));
+    fn extent_equality(e1: &Extent3d, e2: &Extent3d) -> bool {
+        (e1.min - e2.min).length() == Length::zero() && (e1.max - e2.max).length() == Length::zero()
+    }
 
-            assert_is_close(quadrants[1].min, MVec::new(0.0, -2.0, -3.0));
-            assert_is_close(quadrants[1].max, MVec::new(1.0, 0.0, 0.0));
-
-            assert_is_close(quadrants[2].min, MVec::new(-1.0, 0.0, -3.0));
-            assert_is_close(quadrants[2].max, MVec::new(0.0, 2.0, 0.0));
-
-            assert_is_close(quadrants[3].min, MVec::new(0.0, 0.0, -3.0));
-            assert_is_close(quadrants[3].max, MVec::new(1.0, 2.0, 0.0));
-
-            assert_is_close(quadrants[4].min, MVec::new(-1.0, -2.0, 0.0));
-            assert_is_close(quadrants[4].max, MVec::new(0.0, 0.0, 3.0));
-
-            assert_is_close(quadrants[5].min, MVec::new(0.0, -2.0, 0.0));
-            assert_is_close(quadrants[5].max, MVec::new(1.0, 0.0, 3.0));
-
-            assert_is_close(quadrants[6].min, MVec::new(-1.0, 0.0, 0.0));
-            assert_is_close(quadrants[6].max, MVec::new(0.0, 2.0, 3.0));
-
-            assert_is_close(quadrants[7].min, MVec::new(0.0, 0.0, 0.0));
-            assert_is_close(quadrants[7].max, MVec::new(1.0, 2.0, 3.0));
-        }
-
-        #[test]
-        fn extent_from_positions_is_none_with_zero_positions() {
-            assert!(Extent::from_positions([].iter()).is_none());
-        }
-
-        #[test]
-        fn quadrant_index() {
-            let root_extent = Extent::new(
-                VecLength::meters(-1.0, -2.0, -3.0),
-                VecLength::meters(1.0, 2.0, 3.0),
-            );
-            for (i, quadrant) in root_extent.get_quadrants().iter().enumerate() {
-                assert_eq!(i, root_extent.get_quadrant_index(&quadrant.center));
-            }
-        }
-
-        fn extent_equality(e1: &Extent, e2: &Extent) -> bool {
-            (e1.min - e2.min).length() == Length::zero()
-                && (e1.max - e2.max).length() == Length::zero()
-        }
-
-        #[test]
-        fn deserialize() {
-            let extent_from_side_length = serde_yaml::from_str::<Extent>("5 m").unwrap();
-            assert!(extent_equality(
-                &extent_from_side_length,
-                &Extent::cube_from_side_length(Length::meters(5.0))
-            ));
-            let extent_from_min_max = serde_yaml::from_str::<Extent>(
-                "
+    #[test]
+    fn deserialize() {
+        let extent_from_side_length = serde_yaml::from_str::<Extent3d>("5 m").unwrap();
+        assert!(extent_equality(
+            &extent_from_side_length,
+            &Extent3d::cube_from_side_length(Length::meters(5.0))
+        ));
+        let extent_from_min_max = serde_yaml::from_str::<Extent3d>(
+            "
 min: (0.0 0.0 0.0) m
 max: (5.0 5.0 5.0) m",
-            )
-            .unwrap();
-            assert!(extent_equality(
-                &extent_from_min_max,
-                &Extent::cube_from_side_length(Length::meters(5.0))
-            ));
-        }
+        )
+        .unwrap();
+        assert!(extent_equality(
+            &extent_from_min_max,
+            &Extent3d::cube_from_side_length(Length::meters(5.0))
+        ));
     }
 }
