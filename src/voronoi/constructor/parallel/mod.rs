@@ -26,10 +26,10 @@ use crate::dimension::ActiveDimension;
 use crate::domain;
 use crate::domain::Decomposition;
 use crate::domain::QuadTree;
+use crate::extent::Extent;
 use crate::parameters::SimulationBox;
 use crate::units::Length;
 use crate::units::VecLength;
-use crate::voronoi::utils::Extent;
 use crate::voronoi::DDimension;
 use crate::voronoi::Point;
 

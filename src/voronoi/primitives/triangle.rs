@@ -3,6 +3,7 @@ use super::Point2d;
 use super::Point3d;
 use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
+use crate::extent::Extent;
 use crate::voronoi::delaunay::dimension::DFace;
 use crate::voronoi::delaunay::dimension::DFaceData;
 use crate::voronoi::delaunay::dimension::DTetra;
@@ -13,7 +14,6 @@ use crate::voronoi::math::solve_system_of_equations;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::utils::Extent;
 use crate::voronoi::PointIndex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

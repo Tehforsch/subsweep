@@ -7,13 +7,13 @@ use super::Delaunay;
 use super::Point;
 use super::TetraIndex;
 use crate::communication::DataByRank;
+use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
 use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::Float;
-use crate::voronoi::utils::Extent;
 use crate::voronoi::DDimension;
 use crate::voronoi::Triangulation;
 
@@ -147,6 +147,8 @@ mod tests {
     use crate::communication::DataByRank;
     use crate::dimension::ThreeD;
     use crate::dimension::TwoD;
+    use crate::extent::get_extent;
+    use crate::extent::Extent;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::constructor::halo_cache::CachedSearchResult;
@@ -155,8 +157,6 @@ mod tests {
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::primitives::point::DVector;
     use crate::voronoi::test_utils::TestDimension;
-    use crate::voronoi::utils::get_extent;
-    use crate::voronoi::utils::Extent;
     use crate::voronoi::Cell;
     use crate::voronoi::DCell;
     use crate::voronoi::DDimension;

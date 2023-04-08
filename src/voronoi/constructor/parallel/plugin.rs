@@ -16,6 +16,7 @@ use crate::domain::Decomposition;
 use crate::domain::GlobalExtent;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
+use crate::extent::Extent;
 use crate::grid::ParticleType;
 use crate::parameters::SimulationBox;
 use crate::particle::HaloParticle;
@@ -28,7 +29,6 @@ use crate::prelude::SimulationStartupStages;
 use crate::simulation::RaxiomPlugin;
 use crate::units::VecLength;
 use crate::voronoi::constructor::halo_cache::HaloCache;
-use crate::voronoi::utils::Extent;
 
 #[derive(Named)]
 pub struct ParallelVoronoiGridConstruction;

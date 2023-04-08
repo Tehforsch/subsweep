@@ -3,9 +3,9 @@ use super::FaceIndex;
 use super::Point;
 use super::PointIndex;
 use crate::dimension::Dimension;
+use crate::extent::Extent;
 use crate::prelude::Float;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::utils::Extent;
 use crate::voronoi::visualizer::Visualizable;
 
 pub trait DDimension: Dimension {

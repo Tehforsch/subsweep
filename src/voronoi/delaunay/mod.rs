@@ -18,10 +18,10 @@ use self::dimension::DTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
 use super::primitives::DVector;
-use super::utils::get_extent;
-use super::utils::Extent;
 use crate::communication::Rank;
 use crate::dimension::Dimension;
+use crate::extent::get_extent;
+use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashMap;
 
@@ -287,8 +287,8 @@ pub(super) mod tests {
     use super::Triangulation;
     use crate::dimension::ThreeD;
     use crate::dimension::TwoD;
+    use crate::extent::get_extent;
     use crate::voronoi::test_utils::TestDimension;
-    use crate::voronoi::utils::get_extent;
 
     #[instantiate_tests(<TwoD>)]
     mod two_d {}
