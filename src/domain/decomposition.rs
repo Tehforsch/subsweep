@@ -8,11 +8,12 @@ use bevy::prelude::Resource;
 
 use super::key::Key;
 use super::work::Work;
+use super::DomainKey;
 use super::IntoKey;
 use crate::communication::communicator::Communicator;
 use crate::communication::Rank;
-use crate::dimension::Point;
 use crate::extent::Extent;
+use crate::units::MVec;
 
 const LOAD_IMBALANCE_WARN_THRESHOLD: f64 = 0.1;
 
@@ -86,16 +87,6 @@ impl<K: Key> Decomposition<K> {
         }
     }
 
-    pub(crate) fn rank_owns_part_of_search_radius(
-        &self,
-        rank: Rank,
-        extent: Extent<Point<K::Dimension>>,
-    ) -> bool {
-        todo!()
-        // let (min, max) = Extent::get_min_and_max_key(&extent);
-        // self.segments[rank as usize].overlaps(min, max)
-    }
-
     pub(crate) fn get_owning_rank(&self, key: K) -> Rank {
         self.cuts
             .binary_search(&key)
@@ -131,6 +122,18 @@ impl<K: Key> Decomposition<K> {
                 debug!("Load imbalance: {:.1}%", (load_imbalance * 100.0));
             }
         }
+    }
+}
+
+impl Decomposition<DomainKey> {
+    pub(crate) fn rank_owns_part_of_search_radius(
+        &self,
+        rank: Rank,
+        extent: &Extent<MVec>,
+        global: &Extent<MVec>,
+    ) -> bool {
+        let (min, max) = extent.get_min_and_max_key(global);
+        self.segments[rank as usize].overlaps(min, max)
     }
 }
 

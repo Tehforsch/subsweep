@@ -1,7 +1,10 @@
 use serde::Deserialize;
 use serde::Deserializer;
 
+use crate::domain::key::IntoKey;
 use crate::extent::Extent as VExtent;
+use crate::peano_hilbert::PeanoKey2d;
+use crate::peano_hilbert::PeanoKey3d;
 use crate::units::Length;
 use crate::units::MVec2;
 use crate::units::MVec3;
@@ -17,7 +20,7 @@ pub type Extent = Extent2d;
 pub type Extent = Extent3d;
 
 macro_rules! impl_extent {
-    ($extent: ident, $spec: ident, $unit_vec: ident, $vec: ident, $length: ident) => {
+    ($extent: ident, $spec: ident, $unit_vec: ident, $vec: ident, $length: ident, $key: ident) => {
         impl $extent {
             pub fn cube_from_side_length(side_length: $length) -> Self {
                 let min = $unit_vec::zero();
@@ -139,14 +142,46 @@ macro_rules! impl_extent {
     };
 }
 
-impl_extent!(Extent2d, ExtentSpecification2d, Vec2Length, MVec2, Length);
-impl_extent!(Extent3d, ExtentSpecification3d, Vec3Length, MVec3, Length);
+impl_extent!(
+    Extent2d,
+    ExtentSpecification2d,
+    Vec2Length,
+    MVec2,
+    Length,
+    PeanoKey2d
+);
+impl_extent!(
+    Extent3d,
+    ExtentSpecification3d,
+    Vec3Length,
+    MVec3,
+    Length,
+    PeanoKey3d
+);
 
 impl VExtent<MVec2> {
     pub fn cube_around_sphere(center: MVec2, radius: f64) -> Self {
         let min = center - MVec2::ONE * radius;
         let max = center + MVec2::ONE * radius;
         Self { center, min, max }
+    }
+
+    pub fn get_min_and_max_key(&self, global_extent: &Self) -> (PeanoKey2d, PeanoKey2d) {
+        let keys: Vec<_> = self
+            .get_extreme_points()
+            .iter()
+            .map(|p| p.into_key(global_extent))
+            .collect();
+        (*keys.iter().min().unwrap(), *keys.iter().max().unwrap())
+    }
+
+    pub fn get_extreme_points(&self) -> [MVec2; 4] {
+        [
+            MVec2::new(self.min.x, self.min.y),
+            MVec2::new(self.max.x, self.min.y),
+            MVec2::new(self.max.x, self.max.y),
+            MVec2::new(self.min.x, self.max.y),
+        ]
     }
 }
 
@@ -155,6 +190,28 @@ impl VExtent<MVec3> {
         let min = center - MVec3::ONE * radius;
         let max = center + MVec3::ONE * radius;
         Self { center, min, max }
+    }
+
+    pub fn get_min_and_max_key(&self, global_extent: &Self) -> (PeanoKey3d, PeanoKey3d) {
+        let keys: Vec<_> = self
+            .get_extreme_points()
+            .iter()
+            .map(|p| p.into_key(global_extent))
+            .collect();
+        (*keys.iter().min().unwrap(), *keys.iter().max().unwrap())
+    }
+
+    pub fn get_extreme_points(&self) -> [MVec3; 8] {
+        [
+            MVec3::new(self.min.x, self.min.y, self.min.z),
+            MVec3::new(self.max.x, self.min.y, self.min.z),
+            MVec3::new(self.max.x, self.max.y, self.min.z),
+            MVec3::new(self.min.x, self.max.y, self.min.z),
+            MVec3::new(self.min.x, self.min.y, self.max.z),
+            MVec3::new(self.max.x, self.min.y, self.max.z),
+            MVec3::new(self.max.x, self.max.y, self.max.z),
+            MVec3::new(self.min.x, self.max.y, self.max.z),
+        ]
     }
 }
 

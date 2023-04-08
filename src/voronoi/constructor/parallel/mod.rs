@@ -74,10 +74,11 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                     search.point,
                     search.radius,
                 );
-                if self
-                    .decomposition
-                    .rank_owns_part_of_search_radius(rank, extent)
-                {
+                if self.decomposition.rank_owns_part_of_search_radius(
+                    rank,
+                    &extent,
+                    &self.global_extent,
+                ) {
                     outgoing[rank].push(search.to_equivalent());
                 }
             }
