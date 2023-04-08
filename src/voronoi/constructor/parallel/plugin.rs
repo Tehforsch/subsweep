@@ -11,6 +11,7 @@ use super::ParallelSearch;
 use super::SendNum;
 use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
+use crate::dimension::ThreeD;
 use crate::domain::Decomposition;
 use crate::domain::GlobalExtent;
 use crate::domain::IdEntityMap;
@@ -28,7 +29,6 @@ use crate::simulation::RaxiomPlugin;
 use crate::units::VecLength;
 use crate::voronoi::constructor::halo_cache::HaloCache;
 use crate::voronoi::utils::Extent;
-use crate::voronoi::ThreeD;
 
 #[derive(Named)]
 pub struct ParallelVoronoiGridConstruction;

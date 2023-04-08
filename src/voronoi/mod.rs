@@ -19,25 +19,17 @@ pub use delaunay::dimension::DTetra;
 use delaunay::Delaunay;
 use delaunay::PointIndex;
 pub use delaunay::Triangulation;
+pub use primitives::point::DVector;
 pub use primitives::Point2d;
 pub use primitives::Point3d;
 pub use triangulation_data::TriangulationData;
 
+use crate::dimension::Dimension;
 use crate::prelude::ParticleId;
 
 pub type CellIndex = ParticleId;
 
-#[derive(Clone, Debug)]
-pub struct TwoD;
-#[derive(Clone, Debug)]
-pub struct ThreeD;
-
-#[cfg(feature = "2d")]
-pub type ActiveDimension = TwoD;
-#[cfg(feature = "3d")]
-pub type ActiveDimension = ThreeD;
-
-type Point<D> = <D as DDimension>::Point;
+type Point<D> = <D as Dimension>::Point;
 
 #[derive(Resource)]
 pub struct VoronoiGrid<D: DDimension> {
@@ -67,10 +59,10 @@ mod tests {
     use super::test_utils::TestDimension;
     use super::Cell;
     use super::DCell;
-    use super::ThreeD;
     use super::TriangulationData;
-    use super::TwoD;
     use super::VoronoiGrid;
+    use crate::dimension::ThreeD;
+    use crate::dimension::TwoD;
     use crate::prelude::ParticleId;
     use crate::voronoi::primitives::point::DVector;
 
@@ -105,10 +97,8 @@ mod tests {
     fn voronoi_property<D: TestDimension>()
     where
         Triangulation<D>: Delaunay<D>,
-        Triangulation<D>: super::visualizer::Visualizable,
         Cell<D>: DCell<Dimension = D>,
         VoronoiGrid<D>: for<'a> From<&'a TriangulationData<D>>,
-        <D as DDimension>::Point: std::fmt::Debug,
         D: Clone,
     {
         perform_check_on_each_level_of_construction(|data, num_inserted_points| {
@@ -148,15 +138,15 @@ mod tests {
 #[cfg(test)]
 mod quantitative_tests {
     use super::primitives::Point2d;
-    use super::TwoD;
     use super::VoronoiGrid;
+    use crate::dimension::ThreeD;
+    use crate::dimension::TwoD;
     use crate::grid::ParticleType;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::primitives::Point3d;
     use crate::voronoi::Constructor;
     use crate::voronoi::DCell;
-    use crate::voronoi::ThreeD;
 
     #[test]
     fn right_volume_and_face_areas_two_d() {

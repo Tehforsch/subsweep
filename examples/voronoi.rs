@@ -2,9 +2,9 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 use raxiom::prelude::ParticleId;
+use raxiom::prelude::ThreeD;
 use raxiom::voronoi::Constructor;
 use raxiom::voronoi::Point3d;
-use raxiom::voronoi::ThreeD;
 
 pub fn main() {
     let p = setup_particles_3d(100000);

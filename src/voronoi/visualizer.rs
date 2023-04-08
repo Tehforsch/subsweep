@@ -7,8 +7,10 @@ use super::primitives::triangle::TriangleData;
 use super::primitives::Point2d;
 use super::primitives::Point3d;
 use super::Cell;
+use super::Point;
 use super::Triangulation;
-use super::TwoD;
+use crate::dimension::Dimension;
+use crate::dimension::TwoD;
 use crate::hash_map::HashMap;
 
 #[derive(Clone, Hash, Eq, PartialEq)]
@@ -141,6 +143,7 @@ where
     D: DDimension,
     Triangulation<D>: Delaunay<D>,
     <D as DDimension>::TetraData: Visualizable,
+    <D as Dimension>::Point: Visualizable,
 {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         self.points.iter().for_each(|(index, point)| {
@@ -197,6 +200,7 @@ impl Visualizable for Point2d {
 impl<D> Visualizable for SearchData<D>
 where
     D: DDimension,
+    Point<D>: Visualizable,
 {
     fn get_statements(&self, visualizer: &mut Visualizer) -> Vec<Statement> {
         let s: String = self.point.get_statements(visualizer)[0].clone().into();

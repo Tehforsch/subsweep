@@ -2,6 +2,7 @@ use super::super::delaunay::face_info::FaceInfo;
 use super::triangle::TriangleData;
 use super::Float;
 use super::Point3d;
+use crate::dimension::ThreeD;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::math::determinant4x4;
@@ -11,7 +12,6 @@ use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::PointIndex;
-use crate::voronoi::ThreeD;
 
 #[derive(Clone, Debug)]
 pub struct Tetrahedron {

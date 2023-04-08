@@ -9,6 +9,7 @@ use super::PointKind;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
 use super::Triangulation;
+use crate::dimension::TwoD;
 use crate::voronoi::delaunay::dimension::DFace;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::FlipCheckData;
@@ -17,9 +18,7 @@ use crate::voronoi::primitives::line::LineData;
 use crate::voronoi::primitives::triangle::TriangleData;
 use crate::voronoi::primitives::triangle::TriangleWithFaces;
 use crate::voronoi::primitives::Point2d;
-use crate::voronoi::TwoD;
 
-type Point = Point2d;
 type Face = Line;
 // not needed for two d
 type FaceData = LineData<Point2d>;
@@ -27,7 +26,6 @@ type Tetra = TriangleWithFaces;
 type TetraData = TriangleData<Point2d>;
 
 impl DDimension for TwoD {
-    type Point = Point;
     type Face = Face;
     type FaceData = FaceData;
     type Tetra = Tetra;

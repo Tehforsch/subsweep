@@ -4,6 +4,8 @@ pub use crate::communication::CommunicationPlugin;
 pub use crate::communication::Communicator;
 pub use crate::communication::WorldRank;
 pub use crate::communication::WorldSize;
+pub use crate::dimension::ThreeD;
+pub use crate::dimension::TwoD;
 pub use crate::domain::Extent;
 pub use crate::domain::GlobalExtent;
 pub use crate::named::*;

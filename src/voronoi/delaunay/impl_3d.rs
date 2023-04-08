@@ -12,6 +12,7 @@ use super::PointIndex;
 use super::TetraIndex;
 use super::TetrasRequiringCheck;
 use super::Triangulation;
+use crate::dimension::ThreeD;
 use crate::voronoi::delaunay::dimension::DFace;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::polygon3d::Polygon3d;
@@ -20,16 +21,13 @@ use crate::voronoi::primitives::tetrahedron::TetrahedronData;
 use crate::voronoi::primitives::triangle::IntersectionType;
 use crate::voronoi::primitives::triangle::Triangle;
 use crate::voronoi::primitives::triangle::TriangleData;
-use crate::voronoi::ThreeD;
 
-type Point = DVec3;
 type Face = Triangle;
 type FaceData = TriangleData<DVec3>;
 type Tetra = Tetrahedron;
 type TetraData = TetrahedronData;
 
 impl DDimension for ThreeD {
-    type Point = Point;
     type Face = Face;
     type FaceData = FaceData;
     type Tetra = Tetra;
@@ -465,6 +463,7 @@ impl Triangulation<ThreeD> {
 #[cfg(test)]
 mod tests {
     use super::Tetra;
+    use crate::dimension::ThreeD;
     use crate::hash_map::HashMap;
     use crate::voronoi::delaunay::dimension::DFace;
     use crate::voronoi::delaunay::dimension::DTetra;
@@ -479,7 +478,6 @@ mod tests {
     use crate::voronoi::delaunay::TetraList;
     use crate::voronoi::primitives::triangle::Triangle;
     use crate::voronoi::primitives::Point3d;
-    use crate::voronoi::ThreeD;
     use crate::voronoi::Triangulation;
 
     fn insert_tetra_with_neighbours(

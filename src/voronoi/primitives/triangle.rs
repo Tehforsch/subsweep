@@ -1,6 +1,8 @@
 use super::Float;
 use super::Point2d;
 use super::Point3d;
+use crate::dimension::ThreeD;
+use crate::dimension::TwoD;
 use crate::voronoi::delaunay::dimension::DFace;
 use crate::voronoi::delaunay::dimension::DFaceData;
 use crate::voronoi::delaunay::dimension::DTetra;
@@ -13,8 +15,6 @@ use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::PointIndex;
-use crate::voronoi::ThreeD;
-use crate::voronoi::TwoD;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IntersectionType {

@@ -21,6 +21,7 @@ use super::primitives::DVector;
 use super::utils::get_extent;
 use super::utils::Extent;
 use crate::communication::Rank;
+use crate::dimension::Dimension;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashMap;
 
@@ -31,7 +32,7 @@ pub struct FaceIndex(pub Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
 pub struct PointIndex(pub Index);
 
-type Point<D> = <D as DDimension>::Point;
+type Point<D> = <D as Dimension>::Point;
 type Face<D> = <D as DDimension>::Face;
 type FaceData<D> = <D as DDimension>::FaceData;
 type Tetra<D> = <D as DDimension>::Tetra;
@@ -284,10 +285,10 @@ pub(super) mod tests {
     use super::Delaunay;
     use super::PointKind;
     use super::Triangulation;
+    use crate::dimension::ThreeD;
+    use crate::dimension::TwoD;
     use crate::voronoi::test_utils::TestDimension;
     use crate::voronoi::utils::get_extent;
-    use crate::voronoi::ThreeD;
-    use crate::voronoi::TwoD;
 
     #[instantiate_tests(<TwoD>)]
     mod two_d {}

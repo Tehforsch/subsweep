@@ -1,14 +1,14 @@
 use super::face_info::FaceInfo;
 use super::FaceIndex;
+use super::Point;
 use super::PointIndex;
+use crate::dimension::Dimension;
 use crate::prelude::Float;
 use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::primitives::DVector;
 use crate::voronoi::utils::Extent;
 use crate::voronoi::visualizer::Visualizable;
 
-pub trait DDimension {
-    type Point: Clone + Copy + DVector + Visualizable + std::fmt::Debug;
+pub trait DDimension: Dimension {
     type Face: Clone + DFace<Dimension = Self>;
     type FaceData: Clone + DFaceData<Dimension = Self>;
     type Tetra: Clone + DTetra<Dimension = Self>;
@@ -64,19 +64,19 @@ pub trait DTetra: core::fmt::Debug {
 }
 
 pub trait DTetraData:
-    core::fmt::Debug + FromIterator<<Self::Dimension as DDimension>::Point>
+    core::fmt::Debug + FromIterator<<Self::Dimension as Dimension>::Point>
 {
     type Dimension: DDimension;
 
-    fn all_encompassing(extent: &Extent<<Self::Dimension as DDimension>::Point>) -> Self;
-    fn contains(&self, p: <Self::Dimension as DDimension>::Point) -> Result<bool, PrecisionError>;
-    fn distance_to_point(&self, p: <Self::Dimension as DDimension>::Point) -> Float;
+    fn all_encompassing(extent: &Extent<Point<Self::Dimension>>) -> Self;
+    fn contains(&self, p: Point<Self::Dimension>) -> Result<bool, PrecisionError>;
+    fn distance_to_point(&self, p: Point<Self::Dimension>) -> Float;
     fn circumcircle_contains(
         &self,
-        point: <Self::Dimension as DDimension>::Point,
+        point: <Self::Dimension as Dimension>::Point,
     ) -> Result<bool, PrecisionError>;
     fn is_positively_oriented(&self) -> Result<bool, PrecisionError>;
-    fn get_center_of_circumcircle(&self) -> <Self::Dimension as DDimension>::Point;
+    fn get_center_of_circumcircle(&self) -> Point<Self::Dimension>;
 }
 
 pub trait DFace {
@@ -89,6 +89,6 @@ pub trait DFace {
     }
 }
 
-pub trait DFaceData: FromIterator<<Self::Dimension as DDimension>::Point> {
+pub trait DFaceData: FromIterator<Point<Self::Dimension>> {
     type Dimension: DDimension;
 }

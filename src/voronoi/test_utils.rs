@@ -4,8 +4,8 @@ use rand::SeedableRng;
 
 use super::DDimension;
 use super::Point3d;
-use super::ThreeD;
-use super::TwoD;
+use crate::dimension::ThreeD;
+use crate::dimension::TwoD;
 use crate::prelude::ParticleId;
 use crate::voronoi::Point2d;
 

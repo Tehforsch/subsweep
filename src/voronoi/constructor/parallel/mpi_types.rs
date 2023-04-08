@@ -2,14 +2,14 @@ use generational_arena::Index;
 use mpi::traits::Equivalence;
 
 use super::SearchData;
+use crate::dimension::ThreeD;
+use crate::dimension::TwoD;
 use crate::prelude::ParticleId;
 use crate::voronoi::constructor::halo_iteration::SearchResult;
 use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::Point2d;
 use crate::voronoi::Point3d;
-use crate::voronoi::ThreeD;
-use crate::voronoi::TwoD;
 
 pub trait IntoEquivalenceType {
     type Equiv: Equivalence;

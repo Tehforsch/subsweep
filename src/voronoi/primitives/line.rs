@@ -1,8 +1,8 @@
 use super::Point2d;
+use crate::dimension::TwoD;
 use crate::voronoi::delaunay::dimension::DFace;
 use crate::voronoi::delaunay::dimension::DFaceData;
 use crate::voronoi::PointIndex;
-use crate::voronoi::TwoD;
 
 #[derive(Clone, Debug)]
 pub struct Line {

@@ -145,6 +145,8 @@ mod tests {
     use super::SearchData;
     use super::SearchResults;
     use crate::communication::DataByRank;
+    use crate::dimension::ThreeD;
+    use crate::dimension::TwoD;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::constructor::halo_cache::CachedSearchResult;
@@ -159,10 +161,8 @@ mod tests {
     use crate::voronoi::DCell;
     use crate::voronoi::DDimension;
     use crate::voronoi::Point;
-    use crate::voronoi::ThreeD;
     use crate::voronoi::Triangulation;
     use crate::voronoi::TriangulationData;
-    use crate::voronoi::TwoD;
     use crate::voronoi::VoronoiGrid;
 
     #[instantiate_tests(<TwoD>)]
