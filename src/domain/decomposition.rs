@@ -213,7 +213,7 @@ mod tests {
     use super::Key;
     use super::KeyCounter;
     use crate::domain::Extent;
-    use crate::peano_hilbert::PeanoHilbertKey;
+    use crate::peano_hilbert::PeanoKey3d;
     use crate::test_utils::get_particles;
     use crate::units::VecLength;
 
@@ -281,11 +281,11 @@ mod tests {
         }
     }
 
-    fn get_counter_3d(vals: Vec<VecLength>) -> KeyCounter<PeanoHilbertKey> {
+    fn get_counter_3d(vals: Vec<VecLength>) -> KeyCounter<PeanoKey3d> {
         let extent = Extent::from_positions(vals.iter()).unwrap();
         let keys: Vec<_> = vals
             .into_iter()
-            .map(|val| PeanoHilbertKey::from_point_and_extent_3d(val, &extent))
+            .map(|val| PeanoKey3d::from_point_and_extent(val, &extent))
             .collect();
         KeyCounter::new(keys)
     }

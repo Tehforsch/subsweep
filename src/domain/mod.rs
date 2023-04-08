@@ -23,7 +23,7 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::WorldRank;
 use crate::components::Position;
 use crate::named::Named;
-use crate::peano_hilbert::PeanoHilbertKey;
+use crate::peano_hilbert::PeanoKey3d;
 use crate::prelude::Communicator;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
@@ -33,7 +33,10 @@ use crate::quadtree::QuadTreeConfig;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
-pub type DomainKey = PeanoHilbertKey;
+#[cfg(feature = "2d")]
+pub type DomainKey = PeanoKey2d;
+#[cfg(feature = "3d")]
+pub type DomainKey = PeanoKey3d;
 pub type Decomposition = decomposition::Decomposition<DomainKey>;
 
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
@@ -180,7 +183,7 @@ fn domain_decomposition_system(
 ) {
     let local_keys = particles
         .iter()
-        .map(|p| PeanoHilbertKey::from_point_and_extent_3d(**p, &global_extent.0))
+        .map(|p| PeanoKey3d::from_point_and_extent(**p, &global_extent.0))
         .collect();
     let local_counter = KeyCounter::new(local_keys);
     let mut counter = ParallelCounter {
@@ -200,7 +203,7 @@ fn set_outgoing_entities_system(
     particles: Particles<(Entity, &Position)>,
 ) {
     for (entity, pos) in particles.iter() {
-        let key = PeanoHilbertKey::from_point_and_extent_3d(**pos, &global_extent.0);
+        let key = PeanoKey3d::from_point_and_extent(**pos, &global_extent.0);
         let rank = decomposition.get_owning_rank(key);
         if rank != **world_rank {
             outgoing_entities.add(rank, entity);
