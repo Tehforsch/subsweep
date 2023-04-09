@@ -52,7 +52,7 @@ name = "mpi_test"
 required-features = ["mpi", "mpi_test", "3d"]
 
 [[example]]
-name = "arepo"
+name = "arepo_postprocess"
 required-features = ["mpi", "3d"]
 
 [[example]]

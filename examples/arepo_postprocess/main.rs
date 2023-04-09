@@ -41,7 +41,6 @@ fn read_vec(data: &[Float]) -> Position {
 fn main() {
     let mut sim = SimulationBuilder::new();
     let mut sim = sim
-        .parameters_from_relative_path(file!(), "parameters.yml")
         .headless(true)
         .write_output(true)
         .read_initial_conditions(true)
