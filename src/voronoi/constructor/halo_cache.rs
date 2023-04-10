@@ -16,7 +16,6 @@ pub struct HaloCache {
 
 pub enum CachedSearchResult<D: DDimension> {
     NewPoint(SearchResult<D>),
-    NewPointThatHasJustBeenExported,
     NothingNew,
 }
 
@@ -40,7 +39,7 @@ impl HaloCache {
                 if self.sent_now.insert((rank, id)) {
                     CachedSearchResult::NewPoint(SearchResult { point, id })
                 } else {
-                    CachedSearchResult::NewPointThatHasJustBeenExported
+                    CachedSearchResult::NothingNew
                 }
             }
             None => CachedSearchResult::NothingNew,

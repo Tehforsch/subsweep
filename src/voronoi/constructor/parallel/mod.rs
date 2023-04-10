@@ -11,7 +11,6 @@ use mpi::traits::Equivalence;
 pub use plugin::ParallelVoronoiGridConstruction;
 
 use self::mpi_types::IntoEquivalenceType;
-use self::mpi_types::TetraIndexSend;
 use super::halo_cache::CachedSearchResult;
 use super::halo_cache::HaloCache;
 use super::halo_iteration::RadiusSearch;
@@ -45,7 +44,6 @@ where
 {
     data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
     result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<D>>,
-    tetra_index_comm: &'a mut ExchangeCommunicator<TetraIndexSend>,
     finished_comm: &'a mut Communicator<SendNum>,
     global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
@@ -56,10 +54,7 @@ where
 
 type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
 type IncomingRequests<D> = DataByRank<Vec<SearchData<D>>>;
-type OutgoingResults<D> = (
-    DataByRank<Vec<MpiSearchResult<D>>>,
-    DataByRank<Vec<TetraIndexSend>>,
-);
+type OutgoingResults<D> = DataByRank<Vec<MpiSearchResult<D>>>;
 type IncomingResults<D> = DataByRank<SearchResults<D>>;
 
 impl<'a> ParallelSearch<'a, ActiveDimension> {
@@ -92,8 +87,6 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
     ) -> OutgoingResults<ActiveDimension> {
         let mut new_haloes =
             DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.result_comm);
-        let mut undecided_tetras =
-            DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.result_comm);
 
         for (rank, data) in incoming.iter() {
             for search in data {
@@ -113,16 +106,12 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                     CachedSearchResult::NothingNew => {}
                     CachedSearchResult::NewPoint(result) => {
                         new_haloes[*rank].push(result.to_equivalent());
-                        undecided_tetras[*rank].push(search.tetra_index.into());
-                    }
-                    CachedSearchResult::NewPointThatHasJustBeenExported => {
-                        undecided_tetras[*rank].push(search.tetra_index.into());
                     }
                 }
             }
         }
         self.halo_cache.flush();
-        (new_haloes, undecided_tetras)
+        new_haloes
     }
 
     fn exchange_all_searches(
@@ -148,17 +137,10 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         &mut self,
         outgoing: OutgoingResults<ActiveDimension>,
     ) -> IncomingResults<ActiveDimension> {
-        let mut incoming_new_haloes = self.result_comm.exchange_all(outgoing.0);
-        let mut incoming_undecided_tetras = self.tetra_index_comm.exchange_all(outgoing.1);
+        let mut incoming_new_haloes = self.result_comm.exchange_all(outgoing);
         incoming_new_haloes
             .drain_all()
             .map(|(rank, results)| {
-                let undecided_tetras = incoming_undecided_tetras
-                    .remove(&rank)
-                    .unwrap()
-                    .into_iter()
-                    .map(|t| t.into())
-                    .collect();
                 (
                     rank,
                     SearchResults {
@@ -168,7 +150,6 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                                 SearchResult::<ActiveDimension>::from_equivalent(&request)
                             })
                             .collect(),
-                        undecided_tetras,
                     },
                 )
             })
@@ -189,7 +170,7 @@ impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
         let outgoing = self.get_outgoing_searches(data);
         let incoming = self.exchange_all_searches(outgoing);
         let outgoing_results = self.get_outgoing_results(incoming);
-        self.print_num_new_haloes(outgoing_results.0.size());
+        self.print_num_new_haloes(outgoing_results.size());
         self.exchange_all_results(outgoing_results)
     }
 

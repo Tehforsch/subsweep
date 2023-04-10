@@ -4,7 +4,6 @@ use bevy::prelude::Res;
 use derive_custom::Named;
 
 use super::super::Constructor;
-use super::mpi_types::TetraIndexSend;
 use super::MpiSearchData;
 use super::MpiSearchResult;
 use super::ParallelSearch;
@@ -37,7 +36,6 @@ impl RaxiomPlugin for ParallelVoronoiGridConstruction {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_plugin(CommunicationPlugin::<MpiSearchData<ThreeD>>::exchange())
             .add_plugin(CommunicationPlugin::<MpiSearchResult<ThreeD>>::exchange())
-            .add_plugin(CommunicationPlugin::<TetraIndexSend>::exchange())
             .add_plugin(CommunicationPlugin::<SendNum>::default())
             .add_startup_system_to_stage(
                 SimulationStartupStages::InsertGrid,
@@ -51,7 +49,6 @@ fn construct_grid_system(
     particles: Particles<(Entity, &ParticleId, &Position)>,
     mut data_comm: ExchangeCommunicator<MpiSearchData<ThreeD>>,
     mut result_comm: ExchangeCommunicator<MpiSearchResult<ThreeD>>,
-    mut tetra_index_comm: ExchangeCommunicator<TetraIndexSend>,
     mut finished_comm: Communicator<SendNum>,
     tree: Res<QuadTree>,
     decomposition: Res<Decomposition>,
@@ -67,7 +64,6 @@ fn construct_grid_system(
         data_comm: &mut *data_comm,
         result_comm: &mut *result_comm,
         finished_comm: &mut finished_comm,
-        tetra_index_comm: &mut tetra_index_comm,
         global_extent: extent,
         tree: &tree,
         decomposition: &decomposition,

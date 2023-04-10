@@ -63,16 +63,27 @@ pub struct FlipCheckData {
 #[derive(Clone)]
 struct FlipCheckStack {
     point: PointIndex,
-    stack: Vec<TetraIndex>,
+    tetras: Vec<TetraIndex>,
+    current_index: usize,
 }
 
 impl FlipCheckStack {
-    fn pop(&mut self) -> Option<TetraIndex> {
-        self.stack.pop()
+    fn new(point: PointIndex, tetras: Vec<TetraIndex>) -> Self {
+        Self {
+            point,
+            tetras,
+            current_index: 0,
+        }
+    }
+
+    fn get_next(&mut self) -> Option<TetraIndex> {
+        let next = self.tetras.get(self.current_index).cloned();
+        self.current_index += 1;
+        next
     }
 
     fn extend(&mut self, t: Vec<TetraIndex>) {
-        self.stack.extend(t);
+        self.tetras.extend(t);
     }
 }
 
@@ -104,7 +115,7 @@ where
         let mut triangulation = Self::all_encompassing(extent);
         let indices = points
             .iter()
-            .map(|(name, p)| (name.clone(), triangulation.insert(*p, PointKind::Inner)))
+            .map(|(name, p)| (name.clone(), triangulation.insert(*p, PointKind::Inner).0))
             .collect();
         (triangulation, indices)
     }
@@ -218,23 +229,24 @@ where
         }
     }
 
-    pub fn insert(&mut self, point: Point<D>, kind: PointKind) -> PointIndex {
+    pub fn insert(&mut self, point: Point<D>, kind: PointKind) -> (PointIndex, Vec<TetraIndex>) {
         let t = self
             .find_containing_tetra(point)
             .expect("No tetra containing the point {point:?} found");
         let new_point_index = self.points.insert(point);
         self.point_kinds.insert(new_point_index, kind);
         let new_tetras = self.split(t, new_point_index);
-        self.perform_flip_checks(new_point_index, new_tetras);
-        new_point_index
+        let new_tetras = self.perform_flip_checks(new_point_index, new_tetras);
+        (new_point_index, new_tetras)
     }
 
-    fn perform_flip_checks(&mut self, new_point_index: PointIndex, tetras: TetrasRequiringCheck) {
-        let mut stack = FlipCheckStack {
-            point: new_point_index,
-            stack: tetras,
-        };
-        while let Some(tetra) = stack.pop() {
+    fn perform_flip_checks(
+        &mut self,
+        new_point_index: PointIndex,
+        tetras: TetrasRequiringCheck,
+    ) -> TetrasRequiringCheck {
+        let mut stack = FlipCheckStack::new(new_point_index, tetras);
+        while let Some(tetra) = stack.get_next() {
             if !self.tetras.contains(tetra) {
                 // In 3-to-2 flips, tetras are removed that might still be on the stack.
                 // In this case we can just ignore this check.
@@ -247,6 +259,7 @@ where
             self.flip_check(&mut stack, check);
             self.last_insertion_tetra = Some(tetra);
         }
+        stack.tetras
     }
 
     fn flip_check(&mut self, stack: &mut FlipCheckStack, to_check: FlipCheckData) {
