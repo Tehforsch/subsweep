@@ -90,7 +90,7 @@ where
     /// tags.
     fn verify_tag(&mut self) {
         let tag = self.tag;
-        assert!(self.all_ranks_have_same_value(&tag), "Initializing allgather operation but different ranks have different tags. Tag on rank {}: {}!", self.world.rank(), self.tag)
+        debug_assert!(self.all_ranks_have_same_value(&tag), "Initializing allgather operation but different ranks have different tags. Tag on rank {}: {}!", self.world.rank(), self.tag)
     }
 }
 
