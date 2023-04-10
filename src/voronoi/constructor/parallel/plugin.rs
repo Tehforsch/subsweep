@@ -1,3 +1,4 @@
+use bevy::prelude::warn;
 use bevy::prelude::Commands;
 use bevy::prelude::Entity;
 use bevy::prelude::Res;
@@ -44,6 +45,14 @@ impl RaxiomPlugin for ParallelVoronoiGridConstruction {
     }
 }
 
+fn warn_if_halo_fraction_too_high(num_local_particles: usize, num_haloes: usize) {
+    const HALO_FRACTION_WARNING_TRESHOLD: f64 = 0.05;
+    let halo_fraction = num_haloes as f64 / num_local_particles as f64;
+    if halo_fraction > HALO_FRACTION_WARNING_TRESHOLD {
+        warn!("High halo fraction: {:.1}%", halo_fraction * 100.0);
+    }
+}
+
 fn construct_grid_system(
     mut commands: Commands,
     particles: Particles<(Entity, &ParticleId, &Position)>,
@@ -74,13 +83,17 @@ fn construct_grid_system(
         particles.iter().map(|(_, i, p)| (*i, p.value_unchecked())),
         search,
     );
+    let mut num_haloes = 0;
+    let mut num_local_particles = 0;
     for (id, type_, cell) in cons.sweep_grid() {
         match type_ {
             ParticleType::Local(_) => {
+                num_local_particles += 1;
                 let entity = map.get_by_left(&id).unwrap();
                 commands.entity(*entity).insert(cell);
             }
             ParticleType::Remote(remote) => {
+                num_haloes += 1;
                 let has_local_neighbours =
                     cell.neighbours.iter().any(|(_, type_)| type_.is_local());
                 // If this cell does not have local neighbours, it was imported by "accident"
@@ -95,4 +108,5 @@ fn construct_grid_system(
             ParticleType::Boundary => unreachable!(),
         }
     }
+    warn_if_halo_fraction_too_high(num_local_particles, num_haloes);
 }

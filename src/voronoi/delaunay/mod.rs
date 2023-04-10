@@ -32,11 +32,11 @@ pub struct FaceIndex(pub Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
 pub struct PointIndex(pub Index);
 
-type Point<D> = <D as Dimension>::Point;
-type Face<D> = <D as DDimension>::Face;
-type FaceData<D> = <D as DDimension>::FaceData;
-type Tetra<D> = <D as DDimension>::Tetra;
-type TetraData<D> = <D as DDimension>::TetraData;
+pub type Point<D> = <D as Dimension>::Point;
+pub type Face<D> = <D as DDimension>::Face;
+pub type FaceData<D> = <D as DDimension>::FaceData;
+pub type Tetra<D> = <D as DDimension>::Tetra;
+pub type TetraData<D> = <D as DDimension>::TetraData;
 
 type TetraList<D> = IndexedArena<TetraIndex, Tetra<D>>;
 type FaceList<D> = IndexedArena<FaceIndex, Face<D>>;

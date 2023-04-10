@@ -12,6 +12,7 @@ use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
 use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
+use crate::voronoi::delaunay::Tetra;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::DDimension;
 use crate::voronoi::Triangulation;
@@ -70,8 +71,8 @@ where
             .triangulation
             .tetras
             .iter()
+            .filter(|(_, tetra)| self.tetra_should_be_checked(tetra))
             .map(|(t, _)| t)
-            .filter(|t| self.tetra_should_be_checked(*t))
             .collect();
         while !self.search.everyone_finished(undecided_tetras.len()) {
             undecided_tetras = self.iterate(undecided_tetras);
@@ -102,7 +103,11 @@ where
         undecided_tetras
             .into_iter()
             .filter_map(|t| {
-                let tetra = &self.triangulation.tetras.get(t)?;
+                let tetra = &self
+                    .triangulation
+                    .tetras
+                    .get(t)
+                    .filter(|tetra| self.tetra_should_be_checked(tetra))?;
                 let tetra_data = self.triangulation.get_tetra_data(tetra);
                 let center = tetra_data.get_center_of_circumcircle();
                 let sample_point = self.triangulation.points[tetra.points().next().unwrap()];
@@ -116,8 +121,7 @@ where
             .collect()
     }
 
-    fn tetra_should_be_checked(&self, t: TetraIndex) -> bool {
-        let tetra = &self.triangulation.tetras[t];
+    fn tetra_should_be_checked(&self, tetra: &Tetra<D>) -> bool {
         tetra
             .points()
             .any(|p| self.triangulation.point_kinds[&p] == PointKind::Inner)
