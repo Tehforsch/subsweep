@@ -1,4 +1,5 @@
 use super::LeafDataType;
+use super::Node;
 use super::QuadTree;
 use crate::parameters::SimulationBox;
 use crate::prelude::MVec;
@@ -92,6 +93,91 @@ impl<N, L: LeafDataType> QuadTree<N, L> {
     }
 }
 
+impl<N, L> QuadTree<N, L> {
+    fn iter<'a>(&'a self) -> TreeIter<'a, N, L> {
+        TreeIter::new(self)
+    }
+}
+
+struct StackItem<'a, N, L> {
+    tree: &'a QuadTree<N, L>,
+    pos: usize,
+}
+
+impl<'a, N, L> Clone for StackItem<'a, N, L> {
+    fn clone(&self) -> Self {
+        Self {
+            tree: self.tree.clone(),
+            pos: self.pos.clone(),
+        }
+    }
+}
+
+pub struct TreeIter<'a, N, L> {
+    stack: Vec<StackItem<'a, N, L>>,
+}
+
+enum EncounteredNode<'a, L> {
+    Leaf(&'a L),
+    Tree,
+    End,
+}
+
+impl<'a, N, L> TreeIter<'a, N, L> {
+    fn new(tree: &'a QuadTree<N, L>) -> Self {
+        Self {
+            stack: vec![StackItem { pos: 0, tree }],
+        }
+    }
+
+    fn goto_next_valid_node(&mut self) -> EncounteredNode<'a, L> {
+        let last = self.stack.last();
+        if last.is_none() {
+            return EncounteredNode::End;
+        }
+        let last = last.unwrap().clone();
+        let result = match &last.tree.node {
+            Node::Tree(tree) => {
+                let pos = last.pos;
+                if pos < tree.len() {
+                    self.stack.push(StackItem {
+                        tree: &tree[pos],
+                        pos: 0,
+                    });
+                    return EncounteredNode::Tree;
+                } else {
+                    self.stack.pop();
+                }
+                EncounteredNode::Tree
+            }
+            Node::Leaf(leaves) => {
+                if last.pos == leaves.len() {
+                    self.stack.pop();
+                    EncounteredNode::Tree
+                } else {
+                    EncounteredNode::Leaf(&leaves[last.pos])
+                }
+            }
+        };
+        self.stack.last_mut().map(|t| t.pos += 1);
+        result
+    }
+}
+
+impl<'a, N, L> Iterator for TreeIter<'a, N, L> {
+    type Item = &'a L;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.goto_next_valid_node() {
+                EncounteredNode::Leaf(leaf) => return Some(leaf),
+                EncounteredNode::Tree => {}
+                EncounteredNode::End => return None,
+            }
+        }
+    }
+}
+
 trait SearchCriterion<N, L> {
     fn should_check_node(&self, tree: &QuadTree<N, L>) -> bool;
     fn particle_included(&self, l: &L) -> bool;
@@ -136,6 +222,7 @@ mod tests {
     use crate::domain::extent::Extent3d;
     use crate::domain::LeafData;
     use crate::parameters::SimulationBox;
+    use crate::quadtree::Node;
     use crate::quadtree::QuadTree;
     use crate::quadtree::QuadTreeConfig;
     use crate::test_utils::get_particles;
@@ -152,6 +239,74 @@ mod tests {
             .collect()
     }
 
+    #[test]
+    fn quadtree_iter() {
+        let ex = || Extent3d::cube_from_side_length(Length::zero());
+        let child1 = QuadTree {
+            node: Node::Leaf(vec![1, 2, 3]),
+            data: (),
+            extent: ex(),
+        };
+        // let mut it = child1.iter();
+        // assert_eq!(it.next(), Some(&1));
+        // assert_eq!(it.next(), Some(&2));
+        // assert_eq!(it.next(), Some(&3));
+        // assert_eq!(it.next(), None);
+        let child2 = QuadTree {
+            node: Node::Leaf(vec![4, 5]),
+            data: (),
+            extent: ex(),
+        };
+        let child3 = QuadTree {
+            node: Node::Leaf(vec![6]),
+            data: (),
+            extent: ex(),
+        };
+        let child4 = QuadTree {
+            node: Node::Leaf(vec![7]),
+            data: (),
+            extent: ex(),
+        };
+        let child5 = QuadTree {
+            node: Node::Leaf(vec![]),
+            data: (),
+            extent: ex(),
+        };
+        let child6 = QuadTree {
+            node: Node::Leaf(vec![8]),
+            data: (),
+            extent: ex(),
+        };
+        let child7 = QuadTree {
+            node: Node::Leaf(vec![]),
+            data: (),
+            extent: ex(),
+        };
+        let child8 = QuadTree {
+            node: Node::Leaf(vec![9, 10]),
+            data: (),
+            extent: ex(),
+        };
+        let parent = QuadTree {
+            node: Node::Tree(Box::new([
+                child1, child2, child3, child4, child5, child6, child7, child8,
+            ])),
+            data: (),
+            extent: ex(),
+        };
+        let mut it = parent.iter();
+        assert_eq!(it.next(), Some(&1));
+        assert_eq!(it.next(), Some(&2));
+        assert_eq!(it.next(), Some(&3));
+        assert_eq!(it.next(), Some(&4));
+        assert_eq!(it.next(), Some(&5));
+        assert_eq!(it.next(), Some(&6));
+        assert_eq!(it.next(), Some(&7));
+        assert_eq!(it.next(), Some(&8));
+        assert_eq!(it.next(), Some(&9));
+        assert_eq!(it.next(), Some(&10));
+        assert_eq!(it.next(), None);
+    }
     #[test]
     fn radius_search() {
         let n = 12;
