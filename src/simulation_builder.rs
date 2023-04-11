@@ -152,7 +152,7 @@ impl SimulationBuilder {
         if let Some(ref file) = self.parameter_file_path {
             sim.add_parameters_from_file(file);
         } else {
-            sim.add_parameter_file_contents("".into());
+            sim.add_parameter_file_contents("{}".into());
         }
         sim.with_parameter_overrides(self.parameter_overrides.clone());
         sim.insert_resource(self.winit_settings())

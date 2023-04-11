@@ -131,7 +131,7 @@ parameters2:
         }
 
         let mut sim = Simulation::default();
-        sim.add_parameter_file_contents("".into());
+        sim.add_parameter_file_contents("{}".into());
         sim.add_plugin(ParameterPlugin::<Parameters1>::default());
     }
 
@@ -153,7 +153,7 @@ parameters2:
             12.0
         }
         let mut sim = Simulation::default();
-        sim.add_parameter_file_contents("".into());
+        sim.add_parameter_file_contents("{}".into());
         let params = sim.add_parameter_type_and_get_result::<Parameters1>();
         assert_eq!(params.i, 15);
         assert_eq!(params.x, 12.0);

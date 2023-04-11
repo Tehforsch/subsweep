@@ -89,7 +89,7 @@ fn build_integration_sim(sim: &mut Simulation) {
     use crate::stages::SimulationStagesPlugin;
     use crate::units::Time;
 
-    sim.add_parameter_file_contents("".into())
+    sim.add_parameter_file_contents("{}".into())
         .add_parameters_explicitly(SimulationBox::cube_from_side_length_centered(
             Length::astronomical_units(100.0),
         ))

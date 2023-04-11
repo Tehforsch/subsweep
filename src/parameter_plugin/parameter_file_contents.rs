@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn r#override_in_omitted_section() {
-        let mut contents = ParameterFileContents::new("".into());
+        let mut contents = ParameterFileContents::new("{}".into());
         contents.with_overrides(vec![
             Override {
                 section: "x".into(),
@@ -225,7 +225,7 @@ mod tests {
         #[raxiom_parameters("s")]
         struct Section(i32);
 
-        let mut contents = ParameterFileContents::new("".into());
+        let mut contents = ParameterFileContents::new("{}".into());
         contents.with_overrides(vec![Override {
             section: "s".into(),
             keys: vec![],

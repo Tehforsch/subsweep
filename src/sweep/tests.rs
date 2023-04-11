@@ -27,7 +27,7 @@ use crate::units::VecDimensionless;
 fn build_sweep_sim(dirs: Vec<VecDimensionless>, sim: &mut Simulation, num_cells: usize) {
     let cell_size = Length::meters(0.1);
     let simulation_box = SimulationBox::cube_from_side_length(cell_size * num_cells as f64);
-    sim.add_parameter_file_contents("".into())
+    sim.add_parameter_file_contents("{}".into())
         .add_parameters_explicitly(TreeParameters {
             ..Default::default()
         })
