@@ -38,9 +38,7 @@ pub struct SearchResult<D: DDimension> {
     pub id: ParticleId,
 }
 
-pub struct SearchResults<D: DDimension> {
-    pub new_haloes: Vec<SearchResult<D>>,
-}
+pub type SearchResults<D> = Vec<SearchResult<D>>;
 
 pub trait RadiusSearch<D: DDimension> {
     fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>>;
@@ -98,7 +96,7 @@ where
             for SearchResult {
                 point,
                 id: particle_id,
-            } in results.new_haloes
+            } in results
             {
                 assert!(self.haloes.get_by_left(&particle_id).is_none());
                 let (point_index, changed_tetras) =
@@ -240,12 +238,7 @@ mod tests {
                 );
                 new_haloes.extend(result);
             }
-            d.insert(
-                fake_rank,
-                SearchResults {
-                    new_haloes: new_haloes,
-                },
-            );
+            d.insert(fake_rank, new_haloes);
             d
         }
 

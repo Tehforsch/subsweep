@@ -19,6 +19,7 @@ use super::SearchData;
 use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
+use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::dimension::ActiveDimension;
 use crate::dimension::Point;
@@ -89,21 +90,29 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
 
         for (rank, data) in incoming.iter() {
             for search in data {
-                let particles = self.tree.get_particles_in_radius(
-                    &self.box_,
-                    &VecLength::new_unchecked(search.point),
-                    &Length::new_unchecked(search.radius),
-                );
-                let result = self.halo_cache.get_new_haloes::<ActiveDimension>(
-                    *rank,
-                    particles
-                        .into_iter()
-                        .map(|p| (p.pos.value_unchecked(), p.id)),
-                );
+                let result = self.get_haloes_from_search(*rank, search);
                 new_haloes[*rank].extend(result.map(|x| x.to_equivalent()));
             }
         }
         new_haloes
+    }
+
+    fn get_haloes_from_search(
+        &mut self,
+        rank: Rank,
+        search: &SearchData<ActiveDimension>,
+    ) -> impl Iterator<Item = SearchResult<ActiveDimension>> + '_ {
+        let particles = self.tree.get_particles_in_radius(
+            &self.box_,
+            &VecLength::new_unchecked(search.point),
+            &Length::new_unchecked(search.radius),
+        );
+        self.halo_cache.get_new_haloes::<ActiveDimension>(
+            rank,
+            particles
+                .into_iter()
+                .map(|p| (p.pos.value_unchecked(), p.id)),
+        )
     }
 
     fn exchange_all_searches(
@@ -135,14 +144,10 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
             .map(|(rank, results)| {
                 (
                     rank,
-                    SearchResults {
-                        new_haloes: results
-                            .into_iter()
-                            .map(|request| {
-                                SearchResult::<ActiveDimension>::from_equivalent(&request)
-                            })
-                            .collect(),
-                    },
+                    results
+                        .into_iter()
+                        .map(|request| SearchResult::<ActiveDimension>::from_equivalent(&request))
+                        .collect(),
                 )
             })
             .collect()
@@ -152,6 +157,21 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         let num_new_haloes: SendNum = self.finished_comm.all_gather_sum(&SendNum(num_new_haloes));
         debug!("{} new haloes imported.", num_new_haloes.0);
     }
+
+    fn rank(&self) -> Rank {
+        self.data_comm.rank()
+    }
+
+    fn get_local_periodic_haloes(
+        &mut self,
+        data: &Vec<SearchData<ActiveDimension>>,
+    ) -> Vec<SearchResult<ActiveDimension>> {
+        let mut new_haloes = vec![];
+        for search in data.iter() {
+            new_haloes.extend(self.get_haloes_from_search(self.rank(), search));
+        }
+        new_haloes
+    }
 }
 
 impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
@@ -159,11 +179,14 @@ impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
     ) -> DataByRank<SearchResults<ActiveDimension>> {
+        let local_periodic_haloes = self.get_local_periodic_haloes(&data);
         let outgoing = self.get_outgoing_searches(data);
         let incoming = self.exchange_all_searches(outgoing);
         let outgoing_results = self.get_outgoing_results(incoming);
-        self.print_num_new_haloes(outgoing_results.size());
-        self.exchange_all_results(outgoing_results)
+        let mut incoming_results = self.exchange_all_results(outgoing_results);
+        incoming_results.insert(self.rank(), local_periodic_haloes);
+        self.print_num_new_haloes(incoming_results.size());
+        incoming_results
     }
 
     fn determine_global_extent(&self) -> Option<Extent<Point<ActiveDimension>>> {
