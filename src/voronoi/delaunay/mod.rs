@@ -69,6 +69,11 @@ struct FlipCheckStack {
     current_index: usize,
 }
 
+pub struct Circumcircle<D: DDimension> {
+    pub center: Point<D>,
+    pub radius: Float,
+}
+
 impl FlipCheckStack {
     fn new(point: PointIndex, tetras: Vec<TetraIndex>) -> Self {
         Self {
@@ -175,15 +180,13 @@ where
         point_location::find_containing_tetra(self, point)
     }
 
-    pub fn get_center_and_radius_of_tetra_circumcircle(
-        &self,
-        tetra: &Tetra<D>,
-    ) -> (Point<D>, Float) {
+    pub fn get_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
+        let tetra = &self.tetras.get(tetra).unwrap();
         let tetra_data = self.get_tetra_data(tetra);
         let center = tetra_data.get_center_of_circumcircle();
         let sample_point = self.points[tetra.points().next().unwrap()];
         let radius = center.distance(sample_point);
-        (center, radius)
+        Circumcircle { center, radius }
     }
 
     /// Iterate over the inner points of the triangulation, i.e. every
