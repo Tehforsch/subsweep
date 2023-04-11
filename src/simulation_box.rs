@@ -27,6 +27,10 @@ fn minimize_component(v: Float, length: Float) -> Float {
 }
 
 impl SimulationBox {
+    pub fn new(extent: Extent) -> Self {
+        Self(extent)
+    }
+
     pub fn cube_from_side_length(side_length: Length) -> Self {
         Self(Extent::cube_from_side_length(side_length))
     }
