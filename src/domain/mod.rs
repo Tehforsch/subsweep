@@ -10,13 +10,13 @@ mod quadtree;
 mod work;
 
 pub use key::IntoKey;
+pub use quadtree::LeafData;
 
 use self::decomposition::KeyCounter;
 use self::decomposition::ParallelCounter;
 pub use self::exchange_data_plugin::ExchangeDataPlugin;
 use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
-pub use self::quadtree::LeafData;
 pub use self::quadtree::NodeData;
 pub use self::quadtree::QuadTree;
 use self::work::Work;

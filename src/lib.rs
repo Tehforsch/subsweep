@@ -14,7 +14,7 @@ pub mod communication;
 pub mod components;
 pub(crate) mod config;
 pub mod dimension;
-pub(crate) mod domain;
+pub mod domain;
 pub mod extent;
 pub mod grid;
 pub(crate) mod hash_map;
