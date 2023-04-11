@@ -109,6 +109,7 @@ fn construct_grid_system(
                 }
             }
             ParticleType::Boundary => unreachable!(),
+            ParticleType::PeriodicHalo(_) => todo!(),
         }
     }
     warn_if_halo_fraction_too_high(num_local_particles, num_haloes);

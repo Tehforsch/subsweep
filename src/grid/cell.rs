@@ -17,6 +17,7 @@ pub enum ParticleType {
     Local(ParticleId),
     Remote(RemoteNeighbour),
     Boundary,
+    PeriodicHalo(ParticleId),
 }
 
 impl ParticleType {
@@ -25,6 +26,7 @@ impl ParticleType {
             Self::Boundary => true,
             Self::Local(_) => false,
             Self::Remote(_) => false,
+            Self::PeriodicHalo(_) => false,
         }
     }
 
@@ -33,12 +35,15 @@ impl ParticleType {
             Self::Local(_) => true,
             Self::Boundary => false,
             Self::Remote(_) => false,
+            Self::PeriodicHalo(_) => false,
         }
     }
+
     pub fn unwrap_id(&self) -> ParticleId {
         match self {
             Self::Local(particle_id) => *particle_id,
             Self::Remote(neighbour) => neighbour.id,
+            Self::PeriodicHalo(particle_id) => *particle_id,
             _ => panic!("Unwrap id called on boundary neighbour"),
         }
     }
