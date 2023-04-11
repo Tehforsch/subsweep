@@ -11,7 +11,6 @@ use mpi::traits::Equivalence;
 pub use plugin::ParallelVoronoiGridConstruction;
 
 use self::mpi_types::IntoEquivalenceType;
-use super::halo_cache::CachedSearchResult;
 use super::halo_cache::HaloCache;
 use super::halo_iteration::RadiusSearch;
 use super::halo_iteration::SearchResult;
@@ -95,22 +94,15 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                     &VecLength::new_unchecked(search.point),
                     &Length::new_unchecked(search.radius),
                 );
-                let result = self.halo_cache.get_closest_new::<ActiveDimension>(
+                let result = self.halo_cache.get_new_haloes::<ActiveDimension>(
                     *rank,
-                    search.point,
                     particles
                         .into_iter()
                         .map(|p| (p.pos.value_unchecked(), p.id)),
                 );
-                match result {
-                    CachedSearchResult::NothingNew => {}
-                    CachedSearchResult::NewPoint(result) => {
-                        new_haloes[*rank].push(result.to_equivalent());
-                    }
-                }
+                new_haloes[*rank].extend(result.map(|x| x.to_equivalent()));
             }
         }
-        self.halo_cache.flush();
         new_haloes
     }
 

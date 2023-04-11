@@ -1,52 +1,22 @@
-use ordered_float::OrderedFloat;
-
 use super::halo_iteration::SearchResult;
 use crate::communication::Rank;
 use crate::dimension::Point;
 use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
-use crate::voronoi::primitives::DVector;
 use crate::voronoi::DDimension;
 
 #[derive(Default, Clone)]
 pub struct HaloCache {
     sent_previously: HashSet<(Rank, ParticleId)>,
-    sent_now: HashSet<(Rank, ParticleId)>,
-}
-
-pub enum CachedSearchResult<D: DDimension> {
-    NewPoint(SearchResult<D>),
-    NothingNew,
 }
 
 impl HaloCache {
-    /// Given a rank and the origin point of the search, find the
-    /// point in iter which is closest to the origin point and which
-    /// hasn't been sent to this rank in some previous halo
-    /// iteration. If there is no such point (that is, all haloes in
-    /// the search radius have been sent to this rank already),
-    pub fn get_closest_new<D: DDimension>(
-        &mut self,
+    pub fn get_new_haloes<'a, D: DDimension>(
+        &'a mut self,
         rank: Rank,
-        search_origin: Point<D>,
-        iter: impl Iterator<Item = (Point<D>, ParticleId)>,
-    ) -> CachedSearchResult<D> {
-        let closest = iter
-            .filter(|(_, id)| !self.sent_previously.contains(&(rank, *id)))
-            .min_by_key(|(pos, _)| OrderedFloat(search_origin.distance(*pos)));
-        match closest {
-            Some((point, id)) => {
-                if self.sent_now.insert((rank, id)) {
-                    CachedSearchResult::NewPoint(SearchResult { point, id })
-                } else {
-                    CachedSearchResult::NothingNew
-                }
-            }
-            None => CachedSearchResult::NothingNew,
-        }
-    }
-
-    pub fn flush(&mut self) {
-        self.sent_previously.extend(self.sent_now.drain())
+        iter: impl Iterator<Item = (Point<D>, ParticleId)> + 'a,
+    ) -> impl Iterator<Item = SearchResult<D>> + 'a {
+        iter.filter(move |(_, id)| self.sent_previously.insert((rank, *id)))
+            .map(|(point, id)| SearchResult { point, id })
     }
 }

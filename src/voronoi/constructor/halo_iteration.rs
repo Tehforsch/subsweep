@@ -145,7 +145,6 @@ mod tests {
     use crate::extent::Extent;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
-    use crate::voronoi::constructor::halo_cache::CachedSearchResult;
     use crate::voronoi::constructor::halo_cache::HaloCache;
     use crate::voronoi::constructor::Constructor;
     use crate::voronoi::delaunay::Delaunay;
@@ -177,22 +176,15 @@ mod tests {
             let mut d = DataByRank::empty();
             let mut new_haloes = vec![];
             for search in data.iter() {
-                let result = self.cache.get_closest_new::<D>(
+                let result = self.cache.get_new_haloes::<D>(
                     fake_rank,
-                    search.point,
                     self.points
                         .iter()
-                        .filter(|(_, p)| search.point.distance(*p) < search.radius)
+                        .filter(|(_, p)| search.point.distance(*p) <= search.radius)
                         .map(|(j, p)| (*p, *j)),
                 );
-                match result {
-                    CachedSearchResult::NothingNew => {}
-                    CachedSearchResult::NewPoint(result) => {
-                        new_haloes.push(result);
-                    }
-                }
+                new_haloes.extend(result);
             }
-            self.cache.flush();
             d.insert(
                 fake_rank,
                 SearchResults {
