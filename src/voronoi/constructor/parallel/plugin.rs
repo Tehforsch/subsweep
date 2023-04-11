@@ -1,3 +1,4 @@
+use bevy::prelude::debug;
 use bevy::prelude::warn;
 use bevy::prelude::Commands;
 use bevy::prelude::Entity;
@@ -50,6 +51,8 @@ fn warn_if_halo_fraction_too_high(num_local_particles: usize, num_haloes: usize)
     let halo_fraction = num_haloes as f64 / num_local_particles as f64;
     if halo_fraction > HALO_FRACTION_WARNING_TRESHOLD {
         warn!("High halo fraction: {:.1}%", halo_fraction * 100.0);
+    } else {
+        debug!("Halo fraction: {:.1}%", halo_fraction * 100.0);
     }
 }
 

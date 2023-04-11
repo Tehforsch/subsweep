@@ -17,6 +17,8 @@ use self::dimension::DTetra;
 use self::dimension::DTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
+use super::primitives::Float;
+use super::DVector;
 use crate::communication::Rank;
 use crate::dimension::Dimension;
 use crate::domain::IntoKey;
@@ -171,6 +173,17 @@ where
 
     pub fn find_containing_tetra(&self, point: Point<D>) -> Option<TetraIndex> {
         point_location::find_containing_tetra(self, point)
+    }
+
+    pub fn get_center_and_radius_of_tetra_circumcircle(
+        &self,
+        tetra: &Tetra<D>,
+    ) -> (Point<D>, Float) {
+        let tetra_data = self.get_tetra_data(tetra);
+        let center = tetra_data.get_center_of_circumcircle();
+        let sample_point = self.points[tetra.points().next().unwrap()];
+        let radius = center.distance(sample_point);
+        (center, radius)
     }
 
     /// Iterate over the inner points of the triangulation, i.e. every

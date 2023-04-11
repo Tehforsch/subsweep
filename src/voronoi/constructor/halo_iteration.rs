@@ -1,6 +1,4 @@
 use super::super::delaunay::dimension::DTetra;
-use super::super::delaunay::dimension::DTetraData;
-use super::super::primitives::DVector;
 use super::Cell;
 use super::DCell;
 use super::Delaunay;
@@ -49,6 +47,7 @@ pub(super) struct HaloIteration<D: DDimension, F> {
     pub triangulation: Triangulation<D>,
     search: F,
     pub haloes: BiMap<ParticleId, PointIndex>,
+    undecided_tetras: Vec<TetraIndex>,
 }
 
 impl<D, F: RadiusSearch<D>> HaloIteration<D, F>
@@ -59,28 +58,34 @@ where
     Cell<D>: DCell<Dimension = D>,
 {
     pub fn new(triangulation: Triangulation<D>, search: F) -> Self {
-        Self {
+        let mut h = Self {
             triangulation,
             search,
             haloes: BiMap::default(),
-        }
+            undecided_tetras: vec![],
+        };
+        h.set_all_tetras_undecided();
+        h
     }
 
-    pub fn run(&mut self) {
-        let mut undecided_tetras: Vec<_> = self
+    fn set_all_tetras_undecided(&mut self) {
+        self.undecided_tetras = self
             .triangulation
             .tetras
             .iter()
             .filter(|(_, tetra)| self.tetra_should_be_checked(tetra))
             .map(|(t, _)| t)
             .collect();
-        while !self.search.everyone_finished(undecided_tetras.len()) {
-            undecided_tetras = self.iterate(undecided_tetras);
+    }
+
+    pub fn run(&mut self) {
+        while !self.search.everyone_finished(self.undecided_tetras.len()) {
+            self.iterate();
         }
     }
 
-    fn iterate(&mut self, undecided_tetras: Vec<TetraIndex>) -> Vec<TetraIndex> {
-        let search_data = self.get_radius_search_data(undecided_tetras);
+    fn iterate(&mut self) {
+        let search_data = self.get_radius_search_data();
         let search_results = self.search.radius_search(search_data);
         let mut still_undecided = vec![];
         for (rank, results) in search_results.into_iter() {
@@ -96,10 +101,10 @@ where
                 self.haloes.insert(particle_id, point_index);
             }
         }
-        still_undecided
     }
 
-    fn get_radius_search_data(&self, undecided_tetras: Vec<TetraIndex>) -> Vec<SearchData<D>> {
+    fn get_radius_search_data(&mut self) -> Vec<SearchData<D>> {
+        let undecided_tetras: Vec<_> = self.undecided_tetras.drain(..).collect();
         undecided_tetras
             .into_iter()
             .filter_map(|t| {
@@ -108,14 +113,13 @@ where
                     .tetras
                     .get(t)
                     .filter(|tetra| self.tetra_should_be_checked(tetra))?;
-                let tetra_data = self.triangulation.get_tetra_data(tetra);
-                let center = tetra_data.get_center_of_circumcircle();
-                let sample_point = self.triangulation.points[tetra.points().next().unwrap()];
-                let radius_circumcircle = center.distance(sample_point);
+                let (center_circumcircle, radius_circumcircle) = self
+                    .triangulation
+                    .get_center_and_radius_of_tetra_circumcircle(tetra);
                 let radius = SEARCH_SAFETY_FACTOR * radius_circumcircle;
                 Some(SearchData::<D> {
                     radius,
-                    point: center,
+                    point: center_circumcircle,
                 })
             })
             .collect()
@@ -231,16 +235,10 @@ mod tests {
             extent,
             cache: HaloCache::default(),
         };
-        let halo_iteration =
+        let mut halo_iteration =
             HaloIteration::new(sub_triangulation_data.triangulation.clone(), search.clone());
-        for data in halo_iteration.get_radius_search_data(
-            sub_triangulation_data
-                .triangulation
-                .tetras
-                .iter()
-                .map(|(t, _)| t)
-                .collect(),
-        ) {
+        todo!("check that the following actually does something");
+        for data in halo_iteration.get_radius_search_data() {
             let points_in_radius = points
                 .iter()
                 .filter(|(_, p)| p.distance(data.point) < data.radius);
