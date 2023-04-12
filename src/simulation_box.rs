@@ -21,9 +21,13 @@ fn periodic_wrap_component(v: Float, min: Float, max: Float) -> Float {
 }
 
 fn minimize_component(v: Float, length: Float) -> Float {
-    let v = (v + length / 2.0).rem_euclid(length) - length / 2.0;
-    debug_assert!(v.abs() <= length / 2.0);
-    v
+    if v > length / 2.0 {
+        v - length
+    } else if v < -length / 2.0 {
+        v + length
+    } else {
+        v
+    }
 }
 
 impl SimulationBox {
