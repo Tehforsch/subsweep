@@ -89,33 +89,55 @@ impl SimulationBox {
     pub(crate) fn iter_periodic_images(
         &self,
         point: VecLength,
-    ) -> impl Iterator<Item = (PeriodicWrapType, VecLength)> {
-        let x_dist = VecLength::new_x(self.side_lengths().x());
-        let y_dist = VecLength::new_y(self.side_lengths().y());
-        let z_dist = VecLength::new_z(self.side_lengths().z());
-        use PeriodicWrapType::*;
+    ) -> impl Iterator<Item = (PeriodicWrapType3d, VecLength)> + '_ {
         #[cfg(feature = "3d")]
-        [
-            (XPlus, point + x_dist),
-            (XMinus, point - x_dist),
-            (YPlus, point + y_dist),
-            (YMinus, point - y_dist),
-            (ZPlus, point + z_dist),
-            (ZMinus, point - z_dist),
-        ]
-        .into_iter()
+        {
+            WrapType::iter_all()
+                .flat_map(|x| WrapType::iter_all().map(move |y| (x, y)))
+                .flat_map(|(x, y)| WrapType::iter_all().map(move |z| (x, y, z)))
+                .map(move |(x, y, z)| {
+                    let type_ = PeriodicWrapType3d { x, y, z };
+                    (type_, point + type_.as_translation(self))
+                })
+        }
     }
 }
 
-#[derive(Debug)]
-pub enum PeriodicWrapType {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WrapType {
     NoWrap,
-    XPlus,
-    XMinus,
-    YPlus,
-    YMinus,
-    ZPlus,
-    ZMinus,
+    Minus,
+    Plus,
+}
+
+impl WrapType {
+    fn iter_all() -> impl Iterator<Item = Self> {
+        [Self::NoWrap, Self::Minus, Self::Plus].into_iter()
+    }
+
+    fn as_sign(&self) -> f64 {
+        match self {
+            WrapType::NoWrap => 0.0,
+            WrapType::Minus => -1.0,
+            WrapType::Plus => 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PeriodicWrapType3d {
+    pub x: WrapType,
+    pub y: WrapType,
+    pub z: WrapType,
+}
+
+impl PeriodicWrapType3d {
+    fn as_translation(&self, box_: &SimulationBox) -> VecLength {
+        let x_dist = VecLength::new_x(box_.side_lengths().x());
+        let y_dist = VecLength::new_y(box_.side_lengths().y());
+        let z_dist = VecLength::new_z(box_.side_lengths().z());
+        x_dist * self.x.as_sign() + y_dist * self.y.as_sign() + z_dist * self.z.as_sign()
+    }
 }
 
 #[cfg(test)]

@@ -8,7 +8,9 @@ use crate::units::Length;
 use crate::units::VecLength;
 
 fn relative_bounding_box_overlap(dist: VecLength, total_size: VecLength) -> bool {
-    (dist.x()).abs() < total_size.x() && (dist.y()).abs() < total_size.y()
+    (dist.x()).abs() <= total_size.x()
+        && (dist.y()).abs() <= total_size.y()
+        && (dist.z()).abs() <= total_size.z()
 }
 
 /// Returns whether the two bounding boxes given by
@@ -35,10 +37,6 @@ fn within_radius_periodic(
     box_.periodic_distance(pos1, pos2) < radius
 }
 
-fn within_radius(pos1: &VecLength, pos2: &VecLength, radius: Length) -> bool {
-    pos1.distance(pos2) < radius
-}
-
 impl<N, L: LeafDataType> QuadTree<N, L> {
     pub fn iter_particles_in_radius<'a>(
         &'a self,
@@ -47,16 +45,6 @@ impl<N, L: LeafDataType> QuadTree<N, L> {
         radius: Length,
     ) -> impl Iterator<Item = &'a L> + 'a {
         let search = PeriodicRadiusSearch::new(box_size, pos, radius);
-        TreeIter::new(self, search)
-    }
-
-    pub fn iter_periodic_particles_in_radius<'a>(
-        &'a self,
-        box_size: &'a SimulationBox,
-        pos: VecLength,
-        radius: Length,
-    ) -> impl Iterator<Item = &'a L> + 'a {
-        let search = OnlyPeriodicRadiusSearch::new(box_size, pos, radius);
         TreeIter::new(self, search)
     }
 }
@@ -222,40 +210,6 @@ impl<'a, N, L: LeafDataType> SearchCriterion<N, L> for PeriodicRadiusSearch<'a> 
 
     fn should_include_leaf(&self, particle: &L) -> bool {
         within_radius_periodic(self.box_size, &self.pos, particle.pos(), self.radius)
-    }
-}
-
-#[derive(Debug)]
-struct OnlyPeriodicRadiusSearch<'a> {
-    box_size: &'a SimulationBox,
-    pos: VecLength,
-    radius: Length,
-}
-
-impl<'a> OnlyPeriodicRadiusSearch<'a> {
-    fn new(box_size: &'a SimulationBox, pos: VecLength, radius: Length) -> Self {
-        Self {
-            box_size,
-            pos,
-            radius,
-        }
-    }
-}
-
-impl<'a, N, L: LeafDataType> SearchCriterion<N, L> for OnlyPeriodicRadiusSearch<'a> {
-    fn should_visit_node(&self, tree: &QuadTree<N, L>) -> bool {
-        bounding_boxes_overlap_periodic(
-            self.box_size,
-            &tree.extent.center(),
-            &tree.extent.side_lengths(),
-            &self.pos,
-            &VecLength::from_vector_and_scale(MVec::ONE, self.radius),
-        )
-    }
-
-    fn should_include_leaf(&self, particle: &L) -> bool {
-        !within_radius(&self.pos, particle.pos(), self.radius)
-            && within_radius_periodic(self.box_size, &self.pos, particle.pos(), self.radius)
     }
 }
 

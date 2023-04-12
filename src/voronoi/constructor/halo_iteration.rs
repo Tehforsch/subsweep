@@ -8,7 +8,7 @@ use crate::communication::DataByRank;
 use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
-use crate::simulation_box::PeriodicWrapType;
+use crate::simulation_box::PeriodicWrapType3d;
 use crate::voronoi::delaunay::Circumcircle;
 use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
@@ -37,7 +37,7 @@ pub struct SearchData<D: DDimension> {
 pub struct SearchResult<D: DDimension> {
     pub point: Point<D>,
     pub id: ParticleId,
-    pub periodic_wrap_type: PeriodicWrapType,
+    pub periodic_wrap_type: PeriodicWrapType3d,
 }
 
 pub type SearchResults<D> = Vec<SearchResult<D>>;
@@ -200,6 +200,8 @@ mod tests {
     use crate::extent::get_extent;
     use crate::extent::Extent;
     use crate::prelude::ParticleId;
+    use crate::simulation_box::PeriodicWrapType3d;
+    use crate::simulation_box::WrapType;
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::constructor::halo_cache::HaloCache;
     use crate::voronoi::constructor::Constructor;
@@ -237,7 +239,17 @@ mod tests {
                     self.points
                         .iter()
                         .filter(|(_, p)| search.point.distance(*p) <= search.radius)
-                        .map(|(j, p)| (*p, *j)),
+                        .map(|(j, p)| {
+                            (
+                                *p,
+                                *j,
+                                PeriodicWrapType3d {
+                                    x: WrapType::NoWrap,
+                                    y: WrapType::NoWrap,
+                                    z: WrapType::NoWrap,
+                                },
+                            )
+                        }),
                 );
                 new_haloes.extend(result);
             }

@@ -4,7 +4,8 @@ use super::SearchData;
 use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
 use crate::prelude::ParticleId;
-use crate::simulation_box::PeriodicWrapType;
+use crate::simulation_box::PeriodicWrapType3d;
+use crate::simulation_box::WrapType;
 use crate::voronoi::constructor::halo_iteration::SearchResult;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::Point2d;
@@ -71,12 +72,13 @@ impl IntoEquivalenceType for SearchData<ThreeD> {
     }
 }
 
-#[derive(Equivalence, Clone, Debug)]
+#[derive(Clone, Debug, Equivalence)]
 pub struct SearchResultThreeDSend {
     point_x: Float,
     point_y: Float,
     point_z: Float,
     id: ParticleId,
+    periodic_wrap_type: (isize, isize, isize),
 }
 
 impl IntoEquivalenceType for SearchResult<ThreeD> {
@@ -88,6 +90,7 @@ impl IntoEquivalenceType for SearchResult<ThreeD> {
             point_y: self.point.y,
             point_z: self.point.z,
             id: self.id,
+            periodic_wrap_type: self.periodic_wrap_type.into(),
         }
     }
 
@@ -95,7 +98,62 @@ impl IntoEquivalenceType for SearchResult<ThreeD> {
         SearchResult {
             point: Point3d::new(equiv.point_x, equiv.point_y, equiv.point_z),
             id: equiv.id,
-            periodic_wrap_type: PeriodicWrapType::NoWrap,
+            periodic_wrap_type: equiv.periodic_wrap_type.into(),
         }
+    }
+}
+
+impl From<PeriodicWrapType3d> for (isize, isize, isize) {
+    fn from(value: PeriodicWrapType3d) -> Self {
+        (value.x.into(), value.y.into(), value.z.into())
+    }
+}
+
+impl From<(isize, isize, isize)> for PeriodicWrapType3d {
+    fn from((x, y, z): (isize, isize, isize)) -> Self {
+        Self {
+            x: x.into(),
+            y: y.into(),
+            z: z.into(),
+        }
+    }
+}
+
+impl From<WrapType> for isize {
+    fn from(value: WrapType) -> Self {
+        use WrapType::*;
+        match value {
+            NoWrap => 0,
+            Minus => -1,
+            Plus => 1,
+        }
+    }
+}
+
+impl From<isize> for WrapType {
+    fn from(value: isize) -> Self {
+        match value {
+            -1 => WrapType::Minus,
+            0 => WrapType::NoWrap,
+            1 => WrapType::Plus,
+            _ => panic!(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::simulation_box::WrapType;
+
+    #[test]
+    fn conversion_symmetric() {
+        let check_symmetric = |x: WrapType| {
+            let v1: isize = x.into();
+            let v2: WrapType = v1.into();
+            assert_eq!(v2, x);
+        };
+        check_symmetric(WrapType::NoWrap);
+        check_symmetric(WrapType::Plus);
+        check_symmetric(WrapType::Minus);
     }
 }

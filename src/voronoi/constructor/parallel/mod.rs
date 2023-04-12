@@ -27,6 +27,8 @@ use crate::domain::Decomposition;
 use crate::domain::QuadTree;
 use crate::extent::Extent;
 use crate::parameters::SimulationBox;
+use crate::quadtree::LeafDataType;
+use crate::simulation_box::PeriodicWrapType3d;
 use crate::units::Length;
 use crate::units::VecLength;
 use crate::voronoi::DDimension;
@@ -57,20 +59,15 @@ type IncomingRequests<D> = DataByRank<Vec<SearchData<D>>>;
 type OutgoingResults<D> = DataByRank<Vec<MpiSearchResult<D>>>;
 type IncomingResults<D> = DataByRank<SearchResults<D>>;
 
-fn find_wrapped_particle(
+fn find_wrapped_point(
     box_: &SimulationBox,
     search: &SearchData<ActiveDimension>,
-    res: SearchResult<ActiveDimension>,
-) -> SearchResult<ActiveDimension> {
+    point: VecLength,
+) -> (PeriodicWrapType3d, Point<ActiveDimension>) {
     let mut iter = box_
-        .iter_periodic_images(VecLength::new_unchecked(res.point))
+        .iter_periodic_images(point)
         .map(|(t, p)| (t, p.value_unchecked()))
-        .filter(|(_, p)| search.point.distance(*p) < search.radius)
-        .map(|(periodic_wrap_type, p)| SearchResult {
-            point: p,
-            id: res.id,
-            periodic_wrap_type,
-        });
+        .filter(|(_, p)| search.point.distance(*p) < search.radius);
     let result = iter.next().unwrap();
     assert!(
         iter.next().is_none(),
@@ -119,41 +116,40 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         new_haloes
     }
 
-    fn get_haloes_from_search(
+    fn get_local_periodic_haloes(
         &mut self,
+        data: &Vec<SearchData<ActiveDimension>>,
+    ) -> Vec<SearchResult<ActiveDimension>> {
+        let mut new_haloes = vec![];
+        for search in data.iter() {
+            let haloes = self.get_haloes_from_search(self.data_comm.rank(), search);
+            new_haloes.extend(haloes);
+        }
+        for h in new_haloes.iter() {
+            println!(
+                "{:?} {}",
+                h.point / self.box_.side_lengths().value_unchecked(),
+                h.id
+            );
+        }
+        new_haloes
+    }
+
+    fn get_haloes_from_search<'b>(
+        &'b mut self,
         rank: Rank,
-        search: &SearchData<ActiveDimension>,
-    ) -> impl Iterator<Item = SearchResult<ActiveDimension>> + '_ {
+        search: &'b SearchData<ActiveDimension>,
+    ) -> impl Iterator<Item = SearchResult<ActiveDimension>> + 'b {
         let pos = VecLength::new_unchecked(search.point);
         let radius = Length::new_unchecked(search.radius);
         let particles = self.tree.iter_particles_in_radius(&self.box_, pos, radius);
         self.halo_cache.get_new_haloes::<ActiveDimension>(
             rank,
-            particles
-                .into_iter()
-                .map(|p| (p.pos.value_unchecked(), p.id)),
+            particles.into_iter().map(|p| {
+                let (wrap_type, wrapped_p) = find_wrapped_point(&self.box_, search, *p.pos());
+                (wrapped_p, p.id, wrap_type)
+            }),
         )
-    }
-
-    fn get_local_periodic_haloes_from_search<'b>(
-        &'b mut self,
-        search: &'b SearchData<ActiveDimension>,
-    ) -> impl Iterator<Item = SearchResult<ActiveDimension>> + 'b {
-        let pos = VecLength::new_unchecked(search.point);
-        let radius = Length::new_unchecked(search.radius);
-        let particles = self
-            .tree
-            .iter_periodic_particles_in_radius(&self.box_, pos, radius);
-        let rank = self.data_comm.rank();
-        let unwrapped = self.halo_cache.get_new_haloes::<ActiveDimension>(
-            rank,
-            particles
-                .into_iter()
-                .map(|p| (p.pos.value_unchecked(), p.id)),
-        );
-        unwrapped
-            .into_iter()
-            .map(|p| find_wrapped_particle(&self.box_, search, p))
     }
 
     fn exchange_all_searches(
@@ -201,21 +197,6 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
 
     fn rank(&self) -> Rank {
         self.data_comm.rank()
-    }
-
-    fn get_local_periodic_haloes(
-        &mut self,
-        data: &Vec<SearchData<ActiveDimension>>,
-    ) -> Vec<SearchResult<ActiveDimension>> {
-        let mut new_haloes = vec![];
-        for search in data.iter() {
-            let haloes = self.get_local_periodic_haloes_from_search(search);
-            new_haloes.extend(haloes);
-        }
-        for h in new_haloes.iter() {
-            println!("{:?} {}", h.point * 3.24078e-17, h.id);
-        }
-        new_haloes
     }
 }
 
