@@ -113,6 +113,24 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         )
     }
 
+    fn get_local_periodic_haloes_from_search(
+        &mut self,
+        rank: Rank,
+        search: &SearchData<ActiveDimension>,
+    ) -> impl Iterator<Item = SearchResult<ActiveDimension>> + '_ {
+        let pos = VecLength::new_unchecked(search.point);
+        let radius = Length::new_unchecked(search.radius);
+        let particles = self
+            .tree
+            .iter_periodic_particles_in_radius(&self.box_, pos, radius);
+        self.halo_cache.get_new_haloes::<ActiveDimension>(
+            rank,
+            particles
+                .into_iter()
+                .map(|p| (p.pos.value_unchecked(), p.id)),
+        )
+    }
+
     fn exchange_all_searches(
         &mut self,
         outgoing: OutgoingRequests<ActiveDimension>,
@@ -166,7 +184,10 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
     ) -> Vec<SearchResult<ActiveDimension>> {
         let mut new_haloes = vec![];
         for search in data.iter() {
-            new_haloes.extend(self.get_haloes_from_search(self.rank(), search));
+            new_haloes.extend(self.get_local_periodic_haloes_from_search(self.rank(), search));
+        }
+        for h in new_haloes.iter() {
+            println!("{:?} {}", h.point * 3.24078e-17, h.id);
         }
         new_haloes
     }
