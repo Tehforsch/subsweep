@@ -248,7 +248,7 @@ where
     pub fn insert(&mut self, point: Point<D>, kind: PointKind) -> (PointIndex, Vec<TetraIndex>) {
         let t = self
             .find_containing_tetra(point)
-            .expect("No tetra containing the point {point:?} found");
+            .unwrap_or_else(|| panic!("No tetra containing the point {point:?} found"));
         let new_point_index = self.points.insert(point);
         self.point_kinds.insert(new_point_index, kind);
         let new_tetras = self.split(t, new_point_index);

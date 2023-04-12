@@ -123,13 +123,10 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         let mut new_haloes = vec![];
         for search in data.iter() {
             let haloes = self.get_haloes_from_search(self.data_comm.rank(), search);
-            new_haloes.extend(haloes);
-        }
-        for h in new_haloes.iter() {
-            println!(
-                "{:?} {}",
-                h.point / self.box_.side_lengths().value_unchecked(),
-                h.id
+            new_haloes.extend(
+                haloes
+                    .into_iter()
+                    .filter(|h| h.periodic_wrap_type.is_periodic()),
             );
         }
         new_haloes

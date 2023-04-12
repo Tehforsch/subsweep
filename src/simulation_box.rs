@@ -136,6 +136,10 @@ pub struct PeriodicWrapType3d {
 }
 
 impl PeriodicWrapType3d {
+    pub fn is_periodic(&self) -> bool {
+        self.x != WrapType::NoWrap || self.y != WrapType::NoWrap || self.z != WrapType::NoWrap
+    }
+
     fn as_translation(&self, box_: &SimulationBox) -> VecLength {
         let x_dist = VecLength::new_x(box_.side_lengths().x());
         let y_dist = VecLength::new_y(box_.side_lengths().y());
