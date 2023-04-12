@@ -10,9 +10,7 @@ use derive_more::Display;
 use mpi::traits::Equivalence;
 
 use crate::communication::Rank;
-use crate::components::Mass;
 use crate::components::Position;
-use crate::components::Velocity;
 use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::prelude::SimulationStartupStages;
@@ -34,12 +32,12 @@ pub struct HaloParticle {
 
 /// A convenience type to query for particles.
 /// ```
-/// # use raxiom::components::Velocity;
+/// # use raxiom::components::Position;
 /// # use raxiom::components::Mass;
 /// # use raxiom::prelude::Particles;
-/// fn my_system(particles: Particles<(&Velocity, &Mass)>) {
-///     for (velocity, mass) in particles.iter() {
-///        println!("Particle with mass  {} kg moving at {} m/s", mass.in_kilograms(), velocity.in_meters_per_second());
+/// fn my_system(particles: Particles<(&Position, &Mass)>) {
+///     for (pos, mass) in particles.iter() {
+///        println!("Particle with mass  {} at {} m", mass.in_kilograms(), pos.in_meters());
 ///     }
 /// }
 /// ```
@@ -56,8 +54,6 @@ pub type AllParticles<'world, 'state, T, F = ()> =
 #[derive(Bundle)]
 pub struct LocalParticleBundle {
     pos: Position,
-    vel: Velocity,
-    mass: Mass,
     _local: LocalParticle,
 }
 

@@ -8,7 +8,6 @@ use mpi::traits::Equivalence;
 use crate::named::Named;
 pub use crate::sweep::components::*;
 use crate::units::VecLength;
-use crate::units::VecVelocity;
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "position"]
@@ -19,11 +18,6 @@ pub struct Position(pub VecLength);
 #[repr(transparent)]
 #[name = "mass"]
 pub struct Mass(pub crate::units::Mass);
-
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
-#[name = "velocity"]
-#[repr(transparent)]
-pub struct Velocity(pub VecVelocity);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
 #[repr(transparent)]

@@ -63,11 +63,6 @@ macro_rules! impl_extent {
                 self.max - self.min
             }
 
-            pub fn max_side_length(&self) -> $length {
-                let side_length = self.side_lengths();
-                side_length.x().max(side_length.y())
-            }
-
             pub fn from_positions<'a>(
                 positions: impl Iterator<Item = &'a $unit_vec>,
             ) -> Option<Self> {
@@ -92,13 +87,6 @@ macro_rules! impl_extent {
                     update_max(&mut max, *pos);
                 }
                 Some(Self::from_min_max(min?, max?))
-            }
-
-            pub fn contains(&self, pos: &$unit_vec) -> bool {
-                self.min.x() <= pos.x()
-                    && pos.x() <= self.max.x()
-                    && self.min.y() <= pos.y()
-                    && pos.y() <= self.max.y()
             }
 
             pub fn contains_extent(&self, other: &Self) -> bool {
@@ -241,6 +229,18 @@ impl Extent2d {
             Self::from_min_max(min_11, max_11),
         ]
     }
+
+    pub fn max_side_length(&self) -> Length {
+        let side_length = self.side_lengths();
+        side_length.x().max(side_length.y())
+    }
+
+    pub fn contains(&self, pos: &Vec2Length) -> bool {
+        self.min.x() <= pos.x()
+            && pos.x() <= self.max.x()
+            && self.min.y() <= pos.y()
+            && pos.y() <= self.max.y()
+    }
 }
 
 impl Extent3d {
@@ -287,6 +287,20 @@ impl Extent3d {
             Self::from_min_max(min_011, max_011),
             Self::from_min_max(min_111, max_111),
         ]
+    }
+
+    pub fn max_side_length(&self) -> Length {
+        let side_length = self.side_lengths();
+        side_length.x().max(side_length.y()).max(side_length.z())
+    }
+
+    pub fn contains(&self, pos: &Vec3Length) -> bool {
+        self.min.x() <= pos.x()
+            && pos.x() <= self.max.x()
+            && self.min.y() <= pos.y()
+            && pos.y() <= self.max.y()
+            && self.min.z() <= pos.z()
+            && pos.z() <= self.max.z()
     }
 }
 

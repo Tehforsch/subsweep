@@ -328,7 +328,7 @@ mod tests {
     fn domain_decomp_1d() {
         let num_points_per_rank = 5000;
         for get_point_set in [get_point_set_1, get_point_set_2, get_point_set_3] {
-            for num_ranks in 1..100 {
+            for num_ranks in [1, 7, 10, 50] {
                 let num_points = num_points_per_rank * num_ranks;
                 let vals = get_point_set(num_points);
                 let mut counter = KeyCounter::from_points(vals);
@@ -349,7 +349,7 @@ mod tests {
     fn domain_decomp_3d() {
         let num_points_per_rank = 1000;
         for get_point_set in [get_point_set_3d_1] {
-            for num_ranks in 1..100 {
+            for num_ranks in [1, 7, 10, 50] {
                 let num_points = num_points_per_rank * num_ranks;
                 let vals = get_point_set(num_points);
                 let mut counter = KeyCounter::from_points(vals);

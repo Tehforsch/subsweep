@@ -1,9 +1,6 @@
 mod parameters;
 mod time;
 
-#[cfg(all(not(feature = "2d"), test))]
-mod tests;
-
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::window::exit_on_all_closed;
@@ -15,7 +12,6 @@ pub use self::time::Time;
 use crate::communication::CommunicationPlugin;
 use crate::communication::Communicator;
 use crate::components::Position;
-use crate::components::Velocity;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::named::Named;
@@ -62,14 +58,13 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_plugin(CommunicationPlugin::<ShouldExit>::default())
             .add_event::<StopSimulationEvent>()
             .insert_resource(Time(units::Time::seconds(0.00)))
-            .add_system_to_stage(SimulationStages::Integration, integrate_motion_system)
-            .add_system_to_stage(
-                SimulationStages::Integration,
-                show_time_system.after(time_system),
+            .add_startup_system_to_stage(
+                SimulationStartupStages::InsertComponents,
+                check_particles_in_simulation_box_system,
             )
             .add_system_to_stage(
                 SimulationStages::Integration,
-                time_system.after(integrate_motion_system),
+                show_time_system.after(time_system),
             )
             .add_system_to_stage(CoreStage::PostUpdate, stop_simulation_system)
             .add_system_to_stage(
@@ -78,6 +73,19 @@ impl RaxiomPlugin for SimulationPlugin {
                     .after(stop_simulation_system)
                     .before(exit_on_all_closed),
             );
+    }
+}
+
+fn check_particles_in_simulation_box_system(
+    box_: Res<SimulationBox>,
+    particles: Particles<&Position>,
+) {
+    for p in particles.iter() {
+        assert!(
+            box_.contains(p),
+            "Found particle outside of simulation box: {:?}",
+            p
+        );
     }
 }
 
@@ -106,17 +114,6 @@ fn handle_app_exit_system(
     let should_exit = result.into_iter().any(|x| x.0);
     if should_exit {
         event_writer.send(AppExit);
-    }
-}
-
-pub fn integrate_motion_system(
-    mut query: Particles<(&mut Position, &Velocity)>,
-    parameters: Res<TimestepParameters>,
-    box_: Res<SimulationBox>,
-) {
-    for (mut pos, velocity) in query.iter_mut() {
-        **pos += **velocity * parameters.max_timestep;
-        **pos = box_.periodic_wrap(**pos);
     }
 }
 
