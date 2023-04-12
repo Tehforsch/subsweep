@@ -37,6 +37,14 @@ impl<N, L> Node<N, L> {
             panic!("make_node called on Node value")
         }
     }
+
+    fn unwrap_tree(&self) -> &[QuadTree<N, L>; TWO_TO_NUM_DIMENSIONS] {
+        if let Self::Tree(tree) = self {
+            &tree
+        } else {
+            panic!("unwrap_tree called on Tree node")
+        }
+    }
 }
 
 #[derive(Debug, Resource)]

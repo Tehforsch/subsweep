@@ -1,9 +1,9 @@
 use super::LeafDataType;
 use super::Node;
 use super::QuadTree;
+use crate::config::TWO_TO_NUM_DIMENSIONS;
 use crate::parameters::SimulationBox;
 use crate::prelude::MVec;
-use crate::quadtree::{self};
 use crate::units::Length;
 use crate::units::VecLength;
 
@@ -52,137 +52,149 @@ fn within_radius(
 }
 
 impl<N, L: LeafDataType> QuadTree<N, L> {
-    fn add_particles_for_criterion<'a, C: SearchCriterion<N, L>>(
+    pub fn iter_particles_in_radius<'a>(
         &'a self,
-        particles: &mut Vec<&'a L>,
-        criterion: &C,
-    ) {
-        if criterion.should_check_node(self) {
-            match &self.node {
-                quadtree::Node::Tree(tree) => {
-                    for child in tree.iter() {
-                        child.add_particles_for_criterion(particles, criterion);
-                    }
-                }
-                quadtree::Node::Leaf(leaf) => {
-                    particles.extend(leaf.iter());
-                }
-            }
-        }
-    }
-
-    fn get_particles_by_criterion<'a, C: SearchCriterion<N, L>>(
-        &'a self,
-        criterion: &C,
-    ) -> Vec<&'a L> {
-        let mut particles = vec![];
-        self.add_particles_for_criterion(&mut particles, criterion);
-        particles
-            .into_iter()
-            .filter(|p| criterion.particle_included(p))
-            .collect()
-    }
-
-    pub fn get_particles_in_radius<'a>(
-        &'a self,
-        box_size: &SimulationBox,
-        pos: &VecLength,
-        radius: &Length,
-    ) -> Vec<&'a L> {
-        self.get_particles_by_criterion(&RadiusSearch::new(box_size, pos, radius))
+        box_size: &'a SimulationBox,
+        pos: VecLength,
+        radius: Length,
+    ) -> impl Iterator<Item = &'a L> + 'a {
+        let search = RadiusSearch::new(box_size, pos, radius);
+        TreeIter::new(self, search)
     }
 }
 
 impl<N, L> QuadTree<N, L> {
-    fn iter<'a>(&'a self) -> TreeIter<'a, N, L> {
-        TreeIter::new(self)
+    pub fn iter<'a>(&'a self) -> TreeIter<'a, N, L, EntireTree> {
+        TreeIter::new(self, EntireTree)
     }
 }
 
 struct StackItem<'a, N, L> {
     tree: &'a QuadTree<N, L>,
-    pos: usize,
+    pos_in_parent: usize,
+    should_be_visited: bool,
 }
 
 impl<'a, N, L> Clone for StackItem<'a, N, L> {
     fn clone(&self) -> Self {
         Self {
             tree: self.tree.clone(),
-            pos: self.pos.clone(),
+            pos_in_parent: self.pos_in_parent.clone(),
+            should_be_visited: self.should_be_visited,
         }
     }
 }
 
-pub struct TreeIter<'a, N, L> {
+pub struct TreeIter<'a, N, L, C> {
     stack: Vec<StackItem<'a, N, L>>,
+    current_leaf_pos: usize,
+    criterion: C,
 }
 
-enum EncounteredNode<'a, L> {
-    Leaf(&'a L),
-    Tree,
-    End,
-}
-
-impl<'a, N, L> TreeIter<'a, N, L> {
-    fn new(tree: &'a QuadTree<N, L>) -> Self {
-        Self {
-            stack: vec![StackItem { pos: 0, tree }],
-        }
-    }
-
-    fn goto_next_valid_node(&mut self) -> EncounteredNode<'a, L> {
-        let last = self.stack.last();
-        if last.is_none() {
-            return EncounteredNode::End;
-        }
-        let last = last.unwrap().clone();
-        let result = match &last.tree.node {
-            Node::Tree(tree) => {
-                let pos = last.pos;
-                if pos < tree.len() {
-                    self.stack.push(StackItem {
-                        tree: &tree[pos],
-                        pos: 0,
-                    });
-                    return EncounteredNode::Tree;
-                } else {
-                    self.stack.pop();
-                }
-                EncounteredNode::Tree
-            }
-            Node::Leaf(leaves) => {
-                if last.pos == leaves.len() {
-                    self.stack.pop();
-                    EncounteredNode::Tree
-                } else {
-                    EncounteredNode::Leaf(&leaves[last.pos])
-                }
-            }
+impl<'a, N, L, C: SearchCriterion<N, L>> TreeIter<'a, N, L, C> {
+    fn new(tree: &'a QuadTree<N, L>, criterion: C) -> Self {
+        let mut iter = Self {
+            criterion,
+            stack: vec![],
+            current_leaf_pos: 0,
         };
-        self.stack.last_mut().map(|t| t.pos += 1);
-        result
+        let initial_stack_item = iter.get_stack_item_for_new_tree(tree, 0);
+        iter.stack.push(initial_stack_item);
+        iter
+    }
+
+    fn get_stack_item_for_new_tree(
+        &self,
+        tree: &'a QuadTree<N, L>,
+        pos_in_parent: usize,
+    ) -> StackItem<'a, N, L> {
+        let should_be_visited = self.criterion.should_visit_node(tree);
+        StackItem {
+            pos_in_parent,
+            tree,
+            should_be_visited: should_be_visited,
+        }
+    }
+
+    fn num_children(&self) -> usize {
+        TWO_TO_NUM_DIMENSIONS
+    }
+
+    fn goto_next_node(&mut self) -> Option<()> {
+        let last = self.stack.last()?.clone();
+        if last.should_be_visited {
+            match &last.tree.node {
+                Node::Tree(tree) => {
+                    // For the future: remember we visited this node
+                    self.stack.last_mut().unwrap().should_be_visited = false;
+                    // Then go deeper
+                    self.stack
+                        .push(self.get_stack_item_for_new_tree(&tree[0], 0));
+                    return Some(());
+                }
+                Node::Leaf(_) => {}
+            }
+        }
+        // If we encountered a leaf or a previously visited tree: Go to next child on this level, or up one level.
+        let last = self.stack.pop().unwrap();
+        let next_pos_in_parent = last.pos_in_parent + 1;
+        let parent = self.stack.last()?;
+        if next_pos_in_parent < self.num_children() {
+            self.stack.push(self.get_stack_item_for_new_tree(
+                &parent.tree.node.unwrap_tree()[next_pos_in_parent],
+                next_pos_in_parent,
+            ));
+        }
+        Some(())
+    }
+
+    fn get_current_node_if_it_should_be_visited(&self) -> Option<&'a Node<N, L>> {
+        let last = self.stack.last()?;
+        Some(&last.tree.node).filter(|_| last.should_be_visited)
     }
 }
 
-impl<'a, N, L> Iterator for TreeIter<'a, N, L> {
+impl<'a, N, L, C: SearchCriterion<N, L>> Iterator for TreeIter<'a, N, L, C> {
     type Item = &'a L;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            match self.goto_next_valid_node() {
-                EncounteredNode::Leaf(leaf) => return Some(leaf),
-                EncounteredNode::Tree => {}
-                EncounteredNode::End => return None,
+            if let Some(Node::Leaf(leaf)) = self.get_current_node_if_it_should_be_visited() {
+                let leaf = leaf.get(self.current_leaf_pos);
+                if let Some(l) = leaf {
+                    self.current_leaf_pos += 1;
+                    if self.criterion.should_include_leaf(l) {
+                        return Some(l);
+                    } else {
+                        continue;
+                    }
+                } else {
+                    self.current_leaf_pos = 0;
+                }
             }
+            self.goto_next_node()?;
         }
     }
 }
 
-trait SearchCriterion<N, L> {
-    fn should_check_node(&self, tree: &QuadTree<N, L>) -> bool;
-    fn particle_included(&self, l: &L) -> bool;
+pub trait SearchCriterion<N, L> {
+    fn should_visit_node(&self, tree: &QuadTree<N, L>) -> bool;
+    fn should_include_leaf(&self, l: &L) -> bool;
 }
 
+pub struct EntireTree;
+
+impl<N, L> SearchCriterion<N, L> for EntireTree {
+    fn should_visit_node(&self, _: &QuadTree<N, L>) -> bool {
+        true
+    }
+
+    fn should_include_leaf(&self, _: &L) -> bool {
+        true
+    }
+}
+
+#[derive(Debug)]
 struct RadiusSearch<'a> {
     box_size: &'a SimulationBox,
     pos: VecLength,
@@ -190,17 +202,17 @@ struct RadiusSearch<'a> {
 }
 
 impl<'a> RadiusSearch<'a> {
-    fn new(box_size: &'a SimulationBox, pos: &VecLength, radius: &Length) -> Self {
+    fn new(box_size: &'a SimulationBox, pos: VecLength, radius: Length) -> Self {
         Self {
             box_size,
-            pos: *pos,
-            radius: *radius,
+            pos,
+            radius,
         }
     }
 }
 
 impl<'a, N, L: LeafDataType> SearchCriterion<N, L> for RadiusSearch<'a> {
-    fn should_check_node(&self, tree: &QuadTree<N, L>) -> bool {
+    fn should_visit_node(&self, tree: &QuadTree<N, L>) -> bool {
         bounding_boxes_overlap(
             self.box_size,
             &tree.extent.center(),
@@ -210,7 +222,7 @@ impl<'a, N, L: LeafDataType> SearchCriterion<N, L> for RadiusSearch<'a> {
         )
     }
 
-    fn particle_included(&self, particle: &L) -> bool {
+    fn should_include_leaf(&self, particle: &L) -> bool {
         within_radius(self.box_size, &self.pos, particle.pos(), self.radius)
     }
 }
@@ -307,6 +319,7 @@ mod tests {
         assert_eq!(it.next(), Some(&10));
         assert_eq!(it.next(), None);
     }
+
     #[test]
     fn radius_search() {
         let n = 12;
@@ -325,7 +338,7 @@ mod tests {
             QuadTree::new(&QuadTreeConfig::default(), particles.clone(), &extent);
         let box_ = SimulationBox::new(extent);
         for particle in particles.iter() {
-            let tree_neighbours = tree.get_particles_in_radius(&box_, &particle.pos, &radius);
+            let tree_neighbours = tree.iter_particles_in_radius(&box_, particle.pos, radius);
             let direct_neighbours = direct_neighbour_search(&particles, &particle.pos, &radius);
             let tree_entities: HashSet<_> = tree_neighbours
                 .into_iter()

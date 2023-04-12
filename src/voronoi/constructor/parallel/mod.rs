@@ -102,11 +102,9 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         rank: Rank,
         search: &SearchData<ActiveDimension>,
     ) -> impl Iterator<Item = SearchResult<ActiveDimension>> + '_ {
-        let particles = self.tree.get_particles_in_radius(
-            &self.box_,
-            &VecLength::new_unchecked(search.point),
-            &Length::new_unchecked(search.radius),
-        );
+        let pos = VecLength::new_unchecked(search.point);
+        let radius = Length::new_unchecked(search.radius);
+        let particles = self.tree.iter_particles_in_radius(&self.box_, pos, radius);
         self.halo_cache.get_new_haloes::<ActiveDimension>(
             rank,
             particles

@@ -1,4 +1,3 @@
-use bevy::prelude::Entity;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::BenchmarkId;
@@ -11,7 +10,6 @@ use raxiom::quadtree::NodeDataType;
 use raxiom::quadtree::QuadTree;
 use raxiom::quadtree::QuadTreeConfig;
 use raxiom::units::Length;
-use raxiom::units::MVec;
 use raxiom::units::VecLength;
 
 #[derive(Default)]
@@ -23,11 +21,11 @@ impl<T> NodeDataType<T> for Empty {
 
 fn quadtree_radius_search(quadtree: &QuadTree<Empty, LeafData>) {
     let box_size = SimulationBox::new(quadtree.extent.clone());
-    quadtree.get_particles_in_radius(
+    for _ in quadtree.iter_particles_in_radius(
         &box_size,
-        &VecLength::meters(0.5, 0.5, 0.5),
-        &Length::meters(0.01),
-    );
+        VecLength::meters(0.5, 0.5, 0.5),
+        Length::meters(0.01),
+    ) {}
 }
 
 fn get_quadtree(num_parts: usize) -> QuadTree<Empty, LeafData> {
