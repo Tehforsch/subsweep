@@ -8,6 +8,7 @@ use crate::communication::DataByRank;
 use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
+use crate::simulation_box::PeriodicWrapType;
 use crate::voronoi::delaunay::Circumcircle;
 use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
@@ -36,6 +37,7 @@ pub struct SearchData<D: DDimension> {
 pub struct SearchResult<D: DDimension> {
     pub point: Point<D>,
     pub id: ParticleId,
+    pub periodic_wrap_type: PeriodicWrapType,
 }
 
 pub type SearchResults<D> = Vec<SearchResult<D>>;
@@ -96,6 +98,7 @@ where
             for SearchResult {
                 point,
                 id: particle_id,
+                periodic_wrap_type,
             } in results
             {
                 assert!(self.haloes.get_by_left(&particle_id).is_none());

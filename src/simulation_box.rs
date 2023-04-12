@@ -85,6 +85,37 @@ impl SimulationBox {
     pub fn periodic_distance(&self, p1: &VecLength, p2: &VecLength) -> Length {
         self.periodic_distance_vec(p1, p2).length()
     }
+
+    pub(crate) fn iter_periodic_images(
+        &self,
+        point: VecLength,
+    ) -> impl Iterator<Item = (PeriodicWrapType, VecLength)> {
+        let x_dist = VecLength::new_x(self.side_lengths().x());
+        let y_dist = VecLength::new_y(self.side_lengths().y());
+        let z_dist = VecLength::new_z(self.side_lengths().z());
+        use PeriodicWrapType::*;
+        #[cfg(feature = "3d")]
+        [
+            (XPlus, point + x_dist),
+            (XMinus, point - x_dist),
+            (YPlus, point + y_dist),
+            (YMinus, point - y_dist),
+            (ZPlus, point + z_dist),
+            (ZMinus, point - z_dist),
+        ]
+        .into_iter()
+    }
+}
+
+#[derive(Debug)]
+pub enum PeriodicWrapType {
+    NoWrap,
+    XPlus,
+    XMinus,
+    YPlus,
+    YMinus,
+    ZPlus,
+    ZMinus,
 }
 
 #[cfg(test)]

@@ -57,6 +57,26 @@ type IncomingRequests<D> = DataByRank<Vec<SearchData<D>>>;
 type OutgoingResults<D> = DataByRank<Vec<MpiSearchResult<D>>>;
 type IncomingResults<D> = DataByRank<SearchResults<D>>;
 
+fn find_wrapped_particle(
+    box_: &SimulationBox,
+    search: &SearchData<ActiveDimension>,
+    res: SearchResult<ActiveDimension>,
+) -> SearchResult<ActiveDimension> {
+    let mut iter = box_.iter_periodic_images(VecLength::new_unchecked(res.point))
+        .map(|(t, p)| (t, p.value_unchecked()))
+        .filter(|(_, p)| search.point.distance(*p) < search.radius)
+        .map(|(periodic_wrap_type, p)| SearchResult {
+            point: p,
+            id: res.id,
+            periodic_wrap_type,
+        });
+    let result = iter
+        .next()
+        .unwrap();
+    assert!(iter.next().is_none(), "Search radius large enough that two periodic images fall into it at the same time.");
+    result
+}
+
 impl<'a> ParallelSearch<'a, ActiveDimension> {
     fn get_outgoing_searches(
         &mut self,
@@ -113,22 +133,25 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         )
     }
 
-    fn get_local_periodic_haloes_from_search(
-        &mut self,
-        rank: Rank,
-        search: &SearchData<ActiveDimension>,
-    ) -> impl Iterator<Item = SearchResult<ActiveDimension>> + '_ {
+    fn get_local_periodic_haloes_from_search<'b>(
+        &'b mut self,
+        search: &'b SearchData<ActiveDimension>,
+    ) -> impl Iterator<Item = SearchResult<ActiveDimension>> + 'b {
         let pos = VecLength::new_unchecked(search.point);
         let radius = Length::new_unchecked(search.radius);
         let particles = self
             .tree
             .iter_periodic_particles_in_radius(&self.box_, pos, radius);
-        self.halo_cache.get_new_haloes::<ActiveDimension>(
+        let rank = self.data_comm.rank();
+        let unwrapped = self.halo_cache.get_new_haloes::<ActiveDimension>(
             rank,
             particles
                 .into_iter()
                 .map(|p| (p.pos.value_unchecked(), p.id)),
-        )
+        );
+        unwrapped
+            .into_iter()
+            .map(|p| find_wrapped_particle(&self.box_, search, p))
     }
 
     fn exchange_all_searches(
@@ -184,7 +207,8 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
     ) -> Vec<SearchResult<ActiveDimension>> {
         let mut new_haloes = vec![];
         for search in data.iter() {
-            new_haloes.extend(self.get_local_periodic_haloes_from_search(self.rank(), search));
+            let haloes = self.get_local_periodic_haloes_from_search(search);
+            new_haloes.extend(haloes);
         }
         for h in new_haloes.iter() {
             println!("{:?} {}", h.point * 3.24078e-17, h.id);

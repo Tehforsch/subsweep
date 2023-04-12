@@ -3,6 +3,7 @@ use crate::communication::Rank;
 use crate::dimension::Point;
 use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
+use crate::simulation_box::PeriodicWrapType;
 use crate::voronoi::DDimension;
 
 #[derive(Default, Clone)]
@@ -17,6 +18,10 @@ impl HaloCache {
         iter: impl Iterator<Item = (Point<D>, ParticleId)> + 'a,
     ) -> impl Iterator<Item = SearchResult<D>> + 'a {
         iter.filter(move |(_, id)| self.sent_previously.insert((rank, *id)))
-            .map(|(point, id)| SearchResult { point, id })
+            .map(|(point, id)| SearchResult {
+                point,
+                id,
+                periodic_wrap_type: PeriodicWrapType::NoWrap,
+            })
     }
 }

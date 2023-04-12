@@ -4,6 +4,7 @@ use super::SearchData;
 use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
 use crate::prelude::ParticleId;
+use crate::simulation_box::PeriodicWrapType;
 use crate::voronoi::constructor::halo_iteration::SearchResult;
 use crate::voronoi::primitives::Float;
 use crate::voronoi::Point2d;
@@ -94,6 +95,7 @@ impl IntoEquivalenceType for SearchResult<ThreeD> {
         SearchResult {
             point: Point3d::new(equiv.point_x, equiv.point_y, equiv.point_z),
             id: equiv.id,
+            periodic_wrap_type: PeriodicWrapType::NoWrap,
         }
     }
 }
