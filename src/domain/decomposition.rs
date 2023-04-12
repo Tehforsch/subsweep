@@ -203,6 +203,7 @@ impl<K: Key> KeyCounter<K> {
             + Clone
             + std::ops::Div<f64, Output = P>
             + std::ops::Add<P, Output = P>
+            + std::ops::Sub<P, Output = P>
             + Clone
             + Copy,
     {

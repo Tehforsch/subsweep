@@ -1,5 +1,6 @@
 use std::ops::Add;
 use std::ops::Div;
+use std::ops::Sub;
 
 use mpi::datatype::UserDatatype;
 use mpi::internal::memoffset::offset_of;
@@ -17,15 +18,23 @@ pub struct Extent<P> {
     pub center: P,
 }
 
-impl<P: Add<P, Output = P> + Div<f64, Output = P> + Clone + Copy> Extent<P> {
+impl<P: Add<P, Output = P> + Sub<P, Output = P> + Div<f64, Output = P> + Clone + Copy> Extent<P> {
     pub fn from_min_max(min: P, max: P) -> Extent<P> {
         let center: P = (min + max) / 2.0;
         Extent { min, max, center }
     }
+
+    /// Return a new extent which is three times larger
+    /// so that it includes all (first-order) periodic images of the particles
+    /// in the original extent.
+    pub fn including_periodic_images(&self) -> Self {
+        let dist = self.max - self.min;
+        Self::from_min_max(self.min - dist, self.max + dist)
+    }
 }
 
 pub fn get_extent_from_min_and_max_reduce<
-    P: Clone + Div<f64, Output = P> + Add<P, Output = P> + Clone + Copy,
+    P: Clone + Div<f64, Output = P> + Add<P, Output = P> + Sub<P, Output = P> + Clone + Copy,
 >(
     mut vs: impl Iterator<Item = P>,
     min: fn(P, P) -> P,
@@ -43,7 +52,13 @@ pub fn get_extent_from_min_and_max_reduce<
 
 pub fn get_extent<P>(points: impl Iterator<Item = P>) -> Option<Extent<P>>
 where
-    P: MinMax + Clone + Div<f64, Output = P> + Add<P, Output = P> + Clone + Copy,
+    P: MinMax
+        + Clone
+        + Div<f64, Output = P>
+        + Add<P, Output = P>
+        + Sub<P, Output = P>
+        + Clone
+        + Copy,
 {
     get_extent_from_min_and_max_reduce(points, |p1, p2| P::min(p1, p2), |p1, p2| P::max(p1, p2))
 }

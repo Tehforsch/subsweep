@@ -8,6 +8,7 @@ use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
 use crate::parameters::TreeParameters;
 use crate::prelude::LocalParticle;
+use crate::prelude::ThreeD;
 use crate::prelude::WorldRank;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationStartupStages;
@@ -17,7 +18,6 @@ use crate::units::Time;
 use crate::units::VecLength;
 use crate::voronoi::constructor::parallel::plugin::ParallelVoronoiGridConstruction;
 use crate::voronoi::test_utils::TestDimension;
-use crate::voronoi::ThreeD;
 
 #[test]
 #[ignore]

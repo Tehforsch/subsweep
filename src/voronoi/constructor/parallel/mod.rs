@@ -62,7 +62,8 @@ fn find_wrapped_particle(
     search: &SearchData<ActiveDimension>,
     res: SearchResult<ActiveDimension>,
 ) -> SearchResult<ActiveDimension> {
-    let mut iter = box_.iter_periodic_images(VecLength::new_unchecked(res.point))
+    let mut iter = box_
+        .iter_periodic_images(VecLength::new_unchecked(res.point))
         .map(|(t, p)| (t, p.value_unchecked()))
         .filter(|(_, p)| search.point.distance(*p) < search.radius)
         .map(|(periodic_wrap_type, p)| SearchResult {
@@ -70,10 +71,11 @@ fn find_wrapped_particle(
             id: res.id,
             periodic_wrap_type,
         });
-    let result = iter
-        .next()
-        .unwrap();
-    assert!(iter.next().is_none(), "Search radius large enough that two periodic images fall into it at the same time.");
+    let result = iter.next().unwrap();
+    assert!(
+        iter.next().is_none(),
+        "Search radius large enough that two periodic images fall into it at the same time."
+    );
     result
 }
 

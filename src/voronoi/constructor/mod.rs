@@ -53,6 +53,7 @@ where
         let extent = search
             .determine_global_extent()
             .unwrap_or_else(|| get_extent(points.iter().map(|p| p.1)).unwrap());
+        let extent = extent.including_periodic_images();
         let (triangulation, mut map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
         debug!("Finished local Delaunay construction, starting halo iteration.");
