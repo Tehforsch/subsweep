@@ -26,29 +26,13 @@ pub(super) fn bounding_boxes_overlap_periodic(
     relative_bounding_box_overlap(dist, total_size)
 }
 
-/// Returns whether the two bounding boxes given by
-/// the center coordinates pos1 and pos2 and the side lengths
-/// size1 and size2 overlap in a periodic box of size box_size
-pub fn bounding_boxes_overlap(
-    _box_: &SimulationBox,
-    pos1: &VecLength,
-    size1: &VecLength,
-    pos2: &VecLength,
-    size2: &VecLength,
-) -> bool {
-    let dist = *pos1 - *pos2;
-    let total_size = *size1 + *size2;
-    relative_bounding_box_overlap(dist, total_size)
-}
-
-fn within_radius(
-    _box_: &SimulationBox,
+fn within_radius_periodic(
+    box_: &SimulationBox,
     pos1: &VecLength,
     pos2: &VecLength,
     radius: Length,
 ) -> bool {
-    pos1.distance(pos2) < radius
-    // box_.periodic_distance(pos1, pos2) < *radius
+    box_.periodic_distance(pos1, pos2) < radius
 }
 
 impl<N, L: LeafDataType> QuadTree<N, L> {
@@ -58,7 +42,7 @@ impl<N, L: LeafDataType> QuadTree<N, L> {
         pos: VecLength,
         radius: Length,
     ) -> impl Iterator<Item = &'a L> + 'a {
-        let search = RadiusSearch::new(box_size, pos, radius);
+        let search = PeriodicRadiusSearch::new(box_size, pos, radius);
         TreeIter::new(self, search)
     }
 }
@@ -195,13 +179,13 @@ impl<N, L> SearchCriterion<N, L> for EntireTree {
 }
 
 #[derive(Debug)]
-struct RadiusSearch<'a> {
+struct PeriodicRadiusSearch<'a> {
     box_size: &'a SimulationBox,
     pos: VecLength,
     radius: Length,
 }
 
-impl<'a> RadiusSearch<'a> {
+impl<'a> PeriodicRadiusSearch<'a> {
     fn new(box_size: &'a SimulationBox, pos: VecLength, radius: Length) -> Self {
         Self {
             box_size,
@@ -211,9 +195,9 @@ impl<'a> RadiusSearch<'a> {
     }
 }
 
-impl<'a, N, L: LeafDataType> SearchCriterion<N, L> for RadiusSearch<'a> {
+impl<'a, N, L: LeafDataType> SearchCriterion<N, L> for PeriodicRadiusSearch<'a> {
     fn should_visit_node(&self, tree: &QuadTree<N, L>) -> bool {
-        bounding_boxes_overlap(
+        bounding_boxes_overlap_periodic(
             self.box_size,
             &tree.extent.center(),
             &tree.extent.side_lengths(),
@@ -223,7 +207,7 @@ impl<'a, N, L: LeafDataType> SearchCriterion<N, L> for RadiusSearch<'a> {
     }
 
     fn should_include_leaf(&self, particle: &L) -> bool {
-        within_radius(self.box_size, &self.pos, particle.pos(), self.radius)
+        within_radius_periodic(self.box_size, &self.pos, particle.pos(), self.radius)
     }
 }
 
@@ -336,7 +320,10 @@ mod tests {
         let extent = Extent3d::from_positions(particles.iter().map(|leaf| &leaf.pos)).unwrap();
         let tree: QuadTree<(), _> =
             QuadTree::new(&QuadTreeConfig::default(), particles.clone(), &extent);
-        let box_ = SimulationBox::new(extent);
+        // We don't want this to periodically wrap, so make the simulation box large.
+        let box_ = SimulationBox::new(Extent3d::cube_from_side_length(
+            extent.side_lengths().x() * 10.0,
+        ));
         for particle in particles.iter() {
             let tree_neighbours = tree.iter_particles_in_radius(&box_, particle.pos, radius);
             let direct_neighbours = direct_neighbour_search(&particles, &particle.pos, &radius);
