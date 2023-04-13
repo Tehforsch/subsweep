@@ -12,7 +12,7 @@ use super::ParallelSearch;
 use super::SendNum;
 use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
-use crate::dimension::ThreeD;
+use crate::dimension::ActiveDimension;
 use crate::domain::Decomposition;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
@@ -34,8 +34,8 @@ pub struct ParallelVoronoiGridConstruction;
 
 impl RaxiomPlugin for ParallelVoronoiGridConstruction {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_plugin(CommunicationPlugin::<MpiSearchData<ThreeD>>::exchange())
-            .add_plugin(CommunicationPlugin::<MpiSearchResult<ThreeD>>::exchange())
+        sim.add_plugin(CommunicationPlugin::<MpiSearchData<ActiveDimension>>::exchange())
+            .add_plugin(CommunicationPlugin::<MpiSearchResult<ActiveDimension>>::exchange())
             .add_plugin(CommunicationPlugin::<SendNum>::default())
             .add_startup_system_to_stage(
                 SimulationStartupStages::InsertGrid,
@@ -66,8 +66,8 @@ fn warn_if_halo_fraction_too_high(
 fn construct_grid_system(
     mut commands: Commands,
     particles: Particles<(Entity, &ParticleId, &Position)>,
-    mut data_comm: ExchangeCommunicator<MpiSearchData<ThreeD>>,
-    mut result_comm: ExchangeCommunicator<MpiSearchResult<ThreeD>>,
+    mut data_comm: ExchangeCommunicator<MpiSearchData<ActiveDimension>>,
+    mut result_comm: ExchangeCommunicator<MpiSearchResult<ActiveDimension>>,
     mut finished_comm: Communicator<SendNum>,
     tree: Res<QuadTree>,
     decomposition: Res<Decomposition>,
@@ -83,7 +83,7 @@ fn construct_grid_system(
         box_.clone(),
         HaloCache::default(),
     );
-    let cons = Constructor::<ThreeD>::construct_from_iter(
+    let cons = Constructor::<ActiveDimension>::construct_from_iter(
         particles.iter().map(|(_, i, p)| (*i, p.value_unchecked())),
         search,
     );

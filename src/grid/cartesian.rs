@@ -9,6 +9,7 @@ use super::RemoteNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
 use crate::config::NUM_DIMENSIONS;
+use crate::dimension::ActiveWrapType;
 use crate::hash_map::HashMap;
 use crate::parameters::SimulationBox;
 use crate::particle::HaloParticle;
@@ -17,7 +18,6 @@ use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
-use crate::simulation_box::PeriodicWrapType3d;
 use crate::units::Length;
 use crate::units::VecLength;
 use crate::units::Volume;
@@ -244,7 +244,7 @@ impl GridConstructor {
                                 ParticleType::Remote(RemoteNeighbour {
                                     id: self.ids[&neighbour],
                                     rank: self.get_rank(neighbour),
-                                    periodic_wrap_type: PeriodicWrapType3d::no_wrap(),
+                                    periodic_wrap_type: ActiveWrapType::no_wrap(),
                                 }),
                             )
                         }

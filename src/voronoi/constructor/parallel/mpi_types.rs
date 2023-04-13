@@ -4,6 +4,7 @@ use super::SearchData;
 use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
 use crate::prelude::ParticleId;
+use crate::simulation_box::PeriodicWrapType2d;
 use crate::simulation_box::PeriodicWrapType3d;
 use crate::simulation_box::WrapType;
 use crate::voronoi::constructor::halo_iteration::SearchResult;
@@ -73,6 +74,35 @@ impl IntoEquivalenceType for SearchData<ThreeD> {
 }
 
 #[derive(Clone, Debug, Equivalence)]
+pub struct SearchResultTwoDSend {
+    point_x: Float,
+    point_y: Float,
+    id: ParticleId,
+    periodic_wrap_type: (isize, isize),
+}
+
+impl IntoEquivalenceType for SearchResult<TwoD> {
+    type Equiv = SearchResultTwoDSend;
+
+    fn to_equivalent(&self) -> Self::Equiv {
+        SearchResultTwoDSend {
+            point_x: self.point.x,
+            point_y: self.point.y,
+            id: self.id,
+            periodic_wrap_type: self.periodic_wrap_type.into(),
+        }
+    }
+
+    fn from_equivalent(equiv: &Self::Equiv) -> Self {
+        SearchResult {
+            point: Point2d::new(equiv.point_x, equiv.point_y),
+            id: equiv.id,
+            periodic_wrap_type: equiv.periodic_wrap_type.into(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Equivalence)]
 pub struct SearchResultThreeDSend {
     point_x: Float,
     point_y: Float,
@@ -99,6 +129,21 @@ impl IntoEquivalenceType for SearchResult<ThreeD> {
             point: Point3d::new(equiv.point_x, equiv.point_y, equiv.point_z),
             id: equiv.id,
             periodic_wrap_type: equiv.periodic_wrap_type.into(),
+        }
+    }
+}
+
+impl From<PeriodicWrapType2d> for (isize, isize) {
+    fn from(value: PeriodicWrapType2d) -> Self {
+        (value.x.into(), value.y.into())
+    }
+}
+
+impl From<(isize, isize)> for PeriodicWrapType2d {
+    fn from((x, y): (isize, isize)) -> Self {
+        Self {
+            x: x.into(),
+            y: y.into(),
         }
     }
 }

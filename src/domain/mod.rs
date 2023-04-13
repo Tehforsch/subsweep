@@ -26,7 +26,6 @@ use crate::communication::WorldRank;
 use crate::components::Position;
 use crate::named::Named;
 use crate::parameters::SimulationBox;
-use crate::peano_hilbert::PeanoKey3d;
 use crate::prelude::Communicator;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
@@ -37,9 +36,9 @@ use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
 #[cfg(feature = "2d")]
-pub type DomainKey = PeanoKey2d;
+pub type DomainKey = crate::peano_hilbert::PeanoKey2d;
 #[cfg(feature = "3d")]
-pub type DomainKey = PeanoKey3d;
+pub type DomainKey = crate::peano_hilbert::PeanoKey3d;
 pub type Decomposition = decomposition::Decomposition<DomainKey>;
 
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)

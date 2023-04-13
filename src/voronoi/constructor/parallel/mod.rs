@@ -22,13 +22,13 @@ use crate::communication::DataByRank;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::dimension::ActiveDimension;
+use crate::dimension::ActiveWrapType;
 use crate::dimension::Point;
 use crate::domain::Decomposition;
 use crate::domain::QuadTree;
 use crate::extent::Extent;
 use crate::parameters::SimulationBox;
 use crate::quadtree::LeafDataType;
-use crate::simulation_box::PeriodicWrapType3d;
 use crate::units::Length;
 use crate::units::VecLength;
 use crate::voronoi::DDimension;
@@ -55,7 +55,7 @@ where
     tree: &'a QuadTree,
     decomposition: &'a Decomposition,
     box_: SimulationBox,
-    halo_cache: HaloCache,
+    halo_cache: HaloCache<D>,
     extent: Extent<Point<D>>,
 }
 
@@ -63,7 +63,7 @@ fn find_wrapped_point(
     box_: &SimulationBox,
     search: &SearchData<ActiveDimension>,
     point: VecLength,
-) -> (PeriodicWrapType3d, Point<ActiveDimension>) {
+) -> (ActiveWrapType, Point<ActiveDimension>) {
     let mut iter = box_
         .iter_periodic_images(point)
         .map(|(t, p)| (t, p.value_unchecked()))
@@ -84,7 +84,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         tree: &'a QuadTree,
         decomposition: &'a Decomposition,
         box_: SimulationBox,
-        halo_cache: HaloCache,
+        halo_cache: HaloCache<ActiveDimension>,
     ) -> Self {
         let extent = Extent::from_min_max(box_.min.value_unchecked(), box_.max.value_unchecked());
         Self {
@@ -161,7 +161,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         let pos = VecLength::new_unchecked(search.point);
         let radius = Length::new_unchecked(search.radius);
         let particles = self.tree.iter_particles_in_radius(&self.box_, pos, radius);
-        self.halo_cache.get_new_haloes::<ActiveDimension>(
+        self.halo_cache.get_new_haloes(
             rank,
             particles.into_iter().map(|p| {
                 let (wrap_type, wrapped_p) = find_wrapped_point(&self.box_, search, *p.pos());

@@ -55,7 +55,6 @@ pub fn assert_vec_is_close<const U: Dimension>(
     )
 }
 
-#[cfg(feature = "3d")]
 pub fn get_particles(n: i32, m: i32) -> Vec<crate::domain::LeafData> {
     use crate::domain::LeafData;
     use crate::prelude::ParticleId;

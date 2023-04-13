@@ -6,14 +6,15 @@ use super::Point;
 use super::TetraIndex;
 use crate::communication::DataByRank;
 use crate::communication::Rank;
+use crate::dimension::ActiveWrapType;
 use crate::dimension::Dimension;
+use crate::dimension::WrapType;
 use crate::extent::Extent;
 use crate::grid::ParticleType;
 use crate::grid::PeriodicNeighbour;
 use crate::grid::RemoteNeighbour;
 use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
-use crate::simulation_box::PeriodicWrapType3d;
 use crate::voronoi::delaunay::Circumcircle;
 use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
@@ -43,21 +44,21 @@ pub fn get_characteristic_length<D: Dimension>(max_side_length: f64, num_particl
 }
 
 #[derive(Clone, Debug)]
-pub struct SearchData<D: DDimension> {
+pub struct SearchData<D: Dimension> {
     pub point: Point<D>,
     pub radius: Float,
 }
 
 #[derive(Debug)]
-pub struct SearchResult<D: DDimension> {
+pub struct SearchResult<D: Dimension> {
     pub point: Point<D>,
     pub id: ParticleId,
-    pub periodic_wrap_type: PeriodicWrapType3d,
+    pub periodic_wrap_type: WrapType<D>,
 }
 
 pub type SearchResults<D> = Vec<SearchResult<D>>;
 
-pub trait RadiusSearch<D: DDimension> {
+pub trait RadiusSearch<D: Dimension> {
     fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
     fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
@@ -86,7 +87,7 @@ pub(super) struct HaloIteration<D: DDimension, F> {
 
 impl<D, F: RadiusSearch<D>> HaloIteration<D, F>
 where
-    D: DDimension,
+    D: DDimension<WrapType = ActiveWrapType>,
     Triangulation<D>: Delaunay<D>,
     F: RadiusSearch<D>,
     Cell<D>: DCell<Dimension = D>,
@@ -251,7 +252,7 @@ mod tests {
     pub struct TestRadiusSearch<D: DDimension> {
         points: Vec<(ParticleId, Point<D>)>,
         extent: Extent<Point<D>>,
-        cache: HaloCache,
+        cache: HaloCache<D>,
     }
 
     impl<D: DDimension + Debug> RadiusSearch<D> for TestRadiusSearch<D> {

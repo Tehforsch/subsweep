@@ -20,6 +20,7 @@ use super::Triangulation;
 use super::TriangulationData;
 use super::VoronoiGrid;
 use crate::dimension::ActiveDimension;
+use crate::dimension::ActiveWrapType;
 use crate::dimension::Point;
 use crate::extent::get_extent;
 use crate::grid;
@@ -39,7 +40,7 @@ pub struct Constructor<D: DDimension> {
 
 impl<D> Constructor<D>
 where
-    D: DDimension,
+    D: DDimension<WrapType = ActiveWrapType>,
     Triangulation<D>: Delaunay<D>,
     Cell<D>: DCell<Dimension = D>,
 {

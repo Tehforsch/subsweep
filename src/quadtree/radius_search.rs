@@ -7,10 +7,16 @@ use crate::prelude::MVec;
 use crate::units::Length;
 use crate::units::VecLength;
 
+#[cfg(feature = "3d")]
 fn relative_bounding_box_overlap(dist: VecLength, total_size: VecLength) -> bool {
     (dist.x()).abs() <= total_size.x()
         && (dist.y()).abs() <= total_size.y()
         && (dist.z()).abs() <= total_size.z()
+}
+
+#[cfg(feature = "2d")]
+fn relative_bounding_box_overlap(dist: VecLength, total_size: VecLength) -> bool {
+    (dist.x()).abs() <= total_size.x() && (dist.y()).abs() <= total_size.y()
 }
 
 /// Returns whether the two bounding boxes given by

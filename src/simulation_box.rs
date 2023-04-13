@@ -90,17 +90,32 @@ impl SimulationBox {
         self.periodic_distance_vec(p1, p2).length()
     }
 
+    #[cfg(feature = "3d")]
     pub(crate) fn iter_periodic_images(
         &self,
         point: VecLength,
     ) -> impl Iterator<Item = (PeriodicWrapType3d, VecLength)> + '_ {
-        #[cfg(feature = "3d")]
         {
             WrapType::iter_all()
                 .flat_map(|x| WrapType::iter_all().map(move |y| (x, y)))
                 .flat_map(|(x, y)| WrapType::iter_all().map(move |z| (x, y, z)))
                 .map(move |(x, y, z)| {
                     let type_ = PeriodicWrapType3d { x, y, z };
+                    (type_, point + type_.as_translation(self))
+                })
+        }
+    }
+
+    #[cfg(feature = "2d")]
+    pub(crate) fn iter_periodic_images(
+        &self,
+        point: VecLength,
+    ) -> impl Iterator<Item = (PeriodicWrapType2d, VecLength)> + '_ {
+        {
+            WrapType::iter_all()
+                .flat_map(|x| WrapType::iter_all().map(move |y| (x, y)))
+                .map(move |(x, y)| {
+                    let type_ = PeriodicWrapType2d { x, y };
                     (type_, point + type_.as_translation(self))
                 })
         }
@@ -129,6 +144,31 @@ impl WrapType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PeriodicWrapType2d {
+    pub x: WrapType,
+    pub y: WrapType,
+}
+
+impl PeriodicWrapType2d {
+    pub fn no_wrap() -> Self {
+        Self {
+            x: WrapType::NoWrap,
+            y: WrapType::NoWrap,
+        }
+    }
+    pub fn is_periodic(&self) -> bool {
+        self.x != WrapType::NoWrap || self.y != WrapType::NoWrap
+    }
+
+    #[cfg(feature = "2d")]
+    fn as_translation(&self, box_: &SimulationBox) -> VecLength {
+        let x_dist = VecLength::new_x(box_.side_lengths().x());
+        let y_dist = VecLength::new_y(box_.side_lengths().y());
+        x_dist * self.x.as_sign() + y_dist * self.y.as_sign()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PeriodicWrapType3d {
     pub x: WrapType,
     pub y: WrapType,
@@ -147,6 +187,7 @@ impl PeriodicWrapType3d {
         self.x != WrapType::NoWrap || self.y != WrapType::NoWrap || self.z != WrapType::NoWrap
     }
 
+    #[cfg(feature = "3d")]
     fn as_translation(&self, box_: &SimulationBox) -> VecLength {
         let x_dist = VecLength::new_x(box_.side_lengths().x());
         let y_dist = VecLength::new_y(box_.side_lengths().y());

@@ -1,8 +1,8 @@
 use bevy::prelude::Component;
 
 use crate::communication::Rank;
+use crate::dimension::ActiveWrapType;
 use crate::particle::ParticleId;
-use crate::simulation_box::PeriodicWrapType3d;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
@@ -54,13 +54,13 @@ impl ParticleType {
 pub struct RemoteNeighbour {
     pub id: ParticleId,
     pub rank: Rank,
-    pub periodic_wrap_type: PeriodicWrapType3d,
+    pub periodic_wrap_type: ActiveWrapType,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 pub struct PeriodicNeighbour {
     pub id: ParticleId,
-    pub periodic_wrap_type: PeriodicWrapType3d,
+    pub periodic_wrap_type: ActiveWrapType,
 }
 
 #[derive(Debug, Component, Clone)]
