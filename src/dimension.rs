@@ -7,6 +7,7 @@ use crate::units::Vec3Length;
 use crate::voronoi::DVector;
 
 pub trait Dimension {
+    const NUM: i32;
     type Length;
     type Point: Clone + Copy + DVector + IntoKey + std::fmt::Debug;
     type UnitPoint: Clone + Copy + IntoKey + std::fmt::Debug;
@@ -26,12 +27,14 @@ pub type ActiveDimension = TwoD;
 pub type ActiveDimension = ThreeD;
 
 impl Dimension for TwoD {
+    const NUM: i32 = 2;
     type Length = Length;
     type Point = MVec2;
     type UnitPoint = Vec2Length;
 }
 
 impl Dimension for ThreeD {
+    const NUM: i32 = 3;
     type Length = Length;
     type Point = MVec3;
     type UnitPoint = Vec3Length;

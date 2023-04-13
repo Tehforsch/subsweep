@@ -266,6 +266,7 @@ mod tests {
 
     pub struct OneD;
     impl Dimension for OneD {
+        const NUM: i32 = 1;
         type Length = Length;
         type Point = f64;
         type UnitPoint = Length;

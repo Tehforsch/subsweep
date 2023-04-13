@@ -5,6 +5,7 @@ use super::Delaunay;
 use super::Point;
 use super::TetraIndex;
 use crate::communication::DataByRank;
+use crate::dimension::Dimension;
 use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
@@ -26,6 +27,15 @@ const SEARCH_SAFETY_FACTOR: f64 = 1.05;
 /// to find all their haloes. If the factor is too high, we risk importing way
 /// too many haloes than are needed to construct the proper triangulation.
 const SEARCH_RADIUS_INCREASE_FACTOR: f64 = 1.25;
+
+/// By how much to decrease the initial maximally allowed search radius below the
+/// "cartesian" cell size of side_length / num_particles_per_dimension
+const INITIAL_SEARCH_RADIUS_GUESS_FACTOR: f64 = 1e-1;
+
+pub fn get_characteristic_length<D: Dimension>(max_side_length: f64, num_particles: usize) -> f64 {
+    let num_particles_per_dim = (num_particles as f64).powf(1.0 / D::NUM as f64);
+    (max_side_length / num_particles_per_dim) * INITIAL_SEARCH_RADIUS_GUESS_FACTOR
+}
 
 #[derive(Clone, Debug)]
 pub struct SearchData<D: DDimension> {
@@ -65,6 +75,7 @@ pub(super) struct HaloIteration<D: DDimension, F> {
     search: F,
     pub haloes: BiMap<ParticleId, PointIndex>,
     undecided_tetras: Vec<UndecidedTetraInfo<D>>,
+    characteristic_length: Float,
 }
 
 impl<D, F: RadiusSearch<D>> HaloIteration<D, F>
@@ -74,12 +85,13 @@ where
     F: RadiusSearch<D>,
     Cell<D>: DCell<Dimension = D>,
 {
-    pub fn new(triangulation: Triangulation<D>, search: F) -> Self {
+    pub fn new(triangulation: Triangulation<D>, search: F, characteristic_length: Float) -> Self {
         let mut h = Self {
             triangulation,
             search,
             haloes: BiMap::default(),
             undecided_tetras: vec![],
+            characteristic_length,
         };
         h.set_all_tetras_undecided();
         h
@@ -97,11 +109,11 @@ where
         for (rank, results) in search_results.into_iter() {
             for SearchResult {
                 point,
-                id: particle_id,
+                id,
                 periodic_wrap_type,
             } in results
             {
-                assert!(self.haloes.get_by_left(&particle_id).is_none());
+                assert!(self.haloes.get_by_left(&id).is_none());
                 let (point_index, changed_tetras) =
                     self.triangulation.insert(point, PointKind::Halo(rank));
                 for tetra in changed_tetras.iter() {
@@ -110,13 +122,12 @@ where
                             .push(self.get_undecided_tetra_info_for_new_tetra(*tetra));
                     }
                 }
-                self.haloes.insert(particle_id, point_index);
+                self.haloes.insert(id, point_index);
             }
         }
     }
 
     fn get_radius_search_data(&mut self) -> Vec<SearchData<D>> {
-        let characteristic_length = 1.0e18;
         let search_data: Vec<_> = self
             .undecided_tetras
             .iter_mut()
@@ -129,7 +140,7 @@ where
                     Some(radius) => {
                         (radius * SEARCH_RADIUS_INCREASE_FACTOR).min(max_necessary_radius)
                     }
-                    None => max_necessary_radius.min(characteristic_length),
+                    None => max_necessary_radius.min(self.characteristic_length),
                 };
                 undecided.search_radius = Some(search_radius);
                 Some(SearchData::<D> {
@@ -183,7 +194,6 @@ where
 mod tests {
     use std::fmt::Debug;
 
-    use super::HaloIteration;
     use super::RadiusSearch;
     use super::SearchData;
     use super::SearchResults;
@@ -199,7 +209,9 @@ mod tests {
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::constructor::halo_cache::HaloCache;
     use crate::voronoi::constructor::Constructor;
+    use crate::voronoi::delaunay::dimension::DTetra;
     use crate::voronoi::delaunay::Delaunay;
+    use crate::voronoi::delaunay::PointKind;
     use crate::voronoi::primitives::point::DVector;
     use crate::voronoi::test_utils::TestDimension;
     use crate::voronoi::Cell;
@@ -276,24 +288,29 @@ mod tests {
     fn all_points_in_radius_imported<D>(
         sub_triangulation_data: &TriangulationData<D>,
         points: Vec<(ParticleId, Point<D>)>,
-        extent: Extent<Point<D>>,
     ) where
         D: DDimension + TestDimension + Clone + Debug,
         Triangulation<D>: Delaunay<D>,
         Point<D>: DVector,
         Cell<D>: DCell<Dimension = D>,
     {
-        let search = TestRadiusSearch {
-            points: vec![],
-            extent,
-            cache: HaloCache::default(),
-        };
-        let mut halo_iteration =
-            HaloIteration::new(sub_triangulation_data.triangulation.clone(), search.clone());
-        for data in halo_iteration.get_radius_search_data() {
+        for (t, tetra) in sub_triangulation_data.triangulation.tetras.iter() {
+            if tetra
+                .points()
+                .all(|p| sub_triangulation_data.triangulation.point_kinds[&p] != PointKind::Inner)
+            {
+                continue;
+            }
+            let c = sub_triangulation_data
+                .triangulation
+                .get_tetra_circumcircle(t);
+            let search = SearchData::<D> {
+                point: c.center,
+                radius: c.radius,
+            };
             let points_in_radius = points
                 .iter()
-                .filter(|(_, p)| p.distance(data.point) < data.radius);
+                .filter(|(_, p)| p.distance(search.point) < search.radius);
             for (id, _) in points_in_radius {
                 assert!(sub_triangulation_data
                     .triangulation
@@ -337,7 +354,7 @@ mod tests {
         let sub_data = sub_constructor.data;
         let full_voronoi = full_data.construct_voronoi();
         let sub_voronoi = sub_data.construct_voronoi();
-        all_points_in_radius_imported(&sub_data, points.clone(), extent);
+        all_points_in_radius_imported(&sub_data, points.clone());
         for (id, _) in local_points.iter() {
             let c1 = get_cell_for_particle(&full_voronoi, &full_data, *id);
             let c2 = get_cell_for_particle(&sub_voronoi, &sub_data, *id);

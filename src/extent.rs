@@ -8,6 +8,7 @@ use mpi::traits::Equivalence;
 use mpi::Address;
 use serde::Serialize;
 
+use crate::voronoi::DVector;
 use crate::voronoi::MinMax;
 
 #[derive(Clone, Serialize, Default)]
@@ -30,6 +31,13 @@ impl<P: Add<P, Output = P> + Sub<P, Output = P> + Div<f64, Output = P> + Clone +
     pub fn including_periodic_images(&self) -> Self {
         let dist = self.max - self.min;
         Self::from_min_max(self.min - dist, self.max + dist)
+    }
+}
+
+impl<P: DVector> Extent<P> {
+    pub fn max_side_length(&self) -> f64 {
+        let side_length = self.max - self.min;
+        side_length.max_element()
     }
 }
 

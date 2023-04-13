@@ -27,6 +27,7 @@ pub trait DVector:
     fn distance_squared(&self, p: Self) -> Float;
     fn normalize(&self) -> Self;
     fn dot(self, other: Self) -> Float;
+    fn max_element(self) -> Float;
 }
 
 pub trait MinMax {
@@ -51,6 +52,10 @@ macro_rules! impl_for_vector {
 
             fn dot(self, other: Self) -> Float {
                 $vec::dot(self, other)
+            }
+
+            fn max_element(self) -> Float {
+                $vec::max_element(self)
             }
         }
     };
@@ -93,6 +98,10 @@ impl DVector for f64 {
 
     fn dot(self, other: Self) -> Float {
         self * other
+    }
+
+    fn max_element(self) -> Float {
+        self
     }
 }
 

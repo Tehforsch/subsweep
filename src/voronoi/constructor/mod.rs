@@ -29,6 +29,7 @@ use crate::prelude::ParticleId;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
+use crate::voronoi::constructor::halo_iteration::get_characteristic_length;
 use crate::voronoi::DDimension;
 
 pub struct Constructor<D: DDimension> {
@@ -53,11 +54,13 @@ where
         let extent = search
             .determine_global_extent()
             .unwrap_or_else(|| get_extent(points.iter().map(|p| p.1)).unwrap());
+        let characteristic_length =
+            get_characteristic_length::<D>(extent.max_side_length(), points.len());
         let extent = extent.including_periodic_images();
         let (triangulation, mut map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
         debug!("Finished local Delaunay construction, starting halo iteration.");
-        let mut iteration = HaloIteration::new(triangulation, search);
+        let mut iteration = HaloIteration::new(triangulation, search, characteristic_length);
         iteration.run();
         map.extend(iteration.haloes);
         let data = TriangulationData::from_triangulation_and_map(iteration.triangulation, map);
