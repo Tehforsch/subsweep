@@ -5,11 +5,13 @@ use crate::domain::key::IntoKey;
 use crate::extent::Extent as VExtent;
 use crate::peano_hilbert::PeanoKey2d;
 use crate::peano_hilbert::PeanoKey3d;
+use crate::units::Area;
 use crate::units::Length;
 use crate::units::MVec2;
 use crate::units::MVec3;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
+use crate::units::Volume;
 
 pub type Extent2d = VExtent<Vec2Length>;
 pub type Extent3d = VExtent<Vec3Length>;
@@ -241,6 +243,11 @@ impl Extent2d {
             && self.min.y() <= pos.y()
             && pos.y() <= self.max.y()
     }
+
+    pub fn volume(&self) -> Area {
+        let s = self.side_lengths();
+        s.x() * s.y()
+    }
 }
 
 impl Extent3d {
@@ -301,6 +308,11 @@ impl Extent3d {
             && pos.y() <= self.max.y()
             && self.min.z() <= pos.z()
             && pos.z() <= self.max.z()
+    }
+
+    pub fn volume(&self) -> Volume {
+        let s = self.side_lengths();
+        s.x() * s.y() * s.z()
     }
 }
 

@@ -25,6 +25,7 @@ use crate::communication::CommunicationPlugin;
 use crate::communication::WorldRank;
 use crate::components::Position;
 use crate::named::Named;
+use crate::parameters::SimulationBox;
 use crate::peano_hilbert::PeanoKey3d;
 use crate::prelude::Communicator;
 use crate::prelude::ParticleId;
@@ -141,6 +142,7 @@ pub(super) fn determine_global_extent_system(
     particles: Particles<&Position>,
     mut extent_communicator: Communicator<CommunicatedOption<Extent>>,
     mut global_extent: ResMut<GlobalExtent>,
+    box_: Res<SimulationBox>,
 ) {
     let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
     let all_extents = (*extent_communicator).all_gather(&extent.into());
@@ -150,6 +152,15 @@ pub(super) fn determine_global_extent_system(
             .expect("Failed to find simulation extent - are there no particles?")
             .pad(),
     );
+    let volume_ratio = global_extent.volume() / box_.volume();
+    if volume_ratio.value() < 0.8 {
+        error!(
+            "The particles fill out a small region of the simulation box ({:.1}%). Particles range from {:.2?} to {:.2?}",
+            volume_ratio.in_percent(),
+            extent.min,
+            extent.max,
+        );
+    }
 }
 
 fn determine_particle_ids_system(
