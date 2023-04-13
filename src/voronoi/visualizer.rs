@@ -1,3 +1,6 @@
+use std::fs;
+use std::path::PathBuf;
+
 use super::constructor::SearchData;
 use super::delaunay::dimension::DDimension;
 use super::delaunay::Delaunay;
@@ -40,6 +43,7 @@ pub type Name = String;
 pub struct Visualizer {
     statement_names: HashMap<Statement, Name>,
     statements: Vec<Statement>,
+    pub f: Option<PathBuf>,
 }
 
 impl Visualizer {
@@ -79,7 +83,12 @@ impl Visualizer {
                 }
             })
             .collect();
-        println!("Execute({{ {} }})", statements.join(", "));
+        let contents = format!("Execute({{ {} }})", statements.join(", "));
+        if let Some(f) = &self.f {
+            fs::write(&f, &contents).unwrap();
+        } else {
+            println!("{}", &contents);
+        }
     }
 }
 
@@ -237,6 +246,7 @@ macro_rules! vis {
     ( $( $x:expr ),* ) => {
         {
             let mut temp_vis = $crate::voronoi::visualizer::Visualizer::default();
+            temp_vis.f = Some(std::path::Path::new(&format!("vis/out{}", crate::mpi_log::RANK.load(core::sync::atomic::Ordering::SeqCst))).into());
             $(
                 temp_vis.add($x);
             )*
