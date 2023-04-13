@@ -14,10 +14,8 @@ use crate::communication::ExchangeCommunicator;
 use crate::components::Position;
 use crate::dimension::ThreeD;
 use crate::domain::Decomposition;
-use crate::domain::GlobalExtent;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
-use crate::extent::Extent;
 use crate::grid::ParticleType;
 use crate::parameters::SimulationBox;
 use crate::particle::HaloParticle;
@@ -73,24 +71,18 @@ fn construct_grid_system(
     mut finished_comm: Communicator<SendNum>,
     tree: Res<QuadTree>,
     decomposition: Res<Decomposition>,
-    global_extent: Res<GlobalExtent>,
     box_: Res<SimulationBox>,
     map: Res<IdEntityMap>,
 ) {
-    let extent = Extent::from_min_max(
-        global_extent.min.value_unchecked(),
-        global_extent.max.value_unchecked(),
+    let search = ParallelSearch::new(
+        &mut *data_comm,
+        &mut *result_comm,
+        &mut finished_comm,
+        &tree,
+        &decomposition,
+        box_.clone(),
+        HaloCache::default(),
     );
-    let search = ParallelSearch {
-        data_comm: &mut *data_comm,
-        result_comm: &mut *result_comm,
-        finished_comm: &mut finished_comm,
-        global_extent: extent,
-        tree: &tree,
-        decomposition: &decomposition,
-        box_: box_.clone(),
-        halo_cache: HaloCache::default(),
-    };
     let cons = Constructor::<ThreeD>::construct_from_iter(
         particles.iter().map(|(_, i, p)| (*i, p.value_unchecked())),
         search,

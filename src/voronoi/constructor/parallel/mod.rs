@@ -36,6 +36,11 @@ use crate::voronoi::DDimension;
 type MpiSearchData<D> = <SearchData<D> as IntoEquivalenceType>::Equiv;
 type MpiSearchResult<D> = <SearchResult<D> as IntoEquivalenceType>::Equiv;
 
+type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
+type IncomingRequests<D> = DataByRank<Vec<SearchData<D>>>;
+type OutgoingResults<D> = DataByRank<Vec<MpiSearchResult<D>>>;
+type IncomingResults<D> = DataByRank<SearchResults<D>>;
+
 #[derive(Clone, Add, Sum, Equivalence)]
 struct SendNum(pub usize);
 
@@ -47,17 +52,12 @@ where
     data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
     result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<D>>,
     finished_comm: &'a mut Communicator<SendNum>,
-    global_extent: Extent<Point<D>>,
     tree: &'a QuadTree,
     decomposition: &'a Decomposition,
     box_: SimulationBox,
     halo_cache: HaloCache,
+    extent: Extent<Point<D>>,
 }
-
-type OutgoingRequests<D> = DataByRank<Vec<MpiSearchData<D>>>;
-type IncomingRequests<D> = DataByRank<Vec<SearchData<D>>>;
-type OutgoingResults<D> = DataByRank<Vec<MpiSearchResult<D>>>;
-type IncomingResults<D> = DataByRank<SearchResults<D>>;
 
 fn find_wrapped_point(
     box_: &SimulationBox,
@@ -77,6 +77,28 @@ fn find_wrapped_point(
 }
 
 impl<'a> ParallelSearch<'a, ActiveDimension> {
+    fn new(
+        data_comm: &'a mut ExchangeCommunicator<MpiSearchData<ActiveDimension>>,
+        result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<ActiveDimension>>,
+        finished_comm: &'a mut Communicator<SendNum>,
+        tree: &'a QuadTree,
+        decomposition: &'a Decomposition,
+        box_: SimulationBox,
+        halo_cache: HaloCache,
+    ) -> Self {
+        let extent = Extent::from_min_max(box_.min.value_unchecked(), box_.max.value_unchecked());
+        Self {
+            data_comm,
+            result_comm,
+            finished_comm,
+            tree,
+            decomposition,
+            box_,
+            halo_cache,
+            extent: extent,
+        }
+    }
+
     fn get_outgoing_searches(
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
@@ -88,11 +110,10 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                     search.point,
                     search.radius,
                 );
-                if self.decomposition.rank_owns_part_of_search_radius(
-                    rank,
-                    &extent,
-                    &self.global_extent,
-                ) {
+                if self
+                    .decomposition
+                    .rank_owns_part_of_search_radius(rank, &extent, &self.extent)
+                {
                     outgoing[rank].push(search.to_equivalent());
                 }
             }
@@ -213,7 +234,7 @@ impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
     }
 
     fn determine_global_extent(&self) -> Option<Extent<Point<ActiveDimension>>> {
-        Some(self.global_extent.clone())
+        Some(self.extent.clone())
     }
 
     fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool {
