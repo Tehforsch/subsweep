@@ -46,11 +46,20 @@ impl RaxiomPlugin for ParallelVoronoiGridConstruction {
     }
 }
 
-fn warn_if_halo_fraction_too_high(num_local_particles: usize, num_haloes: usize) {
+fn warn_if_halo_fraction_too_high(
+    num_local_particles: usize,
+    num_haloes: usize,
+    num_relevant_haloes: usize,
+) {
     const HALO_FRACTION_WARNING_TRESHOLD: f64 = 0.05;
     let halo_fraction = num_haloes as f64 / num_local_particles as f64;
+    let relevant_halo_fraction = num_relevant_haloes as f64 / num_local_particles as f64;
     if halo_fraction > HALO_FRACTION_WARNING_TRESHOLD {
-        warn!("High halo fraction: {:.1}%", halo_fraction * 100.0);
+        warn!(
+            "High halo fraction: {:.1}% ({:.1}% of those are relevant)",
+            halo_fraction * 100.0,
+            relevant_halo_fraction * 100.0
+        );
     } else {
         debug!("Halo fraction: {:.1}%", halo_fraction * 100.0);
     }
@@ -87,6 +96,7 @@ fn construct_grid_system(
         search,
     );
     let mut num_haloes = 0;
+    let mut num_relevant_haloes = 0;
     let mut num_local_particles = 0;
     for (cell_index, cell) in cons.sweep_grid() {
         match cell_index {
@@ -103,14 +113,15 @@ fn construct_grid_system(
                 // during the delaunay construction and then turned out not to be relevant.
                 // We don't need to spawn a halo particle in this case.
                 if has_local_neighbours {
+                    num_relevant_haloes += 1;
                     let pos = cons.get_position_for_cell(cell_index);
                     let pos = VecLength::new_unchecked(pos);
                     commands.spawn((HaloParticle { rank: remote.rank }, Position(pos), remote.id));
                 }
             }
             ParticleType::Boundary => unreachable!(),
-            ParticleType::PeriodicHalo(_) => todo!(),
+            ParticleType::PeriodicHalo(_) => {}
         }
     }
-    warn_if_halo_fraction_too_high(num_local_particles, num_haloes);
+    warn_if_halo_fraction_too_high(num_local_particles, num_haloes, num_relevant_haloes);
 }

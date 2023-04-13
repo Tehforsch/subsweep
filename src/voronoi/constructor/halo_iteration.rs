@@ -35,7 +35,7 @@ const SEARCH_RADIUS_INCREASE_FACTOR: f64 = 1.25;
 
 /// By how much to decrease the initial maximally allowed search radius below the
 /// "cartesian" cell size of side_length / num_particles_per_dimension
-const INITIAL_SEARCH_RADIUS_GUESS_FACTOR: f64 = 1e-1;
+const INITIAL_SEARCH_RADIUS_GUESS_FACTOR: f64 = 0.5;
 
 pub fn get_characteristic_length<D: Dimension>(max_side_length: f64, num_particles: usize) -> f64 {
     let num_particles_per_dim = (num_particles as f64).powf(1.0 / D::NUM as f64);
