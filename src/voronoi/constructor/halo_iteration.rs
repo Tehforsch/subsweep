@@ -129,13 +129,7 @@ where
                     Some(radius) => {
                         (radius * SEARCH_RADIUS_INCREASE_FACTOR).min(max_necessary_radius)
                     }
-                    None => {
-                        if undecided.circumcircle.radius < characteristic_length {
-                            max_necessary_radius
-                        } else {
-                            characteristic_length
-                        }
-                    }
+                    None => max_necessary_radius.min(characteristic_length),
                 };
                 undecided.search_radius = Some(search_radius);
                 Some(SearchData::<D> {
