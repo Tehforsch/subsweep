@@ -88,9 +88,9 @@ fn construct_grid_system(
     );
     let mut num_haloes = 0;
     let mut num_local_particles = 0;
-    for (id, type_, cell) in cons.sweep_grid() {
-        match type_ {
-            ParticleType::Local(_) => {
+    for (cell_index, cell) in cons.sweep_grid() {
+        match cell_index {
+            ParticleType::Local(id) => {
                 num_local_particles += 1;
                 let entity = map.get_by_left(&id).unwrap();
                 commands.entity(*entity).insert(cell);
@@ -103,7 +103,7 @@ fn construct_grid_system(
                 // during the delaunay construction and then turned out not to be relevant.
                 // We don't need to spawn a halo particle in this case.
                 if has_local_neighbours {
-                    let pos = cons.get_position_for_particle_id(id);
+                    let pos = cons.get_position_for_cell(cell_index);
                     let pos = VecLength::new_unchecked(pos);
                     commands.spawn((HaloParticle { rank: remote.rank }, Position(pos), remote.id));
                 }

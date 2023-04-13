@@ -17,6 +17,7 @@ use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
+use crate::simulation_box::PeriodicWrapType3d;
 use crate::units::Length;
 use crate::units::VecLength;
 use crate::units::Volume;
@@ -243,6 +244,7 @@ impl GridConstructor {
                                 ParticleType::Remote(RemoteNeighbour {
                                     id: self.ids[&neighbour],
                                     rank: self.get_rank(neighbour),
+                                    periodic_wrap_type: PeriodicWrapType3d::no_wrap(),
                                 }),
                             )
                         }

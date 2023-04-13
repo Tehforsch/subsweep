@@ -2,6 +2,7 @@ use bevy::prelude::Component;
 
 use crate::communication::Rank;
 use crate::particle::ParticleId;
+use crate::simulation_box::PeriodicWrapType3d;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
@@ -12,12 +13,12 @@ pub type FaceArea = crate::units::Length;
 #[cfg(not(feature = "2d"))]
 pub type FaceArea = crate::units::Area;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 pub enum ParticleType {
     Local(ParticleId),
     Remote(RemoteNeighbour),
     Boundary,
-    PeriodicHalo(ParticleId),
+    PeriodicHalo(PeriodicNeighbour),
 }
 
 impl ParticleType {
@@ -43,16 +44,23 @@ impl ParticleType {
         match self {
             Self::Local(particle_id) => *particle_id,
             Self::Remote(neighbour) => neighbour.id,
-            Self::PeriodicHalo(particle_id) => *particle_id,
+            Self::PeriodicHalo(periodic) => periodic.id,
             _ => panic!("Unwrap id called on boundary neighbour"),
         }
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 pub struct RemoteNeighbour {
     pub id: ParticleId,
     pub rank: Rank,
+    pub periodic_wrap_type: PeriodicWrapType3d,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+pub struct PeriodicNeighbour {
+    pub id: ParticleId,
+    pub periodic_wrap_type: PeriodicWrapType3d,
 }
 
 #[derive(Debug, Component, Clone)]

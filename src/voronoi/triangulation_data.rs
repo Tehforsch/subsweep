@@ -12,7 +12,6 @@ use super::Triangulation;
 use super::VoronoiGrid;
 use crate::dimension::Point;
 use crate::grid::ParticleType;
-use crate::grid::RemoteNeighbour;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashMap;
 
@@ -39,7 +38,7 @@ where
 
     pub fn from_triangulation_and_map(
         t: Triangulation<D>,
-        map: BiMap<CellIndex, PointIndex>,
+        point_to_cell_map: BiMap<ParticleType, PointIndex>,
     ) -> Self {
         let tetra_to_voronoi_point_map = t
             .tetras
@@ -50,7 +49,7 @@ where
         Self {
             triangulation: t,
             point_to_tetras_map,
-            point_to_cell_map: map,
+            point_to_cell_map,
             tetra_to_voronoi_point_map,
         }
     }
@@ -66,16 +65,10 @@ where
     }
 
     pub fn get_particle_type(&self, p: PointIndex) -> ParticleType {
-        use ParticleType::*;
-        use PointKind::*;
-        match self.triangulation.point_kinds[&p] {
-            Inner => Local(*self.point_to_cell_map.get_by_right(&p).unwrap()),
-            Outer => Boundary,
-            Halo(rank) => Remote(RemoteNeighbour {
-                id: *self.point_to_cell_map.get_by_right(&p).unwrap(),
-                rank,
-            }),
+        if self.triangulation.point_kinds[&p] == PointKind::Outer {
+            return ParticleType::Boundary;
         }
+        *self.point_to_cell_map.get_by_right(&p).unwrap()
     }
 }
 

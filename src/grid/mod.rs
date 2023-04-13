@@ -7,4 +7,5 @@ pub use cell::Cell;
 pub use cell::Face;
 pub use cell::FaceArea;
 pub use cell::ParticleType;
+pub use cell::PeriodicNeighbour;
 pub use cell::RemoteNeighbour;

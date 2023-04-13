@@ -25,9 +25,9 @@ pub use primitives::Point2d;
 pub use primitives::Point3d;
 pub use triangulation_data::TriangulationData;
 
-use crate::prelude::ParticleId;
+use crate::grid::ParticleType;
 
-pub type CellIndex = ParticleId;
+pub type CellIndex = ParticleType;
 
 #[derive(Resource)]
 pub struct VoronoiGrid<D: DDimension> {
@@ -61,6 +61,7 @@ mod tests {
     use super::VoronoiGrid;
     use crate::dimension::ThreeD;
     use crate::dimension::TwoD;
+    use crate::grid::ParticleType;
     use crate::prelude::ParticleId;
     use crate::voronoi::primitives::point::DVector;
 
@@ -82,7 +83,7 @@ mod tests {
                 .points
                 .iter()
                 .enumerate()
-                .map(|(i, (p, _))| (ParticleId(i as u64), p))
+                .map(|(i, (p, _))| (ParticleType::Local(ParticleId(i as u64)), p))
                 .collect();
             check(
                 &TriangulationData::from_triangulation_and_map(t.clone(), map),
@@ -155,7 +156,9 @@ mod quantitative_tests {
             (ParticleId(3), Point2d::new(0.25, 0.25)),
         ];
         let cons = Constructor::new(points.into_iter());
-        let last_point_index = cons.get_point_by_particle_id(ParticleId(3)).unwrap();
+        let last_point_index = cons
+            .get_point_by_cell(ParticleType::Local(ParticleId(3)))
+            .unwrap();
         let grid: VoronoiGrid<TwoD> = cons.voronoi();
         assert_eq!(grid.cells.len(), 4);
         // Find the cell associated with the (0.25, 0.25) point above. This cell should be a triangle.
@@ -195,7 +198,9 @@ mod quantitative_tests {
             (ParticleId(4), Point3d::new(0.1, 0.1, 0.1)),
         ];
         let cons = Constructor::new(points.into_iter());
-        let last_point_index = cons.get_point_by_particle_id(ParticleId(4)).unwrap();
+        let last_point_index = cons
+            .get_point_by_cell(ParticleType::Local(ParticleId(4)))
+            .unwrap();
         let grid: VoronoiGrid<ThreeD> = cons.voronoi();
         assert_eq!(grid.cells.len(), 5);
         // Find the cell associated with the (0.25, 0.25, 0.25) point above.

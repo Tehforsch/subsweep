@@ -223,4 +223,8 @@ impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
         info!("{} tetras undecided", total_undecided.0);
         total_undecided.0 == 0
     }
+
+    fn rank(&self) -> Rank {
+        self.data_comm.rank()
+    }
 }

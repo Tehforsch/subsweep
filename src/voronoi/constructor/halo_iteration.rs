@@ -5,8 +5,12 @@ use super::Delaunay;
 use super::Point;
 use super::TetraIndex;
 use crate::communication::DataByRank;
+use crate::communication::Rank;
 use crate::dimension::Dimension;
 use crate::extent::Extent;
+use crate::grid::ParticleType;
+use crate::grid::PeriodicNeighbour;
+use crate::grid::RemoteNeighbour;
 use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
 use crate::simulation_box::PeriodicWrapType3d;
@@ -14,6 +18,7 @@ use crate::voronoi::delaunay::Circumcircle;
 use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::Float;
+use crate::voronoi::CellIndex;
 use crate::voronoi::DDimension;
 use crate::voronoi::Triangulation;
 
@@ -56,6 +61,7 @@ pub trait RadiusSearch<D: DDimension> {
     fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
     fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
+    fn rank(&self) -> Rank;
 }
 
 struct UndecidedTetraInfo<D: DDimension> {
@@ -73,7 +79,7 @@ impl<D: DDimension> UndecidedTetraInfo<D> {
 pub(super) struct HaloIteration<D: DDimension, F> {
     pub triangulation: Triangulation<D>,
     search: F,
-    pub haloes: BiMap<ParticleId, PointIndex>,
+    pub haloes: BiMap<CellIndex, PointIndex>,
     undecided_tetras: Vec<UndecidedTetraInfo<D>>,
     characteristic_length: Float,
 }
@@ -113,7 +119,19 @@ where
                 periodic_wrap_type,
             } in results
             {
-                assert!(self.haloes.get_by_left(&id).is_none());
+                let ptype = if rank == self.search.rank() {
+                    ParticleType::PeriodicHalo(PeriodicNeighbour {
+                        id,
+                        periodic_wrap_type,
+                    })
+                } else {
+                    ParticleType::Remote(RemoteNeighbour {
+                        id,
+                        rank,
+                        periodic_wrap_type,
+                    })
+                };
+                assert!(self.haloes.get_by_left(&ptype).is_none());
                 let (point_index, changed_tetras) =
                     self.triangulation.insert(point, PointKind::Halo(rank));
                 for tetra in changed_tetras.iter() {
@@ -122,7 +140,7 @@ where
                             .push(self.get_undecided_tetra_info_for_new_tetra(*tetra));
                     }
                 }
-                self.haloes.insert(id, point_index);
+                self.haloes.insert(ptype, point_index);
             }
         }
     }
@@ -198,6 +216,7 @@ mod tests {
     use super::SearchData;
     use super::SearchResults;
     use crate::communication::DataByRank;
+    use crate::communication::Rank;
     use crate::dimension::Point;
     use crate::dimension::ThreeD;
     use crate::dimension::TwoD;
@@ -215,6 +234,7 @@ mod tests {
     use crate::voronoi::primitives::point::DVector;
     use crate::voronoi::test_utils::TestDimension;
     use crate::voronoi::Cell;
+    use crate::voronoi::CellIndex;
     use crate::voronoi::DCell;
     use crate::voronoi::DDimension;
     use crate::voronoi::Triangulation;
@@ -270,9 +290,13 @@ mod tests {
         fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool {
             num_undecided_this_rank == 0
         }
+
+        fn rank(&self) -> Rank {
+            0
+        }
     }
 
-    fn get_cell_for_particle<D: DDimension, 'a>(
+    fn get_cell_for_local_particle<D: DDimension, 'a>(
         grid: &'a VoronoiGrid<D>,
         cons: &'a TriangulationData<D>,
         particle: ParticleId,
@@ -280,7 +304,11 @@ mod tests {
         grid.cells
             .iter()
             .find(|cell| {
-                cell.delaunay_point == *cons.point_to_cell_map.get_by_left(&particle).unwrap()
+                cell.delaunay_point
+                    == *cons
+                        .point_to_cell_map
+                        .get_by_left(&CellIndex::Local(particle))
+                        .unwrap()
             })
             .unwrap()
     }
@@ -320,7 +348,14 @@ mod tests {
                         sub_triangulation_data
                             .point_to_cell_map
                             .get_by_right(&p_index)
-                            == Some(id)
+                            .map(|cell_index| {
+                                if *cell_index == CellIndex::Boundary {
+                                    false
+                                } else {
+                                    cell_index.unwrap_id() == *id
+                                }
+                            })
+                            .unwrap_or(false)
                     }));
             }
         }
@@ -356,8 +391,8 @@ mod tests {
         let sub_voronoi = sub_data.construct_voronoi();
         all_points_in_radius_imported(&sub_data, points.clone());
         for (id, _) in local_points.iter() {
-            let c1 = get_cell_for_particle(&full_voronoi, &full_data, *id);
-            let c2 = get_cell_for_particle(&sub_voronoi, &sub_data, *id);
+            let c1 = get_cell_for_local_particle(&full_voronoi, &full_data, *id);
+            let c2 = get_cell_for_local_particle(&sub_voronoi, &sub_data, *id);
             assert_eq!(c1.is_infinite, c2.is_infinite);
             // Infinite cells (i.e. those neighbouring the boundary) might very well
             // differ in exact shape because of the different encompassing tetras,

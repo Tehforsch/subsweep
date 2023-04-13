@@ -136,6 +136,13 @@ pub struct PeriodicWrapType3d {
 }
 
 impl PeriodicWrapType3d {
+    pub fn no_wrap() -> Self {
+        Self {
+            x: WrapType::NoWrap,
+            y: WrapType::NoWrap,
+            z: WrapType::NoWrap,
+        }
+    }
     pub fn is_periodic(&self) -> bool {
         self.x != WrapType::NoWrap || self.y != WrapType::NoWrap || self.z != WrapType::NoWrap
     }

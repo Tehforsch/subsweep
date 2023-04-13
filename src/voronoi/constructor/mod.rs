@@ -25,6 +25,7 @@ use crate::extent::get_extent;
 use crate::grid;
 use crate::grid::FaceArea;
 use crate::grid::ParticleType;
+use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
 use crate::units::Length;
 use crate::units::VecDimensionless;
@@ -43,7 +44,7 @@ where
     Cell<D>: DCell<Dimension = D>,
 {
     pub fn construct_from_iter<'b, F>(
-        iter: impl Iterator<Item = (CellIndex, Point<D>)> + 'b,
+        iter: impl Iterator<Item = (ParticleId, Point<D>)> + 'b,
         search: F,
     ) -> Self
     where
@@ -57,8 +58,12 @@ where
         let characteristic_length =
             get_characteristic_length::<D>(extent.max_side_length(), points.len());
         let extent = extent.including_periodic_images();
-        let (triangulation, mut map) =
+        let (triangulation, map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
+        let mut map: BiMap<_, _> = map
+            .into_iter()
+            .map(|(id, p)| (ParticleType::Local(id), p))
+            .collect();
         debug!("Finished local Delaunay construction, starting halo iteration.");
         let mut iteration = HaloIteration::new(triangulation, search, characteristic_length);
         iteration.run();
@@ -67,7 +72,7 @@ where
         Self { data }
     }
 
-    pub fn new(points: impl Iterator<Item = (CellIndex, Point<D>)>) -> Self {
+    pub fn new(points: impl Iterator<Item = (ParticleId, Point<D>)>) -> Self {
         Self::construct_from_iter(points, Local)
     }
 
@@ -83,39 +88,35 @@ where
         self.data.construct_voronoi()
     }
 
-    pub fn get_particle_id_by_point(&self, point_index: PointIndex) -> Option<ParticleId> {
+    pub fn get_cell_by_point(&self, point_index: PointIndex) -> Option<ParticleType> {
         self.data
             .point_to_cell_map
             .get_by_right(&point_index)
-            .copied()
+            .cloned()
     }
 
-    pub fn get_point_by_particle_id(&self, particle_id: ParticleId) -> Option<PointIndex> {
+    pub fn get_point_by_cell(&self, cell_index: CellIndex) -> Option<PointIndex> {
         self.data
             .point_to_cell_map
-            .get_by_left(&particle_id)
+            .get_by_left(&cell_index)
             .copied()
     }
 
-    pub fn get_position_for_particle_id(&self, id: ParticleId) -> Point<D> {
-        self.data.triangulation.points[self.get_point_by_particle_id(id).unwrap()]
+    pub fn get_position_for_cell(&self, cell_index: CellIndex) -> Point<D> {
+        self.data.triangulation.points[self.get_point_by_cell(cell_index).unwrap()]
     }
 }
 
 impl Constructor<ActiveDimension> {
-    pub fn sweep_grid(&self) -> Vec<(CellIndex, ParticleType, grid::Cell)> {
+    pub fn sweep_grid(&self) -> Vec<(ParticleType, grid::Cell)> {
         let voronoi = self.voronoi();
         debug!("Constructing sweep grid.");
         voronoi
             .cells
             .iter()
             .map(|voronoi_cell| {
-                let id = self
-                    .get_particle_id_by_point(voronoi_cell.delaunay_point)
-                    .unwrap();
                 let particle_type = self.data.get_particle_type(voronoi_cell.delaunay_point);
                 (
-                    id,
                     particle_type,
                     grid::Cell {
                         neighbours: voronoi_cell

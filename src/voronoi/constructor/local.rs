@@ -2,6 +2,7 @@ use super::halo_iteration::RadiusSearch;
 use super::halo_iteration::SearchResults;
 use super::SearchData;
 use crate::communication::DataByRank;
+use crate::communication::Rank;
 use crate::dimension::Point;
 use crate::extent::Extent;
 use crate::voronoi::DDimension;
@@ -19,5 +20,9 @@ impl<D: DDimension> RadiusSearch<D> for Local {
 
     fn everyone_finished(&mut self, _: usize) -> bool {
         true
+    }
+
+    fn rank(&self) -> Rank {
+        0
     }
 }
