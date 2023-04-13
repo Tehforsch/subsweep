@@ -68,7 +68,7 @@ pub struct IdEntityMap(BiMap<ParticleId, Entity>);
 
 #[derive(StageLabel)]
 pub enum DomainStartupStages {
-    DetermineGlobalExtents,
+    CheckParticleExtent,
     Decomposition,
     SetOutgoingEntities,
     Exchange,
@@ -87,8 +87,7 @@ pub struct DomainPlugin;
 
 impl RaxiomPlugin for DomainPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.insert_resource(GlobalExtent(Extent::default()))
-            .add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::default())
+        sim.add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::default())
             .add_plugin(CommunicationPlugin::<Work>::default())
             .add_parameter_type::<TreeParameters>();
         sim.add_startup_system_to_stage(
@@ -96,8 +95,8 @@ impl RaxiomPlugin for DomainPlugin {
             determine_particle_ids_system,
         )
         .add_startup_system_to_stage(
-            DomainStartupStages::DetermineGlobalExtents,
-            determine_global_extent_system,
+            DomainStartupStages::CheckParticleExtent,
+            check_particle_extent_system,
         )
         .add_startup_system_to_stage(
             DomainStartupStages::Decomposition,
@@ -118,14 +117,11 @@ impl RaxiomPlugin for DomainPlugin {
     }
 }
 
-#[derive(Debug, Deref, DerefMut, Resource)]
-pub struct GlobalExtent(Extent);
-
 pub fn construct_quad_tree_system(
     mut commands: Commands,
     config: Res<TreeParameters>,
     particles: Particles<(&ParticleId, &Position)>,
-    extent: Res<GlobalExtent>,
+    box_: Res<SimulationBox>,
 ) {
     debug!("Constructing top level tree");
     let particles: Vec<_> = particles
@@ -135,24 +131,20 @@ pub fn construct_quad_tree_system(
             pos: pos.0,
         })
         .collect();
-    commands.insert_resource(QuadTree::new(&config.tree, particles, &extent));
+    commands.insert_resource(QuadTree::new(&config.tree, particles, &box_));
 }
 
-pub(super) fn determine_global_extent_system(
+pub(super) fn check_particle_extent_system(
     particles: Particles<&Position>,
     mut extent_communicator: Communicator<CommunicatedOption<Extent>>,
-    mut global_extent: ResMut<GlobalExtent>,
     box_: Res<SimulationBox>,
 ) {
     let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
     let all_extents = (*extent_communicator).all_gather(&extent.into());
     let all_extents: Vec<Extent> = all_extents.into_iter().filter_map(|x| x.into()).collect();
-    *global_extent = GlobalExtent(
-        Extent::get_all_encompassing(all_extents.iter())
-            .expect("Failed to find simulation extent - are there no particles?")
-            .pad(),
-    );
-    let volume_ratio = global_extent.volume() / box_.volume();
+    let extent = Extent::get_all_encompassing(all_extents.iter())
+        .expect("Failed to find simulation extent - are there no particles?");
+    let volume_ratio = extent.volume() / box_.volume();
     if volume_ratio.value() < 0.8 {
         error!(
             "The particles fill out a small region of the simulation box ({:.1}%). Particles range from {:.2?} to {:.2?}",
@@ -189,15 +181,13 @@ fn update_id_entity_map_system(query: Query<(&ParticleId, Entity)>, mut map: Res
 
 fn domain_decomposition_system(
     mut commands: Commands,
-    global_extent: Res<GlobalExtent>,
+    box_: Res<SimulationBox>,
     particles: Particles<&Position>,
     world_size: Res<WorldSize>,
     mut comm: Communicator<Work>,
 ) {
-    let local_counter = KeyCounter::from_points_and_extent(
-        particles.iter().map(|x| **x).collect(),
-        &global_extent.0,
-    );
+    let local_counter =
+        KeyCounter::from_points_and_extent(particles.iter().map(|x| **x).collect(), &*box_);
     let mut counter = ParallelCounter {
         local_counter,
         comm: &mut *comm,
@@ -211,11 +201,11 @@ fn set_outgoing_entities_system(
     mut outgoing_entities: ResMut<OutgoingEntities>,
     decomposition: Res<Decomposition>,
     world_rank: Res<WorldRank>,
-    global_extent: Res<GlobalExtent>,
+    box_: Res<SimulationBox>,
     particles: Particles<(Entity, &Position)>,
 ) {
     for (entity, pos) in particles.iter() {
-        let key = pos.into_key(&global_extent.0);
+        let key = pos.into_key(&*box_);
         let rank = decomposition.get_owning_rank(key);
         if rank != **world_rank {
             outgoing_entities.add(rank, entity);

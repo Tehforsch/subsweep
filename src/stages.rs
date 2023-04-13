@@ -43,7 +43,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             StartupStage::PostStartup.as_label(),
             SimulationStartupStages::InsertComponents.as_label(),
             SimulationStartupStages::InsertDerivedComponents.as_label(),
-            DomainStartupStages::DetermineGlobalExtents.as_label(),
+            DomainStartupStages::CheckParticleExtent.as_label(),
             DomainStartupStages::Decomposition.as_label(),
             DomainStartupStages::SetOutgoingEntities.as_label(),
             DomainStartupStages::Exchange.as_label(),

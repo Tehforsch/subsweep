@@ -7,7 +7,6 @@ pub use crate::communication::WorldSize;
 pub use crate::dimension::ThreeD;
 pub use crate::dimension::TwoD;
 pub use crate::domain::Extent;
-pub use crate::domain::GlobalExtent;
 pub use crate::named::*;
 pub use crate::particle::LocalParticle;
 pub use crate::particle::ParticleId;

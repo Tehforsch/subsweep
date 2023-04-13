@@ -156,11 +156,11 @@ impl VExtent<MVec2> {
         Self { center, min, max }
     }
 
-    pub fn get_min_and_max_key(&self, global_extent: &Self) -> (PeanoKey2d, PeanoKey2d) {
+    pub fn get_min_and_max_key(&self, box_: &Self) -> (PeanoKey2d, PeanoKey2d) {
         let keys: Vec<_> = self
             .get_extreme_points()
             .iter()
-            .map(|p| p.into_key(global_extent))
+            .map(|p| p.into_key(box_))
             .collect();
         (*keys.iter().min().unwrap(), *keys.iter().max().unwrap())
     }
@@ -182,11 +182,11 @@ impl VExtent<MVec3> {
         Self { center, min, max }
     }
 
-    pub fn get_min_and_max_key(&self, global_extent: &Self) -> (PeanoKey3d, PeanoKey3d) {
+    pub fn get_min_and_max_key(&self, box_: &Self) -> (PeanoKey3d, PeanoKey3d) {
         let keys: Vec<_> = self
             .get_extreme_points()
             .iter()
-            .map(|p| p.into_key(global_extent))
+            .map(|p| p.into_key(box_))
             .collect();
         (*keys.iter().min().unwrap(), *keys.iter().max().unwrap())
     }

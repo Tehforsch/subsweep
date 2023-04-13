@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::CameraTransform;
-use crate::domain::GlobalExtent;
+use crate::parameters::SimulationBox;
 
 #[derive(Component)]
 pub(super) struct WorldCamera;
@@ -14,22 +14,22 @@ pub(super) fn setup_camera_system(mut commands: Commands) {
 
 pub(super) fn camera_translation_system(
     mut camera: Query<&mut Transform, With<WorldCamera>>,
-    extent: Res<GlobalExtent>,
+    box_: Res<SimulationBox>,
     camera_transform: Res<CameraTransform>,
 ) {
     let mut camera = camera.single_mut();
-    let pos = camera_transform.position_to_pixels(extent.center());
+    let pos = camera_transform.position_to_pixels(box_.center());
     camera.translation.x = pos.x;
     camera.translation.y = pos.y;
 }
 
 pub(super) fn camera_scale_system(
-    extent: Res<GlobalExtent>,
+    box_: Res<SimulationBox>,
     mut camera_transform: ResMut<CameraTransform>,
     windows: Res<Windows>,
 ) {
-    let simulation_width = extent.side_lengths().x();
-    let simulation_height = extent.side_lengths().y();
+    let simulation_width = box_.side_lengths().x();
+    let simulation_height = box_.side_lengths().y();
     let window = windows.primary();
     let window_width = window.width().max(300.0);
     let window_height = window.height().max(300.0);
