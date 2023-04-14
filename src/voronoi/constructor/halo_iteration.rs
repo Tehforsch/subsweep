@@ -161,10 +161,27 @@ where
                     }
                     None => max_necessary_radius.min(self.characteristic_length),
                 };
+                let point = if search_radius >= max_necessary_radius {
+                    undecided.circumcircle.center
+                } else {
+                    // If the radius is smaller than the circumcircle, we are really only
+                    // looking to find any close-by points (remote/periodic) to add to the triangulation
+                    // in order to show us that the tetra is not really as big as we currently think it is.
+                    // However, if we search for points around the center of the circumcircle, we might import
+                    // very far away points. As a slightly hacky way that seems to work in practice, we look
+                    // for points around any of the inner points that are part of the tetra in this case.
+                    let tetra = &self.triangulation.tetras[undecided.tetra];
+                    let p_index = tetra
+                        .points()
+                        .filter(|p| self.triangulation.point_kinds[p] == PointKind::Inner)
+                        .next()
+                        .unwrap();
+                    self.triangulation.points[p_index]
+                };
                 undecided.search_radius = Some(search_radius);
                 Some(SearchData::<D> {
                     radius: search_radius,
-                    point: undecided.circumcircle.center,
+                    point,
                 })
             })
             .collect();
