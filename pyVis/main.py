@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-from matplotlib.patches import Circle, Polygon
+from matplotlib.patches import Circle, Polygon, Rectangle
 from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
 
@@ -9,6 +9,8 @@ fig, ax = plt.subplots()
 patches = []
 colors = []
 
+ax.set_xlim([-1.0, 2.0])
+ax.set_ylim([-1.0, 2.0])
 
 def getCircle(args):
     return Circle((args[0], args[1]), args[2])
@@ -23,12 +25,14 @@ def getTriangle(args):
         [args[0], args[1]],
         [args[2], args[3]],
         [args[4], args[5]]])
-    print(ps)
-    return Polygon(ps, closed=True)
+    return Polygon(ps, closed=True, linewidth=0.1, linestyle="-", facecolor="red", fill=False, edgecolor="r")
 
 
 def getColor(args):
-    return tuple(args)
+    if len(args) == 4:
+        return list(args)
+    else:
+        return [0.0, 0.0, 0.0, 1.0]
 
 
 def getPatch(args):
@@ -53,8 +57,10 @@ with open(sys.argv[1], "r") as f:
         patches.append(patch)
         colors.append(color)
 
-p = PatchCollection(patches, alpha=0.4)
-# p.set_array(colors)
+p = PatchCollection(patches, match_original=True)
+p.set_array(None)
+# print(np.array(colors).shape)
+# p.set_array(np.array(colors))
 ax.add_collection(p)
 fig.colorbar(p, ax=ax)
 
