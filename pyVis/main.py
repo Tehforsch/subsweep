@@ -1,16 +1,9 @@
+from pathlib import Path
 import numpy as np
 import sys
 from matplotlib.patches import Circle, Polygon, Rectangle
 from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots()
-
-patches = []
-colors = []
-
-ax.set_xlim([-1.0, 2.0])
-ax.set_ylim([-1.0, 2.0])
 
 def getCircle(args):
     return Circle((args[0], args[1]), args[2])
@@ -50,18 +43,42 @@ def getPatch(args):
     raise NotImplementedError()
 
 
-with open(sys.argv[1], "r") as f:
-    for line in f.readlines():
-        args = line.split(" ")
-        patch, color = getPatch(args)
-        patches.append(patch)
-        colors.append(color)
+def plotFile(fname, show=True):
+    fig, ax = plt.subplots()
 
-p = PatchCollection(patches, match_original=True)
-p.set_array(None)
-# print(np.array(colors).shape)
-# p.set_array(np.array(colors))
-ax.add_collection(p)
-fig.colorbar(p, ax=ax)
+    patches = []
+    colors = []
 
-plt.show()
+    ax.set_xlim([-1.0, 2.0])
+    ax.set_ylim([-1.0, 2.0])
+
+    with open(fname, "r") as f:
+        for line in f.readlines():
+            args = line.split(" ")
+            patch, color = getPatch(args)
+            patches.append(patch)
+            colors.append(color)
+
+    p = PatchCollection(patches, match_original=True)
+    p.set_array(None)
+    # print(np.array(colors).shape)
+    # p.set_array(np.array(colors))
+    ax.add_collection(p)
+    fig.colorbar(p, ax=ax)
+
+    if show:
+        plt.show()
+    else:
+        fname = Path(fname)
+        out = fname.parent / ("pic_" + fname.name + ".png")
+        plt.savefig(out)
+
+
+if sys.argv[1] == "show":
+    show = True
+    args = sys.argv[2:]
+else:
+    show = False
+    args = sys.argv[1:]
+for f in args:
+    plotFile(f, show=show)
