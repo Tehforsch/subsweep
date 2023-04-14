@@ -235,14 +235,13 @@ mod tests {
     use super::SearchResults;
     use crate::communication::DataByRank;
     use crate::communication::Rank;
+    use crate::dimension::ActiveWrapType;
+    use crate::dimension::Dimension;
     use crate::dimension::Point;
-    use crate::dimension::ThreeD;
-    use crate::dimension::TwoD;
+    use crate::dimension::WrapType;
     use crate::extent::get_extent;
     use crate::extent::Extent;
     use crate::prelude::ParticleId;
-    use crate::simulation_box::PeriodicWrapType3d;
-    use crate::simulation_box::WrapType;
     use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::constructor::halo_cache::HaloCache;
     use crate::voronoi::constructor::Constructor;
@@ -259,10 +258,12 @@ mod tests {
     use crate::voronoi::TriangulationData;
     use crate::voronoi::VoronoiGrid;
 
-    #[instantiate_tests(<TwoD>)]
+    #[cfg(feature = "2d")]
+    #[instantiate_tests(<crate::dimension::TwoD>)]
     mod two_d {}
 
-    #[instantiate_tests(<ThreeD>)]
+    #[cfg(feature = "3d")]
+    #[instantiate_tests(<crate::dimension::ThreeD>)]
     mod three_d {}
 
     #[derive(Clone)]
@@ -278,22 +279,12 @@ mod tests {
             let mut d = DataByRank::empty();
             let mut new_haloes = vec![];
             for search in data.iter() {
-                let result = self.cache.get_new_haloes::<D>(
+                let result = self.cache.get_new_haloes(
                     fake_rank,
                     self.points
                         .iter()
                         .filter(|(_, p)| search.point.distance(*p) <= search.radius)
-                        .map(|(j, p)| {
-                            (
-                                *p,
-                                *j,
-                                PeriodicWrapType3d {
-                                    x: WrapType::NoWrap,
-                                    y: WrapType::NoWrap,
-                                    z: WrapType::NoWrap,
-                                },
-                            )
-                        }),
+                        .map(|(j, p)| (*p, *j, WrapType::<D>::default())),
                 );
                 new_haloes.extend(result);
             }
@@ -382,9 +373,13 @@ mod tests {
     #[test]
     pub fn voronoi_grid_with_halo_points_is_the_same_as_without<D>()
     where
-        D: DDimension + TestDimension + Clone + Debug,
+        D: DDimension
+            + TestDimension
+            + Clone
+            + Debug
+            + Dimension<WrapType = ActiveWrapType>
+            + Default,
         Triangulation<D>: Delaunay<D>,
-        Point<D>: DVector,
         Cell<D>: DCell<Dimension = D> + Debug,
     {
         // Obtain two point sets - the second of them shifted by some offset away from the first

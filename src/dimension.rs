@@ -8,14 +8,15 @@ use crate::units::MVec2;
 use crate::units::MVec3;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
+use crate::voronoi::visualizer::Visualizable;
 use crate::voronoi::DVector;
 
 pub trait Dimension {
     const NUM: i32;
     type Length;
-    type Point: Clone + Copy + DVector + IntoKey + Debug;
+    type Point: Clone + Copy + DVector + IntoKey + Debug + Visualizable;
     type UnitPoint: Clone + Copy + IntoKey + Debug;
-    type WrapType: Clone + Debug + PartialEq + Eq + std::hash::Hash + Copy;
+    type WrapType: Default + Clone + Debug + PartialEq + Eq + std::hash::Hash + Copy;
 }
 
 pub type Point<D> = <D as Dimension>::Point;

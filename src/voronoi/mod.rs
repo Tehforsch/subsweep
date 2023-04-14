@@ -8,7 +8,7 @@ mod primitives;
 mod test_utils;
 pub mod triangulation_data;
 mod utils;
-mod visualizer;
+pub mod visualizer;
 
 use bevy::prelude::Resource;
 pub use cell::Cell;
@@ -136,19 +136,18 @@ mod tests {
 
 #[cfg(test)]
 mod quantitative_tests {
-    use super::primitives::Point2d;
     use super::VoronoiGrid;
-    use crate::dimension::ThreeD;
-    use crate::dimension::TwoD;
     use crate::grid::ParticleType;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close;
-    use crate::voronoi::primitives::Point3d;
     use crate::voronoi::Constructor;
     use crate::voronoi::DCell;
 
+    #[cfg(feature = "2d")]
     #[test]
     fn right_volume_and_face_areas_two_d() {
+        use super::primitives::Point2d;
+        use crate::dimension::TwoD;
         let points = vec![
             (ParticleId(0), Point2d::new(0.0, 0.0)),
             (ParticleId(1), Point2d::new(0.1, 0.9)),
@@ -188,8 +187,11 @@ mod quantitative_tests {
         }
     }
 
+    #[cfg(feature = "3d")]
     #[test]
     fn right_volume_and_face_areas_three_d() {
+        use crate::dimension::ThreeD;
+        use crate::voronoi::primitives::Point3d;
         let points = vec![
             (ParticleId(0), Point3d::new(0.0, 0.0, 0.0)),
             (ParticleId(1), Point3d::new(0.6, 0.1, 0.1)),
