@@ -60,9 +60,16 @@ name = "voronoi"
 required-features = ["mpi", "3d"]
 
 [[bench]]
-name = "voronoi"
+name = "voronoi2d"
 harness = false
+required-features = ["2d"]
+
+[[bench]]
+name = "voronoi3d"
+harness = false
+required-features = ["3d"]
 
 [[bench]]
 name = "quadtree"
 harness = false
+required-features = ["3d"]

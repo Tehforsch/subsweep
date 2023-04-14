@@ -220,6 +220,7 @@ impl<'a, N, L: LeafDataType> SearchCriterion<N, L> for PeriodicRadiusSearch<'a> 
 }
 
 #[cfg(test)]
+#[cfg(feature = "3d")]
 mod tests {
     use std::collections::HashSet;
 

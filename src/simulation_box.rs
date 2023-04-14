@@ -122,8 +122,9 @@ impl SimulationBox {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum WrapType {
+    #[default]
     NoWrap,
     Minus,
     Plus,
@@ -143,7 +144,7 @@ impl WrapType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct PeriodicWrapType2d {
     pub x: WrapType,
     pub y: WrapType,
@@ -168,7 +169,7 @@ impl PeriodicWrapType2d {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct PeriodicWrapType3d {
     pub x: WrapType,
     pub y: WrapType,
