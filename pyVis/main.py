@@ -1,84 +1,138 @@
+import os
+import subprocess
 from pathlib import Path
 import numpy as np
 import sys
-from matplotlib.patches import Circle, Polygon, Rectangle
+from matplotlib.patches import Circle, Polygon
 from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
+import itertools
 
-def getCircle(args):
-    return Circle((args[0], args[1]), args[2])
-
-
-def getPoint(args):
-    return Circle((args[0], args[1]), 0.002)
+tints = [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0], [0.0, 0.0, 1.0, 1.0]]
+defaultColor = [1.0, 0.0, 0.0, 1.0]
 
 
-def getTriangle(args):
-    ps = np.array([
-        [args[0], args[1]],
-        [args[2], args[3]],
-        [args[4], args[5]]])
-    return Polygon(ps, closed=True, linewidth=0.1, linestyle="-", facecolor="red", fill=False, edgecolor="r")
+def getTints():
+    return itertools.cycle(tints)
 
 
-def getColor(args):
-    if len(args) == 4:
-        return list(args)
+def getCircle(args, color):
+    return None
+    # return Circle((args[0], args[1]), args[2])
+
+
+def getPoint(args, color):
+    return None
+
+
+def getPolygon(args, color):
+    numPoints = len(args) // 2
+    ps = np.zeros((numPoints, 2))
+    for i in range(numPoints):
+        ps[i, 0] = args[2 * i]
+        ps[i, 1] = args[2 * i + 1]
+
+    return Polygon(ps, closed=True, linewidth=0.10, linestyle="-", edgecolor=color, fill=False)
+
+
+def mix(c1, c2):
+    return [0.5 * (c1[0] + c2[0]), 0.5 * (c1[1] + c2[1]), 0.5 * (c1[2] + c2[2]), c1[3]]
+
+
+def getColor(split, tint):
+    if len(split) == 1:
+        color = defaultColor
+    elif len(split) == 2:
+        color = [float(x) for x in split[1].split(" ")]
     else:
-        return [0.0, 0.0, 0.0, 1.0]
+        raise ValueError
+    if tint is not None:
+        return mix(color, tint)
+    else:
+        return color
 
 
-def getPatch(args):
+def getPatch(line, tint):
+    split = line.split(" color ")
+    args = split[0].split(" ")
     type_ = args[0]
     args = [float(x) for x in args[1:]]
+    color = getColor(split, tint)
     if type_ == "Circle":
-        color = getColor(args[3:])
-        return getCircle(args[0:]), color
-    elif type_ == "Triangle":
-        color = getColor(args[6:])
-        return getTriangle(args[0:]), color
+        return getCircle(args, color)
+    elif type_ == "Polygon":
+        return getPolygon(args, color)
     elif type_ == "Point":
-        color = getColor(args[2:])
-        return getPoint(args), color
+        return getPoint(args, color)
     raise NotImplementedError()
 
 
-def plotFile(fname, show=True):
-    fig, ax = plt.subplots()
-
+def addPatchesForFile(fname, tint=None):
     patches = []
-    colors = []
-
-    ax.set_xlim([-1.0, 2.0])
-    ax.set_ylim([-1.0, 2.0])
 
     with open(fname, "r") as f:
         for line in f.readlines():
-            args = line.split(" ")
-            patch, color = getPatch(args)
-            patches.append(patch)
-            colors.append(color)
+            patch = getPatch(line, tint)
+            if patch is not None:
+                patches.append(patch)
 
-    p = PatchCollection(patches, match_original=True)
-    p.set_array(None)
-    # print(np.array(colors).shape)
-    # p.set_array(np.array(colors))
-    ax.add_collection(p)
-    fig.colorbar(p, ax=ax)
+    return PatchCollection(patches, match_original=True)
 
+
+def plotFiles(fnames, tints, outFile, show=True):
+    fig, ax = plt.subplots()
+    ax.set_xlim([-1.0, 2.0])
+    ax.set_ylim([-1.0, 2.0])
+
+    for fname, tint in zip(fnames, tints):
+        collection = addPatchesForFile(fname, tint)
+        ax.add_collection(collection)
     if show:
         plt.show()
     else:
-        fname = Path(fname)
-        out = fname.parent / ("pic_" + fname.name + ".png")
-        plt.savefig(out)
+        dirname = Path(fname)
+        outFile.parent.mkdir(exist_ok=True)
+        out = outFile
+        plt.savefig(out, dpi=800)
+        showImageInTerminal(outFile)
+    fig.clf()
 
 
-if sys.argv[1] == "show":
+def getFilesInDir(dirname):
+    def f():
+        for f in os.listdir(dirname):
+            yield dirname / f
+
+    return list(f())
+
+
+def showImageInTerminal(path: Path) -> None:
+    width = 800
+    height = 600
+    tmpfile = Path("/tmp/test.png")
+    args = ["convert", str(path), "-scale", f"{width}x{height}", str(tmpfile)]
+    subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    args = ["kitty", "+kitten", "icat", "--silent", "--transfer-mode", "file", str(tmpfile)]
+    subprocess.check_call(args)
+
+
+if sys.argv[-1] == "show":
+    args = sys.argv[1:-1]
     show = True
-    args = sys.argv[2:]
 else:
-    show = False
     args = sys.argv[1:]
-for f in args:
-    plotFile(f, show=show)
+    show = False
+out = Path(args[0])
+dirnames = args[1:]
+
+dirnames = [Path(x) for x in dirnames]
+
+numFiles = len(getFilesInDir(dirnames[0]))
+files = getFilesInDir(dirnames[0])
+files.sort()
+for num, f in enumerate(files):
+    fnames = [d / f.name for d in dirnames]
+    outFile = (out / str(num)).with_suffix(".png")
+    print(fnames)
+    print(outFile)
+    plotFiles(fnames, getTints(), outFile, show=show)
