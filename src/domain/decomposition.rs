@@ -132,8 +132,17 @@ impl Decomposition<DomainKey> {
         extent: &Extent<MVec>,
         global: &Extent<MVec>,
     ) -> bool {
-        let (min, max) = extent.get_min_and_max_key(global);
-        self.segments[rank as usize].overlaps(min, max)
+        if global.contains_extent(extent) {
+            let (min, max) = extent.get_min_and_max_key(global);
+            self.segments[rank as usize].overlaps(min, max)
+        } else {
+            // This is not the best we can do, but for now I don't
+            // want to deal with having to periodically wrap extents
+            // and peano hilbert key segments. This is probably not a
+            // major bottleneck anyways, since most searches are
+            // non-periodic
+            true
+        }
     }
 }
 

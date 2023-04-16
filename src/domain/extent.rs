@@ -173,6 +173,14 @@ impl VExtent<MVec2> {
             MVec2::new(self.min.x, self.max.y),
         ]
     }
+
+    pub fn contains(&self, pos: &MVec2) -> bool {
+        self.min.x <= pos.x && pos.x <= self.max.x && self.min.y <= pos.y && pos.y <= self.max.y
+    }
+
+    pub fn contains_extent(&self, other: &Self) -> bool {
+        self.contains(&other.min) && self.contains(&other.max)
+    }
 }
 
 impl VExtent<MVec3> {
@@ -202,6 +210,19 @@ impl VExtent<MVec3> {
             MVec3::new(self.max.x, self.max.y, self.max.z),
             MVec3::new(self.min.x, self.max.y, self.max.z),
         ]
+    }
+
+    pub fn contains(&self, pos: &MVec3) -> bool {
+        self.min.x <= pos.x
+            && pos.x <= self.max.x
+            && self.min.y <= pos.y
+            && pos.y <= self.max.y
+            && self.min.z <= pos.z
+            && pos.z <= self.max.z
+    }
+
+    pub fn contains_extent(&self, other: &Self) -> bool {
+        self.contains(&other.min) && self.contains(&other.max)
     }
 }
 
