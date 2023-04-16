@@ -3,6 +3,7 @@ use mpi::traits::Equivalence;
 
 use super::timestep_level::TimestepLevel;
 use super::Sweep;
+use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::MpiWorld;
@@ -81,7 +82,23 @@ impl<'a> Sweep<'a> {
         dependencies
     }
 
+    fn check_some_initial_task_exists(&self) {
+        let num_to_solve = self.cells.enumerate_active(self.current_level).count();
+        if num_to_solve == 0 {
+            return;
+        }
+        let num_initial_tasks = self.to_solve.len();
+        let w = MpiWorld::new(DEADLOCK_DETECTION_TAG);
+        let mut ex: Communicator<usize> = Communicator::from(w);
+        let total: usize = ex.all_gather_sum(&num_initial_tasks);
+        assert!(
+            total > 0,
+            "No rank has an initial task. Wrong boundary setup?"
+        )
+    }
+
     pub fn check_deadlock(&mut self) {
+        self.check_some_initial_task_exists();
         let dependencies = self.get_dependencies();
         let w = MpiWorld::new(DEADLOCK_DETECTION_TAG);
         let mut ex: ExchangeCommunicator<Dependency> = ExchangeCommunicator::from(w);
