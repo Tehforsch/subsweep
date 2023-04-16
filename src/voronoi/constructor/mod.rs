@@ -13,6 +13,7 @@ pub(super) use self::halo_iteration::SearchData;
 use self::local::Local;
 use super::delaunay::PointIndex;
 use super::delaunay::TetraIndex;
+use super::visualizer::Visualizable;
 use super::Cell;
 use super::CellIndex;
 use super::DCell;
@@ -24,6 +25,7 @@ use crate::dimension::ActiveDimension;
 use crate::dimension::ActiveWrapType;
 use crate::dimension::Point;
 use crate::extent::get_extent;
+use crate::extent::Extent;
 use crate::grid;
 use crate::grid::FaceArea;
 use crate::grid::ParticleType;
@@ -32,6 +34,7 @@ use crate::prelude::ParticleId;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
+use crate::vis;
 use crate::voronoi::constructor::halo_iteration::get_characteristic_length;
 use crate::voronoi::DDimension;
 
@@ -44,6 +47,8 @@ where
     D: DDimension<WrapType = ActiveWrapType>,
     Triangulation<D>: Delaunay<D>,
     Cell<D>: DCell<Dimension = D>,
+    Extent<Point<D>>: Visualizable,
+    SearchData<D>: Visualizable,
 {
     pub fn construct_from_iter<'b, F>(
         iter: impl Iterator<Item = (ParticleId, Point<D>)> + 'b,
@@ -62,6 +67,7 @@ where
         let extent = extent.including_periodic_images();
         let (triangulation, map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
+        vis![&extent, &triangulation];
         let mut map: BiMap<_, _> = map
             .into_iter()
             .map(|(id, p)| (ParticleType::Local(id), p))

@@ -35,6 +35,15 @@ impl ParticleType {
         }
     }
 
+    pub fn is_periodic(&self) -> bool {
+        match self {
+            Self::Boundary => true,
+            Self::Local(_) => false,
+            Self::Remote(remote) => remote.periodic_wrap_type.is_periodic(),
+            Self::PeriodicHalo(_) => true,
+        }
+    }
+
     pub fn is_local(&self) -> bool {
         match self {
             Self::Local(_) => true,

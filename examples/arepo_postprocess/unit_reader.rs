@@ -40,6 +40,7 @@ impl UnitReader for ArepoUnitReader {
             h, 0,
             "Tried to read dataset with h_scaling != 0. Cosmological units not implemented yet."
         );
+        let length = if length == -3 { -2 } else { length };
         let length = length + velocity;
         let time = -velocity;
 

@@ -220,8 +220,7 @@ impl<'a> Sweep<'a> {
     }
 
     fn get_initial_tasks(&self) -> PriorityQueue<Task> {
-        let tasks = self
-            .directions
+        self.directions
             .enumerate()
             .flat_map(|(dir_index, dir)| {
                 self.cells
@@ -235,6 +234,7 @@ impl<'a> Sweep<'a> {
                         cell.neighbours.iter().all(|(face, neighbour)| {
                             !face.points_upwind(dir)
                                 || neighbour.is_boundary()
+                                || neighbour.is_periodic()
                                 || !self.is_active(neighbour.unwrap_id())
                         })
                     })
@@ -243,8 +243,7 @@ impl<'a> Sweep<'a> {
                         dir: dir_index,
                     })
             })
-            .collect();
-        tasks
+            .collect()
     }
 
     fn is_active(&self, id: ParticleId) -> bool {

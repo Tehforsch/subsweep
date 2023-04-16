@@ -33,9 +33,7 @@ struct Parameters {
 }
 
 fn read_vec(data: &[Float]) -> Position {
-    Position(VecLength::new_unchecked(MVec::new(
-        data[0], data[1], data[2],
-    )))
+    Position(VecLength::new_unchecked(MVec::new(data[0], data[1])))
 }
 
 fn main() {
