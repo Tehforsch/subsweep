@@ -347,7 +347,7 @@ impl<'a> Sweep<'a> {
                         self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
                     }
                     ParticleType::Boundary => {}
-                    ParticleType::PeriodicHalo(_) => todo!(),
+                    ParticleType::PeriodicHalo(_) => {}
                 }
             }
         }
