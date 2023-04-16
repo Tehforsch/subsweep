@@ -8,8 +8,9 @@ from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
 import itertools
 
-tints = [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0], [0.0, 0.0, 1.0, 1.0]]
+tints = [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0], [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 0.0, 1.0], [0.0, 1.0, 1.0, 1.0], [0.3, 0.7, 0.2, 1.0]]
 defaultColor = [1.0, 0.0, 0.0, 1.0]
+linewidth = 0.10
 
 
 def getTints():
@@ -17,8 +18,7 @@ def getTints():
 
 
 def getCircle(args, color):
-    return None
-    # return Circle((args[0], args[1]), args[2])
+    return Circle((args[0], args[1]), args[2], fill=False, edgecolor=color, linewidth=linewidth)
 
 
 def getPoint(args, color):
@@ -32,7 +32,7 @@ def getPolygon(args, color):
         ps[i, 0] = args[2 * i]
         ps[i, 1] = args[2 * i + 1]
 
-    return Polygon(ps, closed=True, linewidth=0.10, linestyle="-", edgecolor=color, fill=False)
+    return Polygon(ps, closed=True, linewidth=linewidth, linestyle="-", edgecolor=color, fill=False)
 
 
 def mix(c1, c2):
@@ -132,7 +132,7 @@ files = getFilesInDir(dirnames[0])
 files.sort()
 for num, f in enumerate(files):
     fnames = [d / f.name for d in dirnames]
-    outFile = (out / str(num)).with_suffix(".png")
+    outFile = (out / f"{num:03}").with_suffix(".png")
     print(fnames)
     print(outFile)
     plotFiles(fnames, getTints(), outFile, show=show)

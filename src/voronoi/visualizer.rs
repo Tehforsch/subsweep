@@ -84,8 +84,7 @@ impl Visualizable for Extent<Point2d> {
         vec![format!(
             "Polygon {} {} {} {} {} {} {} {} color 0.0 1.0 0.0 1.0",
             p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y,
-        )
-        ]
+        )]
     }
 }
 
@@ -141,6 +140,14 @@ impl<T: Visualizable> Visualizable for Color<T> {
                     statement, self.color.0, self.color.1, self.color.2, 1.0
                 )
             })
+            .collect()
+    }
+}
+
+impl<T: Visualizable> Visualizable for Vec<T> {
+    fn get_statements(&self) -> Vec<String> {
+        self.iter()
+            .flat_map(|x| x.get_statements().into_iter())
             .collect()
     }
 }
