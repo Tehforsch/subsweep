@@ -203,6 +203,9 @@ impl<'a> Sweep<'a> {
             for (dir_index, dir) in self.directions.enumerate() {
                 for (face, neighbour) in cell.neighbours.iter() {
                     if !face.points_upwind(dir) || neighbour.is_boundary() {
+                        if let ParticleType::PeriodicHalo(p) = neighbour {
+                            // assert!(self.levels[&p.id].is_active(self.current_level));
+                        }
                         continue;
                     }
                     let is_active =
@@ -212,6 +215,7 @@ impl<'a> Sweep<'a> {
                     }
                     site.num_missing_upwind[dir_index] += 1;
                     if let ParticleType::Remote(neighbour) = neighbour {
+                        assert!(!neighbour.periodic_wrap_type.is_periodic());
                         self.to_receive_count[neighbour.rank] += 1;
                     }
                 }
@@ -344,7 +348,9 @@ impl<'a> Sweep<'a> {
                         *neighbour_id,
                     ),
                     ParticleType::Remote(remote) => {
-                        self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
+                        if !remote.periodic_wrap_type.is_periodic() {
+                          self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
+                        }
                     }
                     ParticleType::Boundary => {}
                     ParticleType::PeriodicHalo(_) => {}
@@ -481,9 +487,15 @@ pub fn sweep_system(
         level.0 = desired_level.0;
         **fraction = new_fraction;
     }
+    for (id, level) in levels_query.iter() {
+        if !cells_query.iter().find(|(id, _)| id == id).is_some() {
+            assert!(level.0 ==  0);
+        }
+    }
 }
 
 fn communicate_levels_system(
+    cells: Particles<&Cell>,
     mut levels_comm: ExchangeCommunicator<TimestepLevelData>,
     mut halo_levels: HaloParticles<
         (Entity, &ParticleId, &mut TimestepLevel),
@@ -510,6 +522,21 @@ fn communicate_levels_system(
     for (_, levels) in levels_comm.exchange_all(data).iter() {
         for level_data in levels {
             *halo_levels.get_mut(id_to_entity[&level_data.id]).unwrap().2 = level_data.level;
+            for cell in cells.iter() {
+                for (_, neigh) in cell.neighbours.iter() {
+                    let id = match neigh {
+                        ParticleType::Boundary => {None}
+                        ParticleType::Local(p) => Some(*p),
+                        ParticleType::Remote(remote) => Some(remote.id),
+                        ParticleType::PeriodicHalo(periodic) => Some(periodic.id),
+                    };
+                    if let Some(id) = id {
+                        if level_data.id == id {
+                            dbg!(neigh);
+                        }
+                    }
+                }
+            }
         }
     }
 }

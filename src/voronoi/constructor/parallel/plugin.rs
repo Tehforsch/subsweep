@@ -104,7 +104,9 @@ fn construct_grid_system(
                 // If this cell does not have local neighbours, it was imported by "accident"
                 // during the delaunay construction and then turned out not to be relevant.
                 // We don't need to spawn a halo particle in this case.
-                if has_local_neighbours {
+                if has_local_neighbours &&
+                    !remote.periodic_wrap_type.is_periodic()
+                {
                     num_relevant_haloes += 1;
                     let pos = cons.get_position_for_cell(cell_index);
                     let pos = VecLength::new_unchecked(pos);
