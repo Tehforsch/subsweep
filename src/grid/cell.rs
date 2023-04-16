@@ -26,8 +26,8 @@ impl ParticleType {
         match self {
             Self::Boundary => true,
             Self::Local(_) => false,
-            Self::Remote(_) => false,
-            Self::PeriodicHalo(_) => false,
+            Self::Remote(p) => p.periodic_wrap_type.is_periodic(),
+            Self::PeriodicHalo(_) => true,
         }
     }
 
