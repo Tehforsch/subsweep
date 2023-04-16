@@ -3,6 +3,7 @@ mod halo_iteration;
 mod local;
 pub(super) mod parallel;
 
+use bevy::prelude::info;
 use bevy::prelude::debug;
 pub use parallel::ParallelVoronoiGridConstruction;
 
@@ -51,7 +52,7 @@ where
     where
         F: RadiusSearch<D>,
     {
-        debug!("Beginning local Delaunay construction.");
+        info!("Beginning local Delaunay construction.");
         let points: Vec<_> = iter.collect();
         let extent = search
             .determine_global_extent()
@@ -65,14 +66,12 @@ where
             .into_iter()
             .map(|(id, p)| (ParticleType::Local(id), p))
             .collect();
-        debug!("Finished local Delaunay construction, starting halo iteration.");
+        info!("Finished local Delaunay construction, starting halo iteration.");
         let mut iteration = HaloIteration::new(triangulation, search, characteristic_length);
         iteration.run();
         map.extend(iteration.haloes);
-        debug!(
-            "Finished delaunay construction of {} points ({} tetras).",
-            iteration.triangulation.points.len(),
-            iteration.triangulation.tetras.len()
+        info!(
+            "Finished delaunay construction.",
         );
         let data = TriangulationData::from_triangulation_and_map(iteration.triangulation, map);
         Self { data }

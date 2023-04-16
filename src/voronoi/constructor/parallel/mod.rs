@@ -4,7 +4,6 @@ mod plugin;
 mod tests;
 
 use bevy::prelude::debug;
-use bevy::prelude::info;
 use derive_more::Add;
 use derive_more::Sum;
 use mpi::traits::Equivalence;
@@ -241,7 +240,7 @@ impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
         let total_undecided: SendNum = self
             .finished_comm
             .all_gather_sum(&SendNum(num_undecided_this_rank));
-        info!("{} tetras undecided", total_undecided.0);
+        debug!("{} tetras undecided", total_undecided.0);
         total_undecided.0 == 0
     }
 
