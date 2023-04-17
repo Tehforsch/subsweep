@@ -12,6 +12,9 @@ tints = [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0], [0.0, 0.0, 1.0, 1.0], [1.0,
 defaultColor = [1.0, 0.0, 0.0, 1.0]
 linewidth = 0.10
 
+length = 2.31426e24
+onlyBox = False
+pointSize = length * 1.0
 
 def getTints():
     return itertools.cycle(tints)
@@ -22,7 +25,8 @@ def getCircle(args, color):
 
 
 def getPoint(args, color):
-    return None
+    return np.array([args[0], args[1]])
+    # return Circle((args[0], args[1]), pointSize, fill=True, facecolor=color)
 
 
 def getPolygon(args, color):
@@ -32,6 +36,7 @@ def getPolygon(args, color):
         ps[i, 0] = args[2 * i]
         ps[i, 1] = args[2 * i + 1]
 
+    return None
     return Polygon(ps, closed=True, linewidth=linewidth, linestyle="-", edgecolor=color, fill=False)
 
 
@@ -69,24 +74,33 @@ def getPatch(line, tint):
 
 def addPatchesForFile(fname, tint=None):
     patches = []
+    points = []
 
     with open(fname, "r") as f:
         for line in f.readlines():
             patch = getPatch(line, tint)
-            if patch is not None:
-                patches.append(patch)
+            if type(patch) == np.ndarray:
+                points.append(patch)
+            else:
+                if patch is not None:
+                    patches.append(patch)
 
-    return PatchCollection(patches, match_original=True)
+    return PatchCollection(patches, match_original=True), np.array(points)
 
 
 def plotFiles(fnames, tints, outFile, show=True):
     fig, ax = plt.subplots()
-    ax.set_xlim([-1.0, 2.0])
-    ax.set_ylim([-1.0, 2.0])
+    if onlyBox:
+        ax.set_xlim(length * np.array([0.0, 1.0]))
+        ax.set_ylim(length * np.array([0.0, 1.0]))
+    else:
+        ax.set_xlim(length * np.array([-1.0, 2.0]))
+        ax.set_ylim(length * np.array([-1.0, 2.0]))
 
     for fname, tint in zip(fnames, tints):
-        collection = addPatchesForFile(fname, tint)
+        collection, points = addPatchesForFile(fname, tint)
         ax.add_collection(collection)
+        ax.scatter(points[:, 0], points[:, 1], color=tint, s=1.0)
     if show:
         plt.show()
     else:
