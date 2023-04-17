@@ -61,6 +61,7 @@ fn read_dataset_from_file<T: ToDataset + Component + Named>(world: &mut World, f
     world.insert_resource(WorldSize(1));
     world.insert_resource(InputParameters {
         paths: vec![file.into()],
+        ..Default::default()
     });
     world.insert_non_send_resource(InputDatasetDescriptor::<T>::new(
         DatasetDescriptor::default_for::<T>(),

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use bevy::prelude::debug;
 use bevy::prelude::info;
+use bevy::prelude::warn;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Deref;
@@ -51,6 +52,9 @@ struct InputFiles(Vec<File>);
 pub struct InputParameters {
     /// The files containing the initial conditions
     pub paths: Vec<PathBuf>,
+    /// Utility for debugging: "Shrink" the ICS by only using every
+    /// nth particle.
+    pub shrink_factor: Option<usize>,
 }
 
 #[derive(Default, Deref, DerefMut, Resource)]
@@ -154,20 +158,35 @@ fn close_file_system(mut files: ResMut<InputFiles>) {
     files.0.clear();
 }
 
+fn warn_if_shrink_factor_is_enabled(parameters: &InputParameters) {
+    if let Some(shrink_factor) = parameters.shrink_factor {
+        if shrink_factor != 1 {
+            warn!(
+                "Shrinking ICS by using only every {}-th particle",
+                shrink_factor
+            );
+        }
+    }
+}
+
 fn spawn_entities_system(
     mut commands: Commands,
     mut spawned_entities: ResMut<SpawnedEntities>,
     datasets: Res<RegisteredDatasets>,
     files: Res<InputFiles>,
+    parameters: Res<InputParameters>,
 ) {
     if datasets.len() == 0 {
         return;
     }
+    warn_if_shrink_factor_is_enabled(&parameters);
     let (_, example_dataset) = &datasets.iter().next().unwrap();
     let get_num_entities = |dataset_name: &str| {
         files
             .iter()
-            .map(|f| f.dataset(dataset_name).unwrap().shape()[0])
+            .map(|f| {
+                f.dataset(dataset_name).unwrap().shape()[0] / parameters.shrink_factor.unwrap_or(1)
+            })
             .sum::<usize>()
     };
     let num_entities = get_num_entities(&example_dataset.name);
@@ -191,6 +210,7 @@ fn read_dataset_system<T: ToDataset + Component>(
     mut commands: Commands,
     files: Res<InputFiles>,
     spawned_entities: Res<SpawnedEntities>,
+    parameters: Res<InputParameters>,
 ) {
     let name = descriptor.dataset_name();
     debug!("Reading dataset {}", name);
@@ -219,8 +239,20 @@ fn read_dataset_system<T: ToDataset + Component>(
         );
         (data, conversion_factor)
     });
+    let should_insert = |i: usize| {
+        if let Some(shrink_factor) = parameters.shrink_factor {
+            i.rem_euclid(shrink_factor) == 0
+        } else {
+            true
+        }
+    };
     for ((item, factor_written), entity) in data
-        .flat_map(|(set, factor_written)| set.into_iter().map(move |item| (item, factor_written)))
+        .flat_map(|(set, factor_written)| {
+            set.into_iter()
+                .enumerate()
+                .filter(|(i, _)| should_insert(*i))
+                .map(move |(_, item)| (item, factor_written))
+        })
         .zip(spawned_entities.iter())
     {
         let factor_read = T::dimension().base_conversion_factor();
