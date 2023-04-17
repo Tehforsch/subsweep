@@ -8,9 +8,20 @@ from matplotlib.collections import PatchCollection
 import matplotlib.pyplot as plt
 import itertools
 
-tints = [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0], [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 0.0, 1.0], [0.0, 1.0, 1.0, 1.0], [0.3, 0.7, 0.2, 1.0]]
+tints = [
+    [1.0, 0.0, 0.0, 1.0],
+    [0.0, 1.0, 0.0, 1.0],
+    [0.0, 0.0, 1.0, 1.0],
+    [1.0, 1.0, 0.0, 1.0],
+    [0.0, 1.0, 1.0, 1.0],
+    [0.3, 0.7, 0.2, 1.0],
+]
 defaultColor = [1.0, 0.0, 0.0, 1.0]
 linewidth = 0.10
+
+length = 2.31426e24
+onlyBox = False
+pointSize = length * 1.0
 
 
 def getTints():
@@ -18,11 +29,14 @@ def getTints():
 
 
 def getCircle(args, color):
-    return Circle((args[0], args[1]), args[2], fill=False, edgecolor=color, linewidth=linewidth)
+    return Circle(
+        (args[0], args[1]), args[2], fill=False, edgecolor=color, linewidth=linewidth
+    )
 
 
 def getPoint(args, color):
-    return None
+    return np.array([args[0], args[1]])
+    # return Circle((args[0], args[1]), pointSize, fill=True, facecolor=color)
 
 
 def getPolygon(args, color):
@@ -32,7 +46,9 @@ def getPolygon(args, color):
         ps[i, 0] = args[2 * i]
         ps[i, 1] = args[2 * i + 1]
 
-    return Polygon(ps, closed=True, linewidth=linewidth, linestyle="-", edgecolor=color, fill=False)
+    return Polygon(
+        ps, closed=True, linewidth=linewidth, linestyle="-", edgecolor=color, fill=False
+    )
 
 
 def mix(c1, c2):
@@ -69,24 +85,33 @@ def getPatch(line, tint):
 
 def addPatchesForFile(fname, tint=None):
     patches = []
+    points = []
 
     with open(fname, "r") as f:
         for line in f.readlines():
             patch = getPatch(line, tint)
-            if patch is not None:
-                patches.append(patch)
+            if type(patch) == np.ndarray:
+                points.append(patch)
+            else:
+                if patch is not None:
+                    patches.append(patch)
 
-    return PatchCollection(patches, match_original=True)
+    return PatchCollection(patches, match_original=True), np.array(points)
 
 
 def plotFiles(fnames, tints, outFile, show=True):
     fig, ax = plt.subplots()
-    ax.set_xlim([-1.0, 2.0])
-    ax.set_ylim([-1.0, 2.0])
+    if onlyBox:
+        ax.set_xlim(length * np.array([0.0, 1.0]))
+        ax.set_ylim(length * np.array([0.0, 1.0]))
+    else:
+        ax.set_xlim(length * np.array([-1.0, 2.0]))
+        ax.set_ylim(length * np.array([-1.0, 2.0]))
 
     for fname, tint in zip(fnames, tints):
-        collection = addPatchesForFile(fname, tint)
+        collection, points = addPatchesForFile(fname, tint)
         ax.add_collection(collection)
+        ax.scatter(points[:, 0], points[:, 1], color=tint, s=1.0)
     if show:
         plt.show()
     else:
@@ -112,7 +137,15 @@ def showImageInTerminal(path: Path) -> None:
     tmpfile = Path("/tmp/test.png")
     args = ["convert", str(path), "-scale", f"{width}x{height}", str(tmpfile)]
     subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    args = ["kitty", "+kitten", "icat", "--silent", "--transfer-mode", "file", str(tmpfile)]
+    args = [
+        "kitty",
+        "+kitten",
+        "icat",
+        "--silent",
+        "--transfer-mode",
+        "file",
+        str(tmpfile),
+    ]
     subprocess.check_call(args)
 
 
