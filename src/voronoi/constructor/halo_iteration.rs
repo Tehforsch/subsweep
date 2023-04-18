@@ -27,17 +27,17 @@ use crate::voronoi::Triangulation;
 /// Determines by how much all search radii should be larger than the
 /// radius of the circumcircle/sphere of the tetra, in order to prevent numerical
 /// problems due to floating point arithmetic.
-const SEARCH_SAFETY_FACTOR: f64 = 1.05;
+const SEARCH_SAFETY_FACTOR: f64 = 1.001;
 
 /// Determines by how much the search radii are increased between iterations.
 /// If the factor is too low, large tetras will take a long time
 /// to find all their haloes. If the factor is too high, we risk importing way
 /// too many haloes than are needed to construct the proper triangulation.
-const SEARCH_RADIUS_INCREASE_FACTOR: f64 = 1.25;
+const SEARCH_RADIUS_INCREASE_FACTOR: f64 = 1.6;
 
-/// By how much to decrease the initial maximally allowed search radius below the
+/// By how much to decrease/increase the initial maximally allowed search radius below the
 /// "cartesian" cell size of side_length / num_particles_per_dimension
-const INITIAL_SEARCH_RADIUS_GUESS_FACTOR: f64 = 0.5;
+const INITIAL_SEARCH_RADIUS_GUESS_FACTOR: f64 = 1.5;
 
 pub fn get_characteristic_length<D: Dimension>(max_side_length: f64, num_particles: usize) -> f64 {
     let num_particles_per_dim = (num_particles as f64).powf(1.0 / D::NUM as f64);
