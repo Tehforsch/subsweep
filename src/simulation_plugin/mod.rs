@@ -3,7 +3,6 @@ mod time;
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
-use bevy::window::exit_on_all_closed;
 use mpi::traits::Equivalence;
 
 pub use self::parameters::SimulationParameters;
@@ -70,9 +69,7 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_system_to_stage(CoreStage::PostUpdate, stop_simulation_system)
             .add_system_to_stage(
                 CoreStage::PostUpdate,
-                handle_app_exit_system
-                    .after(stop_simulation_system)
-                    .before(exit_on_all_closed),
+                handle_app_exit_system.after(stop_simulation_system),
             );
     }
 }
