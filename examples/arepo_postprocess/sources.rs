@@ -1,6 +1,6 @@
+use bevy::prelude::debug;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
-use bevy::prelude::Entity;
 use bevy::prelude::Res;
 use bevy::prelude::Resource;
 use derive_custom::Named;
@@ -10,19 +10,19 @@ use derive_more::From;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 use ordered_float::OrderedFloat;
-use raxiom::communication::CommunicatedOption;
-use raxiom::communication::Identified;
 use raxiom::components;
 use raxiom::components::Position;
+use raxiom::domain::Decomposition;
+use raxiom::domain::IntoKey;
 use raxiom::io::input::read_dataset;
 use raxiom::io::input::InputFiles;
 use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
-use raxiom::mpidbg;
 use raxiom::prelude::Communicator;
 use raxiom::prelude::Particles;
 use raxiom::prelude::SimulationBox;
+use raxiom::prelude::WorldRank;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::Mass;
@@ -33,7 +33,6 @@ use raxiom::units::VecLength;
 use crate::cosmology::Cosmology;
 use crate::read_vec;
 use crate::unit_reader::ArepoUnitReader;
-use crate::Parameters;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
 pub struct DistanceToSourceData(Length);
@@ -55,6 +54,18 @@ pub struct Source {
     age: Time,
     metallicity: Dimensionless,
     mass: Mass,
+}
+
+impl Source {
+    fn get_source_term(&self) -> SourceRate {
+        // Not implemented yet
+        SourceRate::new_unchecked(1e55)
+    }
+}
+
+fn formation_time_to_age(_formation_time: Dimensionless) -> Time {
+    // Not implemented yet
+    Time::zero()
 }
 
 #[derive(Resource)]
@@ -106,14 +117,11 @@ fn read_sources(files: &InputFiles, cosmology: &Cosmology) -> Vec<Source> {
         .zip(metallicity)
         .zip(formation_time)
         .zip(mass)
-        .map(|(((position, metallicity), formation_time), mass)| {
-            let age = Time::zero();
-            Source {
-                position: *position,
-                metallicity: *metallicity,
-                mass: *mass,
-                age,
-            }
+        .map(|(((position, metallicity), formation_time), mass)| Source {
+            position: *position,
+            metallicity: *metallicity,
+            mass: *mass,
+            age: formation_time_to_age(*formation_time),
         })
         .collect()
 }
@@ -127,54 +135,34 @@ pub fn read_sources_system(
     commands.insert_resource(Sources { sources });
 }
 
-pub fn initialize_sources_system(
-    mut commands: Commands,
-    particles: Particles<(Entity, &Position)>,
-    parameters: Res<Parameters>,
-    box_size: Res<SimulationBox>,
+pub fn set_source_terms_system(
+    mut particles: Particles<(&Position, &mut components::Source)>,
     mut source_comm: Communicator<Source>,
-    mut comm: Communicator<CommunicatedOption<Identified<DistanceToSourceData>>>,
     sources: Res<Sources>,
+    decomposition: Res<Decomposition>,
+    box_: Res<SimulationBox>,
+    world_rank: Res<WorldRank>,
 ) {
     let all_sources = source_comm.all_gather_varcount(&sources.sources);
-    for (entity, _) in particles.iter() {
-        commands
-            .entity(entity)
-            .insert(components::Source(SourceRate::zero()));
+    for s in all_sources {
+        let key = s.position.into_key(&*box_);
+        let rank = decomposition.get_owning_rank(key);
+        if rank == **world_rank {
+            let closest = particles
+                .iter_mut()
+                .map(|(pos, source)| {
+                    let dist = **pos - s.position;
+                    (OrderedFloat(dist.length().value_unchecked()), source)
+                })
+                .min_by_key(|(dist, _)| *dist);
+            let (_, mut source_term) = closest.unwrap();
+            **source_term += s.get_source_term();
+        }
     }
-    // let closest = find_closest_entity_for_each_source();
-    // let closest = particles
-    //     .iter()
-    //     .map(|(entity, pos)| {
-    //         let dist = **pos - box_size.center();
-    //         (entity, OrderedFloat(dist.length().value_unchecked()))
-    //     })
-    //     .min_by_key(|(_, dist)| *dist)
-    //     .map(|(entity, dist)| {
-    //         Identified::new(entity, DistanceToSourceData(Length::new_unchecked(*dist)))
-    //     });
-    // let closest_on_each_rank = if let Some(closest) = closest {
-    //     comm.all_gather(&Some(closest).into())
-    // } else {
-    //     comm.all_gather(&None.into())
-    // };
-    // let global_closest: Identified<DistanceToSourceData> = closest_on_each_rank
-    //     .into_iter()
-    //     .filter_map(|x| Into::<Option<_>>::into(x))
-    //     .min_by(
-    //         |x: &Identified<DistanceToSourceData>, y: &Identified<DistanceToSourceData>| {
-    //             x.data
-    //                 .partial_cmp(&y.data)
-    //                 .unwrap_or(std::cmp::Ordering::Equal)
-    //         },
-    //     )
-    //     .unwrap();
-    // for (entity, _) in particles.iter() {
-    //     let source = if entity == global_closest.entity() {
-    //         parameters.source_strength
-    //     } else {
-    //         SourceRate::zero()
-    //     };
-    //     commands.entity(entity).insert(components::Source(source));
-    // }
+    let total: SourceRate = particles
+        .iter()
+        .into_iter()
+        .map(|(_, source)| **source)
+        .sum();
+    debug!("Total luminosity: {:+.2e}", total.in_photons_per_s());
 }

@@ -87,7 +87,7 @@ impl<K: Key> Decomposition<K> {
         }
     }
 
-    pub(crate) fn get_owning_rank(&self, key: K) -> Rank {
+    pub fn get_owning_rank(&self, key: K) -> Rank {
         self.cuts
             .binary_search(&key)
             .map(|x| x + 1)
@@ -126,7 +126,7 @@ impl<K: Key> Decomposition<K> {
 }
 
 impl Decomposition<DomainKey> {
-    pub(crate) fn rank_owns_part_of_search_radius(
+    pub fn rank_owns_part_of_search_radius(
         &self,
         rank: Rank,
         extent: &Extent<MVec>,
