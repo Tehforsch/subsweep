@@ -19,6 +19,7 @@ use crate::voronoi::delaunay::Circumcircle;
 use crate::voronoi::delaunay::PointIndex;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::Float;
+use crate::voronoi::visualizer::Visualizable;
 use crate::voronoi::CellIndex;
 use crate::voronoi::DDimension;
 use crate::voronoi::Triangulation;
@@ -91,6 +92,8 @@ where
     Triangulation<D>: Delaunay<D>,
     F: RadiusSearch<D>,
     Cell<D>: DCell<Dimension = D>,
+    SearchData<D>: Visualizable,
+    Extent<Point<D>>: Visualizable,
 {
     pub fn new(triangulation: Triangulation<D>, search: F, characteristic_length: Float) -> Self {
         let mut h = Self {
@@ -112,6 +115,12 @@ where
 
     fn iterate(&mut self) {
         let search_data = self.get_radius_search_data();
+        #[cfg(feature = "vis")]
+        crate::vis![
+            &self.triangulation,
+            &search_data,
+            &self.search.determine_global_extent().unwrap()
+        ];
         let search_results = self.search.radius_search(search_data);
         for (rank, results) in search_results.into_iter() {
             for SearchResult {
@@ -250,6 +259,7 @@ mod tests {
     use crate::voronoi::delaunay::PointKind;
     use crate::voronoi::primitives::point::DVector;
     use crate::voronoi::test_utils::TestDimension;
+    use crate::voronoi::visualizer::Visualizable;
     use crate::voronoi::Cell;
     use crate::voronoi::CellIndex;
     use crate::voronoi::DCell;
@@ -381,6 +391,8 @@ mod tests {
             + Default,
         Triangulation<D>: Delaunay<D>,
         Cell<D>: DCell<Dimension = D> + Debug,
+        SearchData<D>: Visualizable,
+        Extent<Point<D>>: Visualizable,
     {
         // Obtain two point sets - the second of them shifted by some offset away from the first
         let (local_points, remote_points) = D::get_example_point_sets_with_ids();

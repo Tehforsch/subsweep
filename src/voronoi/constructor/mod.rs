@@ -13,6 +13,7 @@ pub(super) use self::halo_iteration::SearchData;
 use self::local::Local;
 use super::delaunay::PointIndex;
 use super::delaunay::TetraIndex;
+use super::visualizer::Visualizable;
 use super::Cell;
 use super::CellIndex;
 use super::DCell;
@@ -24,6 +25,7 @@ use crate::dimension::ActiveDimension;
 use crate::dimension::ActiveWrapType;
 use crate::dimension::Point;
 use crate::extent::get_extent;
+use crate::extent::Extent;
 use crate::grid;
 use crate::grid::FaceArea;
 use crate::grid::ParticleType;
@@ -44,6 +46,8 @@ where
     D: DDimension<WrapType = ActiveWrapType>,
     Triangulation<D>: Delaunay<D>,
     Cell<D>: DCell<Dimension = D>,
+    SearchData<D>: Visualizable,
+    Extent<Point<D>>: Visualizable,
 {
     pub fn construct_from_iter<'b, F>(
         iter: impl Iterator<Item = (ParticleId, Point<D>)> + 'b,

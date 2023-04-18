@@ -9,8 +9,10 @@ use super::delaunay::PointKind;
 use super::primitives::tetrahedron::TetrahedronData;
 use super::primitives::triangle::TriangleData;
 use super::primitives::Point2d;
+use super::Point3d;
 use super::Triangulation;
 use crate::dimension::Dimension;
+use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
 use crate::extent::Extent;
 
@@ -43,6 +45,10 @@ impl Drop for Visualizer {
     }
 }
 
+pub trait Visualizable {
+    fn get_statements(&self) -> Vec<String>;
+}
+
 impl Visualizable for f64 {
     fn get_statements(&self) -> Vec<String> {
         unimplemented!()
@@ -51,18 +57,8 @@ impl Visualizable for f64 {
 
 impl Visualizable for TetrahedronData {
     fn get_statements(&self) -> Vec<String> {
-        unimplemented!()
+        vec![]
     }
-}
-
-impl Visualizable for glam::DVec3 {
-    fn get_statements(&self) -> Vec<String> {
-        unimplemented!()
-    }
-}
-
-pub trait Visualizable {
-    fn get_statements(&self) -> Vec<String>;
 }
 
 impl Visualizable for TriangleData<Point2d> {
@@ -76,6 +72,19 @@ impl Visualizable for TriangleData<Point2d> {
 }
 
 impl Visualizable for Extent<Point2d> {
+    fn get_statements(&self) -> Vec<String> {
+        let p1 = Point2d::new(self.min.x, self.min.y);
+        let p2 = Point2d::new(self.max.x, self.min.y);
+        let p3 = Point2d::new(self.max.x, self.max.y);
+        let p4 = Point2d::new(self.min.x, self.max.y);
+        vec![format!(
+            "Polygon {} {} {} {} {} {} {} {} color 0.0 1.0 0.0 1.0",
+            p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y,
+        )]
+    }
+}
+
+impl Visualizable for Extent<Point3d> {
     fn get_statements(&self) -> Vec<String> {
         let p1 = Point2d::new(self.min.x, self.min.y);
         let p2 = Point2d::new(self.max.x, self.min.y);
@@ -118,7 +127,19 @@ impl Visualizable for Point2d {
     }
 }
 
+impl Visualizable for Point3d {
+    fn get_statements(&self) -> Vec<String> {
+        vec![format!("Point {} {}", self.x, self.y).into()]
+    }
+}
+
 impl Visualizable for SearchData<TwoD> {
+    fn get_statements(&self) -> Vec<String> {
+        vec![format!("Circle {} {} {}", self.point.x, self.point.y, self.radius).into()]
+    }
+}
+
+impl Visualizable for SearchData<ThreeD> {
     fn get_statements(&self) -> Vec<String> {
         vec![format!("Circle {} {} {}", self.point.x, self.point.y, self.radius).into()]
     }
