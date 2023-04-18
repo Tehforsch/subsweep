@@ -19,6 +19,9 @@ use bevy::prelude::Resource;
 use bevy::prelude::SystemLabel;
 use derive_custom::raxiom_parameters;
 use hdf5::File;
+use ndarray::ArrayBase;
+use ndarray::Dim;
+use ndarray::OwnedRepr;
 
 use super::to_dataset::ToDataset;
 use super::InputDatasetDescriptor;
@@ -42,7 +45,7 @@ pub enum ComponentInput<T> {
 }
 
 #[derive(Default, Deref, DerefMut, Resource)]
-struct InputFiles(Vec<File>);
+pub struct InputFiles(Vec<File>);
 
 /// Parameters describing how the initial conditions
 /// should be read. Only required if should_read_initial_conditions
@@ -126,7 +129,7 @@ impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
     }
 }
 
-fn open_file_system(
+pub fn open_file_system(
     mut files: ResMut<InputFiles>,
     parameters: Res<InputParameters>,
     rank: Res<WorldRank>,
@@ -154,7 +157,7 @@ fn open_file_system(
     }
 }
 
-fn close_file_system(mut files: ResMut<InputFiles>) {
+pub fn close_file_system(mut files: ResMut<InputFiles>) {
     files.0.clear();
 }
 
@@ -184,10 +187,9 @@ fn spawn_entities_system(
     let get_num_entities = |dataset_name: &str| {
         files
             .iter()
-            .map(|f| {
-                f.dataset(dataset_name).unwrap().shape()[0] / parameters.shrink_factor.unwrap_or(1)
-            })
+            .map(|f| f.dataset(dataset_name).unwrap().shape()[0])
             .sum::<usize>()
+            / parameters.shrink_factor.unwrap_or(1)
     };
     let num_entities = get_num_entities(&example_dataset.name);
     for (_, dataset) in datasets.iter() {
@@ -214,31 +216,6 @@ fn read_dataset_system<T: ToDataset + Component>(
 ) {
     let name = descriptor.dataset_name();
     debug!("Reading dataset {}", name);
-    let data = files.iter().map(|file| {
-        let set = file
-            .dataset(name)
-            .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
-        let data = match descriptor.shape {
-            DatasetShape::OneDimensional => set
-                .read_1d::<T>()
-                .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}")),
-            DatasetShape::TwoDimensional(constructor) => {
-                let d = set
-                    .read_2d::<Float>()
-                    .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}"));
-                d.outer_iter()
-                    .map(|row| constructor(row.as_slice().unwrap()))
-                    .collect()
-            }
-        };
-        let conversion_factor = descriptor.read_scale_factor(&set);
-        assert_eq!(
-            descriptor.read_dimension(&set),
-            T::dimension(),
-            "Mismatch in dimension while reading dataset {name}.",
-        );
-        (data, conversion_factor)
-    });
     let should_insert = |i: usize| {
         if let Some(shrink_factor) = parameters.shrink_factor {
             i.rem_euclid(shrink_factor) == 0
@@ -246,19 +223,55 @@ fn read_dataset_system<T: ToDataset + Component>(
             true
         }
     };
-    for ((item, factor_written), entity) in data
-        .flat_map(|(set, factor_written)| {
-            set.into_iter()
-                .enumerate()
-                .filter(|(i, _)| should_insert(*i))
-                .map(move |(_, item)| (item, factor_written))
-        })
+    for (item, entity) in read_dataset::<T>(&descriptor, &files)
+        .enumerate()
+        .filter(|(i, _)| should_insert(*i))
+        .map(|(_, t)| t)
         .zip(spawned_entities.iter())
     {
-        let factor_read = T::dimension().base_conversion_factor();
-        commands
-            .entity(*entity)
-            .insert(item.convert_base_units(factor_written / factor_read));
+        commands.entity(*entity).insert(item);
     }
     debug!("Finished reading dataset {}", name);
+}
+
+pub fn read_dataset<'a, T: ToDataset + Component>(
+    descriptor: &'a InputDatasetDescriptor<T>,
+    files: &'a InputFiles,
+) -> impl Iterator<Item = T> + 'a {
+    let factor_read = T::dimension().base_conversion_factor();
+    files.iter().flat_map(move |file| {
+        let (set, factor_written) = read_dataset_for_file(descriptor, file);
+        set.into_iter()
+            .map(move |item| item.convert_base_units(factor_written / factor_read))
+    })
+}
+
+pub fn read_dataset_for_file<'a, T: ToDataset + Component>(
+    descriptor: &'a InputDatasetDescriptor<T>,
+    file: &'a File,
+) -> (ArrayBase<OwnedRepr<T>, Dim<[usize; 1]>>, f64) {
+    let name = descriptor.dataset_name();
+    let set = file
+        .dataset(&name)
+        .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
+    let data = match descriptor.shape {
+        DatasetShape::OneDimensional => set
+            .read_1d::<T>()
+            .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}")),
+        DatasetShape::TwoDimensional(constructor) => {
+            let d = set
+                .read_2d::<Float>()
+                .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}"));
+            d.outer_iter()
+                .map(|row| constructor(row.as_slice().unwrap()))
+                .collect()
+        }
+    };
+    let conversion_factor = descriptor.read_scale_factor(&set);
+    assert_eq!(
+        descriptor.read_dimension(&set),
+        T::dimension(),
+        "Mismatch in dimension while reading dataset {name}.",
+    );
+    (data, conversion_factor)
 }
