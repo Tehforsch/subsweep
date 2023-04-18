@@ -2,6 +2,8 @@ use hdf5::Dataset;
 use raxiom::io::UnitReader;
 use raxiom::units::Dimension;
 
+use crate::cosmology::Cosmology;
+
 pub const SCALE_FACTOR_IDENTIFIER: &str = "to_cgs";
 pub const LENGTH_IDENTIFIER: &str = "length_scaling";
 pub const VELOCITY_IDENTIFIER: &str = "velocity_scaling";
@@ -10,7 +12,15 @@ pub const A_IDENTIFIER: &str = "a_scaling";
 pub const H_IDENTIFIER: &str = "h_scaling";
 
 #[derive(Clone)]
-pub struct ArepoUnitReader;
+pub struct ArepoUnitReader {
+    cosmology: Cosmology,
+}
+
+impl ArepoUnitReader {
+    pub fn new(cosmology: Cosmology) -> Self {
+        Self { cosmology }
+    }
+}
 
 impl UnitReader for ArepoUnitReader {
     fn read_scale_factor(&self, set: &Dataset) -> f64 {
@@ -32,14 +42,6 @@ impl UnitReader for ArepoUnitReader {
         let velocity: i32 = read_attr(VELOCITY_IDENTIFIER, "No time scale factor in dataset");
         let a: i32 = read_attr(A_IDENTIFIER, "No a scale factor in dataset");
         let h: i32 = read_attr(H_IDENTIFIER, "No h scale factor in dataset");
-        assert_eq!(
-            a, 0,
-            "Tried to read dataset with a_scaling != 0. Cosmological units not implemented yet."
-        );
-        assert_eq!(
-            h, 0,
-            "Tried to read dataset with h_scaling != 0. Cosmological units not implemented yet."
-        );
         let length = length + velocity;
         let time = -velocity;
 

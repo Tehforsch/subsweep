@@ -43,19 +43,23 @@ fn extract_from_default<T: RaxiomParameters>(overrides: &[Override]) -> T {
         insert_overrides(&mut value, overrides);
         value
     };
-    match serde_yaml::from_value::<T>(get_value()) {
-        Ok(obj) => obj,
-        Err(e) => {
-            let value = get_value();
-            if !value.is_mapping() {
-                panic!("Failed to parse section {section_name}: {e}");
-            }
-            let values_overriden = !value.as_mapping().unwrap().is_empty();
-            if values_overriden {
-                panic!("Failed to parse required section {section_name}. Error: {e}.",);
-            } else {
-                panic!("Required section {section_name} not present in parameter file. Error: {e}",);
-            }
+    let values_to_try = [get_value(), Value::Null];
+    let results = values_to_try.map(|value| serde_yaml::from_value::<T>(value));
+    let errors = results
+        .iter()
+        .filter_map(|r| match r {
+            Ok(_) => None,
+            Err(e) => Some(format!("{:?}", e)),
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    match results.into_iter().find(|result| result.is_ok()) {
+        Some(t) => t.unwrap(),
+        None => {
+            panic!(
+                "Failed to parse parameter section {section_name}. Errors: {}",
+                errors
+            )
         }
     }
 }

@@ -1,9 +1,11 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
+mod cosmology;
 mod unit_reader;
 
 use bevy::prelude::*;
+use cosmology::Cosmology;
 use mpi::traits::Equivalence;
 use ordered_float::OrderedFloat;
 use raxiom::communication::CommunicatedOption;
@@ -46,6 +48,8 @@ fn main() {
         .read_initial_conditions(true)
         .update_from_command_line_options()
         .build();
+    let cosmology = sim.add_parameter_type_and_get_result::<Cosmology>().clone();
+    let unit_reader = Box::new(ArepoUnitReader::new(cosmology));
     sim.add_parameter_type::<Parameters>()
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
@@ -60,7 +64,7 @@ fn main() {
             InputDatasetDescriptor::<Position>::new(
                 DatasetDescriptor {
                     dataset_name: "PartType0/Coordinates".into(),
-                    unit_reader: Box::new(ArepoUnitReader),
+                    unit_reader: unit_reader.clone(),
                 },
                 DatasetShape::TwoDimensional(read_vec),
             ),
@@ -69,7 +73,7 @@ fn main() {
             InputDatasetDescriptor::<Density> {
                 descriptor: DatasetDescriptor {
                     dataset_name: "PartType0/Density".into(),
-                    unit_reader: Box::new(ArepoUnitReader),
+                    unit_reader: unit_reader.clone(),
                 },
                 ..default()
             },
