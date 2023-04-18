@@ -35,6 +35,7 @@ ordered-float = "3.4.0"
 generational-arena = "0.2.8"
 generic-tests = "0.1.2"
 bimap = "0.6.3"
+ndarray = "0.15.6"
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"] }

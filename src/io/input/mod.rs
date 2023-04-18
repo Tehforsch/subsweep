@@ -234,7 +234,7 @@ fn read_dataset_system<T: ToDataset + Component>(
     debug!("Finished reading dataset {}", name);
 }
 
-pub fn read_dataset<'a, T: ToDataset + Component>(
+pub fn read_dataset<'a, T: ToDataset>(
     descriptor: &'a InputDatasetDescriptor<T>,
     files: &'a InputFiles,
 ) -> impl Iterator<Item = T> + 'a {
@@ -246,7 +246,7 @@ pub fn read_dataset<'a, T: ToDataset + Component>(
     })
 }
 
-pub fn read_dataset_for_file<'a, T: ToDataset + Component>(
+pub fn read_dataset_for_file<'a, T: ToDataset>(
     descriptor: &'a InputDatasetDescriptor<T>,
     file: &'a File,
 ) -> (ArrayBase<OwnedRepr<T>, Dim<[usize; 1]>>, f64) {
