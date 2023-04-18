@@ -146,7 +146,7 @@ pub(super) fn check_particle_extent_system(
     let volume_ratio = extent.volume() / box_.volume();
     if volume_ratio.value() < 0.8 {
         error!(
-            "The particles fill out a small region of the simulation box ({:.1}%). Particles range from {:.2?} to {:.2?}",
+            "The particles fill out a small region of the simulation box ({:.5}%). Particles range from {:.2?} to {:.2?}",
             volume_ratio.in_percent(),
             extent.min,
             extent.max,
