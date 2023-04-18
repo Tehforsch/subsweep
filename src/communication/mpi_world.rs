@@ -92,6 +92,14 @@ where
         let tag = self.tag;
         debug_assert!(self.all_ranks_have_same_value(&tag), "Initializing allgather operation but different ranks have different tags. Tag on rank {}: {}!", self.world.rank(), self.tag)
     }
+
+    fn unchecked_convert<S>(&self) -> MpiWorld<S> {
+        MpiWorld::<S> {
+            world: self.world,
+            _marker: PhantomData,
+            tag: self.tag,
+        }
+    }
 }
 
 impl<S> MpiWorld<S>
@@ -188,8 +196,7 @@ where
         data
     }
 
-    #[allow(dead_code)] // Will most likely be used eventually
-    pub fn all_gather_varcount(&mut self, send: &[S], counts: &[Count]) -> Vec<S> {
+    fn all_gather_varcount_with_counts(&mut self, send: &[S], counts: &[Count]) -> Vec<S> {
         self.verify_tag();
         let mut result_buffer: Vec<S> =
             unsafe { get_buffer(counts.iter().map(|x| *x as usize).sum()) };
@@ -204,6 +211,13 @@ where
         let mut partition = PartitionMut::new(&mut result_buffer, counts, &displacements[..]);
         self.world.all_gather_varcount_into(send, &mut partition);
         result_buffer
+    }
+
+    pub fn all_gather_varcount(&mut self, send: &[S]) -> Vec<S> {
+        let mut counter: MpiWorld<usize> = self.unchecked_convert();
+        let counts = counter.all_gather(&send.len());
+        let counts: Vec<_> = counts.into_iter().map(|x| x as Count).collect();
+        self.all_gather_varcount_with_counts(send, &counts)
     }
 }
 
