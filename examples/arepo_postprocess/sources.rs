@@ -2,6 +2,7 @@ use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Entity;
 use bevy::prelude::Res;
+use bevy::prelude::Resource;
 use derive_custom::Named;
 use derive_more::Deref;
 use derive_more::DerefMut;
@@ -18,6 +19,7 @@ use raxiom::io::input::InputFiles;
 use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
+use raxiom::mpidbg;
 use raxiom::prelude::Communicator;
 use raxiom::prelude::Particles;
 use raxiom::prelude::SimulationBox;
@@ -47,12 +49,17 @@ pub struct Metallicity(pub Dimensionless);
 // This is dimensionless in the arepo outputs, since its the scale factor
 pub struct StellarFormationTime(pub Dimensionless);
 
-#[derive(Debug)]
-struct Source {
+#[derive(Clone, Debug, Equivalence)]
+pub struct Source {
     position: VecLength,
     age: Time,
     metallicity: Dimensionless,
     mass: Mass,
+}
+
+#[derive(Resource)]
+pub struct Sources {
+    sources: Vec<Source>,
 }
 
 fn make_descriptor<T>(
@@ -111,21 +118,31 @@ fn read_sources(files: &InputFiles, cosmology: &Cosmology) -> Vec<Source> {
         .collect()
 }
 
+pub fn read_sources_system(
+    mut commands: Commands,
+    files: Res<InputFiles>,
+    cosmology: Res<Cosmology>,
+) {
+    let sources = read_sources(&files, &cosmology);
+    commands.insert_resource(Sources { sources });
+}
+
 pub fn initialize_sources_system(
     mut commands: Commands,
     particles: Particles<(Entity, &Position)>,
     parameters: Res<Parameters>,
     box_size: Res<SimulationBox>,
+    mut source_comm: Communicator<Source>,
     mut comm: Communicator<CommunicatedOption<Identified<DistanceToSourceData>>>,
-    files: Res<InputFiles>,
-    cosmology: Res<Cosmology>,
+    sources: Res<Sources>,
 ) {
-    let sources = dbg!(read_sources(&files, &cosmology));
-    for (entity, p) in particles.iter() {
+    let all_sources = source_comm.all_gather_varcount(&sources.sources);
+    for (entity, _) in particles.iter() {
         commands
             .entity(entity)
             .insert(components::Source(SourceRate::zero()));
     }
+    // let closest = find_closest_entity_for_each_source();
     // let closest = particles
     //     .iter()
     //     .map(|(entity, pos)| {

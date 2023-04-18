@@ -25,7 +25,9 @@ use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::VecLength;
 use sources::initialize_sources_system;
+use sources::read_sources_system;
 use sources::DistanceToSourceData;
+use sources::Source;
 use unit_reader::ArepoUnitReader;
 
 #[raxiom_parameters("postprocess")]
@@ -55,8 +57,12 @@ fn main() {
             SimulationStartupStages::InsertDerivedComponents,
             insert_missing_components_system,
         )
+        .add_startup_system_to_stage(
+            SimulationStartupStages::InsertDerivedComponents,
+            initialize_sources_system,
+        )
         .add_startup_system(
-            initialize_sources_system
+            read_sources_system
                 .after(open_file_system)
                 .before(close_file_system),
         )
@@ -82,6 +88,7 @@ fn main() {
         .add_plugin(CommunicationPlugin::<
             CommunicatedOption<Identified<DistanceToSourceData>>,
         >::default())
+        .add_plugin(CommunicationPlugin::<Source>::default())
         .add_plugin(SweepPlugin)
         .run();
 }
