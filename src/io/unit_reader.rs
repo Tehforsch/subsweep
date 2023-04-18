@@ -49,6 +49,8 @@ impl UnitReader for DefaultUnitReader {
         let length: i32 = read_attr(LENGTH_IDENTIFIER, "No length scale factor in dataset");
         let mass: i32 = read_attr(MASS_IDENTIFIER, "No mass scale factor in dataset");
         let time: i32 = read_attr(TIME_IDENTIFIER, "No time scale factor in dataset");
+        let h = 0;
+        let a = 0;
         let temperature: i32 = read_attr(
             TEMPERATURE_IDENTIFIER,
             "No temperature scale factor in dataset",
@@ -60,6 +62,8 @@ impl UnitReader for DefaultUnitReader {
             time,
             temperature,
             amount,
+            h,
+            a,
         }
     }
 }

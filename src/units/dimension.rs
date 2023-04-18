@@ -14,6 +14,8 @@ pub struct Dimension {
     pub mass: i32,
     pub temperature: i32,
     pub amount: i32,
+    pub h: i32,
+    pub a: i32,
 }
 
 pub const NONE: Dimension = Dimension {
@@ -22,6 +24,8 @@ pub const NONE: Dimension = Dimension {
     mass: 0,
     temperature: 0,
     amount: 0,
+    h: 0,
+    a: 0,
 };
 
 impl Dimension {
@@ -37,6 +41,8 @@ impl Dimension {
             mass,
             temperature,
             amount,
+            h: _,
+            a: _,
         } = self;
         (LENGTH_TO_SI).powi(*length)
             * (TIME_TO_SI).powi(*time)

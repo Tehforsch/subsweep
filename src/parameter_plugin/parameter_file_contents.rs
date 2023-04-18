@@ -54,7 +54,7 @@ fn extract_from_default<T: RaxiomParameters>(overrides: &[Override]) -> T {
             if values_overriden {
                 panic!("Failed to parse required section {section_name}. Error: {e}.",);
             } else {
-                panic!("Required section {section_name} not present in parameter file.",);
+                panic!("Required section {section_name} not present in parameter file. Error: {e}",);
             }
         }
     }
