@@ -1,6 +1,7 @@
 use bevy::prelude::warn;
 use mpi::traits::Equivalence;
 
+use super::chemistry::Chemistry;
 use super::timestep_level::TimestepLevel;
 use super::Sweep;
 use crate::communication::communicator::Communicator;
@@ -38,7 +39,7 @@ impl std::fmt::Display for ParticleInfo {
     }
 }
 
-impl<'a> Sweep<'a> {
+impl<'a, C: Chemistry> Sweep<'a, C> {
     fn get_dependency(
         &self,
         p1: ParticleId,

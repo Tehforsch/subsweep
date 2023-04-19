@@ -1,4 +1,5 @@
 mod active_list;
+mod chemistry;
 mod chemistry_solver;
 mod communicator;
 pub mod components;
@@ -21,7 +22,7 @@ pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
 use self::active_list::ActiveList;
-use self::chemistry_solver::Solver;
+use self::chemistry::Chemistry;
 use self::components::IonizedHydrogenFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
@@ -50,13 +51,16 @@ use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
+use crate::sweep::chemistry::HydrogenOnly;
+use crate::sweep::chemistry::HydrogenOnlySpecies;
 use crate::units::Dimensionless;
-use crate::units::PhotonFlux;
 use crate::units::SourceRate;
 use crate::units::Time;
-use crate::units::PROTON_MASS;
 
-pub type SweepCommunicator<'a> = self::communicator::SweepCommunicator<'a>;
+pub type Flux<C> = <C as Chemistry>::Photons;
+pub type Species<C> = <C as Chemistry>::Species;
+
+pub type SweepCommunicator<'a, C> = self::communicator::SweepCommunicator<'a, C>;
 
 #[derive(Equivalence, Clone, Into)]
 pub struct CellCount(usize);
@@ -65,7 +69,7 @@ type PriorityQueue<T> = std::collections::binary_heap::BinaryHeap<T>;
 type Queue<T> = Vec<T>;
 
 type Cells = ActiveList<Cell>;
-type Sites = ActiveList<Site>;
+type Sites<C> = ActiveList<Site<C>>;
 
 #[derive(Named)]
 pub struct SweepPlugin;
@@ -103,49 +107,50 @@ impl RaxiomPlugin for SweepPlugin {
             communicate_levels_system.after(sweep_system),
         )
         .add_parameter_type::<SweepParameters>()
-        .add_plugin(CommunicationPlugin::<FluxData>::default())
+        .add_plugin(CommunicationPlugin::<FluxData<HydrogenOnly>>::default())
         .add_plugin(CommunicationPlugin::<CellCount>::default())
         .add_plugin(CommunicationPlugin::<TimestepLevelData>::exchange());
     }
 }
 
-struct Sweep<'a> {
+struct Sweep<'a, C: Chemistry> {
     directions: Directions,
     cells: Cells,
-    sites: Sites,
+    sites: Sites<C>,
     levels: HashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
-    to_send: DataByRank<Queue<FluxData>>,
+    to_send: DataByRank<Queue<FluxData<C>>>,
     to_solve_count: CountByDir,
     to_receive_count: DataByRank<usize>,
     max_timestep: Time,
     current_level: TimestepLevel,
-    flux_treshold: PhotonFlux,
-    communicator: SweepCommunicator<'a>,
+    communicator: SweepCommunicator<'a, C>,
     count_communicator: Communicator<'a, CellCount>,
     num_timestep_levels: usize,
     check_deadlock: bool,
+    chemistry: C,
 }
 
-impl<'a> Sweep<'a> {
+impl<'a, C: Chemistry> Sweep<'a, C> {
     fn run(
         directions: &Directions,
         cells: HashMap<ParticleId, Cell>,
-        sites: HashMap<ParticleId, Site>,
+        sites: HashMap<ParticleId, Site<C>>,
         levels: HashMap<ParticleId, TimestepLevel>,
         max_timestep: Time,
         parameters: &SweepParameters,
         world_size: usize,
         world_rank: Rank,
-        communicator: SweepCommunicator,
+        communicator: SweepCommunicator<C>,
         count_communicator: Communicator<CellCount>,
-    ) -> Sites {
+        chemistry: C,
+    ) -> Sites<C> {
         for level in levels.values() {
             assert!(level.0 < parameters.num_timestep_levels);
         }
         let mut solver = Sweep {
             cells: Cells::new(cells, &levels),
-            sites: Sites::new(sites, &levels),
+            sites: Sites::<C>::new(sites, &levels),
             levels,
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
@@ -154,11 +159,11 @@ impl<'a> Sweep<'a> {
             to_receive_count: DataByRank::empty(),
             max_timestep,
             current_level: TimestepLevel(0),
-            flux_treshold: parameters.significant_flux_treshold,
             communicator,
             count_communicator,
             num_timestep_levels: parameters.num_timestep_levels,
             check_deadlock: parameters.check_deadlock,
+            chemistry,
         };
         solver.run_sweeps();
         solver.sites
@@ -292,26 +297,19 @@ impl<'a> Sweep<'a> {
         self.levels[&id].is_active(self.current_level)
     }
 
-    fn get_outgoing_flux(&mut self, task: &Task) -> PhotonFlux {
+    fn get_outgoing_flux(&mut self, task: &Task) -> Flux<C> {
         let cell = &self.cells.get(task.id);
         let site = self.sites.get_mut(task.id);
-        let neutral_hydrogen_number_density =
-            site.density / PROTON_MASS * (1.0 - site.ionized_hydrogen_fraction);
         let source = site.source_per_direction_bin(&self.directions);
-        let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-        let flux = site.incoming_total_flux[task.dir.0] + source;
-        if flux < self.flux_treshold {
-            PhotonFlux::zero()
-        } else {
-            let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-            flux * absorbed_fraction
-        }
+        let incoming_flux = site.incoming_total_flux[task.dir.0].clone() + source;
+        self.chemistry.get_outgoing_flux(cell, site, incoming_flux)
     }
 
     fn solve_task(&mut self, task: Task) {
         let outgoing_flux = self.get_outgoing_flux(&task);
         let site = self.sites.get_mut(task.id);
-        let outgoing_flux_correction = outgoing_flux - site.outgoing_total_flux[task.dir.0];
+        let outgoing_flux_correction =
+            outgoing_flux.clone() - site.outgoing_total_flux[task.dir.0].clone();
         site.outgoing_total_flux[task.dir.0] = outgoing_flux;
         let cell = &self.cells.get(task.id);
         self.to_solve_count.reduce(task.dir);
@@ -325,7 +323,7 @@ impl<'a> Sweep<'a> {
             if face.points_downwind(&self.directions[task.dir]) {
                 let effective_area = face.area * face.normal.dot(*self.directions[task.dir]);
                 let flux_correction_this_cell =
-                    outgoing_flux_correction * (effective_area / total_effective_area);
+                    outgoing_flux_correction.clone() * (effective_area / total_effective_area);
                 match neighbour {
                     ParticleType::Local(neighbour_id) => self.handle_local_neighbour(
                         flux_correction_this_cell,
@@ -345,7 +343,7 @@ impl<'a> Sweep<'a> {
 
     fn handle_local_neighbour(
         &mut self,
-        incoming_flux_correction: PhotonFlux,
+        incoming_flux_correction: Flux<C>,
         dir: DirectionIndex,
         neighbour: ParticleId,
     ) {
@@ -364,7 +362,7 @@ impl<'a> Sweep<'a> {
     fn handle_remote_neighbour(
         &mut self,
         task: &Task,
-        flux_correction: PhotonFlux,
+        flux_correction: Flux<C>,
         remote: &RemoteNeighbour,
     ) {
         if self.is_active(remote.id) {
@@ -383,15 +381,8 @@ impl<'a> Sweep<'a> {
             let timestep = level.to_timestep(self.max_timestep);
             let source = site.source_per_direction_bin(&self.directions);
             let flux = site.total_incoming_flux() + source;
-            site.ionized_hydrogen_fraction = Solver {
-                ionized_hydrogen_fraction: site.ionized_hydrogen_fraction,
-                timestep,
-                density: site.density,
-                volume: cell.volume,
-                length: cell.size,
-                flux,
-            }
-            .get_new_abundance();
+            self.chemistry
+                .update(site, flux, timestep, cell.volume, cell.size);
         }
     }
 }
@@ -411,7 +402,7 @@ pub fn sweep_system(
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
-    mut comm: Communicator<FluxData>,
+    mut comm: Communicator<FluxData<HydrogenOnly>>,
     count_comm: Communicator<CellCount>,
 ) {
     let cells: HashMap<_, _> = cells_query
@@ -423,10 +414,12 @@ pub fn sweep_system(
         .map(|(_, id, density, ionized_hydrogen_fraction, source)| {
             (
                 *id,
-                Site::new(
+                Site::<HydrogenOnly>::new(
                     &directions,
+                    HydrogenOnlySpecies {
+                        ionized_hydrogen_fraction: **ionized_hydrogen_fraction,
+                    },
                     **density,
-                    **ionized_hydrogen_fraction,
                     **source,
                 ),
             )
@@ -449,10 +442,13 @@ pub fn sweep_system(
         **world_rank,
         SweepCommunicator::new(&mut comm),
         count_comm,
+        HydrogenOnly {
+            flux_treshold: sweep_parameters.significant_flux_treshold,
+        },
     );
     for (entity, id, _, mut fraction, _) in sites_query.iter_mut() {
         let site = sites.get(*id);
-        let new_fraction = site.ionized_hydrogen_fraction;
+        let new_fraction = site.species.ionized_hydrogen_fraction;
         let change_timescale =
             (**fraction / ((**fraction - new_fraction) / timestep.max_timestep)).abs();
         let desired_timestep = change_timescale * sweep_parameters.timestep_safety_factor;

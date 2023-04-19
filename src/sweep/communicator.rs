@@ -1,6 +1,7 @@
 use mpi::request::scope;
 use mpi::request::Request;
 
+use super::chemistry::Chemistry;
 use super::task::FluxData;
 use crate::communication::DataByRank;
 use crate::communication::DataCommunicator;
@@ -13,15 +14,15 @@ type OutstandingRequest = mpi::ffi::MPI_Request;
 #[cfg(not(feature = "mpi"))]
 type OutstandingRequest = ();
 
-pub struct SweepCommunicator<'comm> {
-    communicator: &'comm mut DataCommunicator<FluxData>,
-    send_buffers: DataByRank<Vec<FluxData>>,
+pub struct SweepCommunicator<'comm, C: Chemistry> {
+    communicator: &'comm mut DataCommunicator<FluxData<C>>,
+    send_buffers: DataByRank<Vec<FluxData<C>>>,
     requests: DataByRank<Option<OutstandingRequest>>,
 }
 
 #[cfg(feature = "mpi")]
-fn to_unscoped<'a>(
-    scoped_request: Request<'a, [FluxData], &mpi::request::LocalScope<'a>>,
+fn to_unscoped<'a, C: Chemistry>(
+    scoped_request: Request<'a, [FluxData<C>], &mpi::request::LocalScope<'a>>,
 ) -> OutstandingRequest {
     // SAFETY:
     // We only overwrite the data in a send buffer whenever the previous request is finished.
@@ -30,12 +31,14 @@ fn to_unscoped<'a>(
 }
 
 #[cfg(not(feature = "mpi"))]
-fn to_unscoped<'a>(_scoped_request: Request<'a, [FluxData], &mpi::request::LocalScope<'a>>) -> () {
+fn to_unscoped<'a, C: Chemistry>(
+    _scoped_request: Request<'a, [FluxData<C>], &mpi::request::LocalScope<'a>>,
+) -> () {
     ()
 }
 
-impl<'comm> SweepCommunicator<'comm> {
-    pub fn new(communicator: &'comm mut DataCommunicator<FluxData>) -> Self {
+impl<'comm, C: Chemistry> SweepCommunicator<'comm, C> {
+    pub fn new(communicator: &'comm mut DataCommunicator<FluxData<C>>) -> Self {
         let send_buffers = DataByRank::from_communicator(communicator);
         let requests = DataByRank::from_communicator(communicator);
         Self {
@@ -64,7 +67,7 @@ impl<'comm> SweepCommunicator<'comm> {
         }
     }
 
-    pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData>>) {
+    pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData<C>>>) {
         self.update_pending_requests();
         for (rank, data) in to_send.iter_mut() {
             if data.is_empty() {
@@ -84,7 +87,7 @@ impl<'comm> SweepCommunicator<'comm> {
         }
     }
 
-    pub fn try_recv(&mut self, rank: Rank) -> Option<Vec<FluxData>> {
+    pub fn try_recv(&mut self, rank: Rank) -> Option<Vec<FluxData<C>>> {
         self.communicator.try_receive_vec(rank)
     }
 
@@ -123,16 +126,16 @@ impl<'comm> SweepCommunicator<'comm> {
     fn to_scoped_request<'a, Sc: mpi::request::Scope<'a>>(
         &self,
         scope: Sc,
-        data: &'a Vec<FluxData>,
+        data: &'a Vec<FluxData<C>>,
         request: OutstandingRequest,
-    ) -> Request<'a, [FluxData], Sc> {
+    ) -> Request<'a, [FluxData<C>], Sc> {
         unsafe { Request::from_raw(request, data, scope) }
     }
 }
 
 // Make sure we cannot accidentally drop the send buffers while
 // there are still pending MPI requests.
-impl<'comm> Drop for SweepCommunicator<'comm> {
+impl<'comm, C: Chemistry> Drop for SweepCommunicator<'comm, C> {
     fn drop(&mut self) {
         for (rank, request) in self.requests.iter() {
             if let Some(request) = request {
@@ -143,7 +146,7 @@ impl<'comm> Drop for SweepCommunicator<'comm> {
     }
 }
 
-impl<'comm> SizedCommunicator for SweepCommunicator<'comm> {
+impl<'comm, C: Chemistry> SizedCommunicator for SweepCommunicator<'comm, C> {
     fn size(&self) -> usize {
         self.communicator.size()
     }

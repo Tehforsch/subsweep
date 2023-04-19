@@ -1,8 +1,12 @@
+use mpi::datatype::UserDatatype;
+use mpi::internal::memoffset::offset_of;
 use mpi::traits::Equivalence;
+use mpi::Address;
 
+use super::chemistry::Chemistry;
 use super::direction::DirectionIndex;
+use super::Flux;
 use crate::particle::ParticleId;
-use crate::units::PhotonFlux;
 
 #[derive(Debug)]
 pub struct Task {
@@ -10,11 +14,11 @@ pub struct Task {
     pub dir: DirectionIndex,
 }
 
-#[derive(Clone, Debug, Equivalence)]
-pub struct FluxData {
+#[derive(Clone, Debug)]
+pub struct FluxData<C: Chemistry> {
     pub id: ParticleId,
     pub dir: DirectionIndex,
-    pub flux: PhotonFlux,
+    pub flux: Flux<C>,
 }
 
 impl PartialOrd for Task {
@@ -34,5 +38,25 @@ impl Ord for Task {
 impl PartialEq for Task {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id && self.dir == other.dir
+    }
+}
+
+unsafe impl<C: Chemistry> Equivalence for FluxData<C> {
+    type Out = UserDatatype;
+
+    fn equivalent_datatype() -> Self::Out {
+        UserDatatype::structured(
+            &[1, 1, 1],
+            &[
+                offset_of!(FluxData<C>, id) as Address,
+                offset_of!(FluxData<C>, dir) as Address,
+                offset_of!(FluxData<C>, flux) as Address,
+            ],
+            &[
+                UserDatatype::contiguous(1, &ParticleId::equivalent_datatype()),
+                UserDatatype::contiguous(1, &DirectionIndex::equivalent_datatype()),
+                UserDatatype::contiguous(1, &Flux::<C>::equivalent_datatype()),
+            ],
+        )
     }
 }
