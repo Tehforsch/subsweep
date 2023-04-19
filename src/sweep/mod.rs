@@ -223,21 +223,10 @@ impl<'a> Sweep<'a> {
         let tasks = self
             .directions
             .enumerate()
-            .flat_map(|(dir_index, dir)| {
-                self.cells
+            .flat_map(|(dir_index, _)| {
+                self.sites
                     .enumerate_active(self.current_level)
-                    .filter(|(_, cell)| {
-                        // Importantly, the !face_points_upwind cannot
-                        // be changed to face_points_downwind, because
-                        // we need to be inclusive of all faces, even
-                        // those that have zero dot product with the
-                        // face normal.
-                        cell.neighbours.iter().all(|(face, neighbour)| {
-                            !face.points_upwind(dir)
-                                || neighbour.is_boundary()
-                                || !self.is_active(neighbour.unwrap_id())
-                        })
-                    })
+                    .filter(move |(_, site)| site.num_missing_upwind[dir_index] == 0)
                     .map(move |(id, _)| Task {
                         id: *id,
                         dir: dir_index,
