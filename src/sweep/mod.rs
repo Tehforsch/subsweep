@@ -377,7 +377,7 @@ impl<'a> Sweep<'a> {
         flux_correction: PhotonFlux,
         remote: &RemoteNeighbour,
     ) {
-        if self.is_active(remote.id) {
+        if self.is_active(remote.id) && !remote.periodic_wrap_type.is_periodic() {
             let flux_data = FluxData {
                 dir: task.dir,
                 flux: flux_correction,
