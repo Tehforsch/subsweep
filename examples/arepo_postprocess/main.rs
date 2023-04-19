@@ -33,7 +33,7 @@ use unit_reader::ArepoUnitReader;
 #[raxiom_parameters("postprocess")]
 pub struct Parameters {
     initial_fraction_ionized_hydrogen: Dimensionless,
-    source_strength: PhotonFlux,
+    sources_from_ics: bool,
 }
 
 fn read_vec(data: &[Float]) -> Position {
@@ -52,12 +52,9 @@ fn main() {
         .build();
     let cosmology = sim.add_parameter_type_and_get_result::<Cosmology>().clone();
     let unit_reader = Box::new(ArepoUnitReader::new(cosmology));
-    sim.add_parameter_type::<Parameters>()
-        .add_startup_system_to_stage(
-            SimulationStartupStages::InsertDerivedComponents,
-            insert_missing_components_system,
-        )
-        .add_startup_system_to_stage(
+    let parameters = sim.add_parameter_type_and_get_result::<Parameters>();
+    if parameters.sources_from_ics {
+        sim.add_startup_system_to_stage(
             SimulationStartupStages::InsertComponentsAfterGrid,
             set_source_terms_system,
         )
@@ -65,6 +62,12 @@ fn main() {
             read_sources_system
                 .after(open_file_system)
                 .before(close_file_system),
+        );
+    }
+    sim.add_parameter_type::<Parameters>()
+        .add_startup_system_to_stage(
+            SimulationStartupStages::InsertDerivedComponents,
+            insert_missing_components_system,
         )
         .add_plugin(ParallelVoronoiGridConstruction)
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
