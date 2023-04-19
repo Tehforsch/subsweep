@@ -56,7 +56,10 @@ fn main() {
             SimulationStartupStages::InsertDerivedComponents,
             insert_missing_components_system,
         )
-        .add_startup_system_to_stage(SimulationStartupStages::InsertGrid, set_source_terms_system)
+        .add_startup_system_to_stage(
+            SimulationStartupStages::InsertComponentsAfterGrid,
+            set_source_terms_system,
+        )
         .add_startup_system(
             read_sources_system
                 .after(open_file_system)
