@@ -16,22 +16,22 @@ mpi_test = []
 vis = []
 
 [dependencies]
-bevy = { version = "0.9.0", default-features = false, features = ["bevy_render", "x11", "bevy_winit", "bevy_asset", "bevy_sprite", "bevy_core_pipeline"]}
+bevy = { version = "0.9.1", default-features = false, features = ["bevy_render", "x11", "bevy_winit", "bevy_asset", "bevy_sprite", "bevy_core_pipeline"]}
 clap = {version = "3.2.23", features = ["derive"]}
 derive_more = "0.99.17"
 glam = "0.21.3"
-hdf5 = "0.8.1"
+hdf5 = { rev = "7eb87b800e2806fcd416e5f76dc16998bf311525", git = "https://github.com/aldanor/hdf5-rust" }
 lazy_static = "1.4.0"
 mpi = { version = "0.6", default-features = false, features = ["derive"] }
-serde = {version = "1.0.147", features = ["derive"] }
-serde_yaml = "0.9.14"
+serde = {version = "1.0.160", features = ["derive"] }
+serde_yaml = "0.9.21"
 derive_custom = { path = "crates/derive_custom" }
 diman = { git = "https://github.com/tehforsch/diman", default-features = false, features = ["mpi", "hdf5", "serde", "rand", "glam", "default-f64"] }
 rand = "0.8.5"
-paste = "1.0.9"
-once_cell = "1.16.0"
+paste = "1.0.12"
+once_cell = "1.17.1"
 derive_traits = {path =  "crates/derive_traits" }
-ordered-float = "3.4.0"
+ordered-float = "3.6.0"
 generational-arena = "0.2.8"
 generic-tests = "0.1.2"
 bimap = "0.6.3"
@@ -48,6 +48,9 @@ opt-level = 3
 [profile.release-lto]
 inherits = "release"
 lto = true
+
+[profile.release]
+debug = true
 
 [[example]]
 name = "mpi_test"
