@@ -543,3 +543,34 @@ pub(super) mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod tests_3d {
+    use super::PointKind;
+    use super::Triangulation;
+    use crate::dimension::ThreeD;
+    use crate::voronoi::primitives::tetrahedron::TetrahedronData;
+    use crate::voronoi::Point3d;
+
+    #[test]
+    fn interesting_point_set() {
+        let points: Vec<(f64, f64, f64)> = serde_yaml::from_str(include_str!(
+            "../../../tests/delaunay/interesting_point_set"
+        ))
+        .unwrap();
+        let points: Vec<Point3d> = points
+            .into_iter()
+            .map(|(x, y, z)| Point3d::new(x, y, z))
+            .collect();
+        let mut triangulation: Triangulation<ThreeD> =
+            Triangulation::from_basic_tetra(TetrahedronData {
+                p1: points[0],
+                p2: points[1],
+                p3: points[2],
+                p4: points[3],
+            });
+        for p in points[4..].iter() {
+            triangulation.insert(*p, PointKind::Inner);
+        }
+    }
+}
