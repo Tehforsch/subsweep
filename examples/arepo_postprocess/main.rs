@@ -1,6 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
+mod bpass;
 mod cosmology;
 mod sources;
 mod unit_reader;

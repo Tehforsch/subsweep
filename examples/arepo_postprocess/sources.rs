@@ -30,6 +30,7 @@ use raxiom::units::SourceRate;
 use raxiom::units::Time;
 use raxiom::units::VecLength;
 
+use crate::bpass::bpass_lookup;
 use crate::cosmology::Cosmology;
 use crate::read_vec;
 use crate::unit_reader::ArepoUnitReader;
@@ -58,14 +59,13 @@ pub struct Source {
 
 impl Source {
     fn get_source_term(&self) -> SourceRate {
-        // Not implemented yet
-        SourceRate::new_unchecked(1e55)
+        bpass_lookup(self.age, self.metallicity, self.mass)
     }
 }
 
 fn formation_time_to_age(_formation_time: Dimensionless) -> Time {
     // Not implemented yet
-    Time::zero()
+    Time::megayears(100.0)
 }
 
 #[derive(Resource)]
