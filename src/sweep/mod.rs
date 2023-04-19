@@ -347,7 +347,8 @@ impl<'a> Sweep<'a> {
                         self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
                     }
                     ParticleType::Boundary => {}
-                    ParticleType::PeriodicHalo(_) => {}
+                    ParticleType::LocalPeriodic(_) => {}
+                    ParticleType::RemotePeriodic(_) => {}
                 }
             }
         }
@@ -377,7 +378,7 @@ impl<'a> Sweep<'a> {
         flux_correction: PhotonFlux,
         remote: &RemoteNeighbour,
     ) {
-        if self.is_active(remote.id) && !remote.periodic_wrap_type.is_periodic() {
+        if self.is_active(remote.id) {
             let flux_data = FluxData {
                 dir: task.dir,
                 flux: flux_correction,

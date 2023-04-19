@@ -9,3 +9,4 @@ pub use cell::FaceArea;
 pub use cell::ParticleType;
 pub use cell::PeriodicNeighbour;
 pub use cell::RemoteNeighbour;
+pub use cell::RemotePeriodicNeighbour;

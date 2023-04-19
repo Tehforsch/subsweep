@@ -18,16 +18,18 @@ pub enum ParticleType {
     Local(ParticleId),
     Remote(RemoteNeighbour),
     Boundary,
-    PeriodicHalo(PeriodicNeighbour),
+    LocalPeriodic(PeriodicNeighbour),
+    RemotePeriodic(RemotePeriodicNeighbour),
 }
 
 impl ParticleType {
     pub fn is_boundary(&self) -> bool {
         match self {
-            Self::Boundary => true,
             Self::Local(_) => false,
-            Self::Remote(p) => p.periodic_wrap_type.is_periodic(),
-            Self::PeriodicHalo(_) => true,
+            Self::Remote(_) => false,
+            Self::Boundary => true,
+            Self::LocalPeriodic(_) => true,
+            Self::RemotePeriodic(_) => true,
         }
     }
 
@@ -36,7 +38,8 @@ impl ParticleType {
             Self::Local(_) => true,
             Self::Boundary => false,
             Self::Remote(_) => false,
-            Self::PeriodicHalo(_) => false,
+            Self::LocalPeriodic(_) => false,
+            Self::RemotePeriodic(_) => false,
         }
     }
 
@@ -44,7 +47,8 @@ impl ParticleType {
         match self {
             Self::Local(particle_id) => *particle_id,
             Self::Remote(neighbour) => neighbour.id,
-            Self::PeriodicHalo(periodic) => periodic.id,
+            Self::LocalPeriodic(periodic) => periodic.id,
+            Self::RemotePeriodic(periodic) => periodic.id,
             _ => panic!("Unwrap id called on boundary neighbour"),
         }
     }
@@ -54,12 +58,18 @@ impl ParticleType {
 pub struct RemoteNeighbour {
     pub id: ParticleId,
     pub rank: Rank,
-    pub periodic_wrap_type: ActiveWrapType,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
 pub struct PeriodicNeighbour {
     pub id: ParticleId,
+    pub periodic_wrap_type: ActiveWrapType,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+pub struct RemotePeriodicNeighbour {
+    pub id: ParticleId,
+    pub rank: Rank,
     pub periodic_wrap_type: ActiveWrapType,
 }
 

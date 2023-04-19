@@ -13,6 +13,7 @@ use crate::extent::Extent;
 use crate::grid::ParticleType;
 use crate::grid::PeriodicNeighbour;
 use crate::grid::RemoteNeighbour;
+use crate::grid::RemotePeriodicNeighbour;
 use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
 use crate::voronoi::delaunay::Circumcircle;
@@ -130,16 +131,20 @@ where
             } in results
             {
                 let ptype = if rank == self.search.rank() {
-                    ParticleType::PeriodicHalo(PeriodicNeighbour {
+                    ParticleType::LocalPeriodic(PeriodicNeighbour {
                         id,
                         periodic_wrap_type,
                     })
                 } else {
-                    ParticleType::Remote(RemoteNeighbour {
-                        id,
-                        rank,
-                        periodic_wrap_type,
-                    })
+                    if periodic_wrap_type.is_periodic() {
+                        ParticleType::RemotePeriodic(RemotePeriodicNeighbour {
+                            id,
+                            rank,
+                            periodic_wrap_type,
+                        })
+                    } else {
+                        ParticleType::Remote(RemoteNeighbour { id, rank })
+                    }
                 };
                 assert!(self.haloes.get_by_left(&ptype).is_none());
                 let (point_index, changed_tetras) =

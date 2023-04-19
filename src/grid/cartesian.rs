@@ -5,7 +5,9 @@ use super::cell::Face;
 use super::cell::FaceArea;
 use super::Cell;
 use super::ParticleType;
+use super::PeriodicNeighbour;
 use super::RemoteNeighbour;
+use super::RemotePeriodicNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
 use crate::config::NUM_DIMENSIONS;
@@ -18,6 +20,8 @@ use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
+use crate::simulation_box::PeriodicWrapType3d;
+use crate::simulation_box::WrapType;
 use crate::units::Length;
 use crate::units::VecLength;
 use crate::units::Volume;
@@ -88,6 +92,44 @@ impl IntegerPosition {
                 && self.x < num_cells.x
                 && self.y < num_cells.y
                 && self.z < num_cells.z
+        }
+    }
+
+    fn wrapped(&self, num_cells: &IntegerPosition) -> (ActiveWrapType, IntegerPosition) {
+        let wrap_component = |v: i32, max: i32| {
+            if v >= max {
+                (v - max, WrapType::Plus)
+            } else if v < 0 {
+                (v + max, WrapType::Minus)
+            } else {
+                (v, WrapType::NoWrap)
+            }
+        };
+        #[cfg(feature = "2d")]
+        {
+            let (x, x_wrap) = wrap_component(self.x, num_cells.x);
+            let (y, y_wrap) = wrap_component(self.y, num_cells.y);
+            (
+                ActiveWrapType {
+                    x: x_wrap,
+                    y: y_wrap,
+                },
+                Self { x, y },
+            )
+        }
+        #[cfg(not(feature = "2d"))]
+        {
+            let (x, x_wrap) = wrap_component(self.x, num_cells.x);
+            let (y, y_wrap) = wrap_component(self.y, num_cells.y);
+            let (z, z_wrap) = wrap_component(self.z, num_cells.z);
+            (
+                ActiveWrapType {
+                    x: x_wrap,
+                    y: y_wrap,
+                    z: z_wrap,
+                },
+                Self { x, y, z },
+            )
         }
     }
 
@@ -177,6 +219,7 @@ struct GridConstructor {
     resolution: NumCellsSpec,
     rank_function: Box<dyn Fn(VecLength) -> Rank>,
     rank: Rank,
+    allow_periodic: bool,
 }
 
 impl GridConstructor {
@@ -186,6 +229,7 @@ impl GridConstructor {
         cell_size: NumCellsSpec,
         rank_function: Box<dyn Fn(VecLength) -> Rank>,
         rank: Rank,
+        periodic: bool,
     ) {
         let mut constructor = Self {
             cells: HashMap::default(),
@@ -194,6 +238,7 @@ impl GridConstructor {
             resolution: cell_size,
             rank_function,
             rank,
+            allow_periodic: periodic,
         };
         for (i, integer_pos) in constructor
             .get_all_integer_positions()
@@ -235,22 +280,8 @@ impl GridConstructor {
                         area: self.face_area(),
                         normal: (neighbour_pos - pos).normalize(),
                     };
-                    if neighbour.contained(&self.num_cells()) {
-                        if rank == neighbour_rank {
-                            (face, ParticleType::Local(self.ids[&neighbour]))
-                        } else {
-                            (
-                                face,
-                                ParticleType::Remote(RemoteNeighbour {
-                                    id: self.ids[&neighbour],
-                                    rank: self.get_rank(neighbour),
-                                    periodic_wrap_type: ActiveWrapType::no_wrap(),
-                                }),
-                            )
-                        }
-                    } else {
-                        (face, ParticleType::Boundary)
-                    }
+                    let neighbour = self.get_neighbour(neighbour, rank, neighbour_rank);
+                    (face, neighbour)
                 })
                 .collect();
             let cell = Cell {
@@ -259,6 +290,49 @@ impl GridConstructor {
                 volume: self.volume(),
             };
             self.cells.insert(integer_pos, cell);
+        }
+    }
+
+    fn get_neighbour(
+        &mut self,
+        neighbour: IntegerPosition,
+        rank: i32,
+        neighbour_rank: i32,
+    ) -> ParticleType {
+        let is_local = rank == neighbour_rank;
+        let is_periodic = neighbour.contained(&self.num_cells());
+        let (periodic_wrap_type, wrapped) = self.wrap(neighbour);
+        let id = if is_periodic {
+            self.ids[&neighbour]
+        } else {
+            self.ids[&wrapped]
+        };
+        if is_periodic {
+            if is_local {
+                ParticleType::Local(id)
+            } else {
+                ParticleType::Remote(RemoteNeighbour {
+                    id: id,
+                    rank: neighbour_rank,
+                })
+            }
+        } else {
+            if self.allow_periodic {
+                if is_local {
+                    ParticleType::LocalPeriodic(PeriodicNeighbour {
+                        id: id,
+                        periodic_wrap_type,
+                    })
+                } else {
+                    ParticleType::RemotePeriodic(RemotePeriodicNeighbour {
+                        id,
+                        rank: neighbour_rank,
+                        periodic_wrap_type,
+                    })
+                }
+            } else {
+                ParticleType::Boundary
+            }
         }
     }
 
@@ -294,6 +368,10 @@ impl GridConstructor {
             }
         }
     }
+
+    fn wrap(&self, neighbour: IntegerPosition) -> (PeriodicWrapType3d, IntegerPosition) {
+        neighbour.wrapped(&self.num_cells())
+    }
 }
 
 pub fn init_cartesian_grid_system(
@@ -302,6 +380,7 @@ pub fn init_cartesian_grid_system(
     cell_size: NumCellsSpec,
     world_size: Res<WorldSize>,
     world_rank: Res<WorldRank>,
+    periodic: bool,
 ) {
     let cloned_box_size = box_size.clone();
     let cloned_world_size = *world_size;
@@ -316,5 +395,6 @@ pub fn init_cartesian_grid_system(
         cell_size,
         Box::new(rank_function),
         **world_rank,
+        periodic,
     );
 }
