@@ -111,7 +111,7 @@ fn construct_grid_system(
                     commands.spawn((HaloParticle { rank: remote.rank }, Position(pos), remote.id));
                 }
             }
-            ParticleType::Boundary => unreachable!(),
+            ParticleType::Boundary => {}
             ParticleType::LocalPeriodic(_) => {}
             ParticleType::RemotePeriodic(_) => {}
         }

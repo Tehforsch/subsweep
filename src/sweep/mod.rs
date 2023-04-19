@@ -186,6 +186,58 @@ impl<'a> Sweep<'a> {
         }
     }
 
+    fn single_sweep(&mut self) {
+        self.init_counts();
+        self.to_solve = self.get_initial_tasks();
+        if self.check_deadlock {
+            #[cfg(feature = "mpi")]
+            self.check_deadlock();
+        }
+        self.solve();
+        self.update_chemistry();
+        for site in self.sites.iter() {
+            debug_assert_eq!(site.num_missing_upwind.total(), 0);
+        }
+    }
+
+    fn solve(&mut self) {
+        while self.to_solve_count.total() > 0 || self.remaining_to_send_count() > 0 {
+            if self.to_solve.is_empty() {
+                self.receive_all_messages();
+            }
+            while let Some(task) = self.to_solve.pop() {
+                self.solve_task(task);
+            }
+            self.send_all_messages();
+        }
+    }
+
+    fn remaining_to_send_count(&self) -> usize {
+        self.communicator.count_remaining_to_send()
+    }
+
+    fn receive_all_messages(&mut self) {
+        for rank in self.communicator.other_ranks() {
+            if self.to_receive_count[rank] > 0 {
+                self.receive_messages_from_rank(rank);
+            }
+        }
+    }
+
+    fn receive_messages_from_rank(&mut self, rank: Rank) {
+        let received = self.communicator.try_recv(rank);
+        if let Some(received) = received {
+            self.to_receive_count[rank] -= received.len();
+            for d in received.into_iter() {
+                self.handle_local_neighbour(d.flux, d.dir, d.id);
+            }
+        }
+    }
+
+    fn send_all_messages(&mut self) {
+        self.communicator.try_send_all(&mut self.to_send);
+    }
+
     pub fn init_counts(&mut self) {
         self.to_solve_count = CountByDir::new(
             self.directions.len(),
@@ -238,58 +290,6 @@ impl<'a> Sweep<'a> {
 
     fn is_active(&self, id: ParticleId) -> bool {
         self.levels[&id].is_active(self.current_level)
-    }
-
-    fn single_sweep(&mut self) {
-        self.init_counts();
-        self.to_solve = self.get_initial_tasks();
-        if self.check_deadlock {
-            #[cfg(feature = "mpi")]
-            self.check_deadlock();
-        }
-        self.solve();
-        self.update_chemistry();
-        for site in self.sites.iter() {
-            debug_assert_eq!(site.num_missing_upwind.total(), 0);
-        }
-    }
-
-    fn solve(&mut self) {
-        while self.to_solve_count.total() > 0 || self.remaining_to_send_count() > 0 {
-            if self.to_solve.is_empty() {
-                self.receive_all_messages();
-            }
-            while let Some(task) = self.to_solve.pop() {
-                self.solve_task(task);
-            }
-            self.send_all_messages();
-        }
-    }
-
-    fn remaining_to_send_count(&self) -> usize {
-        self.communicator.count_remaining_to_send()
-    }
-
-    fn receive_all_messages(&mut self) {
-        for rank in self.communicator.other_ranks() {
-            if self.to_receive_count[rank] > 0 {
-                self.receive_messages_from_rank(rank);
-            }
-        }
-    }
-
-    fn receive_messages_from_rank(&mut self, rank: Rank) {
-        let received = self.communicator.try_recv(rank);
-        if let Some(received) = received {
-            self.to_receive_count[rank] -= received.len();
-            for d in received.into_iter() {
-                self.handle_local_neighbour(d.flux, d.dir, d.id);
-            }
-        }
-    }
-
-    fn send_all_messages(&mut self) {
-        self.communicator.try_send_all(&mut self.to_send);
     }
 
     fn get_outgoing_flux(&mut self, task: &Task) -> PhotonFlux {
