@@ -28,7 +28,7 @@ pub(crate) mod simulation;
 pub(crate) mod simulation_box;
 pub(crate) mod simulation_builder;
 pub mod simulation_plugin;
-pub(crate) mod stages;
+pub mod stages;
 pub mod sweep;
 pub mod voronoi;
 

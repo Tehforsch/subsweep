@@ -13,6 +13,7 @@ pub mod visualizer;
 use bevy::prelude::Resource;
 pub use cell::Cell;
 pub use cell::DCell;
+pub use constructor::parallel::plugin::construct_grid_system;
 pub use constructor::Constructor;
 pub use delaunay::dimension::DDimension;
 pub use delaunay::dimension::DTetra;

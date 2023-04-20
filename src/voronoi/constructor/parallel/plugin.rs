@@ -51,7 +51,7 @@ fn warn_if_halo_fraction_too_high(
     }
 }
 
-fn construct_grid_system(
+pub fn construct_grid_system(
     mut commands: Commands,
     particles: Particles<(Entity, &ParticleId, &Position)>,
     tree: Res<QuadTree>,

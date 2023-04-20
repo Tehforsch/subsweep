@@ -1,5 +1,5 @@
 mod mpi_types;
-mod plugin;
+pub mod plugin;
 #[cfg(test)]
 mod tests;
 

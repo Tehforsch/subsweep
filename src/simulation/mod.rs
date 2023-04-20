@@ -16,6 +16,7 @@ use bevy::prelude::PluginGroup;
 use bevy::prelude::Stage;
 use bevy::prelude::StageLabel;
 use bevy::prelude::SystemSet;
+use bevy::prelude::SystemStage;
 use bevy::prelude::World;
 use derive_traits::RaxiomParameters;
 use mpi::traits::Equivalence;
@@ -43,7 +44,6 @@ pub struct Simulation {
     labels: HashSet<&'static str>,
     parameter_sections: HashSet<String>,
     ordering_labels: HashMap<&'static str, Vec<SystemLabelId>>,
-    current_communication_tag: i32,
     pub read_initial_conditions: bool,
     pub write_output: bool,
 }
@@ -58,9 +58,10 @@ impl Simulation {
         sim
     }
 
-    pub fn get_next_tag(&mut self) -> i32 {
-        self.current_communication_tag += 1;
-        self.current_communication_tag
+    pub fn run_system<P>(&mut self, system: impl IntoSystemDescriptor<P>) {
+        let world = &mut self.app.world;
+        let mut stage = SystemStage::single_threaded().with_system(system);
+        stage.run(world);
     }
 
     pub fn read_initial_conditions(&mut self, read_initial_conditions: bool) -> &mut Self {
