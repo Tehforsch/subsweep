@@ -44,7 +44,6 @@ use crate::hash_map::HashMap;
 use crate::parameters::TimestepParameters;
 use crate::particle::AllParticles;
 use crate::particle::HaloParticle;
-use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
@@ -87,6 +86,7 @@ impl RaxiomPlugin for SweepPlugin {
         .add_derived_component::<Source>()
         .add_derived_component::<components::Flux>()
         .add_derived_component::<Density>()
+        .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
         .add_component_no_io::<ParticleId>()
         .add_component_no_io::<TimestepLevel>()
         .add_startup_system_to_stage(
@@ -98,25 +98,25 @@ impl RaxiomPlugin for SweepPlugin {
             SimulationStartupStages::InsertComponentsAfterGrid,
             initialize_timestep_levels_system::<HaloParticle>,
         )
-        .add_system_to_stage(SimulationStages::ForceCalculation, sweep_system)
-        .add_system_to_stage(
-            SimulationStages::ForceCalculation,
-            communicate_levels_system.after(sweep_system),
-        )
+        .add_startup_system_to_stage(SimulationStartupStages::Sweep, init_sweep_system)
+        .add_system_to_stage(SimulationStages::ForceCalculation, run_sweep_system)
         .add_parameter_type::<SweepParameters>();
     }
 }
 
+#[derive(Resource)]
 struct Sweep<C: Chemistry> {
     directions: Directions,
     cells: Cells,
     sites: Sites<C>,
     levels: HashMap<ParticleId, TimestepLevel>,
+    new_levels: HashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
     to_send: DataByRank<Queue<FluxData<C>>>,
     to_solve_count: CountByDir,
     to_receive_count: DataByRank<usize>,
     max_timestep: Time,
+    timestep_safety_factor: Dimensionless,
     current_level: TimestepLevel,
     communicator: SweepCommunicator<C>,
     num_timestep_levels: usize,
@@ -125,39 +125,40 @@ struct Sweep<C: Chemistry> {
 }
 
 impl<C: Chemistry> Sweep<C> {
-    fn run(
+    fn new(
         directions: &Directions,
         cells: HashMap<ParticleId, Cell>,
         sites: HashMap<ParticleId, Site<C>>,
         levels: HashMap<ParticleId, TimestepLevel>,
         max_timestep: Time,
+        timestep_safety_factor: Dimensionless,
         parameters: &SweepParameters,
         world_size: usize,
         world_rank: Rank,
         chemistry: C,
-    ) -> Sites<C> {
+    ) -> Sweep<C> {
         for level in levels.values() {
             assert!(level.0 < parameters.num_timestep_levels);
         }
         let communicator = SweepCommunicator::<C>::new();
-        let mut solver = Sweep {
+        Sweep {
             cells: Cells::new(cells, &levels),
             sites: Sites::<C>::new(sites, &levels),
             levels,
+            new_levels: HashMap::default(),
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
             directions: directions.clone(),
             to_solve_count: CountByDir::empty(),
             to_receive_count: DataByRank::empty(),
             max_timestep,
+            timestep_safety_factor,
             current_level: TimestepLevel(0),
             communicator,
             num_timestep_levels: parameters.num_timestep_levels,
             check_deadlock: parameters.check_deadlock,
             chemistry,
-        };
-        solver.run_sweeps();
-        solver.sites
+        }
     }
 
     pub fn run_sweeps(&mut self) {
@@ -167,6 +168,7 @@ impl<C: Chemistry> Sweep<C> {
                 TimestepLevel::lowest_active_from_iteration(self.num_timestep_levels, i as u32);
             self.single_sweep();
         }
+        self.update_timestep_levels();
     }
 
     fn count_cells_global(&mut self, level: usize) -> usize {
@@ -371,27 +373,64 @@ impl<C: Chemistry> Sweep<C> {
             let timestep = level.to_timestep(self.max_timestep);
             let source = site.source_per_direction_bin(&self.directions);
             let flux = site.total_incoming_flux() + source;
-            self.chemistry
-                .update(site, flux, timestep, cell.volume, cell.size);
+            let change_timescale =
+                self.chemistry
+                    .update(site, flux, timestep, cell.volume, cell.size);
+            let desired_timestep = self.timestep_safety_factor * change_timescale;
+            let desired_level = TimestepLevel::from_max_timestep_and_desired_timestep(
+                self.num_timestep_levels,
+                self.max_timestep,
+                desired_timestep,
+            );
+            self.new_levels.insert(*entity, desired_level);
+        }
+    }
+
+    fn update_timestep_levels(&mut self) {
+        self.cells.update_levels(&self.new_levels);
+        self.sites.update_levels(&self.new_levels);
+        self.levels.extend(self.new_levels.drain());
+        self.communicate_levels();
+    }
+
+    fn communicate_levels(&mut self) {
+        let mut levels_comm = ExchangeCommunicator::new();
+        let mut data: DataByRank<Vec<TimestepLevelData>> =
+            DataByRank::from_communicator(&levels_comm);
+        for (id, level, cell) in self.cells.enumerate_with_levels() {
+            for (_, neighbour) in cell.neighbours.iter() {
+                if let ParticleType::Remote(neighbour) = neighbour {
+                    data[neighbour.rank].push(TimestepLevelData {
+                        id: *id,
+                        level: level,
+                    });
+                }
+            }
+        }
+        for (_, levels) in levels_comm.exchange_all(data).iter() {
+            for level_data in levels {
+                self.levels.insert(level_data.id, level_data.level);
+            }
         }
     }
 }
 
-pub fn sweep_system(
+fn init_sweep_system(
     directions: Res<Directions>,
     cells_query: Particles<(&ParticleId, &Cell)>,
-    mut sites_query: Particles<(
+    sites_query: Particles<(
         Entity,
         &ParticleId,
         &Density,
-        &mut IonizedHydrogenFraction,
+        &IonizedHydrogenFraction,
         &Source,
     )>,
-    mut levels_query: AllParticles<(&ParticleId, &mut TimestepLevel)>,
+    levels_query: AllParticles<(&ParticleId, &TimestepLevel)>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
+    mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
 ) {
     let cells: HashMap<_, _> = cells_query
         .iter()
@@ -419,70 +458,31 @@ pub fn sweep_system(
         .collect();
     #[cfg(test)]
     assert!(!cells.is_empty() && !sites.is_empty() && !levels.is_empty());
-    let sites = Sweep::run(
+    *solver = Some(Sweep::new(
         &directions,
         cells,
         sites,
         levels,
         timestep.max_timestep,
+        sweep_parameters.timestep_safety_factor,
         &sweep_parameters,
         **world_size,
         **world_rank,
         HydrogenOnly {
             flux_treshold: sweep_parameters.significant_flux_treshold,
         },
-    );
-    for (entity, id, _, mut fraction, _) in sites_query.iter_mut() {
-        let site = sites.get(*id);
-        let new_fraction = site.species.ionized_hydrogen_fraction;
-        let change_timescale =
-            (**fraction / ((**fraction - new_fraction) / timestep.max_timestep)).abs();
-        let desired_timestep = change_timescale * sweep_parameters.timestep_safety_factor;
-        let mut desired_level = TimestepLevel::from_max_timestep_and_desired_timestep(
-            sweep_parameters.num_timestep_levels,
-            timestep.max_timestep,
-            desired_timestep,
-        );
-        let mut level = levels_query
-            .get_component_mut::<TimestepLevel>(entity)
-            .unwrap();
-        if desired_level.0 + 1 < level.0 {
-            // Never move down more than one level at a time
-            desired_level.0 = level.0 - 1;
-        }
-        level.0 = desired_level.0;
-        **fraction = new_fraction;
-    }
+    ));
 }
 
-fn communicate_levels_system(
-    mut halo_levels: HaloParticles<
-        (Entity, &ParticleId, &mut TimestepLevel),
-        Without<LocalParticle>,
-    >,
-    local_levels: Particles<(&ParticleId, &TimestepLevel, &Cell), Without<HaloParticle>>,
+fn run_sweep_system(
+    mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
+    mut sites_query: Particles<(&ParticleId, &mut IonizedHydrogenFraction)>,
 ) {
-    let mut levels_comm = ExchangeCommunicator::new();
-    let mut data: DataByRank<Vec<TimestepLevelData>> = DataByRank::from_communicator(&levels_comm);
-    for (id, level, cell) in local_levels.iter() {
-        for (_, n) in cell.neighbours.iter() {
-            if let ParticleType::Remote(n) = n {
-                data[n.rank].push(TimestepLevelData {
-                    id: *id,
-                    level: *level,
-                });
-            }
-        }
-    }
-
-    let id_to_entity: HashMap<ParticleId, Entity> = halo_levels
-        .iter()
-        .map(|(entity, id, _)| (*id, entity))
-        .collect();
-    for (_, levels) in levels_comm.exchange_all(data).iter() {
-        for level_data in levels {
-            *halo_levels.get_mut(id_to_entity[&level_data.id]).unwrap().2 = level_data.level;
-        }
+    let solver = (*solver).as_mut().unwrap();
+    solver.run_sweeps();
+    for (id, mut fraction) in sites_query.iter_mut() {
+        let site = solver.sites.get(*id);
+        **fraction = site.species.ionized_hydrogen_fraction;
     }
 }
 

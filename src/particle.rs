@@ -43,10 +43,6 @@ pub struct HaloParticle {
 /// ```
 pub type Particles<'world, 'state, T, F = ()> = Query<'world, 'state, T, (With<LocalParticle>, F)>;
 
-/// A convenience type to query for halo particles.
-pub type HaloParticles<'world, 'state, T, F = ()> =
-    Query<'world, 'state, T, (With<HaloParticle>, F)>;
-
 /// A convenience type to query for all particles, local ones and halo.
 pub type AllParticles<'world, 'state, T, F = ()> =
     Query<'world, 'state, T, (Or<(With<LocalParticle>, With<HaloParticle>)>, F)>;

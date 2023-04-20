@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use bevy::prelude::Commands;
-
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::BatchSize;
@@ -14,8 +13,6 @@ use rand::SeedableRng;
 use raxiom::communication::BaseCommunicationPlugin;
 use raxiom::components::Position;
 use raxiom::domain::DomainPlugin;
-
-
 use raxiom::parameters::SimulationBox;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::SweepParameters;
@@ -26,9 +23,6 @@ use raxiom::prelude::ParallelVoronoiGridConstruction;
 use raxiom::prelude::ParticleId;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationStartupStages;
-
-
-
 use raxiom::stages::SimulationStagesPlugin;
 use raxiom::sweep::initialize_sweep_components_system;
 use raxiom::sweep::DirectionsSpecification;
@@ -38,8 +32,6 @@ use raxiom::units::Length;
 use raxiom::units::PhotonFlux;
 use raxiom::units::Time;
 use raxiom::units::VecLength;
-
-
 use raxiom::voronoi::Point3d;
 
 fn setup_sweep_sim(num_particles: usize) -> Simulation {

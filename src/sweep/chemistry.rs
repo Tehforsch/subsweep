@@ -6,6 +6,7 @@ use std::ops::Div;
 use std::ops::Mul;
 use std::ops::Sub;
 
+use bevy::prelude::Resource;
 use mpi::traits::Equivalence;
 
 use super::chemistry_solver::Solver;
@@ -37,9 +38,10 @@ pub trait Chemistry: Sized + 'static {
         timestep: Time,
         volume: Volume,
         length: Length,
-    );
+    ) -> Time;
 }
 
+#[derive(Resource)]
 pub struct HydrogenOnly {
     pub flux_treshold: PhotonFlux,
 }
@@ -77,8 +79,9 @@ impl Chemistry for HydrogenOnly {
         timestep: Time,
         volume: Volume,
         length: Length,
-    ) {
-        site.species.ionized_hydrogen_fraction = Solver {
+    ) -> Time {
+        let old_fraction = site.species.ionized_hydrogen_fraction;
+        let new_fraction = Solver {
             ionized_hydrogen_fraction: site.species.ionized_hydrogen_fraction,
             timestep,
             density: site.density,
@@ -87,6 +90,9 @@ impl Chemistry for HydrogenOnly {
             flux,
         }
         .get_new_abundance();
+        site.species.ionized_hydrogen_fraction = new_fraction;
+        let change_timescale = (old_fraction / ((old_fraction - new_fraction) / timestep)).abs();
+        change_timescale
     }
 }
 

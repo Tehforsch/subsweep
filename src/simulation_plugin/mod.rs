@@ -35,6 +35,7 @@ pub enum SimulationStartupStages {
     InsertDerivedComponents,
     InsertGrid,
     InsertComponentsAfterGrid,
+    Sweep,
     Final,
 }
 

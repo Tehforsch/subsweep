@@ -43,6 +43,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainStartupStages::TreeConstruction.as_label(),
             SimulationStartupStages::InsertGrid.as_label(),
             SimulationStartupStages::InsertComponentsAfterGrid.as_label(),
+            SimulationStartupStages::Sweep.as_label(),
             SimulationStartupStages::Final.as_label(),
         ];
         for window in startup_stages.windows(2) {

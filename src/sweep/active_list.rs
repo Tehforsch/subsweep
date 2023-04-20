@@ -26,6 +26,10 @@ impl<T> ActiveList<T> {
             .map(|(id, (_, item))| (id, item))
     }
 
+    pub fn enumerate_with_levels(&self) -> impl Iterator<Item = (&ParticleId, TimestepLevel, &T)> {
+        self.items.iter().map(|(id, (level, t))| (id, *level, t))
+    }
+
     pub fn get_mut_and_active_state(
         &mut self,
         id: ParticleId,
@@ -50,5 +54,12 @@ impl<T> ActiveList<T> {
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.items.values().map(|(_, item)| item)
+    }
+
+    pub(crate) fn update_levels(&mut self, new_levels: &HashMap<ParticleId, TimestepLevel>) {
+        assert_eq!(self.items.len(), new_levels.len());
+        for (id, level) in new_levels.iter() {
+            self.items.get_mut(id).unwrap().0 = *level;
+        }
     }
 }
