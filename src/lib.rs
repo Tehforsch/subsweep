@@ -45,7 +45,6 @@ pub(crate) mod test_examples;
 pub(crate) mod test_utils;
 
 /// Debug printing utilities for MPI simulations
-#[cfg(feature = "mpi")]
 pub mod mpi_log;
 /// Compile-time units and quantities for the simulation.
 pub mod units;

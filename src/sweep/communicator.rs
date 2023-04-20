@@ -8,11 +8,7 @@ use crate::communication::DataCommunicator;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 
-#[cfg(feature = "mpi")]
 type OutstandingRequest = mpi::ffi::MPI_Request;
-
-#[cfg(not(feature = "mpi"))]
-type OutstandingRequest = ();
 
 pub struct SweepCommunicator<'comm, C: Chemistry> {
     communicator: &'comm mut DataCommunicator<FluxData<C>>,
@@ -20,7 +16,6 @@ pub struct SweepCommunicator<'comm, C: Chemistry> {
     requests: DataByRank<Option<OutstandingRequest>>,
 }
 
-#[cfg(feature = "mpi")]
 fn to_unscoped<'a, C: Chemistry>(
     scoped_request: Request<'a, [FluxData<C>], &mpi::request::LocalScope<'a>>,
 ) -> OutstandingRequest {
@@ -28,13 +23,6 @@ fn to_unscoped<'a, C: Chemistry>(
     // We only overwrite the data in a send buffer whenever the previous request is finished.
     // We also await all requests before dropping the send buffers.
     unsafe { scoped_request.into_raw().0 }
-}
-
-#[cfg(not(feature = "mpi"))]
-fn to_unscoped<'a, C: Chemistry>(
-    _scoped_request: Request<'a, [FluxData<C>], &mpi::request::LocalScope<'a>>,
-) -> () {
-    ()
 }
 
 impl<'comm, C: Chemistry> SweepCommunicator<'comm, C> {
@@ -91,7 +79,6 @@ impl<'comm, C: Chemistry> SweepCommunicator<'comm, C> {
         self.communicator.try_receive_vec(rank)
     }
 
-    #[cfg(feature = "mpi")]
     fn request_completed(&self, mut request: OutstandingRequest) -> bool {
         use std::mem::MaybeUninit;
 
@@ -106,12 +93,6 @@ impl<'comm, C: Chemistry> SweepCommunicator<'comm, C> {
         }
     }
 
-    #[cfg(not(feature = "mpi"))]
-    fn request_completed(&self, _request: OutstandingRequest) -> bool {
-        true
-    }
-
-    #[cfg(feature = "mpi")]
     fn wait_for_request(&self, rank: Rank, request: OutstandingRequest) {
         scope(|s| {
             let data = &self.send_buffers[rank];
@@ -119,10 +100,6 @@ impl<'comm, C: Chemistry> SweepCommunicator<'comm, C> {
         });
     }
 
-    #[cfg(not(feature = "mpi"))]
-    fn wait_for_request(&self, _rank: Rank, _request: OutstandingRequest) {}
-
-    #[cfg(feature = "mpi")]
     fn to_scoped_request<'a, Sc: mpi::request::Scope<'a>>(
         &self,
         scope: Sc,

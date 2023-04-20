@@ -27,7 +27,6 @@ pub struct BaseCommunicationPlugin {
 }
 
 impl BaseCommunicationPlugin {
-    #[cfg(any(feature = "mpi", test))]
     pub fn new(size: usize, rank: super::Rank) -> Self {
         Self {
             num_ranks: WorldSize(size),
@@ -79,7 +78,6 @@ pub(super) fn get_next_tag(sim: &mut Simulation) -> Tag {
     sim.get_next_tag()
 }
 
-#[cfg(feature = "mpi")]
 impl<T: Equivalence + Sync + Send + 'static> RaxiomPlugin for CommunicationPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,

@@ -8,8 +8,7 @@ authors = [
 ]
 
 [features]
-default = ["mpi", "3d"]
-mpi = []
+default = ["3d"]
 mpi_test = []
 2d = ["diman/default-2d"]
 3d = ["diman/default-3d"]
@@ -54,15 +53,15 @@ debug = true
 
 [[example]]
 name = "mpi_test"
-required-features = ["mpi", "mpi_test", "3d"]
+required-features = ["mpi_test", "3d"]
 
 [[example]]
 name = "arepo_postprocess"
-required-features = ["mpi", "3d"]
+required-features = ["3d"]
 
 [[example]]
 name = "voronoi"
-required-features = ["mpi", "3d"]
+required-features = ["3d"]
 
 [[bench]]
 name = "voronoi2d"

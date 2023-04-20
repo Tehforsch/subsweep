@@ -1,7 +1,6 @@
 use bevy::ecs::system::Commands;
 use bevy::prelude::Res;
 
-use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::components::Position;
 use crate::domain::DomainPlugin;
 use crate::parameters::SimulationBox;
@@ -24,13 +23,14 @@ use crate::voronoi::test_utils::TestDimension;
 fn parallel_voronoi_construction() {
     for num_ranks in 1..10 {
         println!("Running on {}", num_ranks);
-        build_local_communication_sim_with_custom_logic(
-            |sim: &mut Simulation| build_sim(sim),
-            |mut sim| {
-                sim.update();
-            },
-            num_ranks,
-        );
+        todo!()
+        // build_local_communication_sim_with_custom_logic(
+        //     |sim: &mut Simulation| build_sim(sim),
+        //     |mut sim| {
+        //         sim.update();
+        //     },
+        //     num_ranks,
+        // );
     }
 }
 

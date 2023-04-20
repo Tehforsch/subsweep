@@ -1,6 +1,6 @@
 mod mpi_types;
 mod plugin;
-#[cfg(all(test, not(feature = "mpi")))]
+#[cfg(test)]
 mod tests;
 
 use bevy::prelude::debug;

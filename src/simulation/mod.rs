@@ -280,7 +280,6 @@ impl Simulation {
     }
 
     pub fn finalize() {
-        #[cfg(feature = "mpi")]
         crate::communication::MPI_UNIVERSE.drop();
     }
 

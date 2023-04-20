@@ -26,40 +26,15 @@ pub type ExchangeCommunicator<'a, T> =
 pub type SyncCommunicator<'a, T> = NonSendMut<'a, sync_communicator::SyncCommunicator<T>>;
 pub type DataCommunicator<T> = communicator::Communicator<T>;
 
-#[cfg(feature = "mpi")]
 mod verify_tag_type_mapping;
 
-#[cfg(not(feature = "mpi"))]
-mod local;
-
-#[cfg(not(feature = "mpi"))]
-pub use local_reexport::*;
-
-#[cfg(not(feature = "mpi"))]
-#[path = ""]
-mod local_reexport {
-    pub mod local_sim_building;
-
-    pub mod communicator {
-        pub type Communicator<T> = super::super::local::LocalCommunicator<T>;
-    }
-}
-
-#[cfg(feature = "mpi")]
 mod mpi_world;
 
-#[cfg(feature = "mpi")]
-pub use mpi_reexport::*;
+pub use self::mpi_world::MpiWorld;
+pub use self::mpi_world::MPI_UNIVERSE;
 
-#[cfg(feature = "mpi")]
-#[path = ""]
-mod mpi_reexport {
-    pub use super::mpi_world::MpiWorld;
-    pub use super::mpi_world::MPI_UNIVERSE;
-
-    pub mod communicator {
-        pub type Communicator<T> = super::super::mpi_world::MpiWorld<T>;
-    }
+pub mod communicator {
+    pub type Communicator<T> = super::mpi_world::MpiWorld<T>;
 }
 
 pub type Rank = mpi::Rank;

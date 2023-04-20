@@ -1,7 +1,6 @@
 use bevy::prelude::Commands;
 use bevy::prelude::Res;
 
-use crate::communication::local_sim_building::build_local_communication_sim_with_custom_logic;
 use crate::grid::init_cartesian_grid_system;
 use crate::grid::NumCellsSpec;
 use crate::parameters::SimulationBox;
@@ -97,21 +96,22 @@ fn simple_sweep() {
         for num_timestep_levels in 1..3 {
             for periodic in [false, true] {
                 println!("Running on {}", num_ranks);
-                build_local_communication_sim_with_custom_logic(
-                    move |sim: &mut Simulation| {
-                        build_cartesian_sweep_sim(
-                            sim,
-                            vec![MVec::ONE * Dimensionless::dimensionless(1.0)],
-                            10,
-                            num_timestep_levels,
-                            periodic,
-                        )
-                    },
-                    |mut sim| {
-                        sim.update();
-                    },
-                    num_ranks,
-                );
+                todo!()
+                // build_local_communication_sim_with_custom_logic(
+                //     move |sim: &mut Simulation| {
+                //         build_cartesian_sweep_sim(
+                //             sim,
+                //             vec![MVec::ONE * Dimensionless::dimensionless(1.0)],
+                //             10,
+                //             num_timestep_levels,
+                //             periodic,
+                //         )
+                //     },
+                //     |mut sim| {
+                //         sim.update();
+                //     },
+                //     num_ranks,
+                // );
             }
         }
     }
@@ -120,19 +120,20 @@ fn simple_sweep() {
 #[test]
 #[ignore]
 fn sweep_along_grid_axes_does_not_deadlock_or_crash() {
-    build_local_communication_sim_with_custom_logic(
-        |sim: &mut Simulation| {
-            build_cartesian_sweep_sim(
-                sim,
-                vec![MVec::X * Dimensionless::dimensionless(1.0)],
-                5,
-                1,
-                false,
-            )
-        },
-        |mut sim| {
-            sim.update();
-        },
-        2,
-    );
+    todo!()
+    // build_local_communication_sim_with_custom_logic(
+    //     |sim: &mut Simulation| {
+    //         build_cartesian_sweep_sim(
+    //             sim,
+    //             vec![MVec::X * Dimensionless::dimensionless(1.0)],
+    //             5,
+    //             1,
+    //             false,
+    //         )
+    //     },
+    //     |mut sim| {
+    //         sim.update();
+    //     },
+    //     2,
+    // );
 }
