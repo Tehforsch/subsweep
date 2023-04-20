@@ -19,7 +19,6 @@ pub mod extent;
 pub mod grid;
 pub(crate) mod hash_map;
 pub mod io;
-pub(crate) mod memory;
 pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
 mod peano_hilbert;

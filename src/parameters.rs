@@ -1,7 +1,6 @@
 pub use crate::domain::TreeParameters;
 pub use crate::io::input::InputParameters;
 pub use crate::io::output::parameters::*;
-pub use crate::memory::MemoryUsageParameters;
 pub use crate::prelude::SimulationBox;
 pub use crate::quadtree::QuadTreeConfig;
 pub use crate::simulation_plugin::SimulationParameters;

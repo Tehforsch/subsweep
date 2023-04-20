@@ -33,7 +33,6 @@ use crate::io::to_dataset::ToDataset;
 use crate::io::DatasetDescriptor;
 use crate::io::DatasetShape;
 use crate::io::InputDatasetDescriptor;
-use crate::memory::ComponentMemoryUsagePlugin;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
@@ -450,7 +449,6 @@ impl Simulation {
         if self.has_world_rank() {
             self.add_plugin(ExchangeDataPlugin::<T>::default());
         }
-        self.add_plugin(ComponentMemoryUsagePlugin::<T>::default());
         self
     }
 
