@@ -9,7 +9,6 @@ use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationStages;
 use crate::simulation_plugin::SimulationStartupStages;
-use crate::visualization::VisualizationStage;
 
 #[derive(Named)]
 pub struct SimulationStagesPlugin;
@@ -24,12 +23,6 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             SimulationStages::SetTimestep.as_label(),
             SimulationStages::ForceCalculation.as_label(),
             SimulationStages::Integration.as_label(),
-            VisualizationStage::AddVisualization.as_label(),
-            VisualizationStage::ModifyVisualization.as_label(),
-            VisualizationStage::Synchronize.as_label(),
-            VisualizationStage::AddDrawComponentsOnMainRank.as_label(),
-            VisualizationStage::DrawOnMainRank.as_label(),
-            VisualizationStage::AppExit.as_label(),
             OutputStages::Output.as_label(),
         ];
         for window in stages.windows(2) {
@@ -50,7 +43,6 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainStartupStages::TreeConstruction.as_label(),
             SimulationStartupStages::InsertGrid.as_label(),
             SimulationStartupStages::InsertComponentsAfterGrid.as_label(),
-            VisualizationStage::Startup.as_label(),
             SimulationStartupStages::Final.as_label(),
         ];
         for window in startup_stages.windows(2) {

@@ -5,7 +5,6 @@ use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
 use bevy::log::Level;
 use bevy::log::LogPlugin;
 use bevy::prelude::CorePlugin;
-use bevy::prelude::DefaultPlugins;
 use bevy::prelude::MinimalPlugins;
 use bevy::prelude::PluginGroup;
 use bevy::prelude::TaskPoolOptions;
@@ -16,14 +15,12 @@ use clap::Parser;
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainPlugin;
 use super::simulation_plugin::SimulationPlugin;
-use super::visualization::VisualizationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::parameter_plugin::parameter_file_contents::Override;
 use crate::simulation::Simulation;
 use crate::stages::SimulationStagesPlugin;
 
 pub struct SimulationBuilder {
-    pub headless: bool,
     pub num_worker_threads: Option<usize>,
     pub parameter_file_path: Option<PathBuf>,
     pub verbosity: usize,
@@ -37,7 +34,6 @@ pub struct SimulationBuilder {
 impl Default for SimulationBuilder {
     fn default() -> Self {
         Self {
-            headless: true,
             num_worker_threads: None,
             parameter_file_path: None,
             verbosity: 0,
@@ -68,7 +64,6 @@ impl SimulationBuilder {
         builder
             .read_initial_conditions(false)
             .write_output(false)
-            .headless(true)
             .log(false);
         builder
     }
@@ -91,9 +86,6 @@ impl SimulationBuilder {
     }
 
     pub fn with_command_line_options(&mut self, opts: &CommandLineOptions) -> &mut Self {
-        if let Some(headless) = opts.headless {
-            self.headless(headless);
-        }
         if let Some(num_worker_threads) = opts.num_worker_threads {
             self.num_worker_threads(Some(num_worker_threads));
         }
@@ -102,11 +94,6 @@ impl SimulationBuilder {
         }
         self.verbosity(opts.verbosity);
         self.parameter_overrides = opts.parameter_overrides.clone();
-        self
-    }
-
-    pub fn headless(&mut self, headless: bool) -> &mut Self {
-        self.headless = headless;
         self
     }
 
@@ -159,9 +146,6 @@ impl SimulationBuilder {
             .add_plugin(DomainPlugin)
             .insert_resource(ReportExecutionOrderAmbiguities);
         self.add_default_bevy_plugins(sim);
-        if !self.headless {
-            sim.add_plugin(VisualizationPlugin);
-        }
         sim
     }
 
@@ -172,25 +156,14 @@ impl SimulationBuilder {
     }
 
     fn add_default_bevy_plugins(&self, sim: &mut Simulation) {
-        if sim.on_main_rank() && !self.headless {
-            sim.add_bevy_plugins(
-                DefaultPlugins
-                    .build()
-                    .disable::<LogPlugin>()
-                    .set(CorePlugin {
-                        task_pool_options: self.task_pool_opts(),
-                    }),
-            );
-        } else {
-            sim.add_bevy_plugins(
-                MinimalPlugins
-                    .build()
-                    .disable::<TimePlugin>()
-                    .set(CorePlugin {
-                        task_pool_options: self.task_pool_opts(),
-                    }),
-            );
-        }
+        sim.add_bevy_plugins(
+            MinimalPlugins
+                .build()
+                .disable::<TimePlugin>()
+                .set(CorePlugin {
+                    task_pool_options: self.task_pool_opts(),
+                }),
+        );
     }
 
     fn task_pool_opts(&self) -> TaskPoolOptions {

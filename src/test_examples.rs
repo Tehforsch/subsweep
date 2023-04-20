@@ -26,7 +26,6 @@ fn run_all_examples() {
             "--",
             "simulation/final_time: 0.0 s",
             "example/num_particles: 50",
-            "--headless",
             "true",
         ]);
         println!("Running example {}", &name);

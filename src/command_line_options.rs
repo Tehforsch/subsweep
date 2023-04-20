@@ -50,8 +50,6 @@ pub struct CommandLineOptions {
     pub parameter_overrides: Vec<Override>,
     #[clap(long)]
     pub parameter_file_path: Option<PathBuf>,
-    #[clap(long)]
-    pub headless: Option<bool>,
     #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
     #[clap(long)]

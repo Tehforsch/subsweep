@@ -31,7 +31,6 @@ pub(crate) mod simulation_builder;
 pub mod simulation_plugin;
 pub(crate) mod stages;
 pub mod sweep;
-pub(crate) mod visualization;
 pub mod voronoi;
 
 pub mod named {

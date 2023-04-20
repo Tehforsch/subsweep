@@ -7,4 +7,3 @@ pub use crate::quadtree::QuadTreeConfig;
 pub use crate::simulation_plugin::SimulationParameters;
 pub use crate::simulation_plugin::TimestepParameters;
 pub use crate::sweep::SweepParameters;
-pub use crate::visualization::VisualizationParameters;

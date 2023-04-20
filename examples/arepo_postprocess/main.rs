@@ -45,7 +45,6 @@ fn read_vec(data: &[Float]) -> Position {
 fn main() {
     let mut sim = SimulationBuilder::new();
     let mut sim = sim
-        .headless(true)
         .write_output(true)
         .read_initial_conditions(true)
         .update_from_command_line_options()
