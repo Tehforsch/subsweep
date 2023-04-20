@@ -15,7 +15,7 @@ mpi_test = []
 vis = []
 
 [dependencies]
-bevy = { version = "0.9.1", default-features = false, features = ["bevy_render", "x11", "bevy_winit", "bevy_asset", "bevy_sprite", "bevy_core_pipeline"]}
+bevy = { version = "0.9.1", default-features = false, features = []}
 clap = {version = "3.2.23", features = ["derive"]}
 derive_more = "0.99.17"
 glam = "0.21.3"

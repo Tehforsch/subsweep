@@ -9,7 +9,6 @@ use bevy::prelude::MinimalPlugins;
 use bevy::prelude::PluginGroup;
 use bevy::prelude::TaskPoolOptions;
 use bevy::time::TimePlugin;
-use bevy::winit::WinitSettings;
 use clap::Parser;
 
 use super::command_line_options::CommandLineOptions;
@@ -134,8 +133,7 @@ impl SimulationBuilder {
             sim.add_parameter_file_contents("{}".into());
         }
         sim.with_parameter_overrides(self.parameter_overrides.clone());
-        sim.insert_resource(self.winit_settings())
-            .read_initial_conditions(self.read_initial_conditions)
+        sim.read_initial_conditions(self.read_initial_conditions)
             .write_output(self.write_output)
             .maybe_add_plugin(self.base_communication.clone());
         if sim.on_main_rank() && self.log {
@@ -171,13 +169,6 @@ impl SimulationBuilder {
             TaskPoolOptions::with_num_threads(num_worker_threads)
         } else {
             TaskPoolOptions::default()
-        }
-    }
-
-    fn winit_settings(&self) -> WinitSettings {
-        WinitSettings {
-            return_from_run: true,
-            ..Default::default()
         }
     }
 
