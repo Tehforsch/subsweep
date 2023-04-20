@@ -13,6 +13,7 @@ use crate::prelude::WorldRank;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationStartupStages;
 use crate::stages::SimulationStagesPlugin;
+use crate::test_utils::build_local_communication_sim_with_custom_logic;
 use crate::units::Time;
 use crate::units::VecLength;
 use crate::voronoi::constructor::parallel::plugin::ParallelVoronoiGridConstruction;
@@ -23,14 +24,13 @@ use crate::voronoi::test_utils::TestDimension;
 fn parallel_voronoi_construction() {
     for num_ranks in 1..10 {
         println!("Running on {}", num_ranks);
-        todo!()
-        // build_local_communication_sim_with_custom_logic(
-        //     |sim: &mut Simulation| build_sim(sim),
-        //     |mut sim| {
-        //         sim.update();
-        //     },
-        //     num_ranks,
-        // );
+        build_local_communication_sim_with_custom_logic(
+            |sim: &mut Simulation| build_sim(sim),
+            |sim| {
+                sim.update();
+            },
+            num_ranks,
+        );
     }
 }
 
