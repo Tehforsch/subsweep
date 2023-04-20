@@ -18,6 +18,7 @@ use super::SearchData;
 use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
+use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::dimension::ActiveDimension;
@@ -48,9 +49,9 @@ where
     SearchData<D>: IntoEquivalenceType,
     SearchResult<D>: IntoEquivalenceType,
 {
-    data_comm: &'a mut ExchangeCommunicator<MpiSearchData<D>>,
-    result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<D>>,
-    finished_comm: &'a mut Communicator<SendNum>,
+    data_comm: ExchangeCommunicator<MpiSearchData<D>>,
+    result_comm: ExchangeCommunicator<MpiSearchResult<D>>,
+    finished_comm: Communicator<SendNum>,
     tree: &'a QuadTree,
     decomposition: &'a Decomposition,
     box_: SimulationBox,
@@ -77,14 +78,14 @@ fn find_wrapped_point(
 
 impl<'a> ParallelSearch<'a, ActiveDimension> {
     fn new(
-        data_comm: &'a mut ExchangeCommunicator<MpiSearchData<ActiveDimension>>,
-        result_comm: &'a mut ExchangeCommunicator<MpiSearchResult<ActiveDimension>>,
-        finished_comm: &'a mut Communicator<SendNum>,
         tree: &'a QuadTree,
         decomposition: &'a Decomposition,
         box_: SimulationBox,
         halo_cache: HaloCache<ActiveDimension>,
     ) -> Self {
+        let data_comm = ExchangeCommunicator::<MpiSearchData<ActiveDimension>>::new();
+        let result_comm = ExchangeCommunicator::<MpiSearchResult<ActiveDimension>>::new();
+        let finished_comm = MpiWorld::<SendNum>::new();
         let extent = Extent::from_min_max(box_.min.value_unchecked(), box_.max.value_unchecked());
         Self {
             data_comm,
@@ -102,7 +103,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
     ) -> OutgoingRequests<ActiveDimension> {
-        let mut outgoing = DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.data_comm);
+        let mut outgoing = DataByRank::same_for_all_ranks_in_communicator(vec![], &self.data_comm);
         for rank in self.data_comm.other_ranks() {
             for search in data.iter() {
                 let extent = Extent::<Point<ActiveDimension>>::cube_around_sphere(
@@ -125,7 +126,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         incoming: IncomingRequests<ActiveDimension>,
     ) -> OutgoingResults<ActiveDimension> {
         let mut new_haloes =
-            DataByRank::same_for_all_ranks_in_communicator(vec![], &*self.result_comm);
+            DataByRank::same_for_all_ranks_in_communicator(vec![], &self.result_comm);
 
         for (rank, data) in incoming.iter() {
             for search in data {

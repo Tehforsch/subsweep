@@ -1,3 +1,7 @@
+use std::any::TypeId;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hash;
+use std::hash::Hasher;
 use std::iter::Sum;
 use std::marker::PhantomData;
 use std::mem;
@@ -60,6 +64,20 @@ lazy_static! {
     };
 }
 
+fn get_hash_for_type<T: 'static>() -> u64 {
+    let id = TypeId::of::<T>();
+    let mut s = DefaultHasher::new();
+    id.hash(&mut s);
+    s.finish()
+}
+
+fn get_tag_for_type<T: 'static>() -> Tag {
+    let hash: u64 = get_hash_for_type::<T>();
+    // Silently truncate 3/4 of the bits in the integer and then take the absolute value to make sure we have no negative values.
+    // This is hacky but feels better than not having tags at all. Collision chance should still be negligible.
+    (hash as i16).abs() as i32
+}
+
 #[derive(Clone)]
 pub struct MpiWorld<T> {
     world: SystemCommunicator,
@@ -67,8 +85,18 @@ pub struct MpiWorld<T> {
     tag: Tag,
 }
 
-impl<T> MpiWorld<T> {
-    pub fn new(tag: Tag) -> Self {
+impl<T: 'static> MpiWorld<T> {
+    pub fn new() -> Self {
+        let world = MPI_UNIVERSE.world();
+        let tag = get_tag_for_type::<T>();
+        Self {
+            world,
+            _marker: PhantomData::default(),
+            tag,
+        }
+    }
+
+    pub fn new_custom_tag(tag: Tag) -> Self {
         let world = MPI_UNIVERSE.world();
         Self {
             world,
@@ -280,13 +308,12 @@ unsafe impl<M: Equivalence> Equivalence for UninitMsg<M> {
 #[cfg(test)]
 mod tests {
     use mpi::request::scope;
-    use mpi::Tag;
 
     use super::MpiWorld;
 
     #[test]
     fn immediate_send_receive() {
-        let mut world = MpiWorld::<i32>::new(Tag::default());
+        let mut world = MpiWorld::<i32>::new();
         let x: [i32; 3] = [1, 2, 3];
         let result: Vec<i32> = scope(|scope| {
             let _guard = world.immediate_send_vec_wait_guard(scope, 0, &x);

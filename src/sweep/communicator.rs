@@ -4,14 +4,14 @@ use mpi::request::Request;
 use super::chemistry::Chemistry;
 use super::task::FluxData;
 use crate::communication::DataByRank;
-use crate::communication::DataCommunicator;
+use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 
 type OutstandingRequest = mpi::ffi::MPI_Request;
 
-pub struct SweepCommunicator<'comm, C: Chemistry> {
-    communicator: &'comm mut DataCommunicator<FluxData<C>>,
+pub struct SweepCommunicator<C: Chemistry> {
+    communicator: MpiWorld<FluxData<C>>,
     send_buffers: DataByRank<Vec<FluxData<C>>>,
     requests: DataByRank<Option<OutstandingRequest>>,
 }
@@ -25,10 +25,11 @@ fn to_unscoped<'a, C: Chemistry>(
     unsafe { scoped_request.into_raw().0 }
 }
 
-impl<'comm, C: Chemistry> SweepCommunicator<'comm, C> {
-    pub fn new(communicator: &'comm mut DataCommunicator<FluxData<C>>) -> Self {
-        let send_buffers = DataByRank::from_communicator(communicator);
-        let requests = DataByRank::from_communicator(communicator);
+impl<C: Chemistry> SweepCommunicator<C> {
+    pub fn new() -> Self {
+        let communicator = MpiWorld::<FluxData<C>>::new();
+        let send_buffers = DataByRank::from_communicator(&communicator);
+        let requests = DataByRank::from_communicator(&communicator);
         Self {
             communicator,
             send_buffers,
@@ -112,7 +113,7 @@ impl<'comm, C: Chemistry> SweepCommunicator<'comm, C> {
 
 // Make sure we cannot accidentally drop the send buffers while
 // there are still pending MPI requests.
-impl<'comm, C: Chemistry> Drop for SweepCommunicator<'comm, C> {
+impl<C: Chemistry> Drop for SweepCommunicator<C> {
     fn drop(&mut self) {
         for (rank, request) in self.requests.iter() {
             if let Some(request) = request {
@@ -123,7 +124,7 @@ impl<'comm, C: Chemistry> Drop for SweepCommunicator<'comm, C> {
     }
 }
 
-impl<'comm, C: Chemistry> SizedCommunicator for SweepCommunicator<'comm, C> {
+impl<C: Chemistry> SizedCommunicator for SweepCommunicator<C> {
     fn size(&self) -> usize {
         self.communicator.size()
     }

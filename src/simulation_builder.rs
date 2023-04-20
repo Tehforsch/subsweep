@@ -51,7 +51,7 @@ impl SimulationBuilder {
         use crate::communication::MpiWorld;
         use crate::communication::SizedCommunicator;
 
-        let world: MpiWorld<usize> = MpiWorld::new(0);
+        let world: MpiWorld<usize> = MpiWorld::new();
         crate::mpi_log::initialize(world.rank(), world.size());
         Self {
             base_communication: Some(BaseCommunicationPlugin::new(world.size(), world.rank())),

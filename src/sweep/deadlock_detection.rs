@@ -39,7 +39,7 @@ impl std::fmt::Display for ParticleInfo {
     }
 }
 
-impl<'a, C: Chemistry> Sweep<'a, C> {
+impl<C: Chemistry> Sweep<C> {
     fn get_dependency(
         &self,
         p1: ParticleId,
@@ -89,7 +89,7 @@ impl<'a, C: Chemistry> Sweep<'a, C> {
             return;
         }
         let num_initial_tasks = self.to_solve.len();
-        let w = MpiWorld::new(DEADLOCK_DETECTION_TAG);
+        let w = MpiWorld::new_custom_tag(DEADLOCK_DETECTION_TAG);
         let mut ex: Communicator<usize> = Communicator::from(w);
         let total: usize = ex.all_gather_sum(&num_initial_tasks);
         assert!(
@@ -101,7 +101,7 @@ impl<'a, C: Chemistry> Sweep<'a, C> {
     pub fn check_deadlock(&mut self) {
         self.check_some_initial_task_exists();
         let dependencies = self.get_dependencies();
-        let w = MpiWorld::new(DEADLOCK_DETECTION_TAG);
+        let w = MpiWorld::new_custom_tag(DEADLOCK_DETECTION_TAG);
         let mut ex: ExchangeCommunicator<Dependency> = ExchangeCommunicator::from(w);
         let received = ex.exchange_all(dependencies.clone());
         warn!("Checking for deadlocks at level: {}", self.current_level.0);

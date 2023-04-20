@@ -248,12 +248,12 @@ impl<K: Key> LoadCounter<K> for KeyCounter<K> {
     }
 }
 
-pub struct ParallelCounter<'a, K> {
+pub struct ParallelCounter<K> {
     pub local_counter: KeyCounter<K>,
-    pub comm: &'a mut Communicator<Work>,
+    pub comm: Communicator<Work>,
 }
 
-impl<'a, K: Key> LoadCounter<K> for ParallelCounter<'a, K> {
+impl<K: Key> LoadCounter<K> for ParallelCounter<K> {
     fn load_in_range(&mut self, start: K, end: K) -> Work {
         let local_work = self.local_counter.load_in_range(start, end);
         let all_work = self.comm.all_gather(&local_work);

@@ -30,10 +30,9 @@ use self::site::Site;
 pub use self::task::FluxData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
-use crate::communication::CommunicationPlugin;
-use crate::communication::Communicator;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
+use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::components::Density;
@@ -58,7 +57,7 @@ use crate::units::Time;
 pub type Flux<C> = <C as Chemistry>::Photons;
 pub type Species<C> = <C as Chemistry>::Species;
 
-pub type SweepCommunicator<'a, C> = self::communicator::SweepCommunicator<'a, C>;
+pub type SweepCommunicator<C> = self::communicator::SweepCommunicator<C>;
 
 #[derive(Equivalence, Clone, Into)]
 pub struct CellCount(usize);
@@ -104,14 +103,11 @@ impl RaxiomPlugin for SweepPlugin {
             SimulationStages::ForceCalculation,
             communicate_levels_system.after(sweep_system),
         )
-        .add_parameter_type::<SweepParameters>()
-        .add_plugin(CommunicationPlugin::<FluxData<HydrogenOnly>>::default())
-        .add_plugin(CommunicationPlugin::<CellCount>::default())
-        .add_plugin(CommunicationPlugin::<TimestepLevelData>::exchange());
+        .add_parameter_type::<SweepParameters>();
     }
 }
 
-struct Sweep<'a, C: Chemistry> {
+struct Sweep<C: Chemistry> {
     directions: Directions,
     cells: Cells,
     sites: Sites<C>,
@@ -122,14 +118,13 @@ struct Sweep<'a, C: Chemistry> {
     to_receive_count: DataByRank<usize>,
     max_timestep: Time,
     current_level: TimestepLevel,
-    communicator: SweepCommunicator<'a, C>,
-    count_communicator: Communicator<'a, CellCount>,
+    communicator: SweepCommunicator<C>,
     num_timestep_levels: usize,
     check_deadlock: bool,
     chemistry: C,
 }
 
-impl<'a, C: Chemistry> Sweep<'a, C> {
+impl<C: Chemistry> Sweep<C> {
     fn run(
         directions: &Directions,
         cells: HashMap<ParticleId, Cell>,
@@ -139,13 +134,12 @@ impl<'a, C: Chemistry> Sweep<'a, C> {
         parameters: &SweepParameters,
         world_size: usize,
         world_rank: Rank,
-        communicator: SweepCommunicator<C>,
-        count_communicator: Communicator<CellCount>,
         chemistry: C,
     ) -> Sites<C> {
         for level in levels.values() {
             assert!(level.0 < parameters.num_timestep_levels);
         }
+        let communicator = SweepCommunicator::<C>::new();
         let mut solver = Sweep {
             cells: Cells::new(cells, &levels),
             sites: Sites::<C>::new(sites, &levels),
@@ -158,7 +152,6 @@ impl<'a, C: Chemistry> Sweep<'a, C> {
             max_timestep,
             current_level: TimestepLevel(0),
             communicator,
-            count_communicator,
             num_timestep_levels: parameters.num_timestep_levels,
             check_deadlock: parameters.check_deadlock,
             chemistry,
@@ -178,8 +171,8 @@ impl<'a, C: Chemistry> Sweep<'a, C> {
 
     fn count_cells_global(&mut self, level: usize) -> usize {
         let local_count = self.cells.enumerate_active(TimestepLevel(level)).count();
-        self.count_communicator
-            .all_gather_sum(&CellCount(local_count))
+        let mut count_communicator = MpiWorld::new();
+        count_communicator.all_gather_sum(&CellCount(local_count))
     }
 
     pub fn print_cell_counts(&mut self) {
@@ -399,8 +392,6 @@ pub fn sweep_system(
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
-    mut comm: Communicator<FluxData<HydrogenOnly>>,
-    count_comm: Communicator<CellCount>,
 ) {
     let cells: HashMap<_, _> = cells_query
         .iter()
@@ -437,8 +428,6 @@ pub fn sweep_system(
         &sweep_parameters,
         **world_size,
         **world_rank,
-        SweepCommunicator::new(&mut comm),
-        count_comm,
         HydrogenOnly {
             flux_treshold: sweep_parameters.significant_flux_treshold,
         },
@@ -467,14 +456,14 @@ pub fn sweep_system(
 }
 
 fn communicate_levels_system(
-    mut levels_comm: ExchangeCommunicator<TimestepLevelData>,
     mut halo_levels: HaloParticles<
         (Entity, &ParticleId, &mut TimestepLevel),
         Without<LocalParticle>,
     >,
     local_levels: Particles<(&ParticleId, &TimestepLevel, &Cell), Without<HaloParticle>>,
 ) {
-    let mut data: DataByRank<Vec<TimestepLevelData>> = DataByRank::from_communicator(&*levels_comm);
+    let mut levels_comm = ExchangeCommunicator::new();
+    let mut data: DataByRank<Vec<TimestepLevelData>> = DataByRank::from_communicator(&levels_comm);
     for (id, level, cell) in local_levels.iter() {
         for (_, n) in cell.neighbours.iter() {
             if let ParticleType::Remote(n) = n {

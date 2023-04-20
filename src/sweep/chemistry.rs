@@ -19,7 +19,7 @@ use crate::units::Time;
 use crate::units::Volume;
 use crate::units::PROTON_MASS;
 
-pub trait Chemistry: Sized {
+pub trait Chemistry: Sized + 'static {
     type Photons: Photons;
     type Species: Debug;
 

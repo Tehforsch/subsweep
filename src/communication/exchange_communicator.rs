@@ -5,13 +5,26 @@ use mpi::traits::Equivalence;
 
 use super::communicator::Communicator;
 use super::DataByRank;
+use super::MpiWorld;
 use super::Rank;
 use super::SizedCommunicator;
 
 pub struct ExchangeCommunicator<T> {
-    pub communicator: Communicator<T>,
+    pub communicator: MpiWorld<T>,
     pending_data: DataByRank<bool>,
     _marker: PhantomData<T>,
+}
+
+impl<T: 'static> ExchangeCommunicator<T> {
+    pub fn new() -> Self {
+        let communicator = MpiWorld::new();
+        let pending_data = DataByRank::from_communicator(&communicator);
+        Self {
+            communicator,
+            pending_data,
+            _marker: PhantomData::default(),
+        }
+    }
 }
 
 impl<T> SizedCommunicator for ExchangeCommunicator<T> {

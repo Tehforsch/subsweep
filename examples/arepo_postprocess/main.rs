@@ -8,8 +8,6 @@ mod unit_reader;
 
 use bevy::prelude::*;
 use cosmology::Cosmology;
-use raxiom::communication::CommunicatedOption;
-use raxiom::communication::Identified;
 use raxiom::components;
 use raxiom::components::Density;
 use raxiom::components::Position;
@@ -26,8 +24,6 @@ use raxiom::units::SourceRate;
 use raxiom::units::VecLength;
 use sources::read_sources_system;
 use sources::set_source_terms_system;
-use sources::DistanceToSourceData;
-use sources::Source;
 use unit_reader::ArepoUnitReader;
 
 #[raxiom_parameters("postprocess")]
@@ -87,10 +83,6 @@ fn main() {
                 ..default()
             },
         ))
-        .add_plugin(CommunicationPlugin::<
-            CommunicatedOption<Identified<DistanceToSourceData>>,
-        >::default())
-        .add_plugin(CommunicationPlugin::<Source>::default())
         .add_plugin(SweepPlugin)
         .run();
 }

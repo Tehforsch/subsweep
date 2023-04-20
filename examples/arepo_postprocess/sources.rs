@@ -10,6 +10,7 @@ use derive_more::From;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 use ordered_float::OrderedFloat;
+use raxiom::communication::MpiWorld;
 use raxiom::components;
 use raxiom::components::Position;
 use raxiom::domain::Decomposition;
@@ -19,7 +20,6 @@ use raxiom::io::input::InputFiles;
 use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
-use raxiom::prelude::Communicator;
 use raxiom::prelude::Particles;
 use raxiom::prelude::SimulationBox;
 use raxiom::prelude::WorldRank;
@@ -137,12 +137,12 @@ pub fn read_sources_system(
 
 pub fn set_source_terms_system(
     mut particles: Particles<(&Position, &mut components::Source)>,
-    mut source_comm: Communicator<Source>,
     sources: Res<Sources>,
     decomposition: Res<Decomposition>,
     box_: Res<SimulationBox>,
     world_rank: Res<WorldRank>,
 ) {
+    let mut source_comm = MpiWorld::<Source>::new();
     let all_sources = source_comm.all_gather_varcount(&sources.sources);
     for s in all_sources {
         let key = s.position.into_key(&*box_);

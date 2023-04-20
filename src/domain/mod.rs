@@ -19,14 +19,12 @@ use self::exchange_data_plugin::OutgoingEntities;
 pub use self::extent::Extent;
 pub use self::quadtree::NodeData;
 pub use self::quadtree::QuadTree;
-use self::work::Work;
 use crate::communication::CommunicatedOption;
-use crate::communication::CommunicationPlugin;
+use crate::communication::MpiWorld;
 use crate::communication::WorldRank;
 use crate::components::Position;
 use crate::named::Named;
 use crate::parameters::SimulationBox;
-use crate::prelude::Communicator;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::SimulationStartupStages;
@@ -86,33 +84,31 @@ pub struct DomainPlugin;
 
 impl RaxiomPlugin for DomainPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_plugin(CommunicationPlugin::<CommunicatedOption<Extent>>::default())
-            .add_plugin(CommunicationPlugin::<Work>::default())
-            .add_parameter_type::<TreeParameters>();
-        sim.add_startup_system_to_stage(
-            SimulationStartupStages::InsertDerivedComponents,
-            determine_particle_ids_system,
-        )
-        .add_startup_system_to_stage(
-            DomainStartupStages::CheckParticleExtent,
-            check_particle_extent_system,
-        )
-        .add_startup_system_to_stage(
-            DomainStartupStages::Decomposition,
-            domain_decomposition_system,
-        )
-        .add_startup_system_to_stage(
-            DomainStartupStages::SetOutgoingEntities,
-            set_outgoing_entities_system,
-        )
-        .add_startup_system_to_stage(
-            DomainStartupStages::TreeConstruction,
-            update_id_entity_map_system,
-        )
-        .add_startup_system_to_stage(
-            DomainStartupStages::TreeConstruction,
-            construct_quad_tree_system,
-        );
+        sim.add_parameter_type::<TreeParameters>()
+            .add_startup_system_to_stage(
+                SimulationStartupStages::InsertDerivedComponents,
+                determine_particle_ids_system,
+            )
+            .add_startup_system_to_stage(
+                DomainStartupStages::CheckParticleExtent,
+                check_particle_extent_system,
+            )
+            .add_startup_system_to_stage(
+                DomainStartupStages::Decomposition,
+                domain_decomposition_system,
+            )
+            .add_startup_system_to_stage(
+                DomainStartupStages::SetOutgoingEntities,
+                set_outgoing_entities_system,
+            )
+            .add_startup_system_to_stage(
+                DomainStartupStages::TreeConstruction,
+                update_id_entity_map_system,
+            )
+            .add_startup_system_to_stage(
+                DomainStartupStages::TreeConstruction,
+                construct_quad_tree_system,
+            );
     }
 }
 
@@ -135,11 +131,11 @@ pub fn construct_quad_tree_system(
 
 pub(super) fn check_particle_extent_system(
     particles: Particles<&Position>,
-    mut extent_communicator: Communicator<CommunicatedOption<Extent>>,
     box_: Res<SimulationBox>,
 ) {
+    let mut extent_communicator = MpiWorld::<CommunicatedOption<Extent>>::new();
     let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
-    let all_extents = (*extent_communicator).all_gather(&extent.into());
+    let all_extents = extent_communicator.all_gather(&extent.into());
     let all_extents: Vec<Extent> = all_extents.into_iter().filter_map(|x| x.into()).collect();
     let extent = Extent::get_all_encompassing(all_extents.iter())
         .expect("Failed to find simulation extent - are there no particles?");
@@ -183,13 +179,12 @@ fn domain_decomposition_system(
     box_: Res<SimulationBox>,
     particles: Particles<&Position>,
     world_size: Res<WorldSize>,
-    mut comm: Communicator<Work>,
 ) {
     let local_counter =
         KeyCounter::from_points_and_extent(particles.iter().map(|x| **x).collect(), &*box_);
     let mut counter = ParallelCounter {
+        comm: MpiWorld::new(),
         local_counter,
-        comm: &mut *comm,
     };
     let decomp = Decomposition::new(&mut counter, **world_size);
     decomp.log_imbalance();

@@ -15,7 +15,6 @@ use mpi::traits::MatchesRaw;
 
 use super::DomainStartupStages;
 use super::TreeParameters;
-use crate::communication::CommunicationPlugin;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
@@ -84,7 +83,6 @@ where
         let size = **sim.unwrap_resource::<WorldSize>();
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
-            .add_plugin(CommunicationPlugin::<NumEntities>::exchange())
             .try_add_parameter_type::<TreeParameters>();
         sim.add_startup_system_to_stage(
             DomainStartupStages::Exchange,
@@ -112,8 +110,7 @@ where
         sim.try_add_parameter_type::<TreeParameters>()
             .insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
                 size, rank,
-            )))
-            .add_plugin(CommunicationPlugin::<T>::exchange());
+            )));
         sim.add_well_ordered_system_to_startup_stage::<_, ExchangeDataStartupOrder>(
             DomainStartupStages::Exchange,
             Self::exchange_buffers_system
@@ -151,10 +148,10 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
 
     fn exchange_buffers_system(
         mut commands: Commands,
-        mut communicator: ExchangeCommunicator<T>,
         mut buffers: ResMut<ExchangeBuffers<T>>,
         spawned_entities: Res<SpawnedEntities>,
     ) {
+        let mut communicator = ExchangeCommunicator::<T>::new();
         let buffers = buffers.take();
         let mut incoming = communicator.exchange_all(buffers);
         for (rank, data) in incoming.drain_all() {
@@ -174,10 +171,8 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
     }
 }
 
-fn send_num_outgoing_entities_system(
-    mut communicator: ExchangeCommunicator<NumEntities>,
-    num_outgoing: Res<OutgoingEntities>,
-) {
+fn send_num_outgoing_entities_system(num_outgoing: Res<OutgoingEntities>) {
+    let mut communicator = ExchangeCommunicator::new();
     for rank in communicator.other_ranks() {
         communicator.send(rank, NumEntities(num_outgoing.get(&rank).unwrap().len()));
     }
@@ -185,9 +180,9 @@ fn send_num_outgoing_entities_system(
 
 fn spawn_incoming_entities_system(
     mut commands: Commands,
-    mut communicator: ExchangeCommunicator<NumEntities>,
     mut spawned_entities: ResMut<SpawnedEntities>,
 ) {
+    let mut communicator: ExchangeCommunicator<NumEntities> = ExchangeCommunicator::new();
     for (rank, num_incoming) in communicator.receive() {
         spawned_entities.insert(
             rank,
