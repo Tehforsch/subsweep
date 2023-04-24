@@ -194,19 +194,24 @@ impl DTetraData for TriangleData<Point2d> {
         let c = self.p3;
         let d = point;
         is_negative(determinant3x3(
-            b.x - a.x, b.y - a.y, (b.x - a.x).powi(2) + (b.y - a.y).powi(2),
-            c.x - a.x, c.y - a.y, (c.x - a.x).powi(2) + (c.y - a.y).powi(2),
-            d.x - a.x, d.y - a.y, (d.x - a.x).powi(2) + (d.y - a.y).powi(2)
+            [
+                [b.x - a.x, b.y - a.y, (b.x - a.x).powi(2) + (b.y - a.y).powi(2)],
+                [c.x - a.x, c.y - a.y, (c.x - a.x).powi(2) + (c.y - a.y).powi(2)],
+                [d.x - a.x, d.y - a.y, (d.x - a.x).powi(2) + (d.y - a.y).powi(2)]
+            ]
         ))
     }
 
     #[rustfmt::skip]
     fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
-        is_positive(determinant3x3(
-            1.0, self.p1.x, self.p1.y,
-            1.0, self.p2.x, self.p2.y,
-            1.0, self.p3.x, self.p3.y,
-        ))
+        let determinant = determinant3x3(
+            [
+                [1.0, self.p1.x, self.p1.y],
+                [1.0, self.p2.x, self.p2.y],
+                [1.0, self.p3.x, self.p3.y],
+            ]
+        );
+        is_positive(determinant)
     }
 
     fn get_center_of_circumcircle(&self) -> Point2d {

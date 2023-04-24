@@ -134,21 +134,25 @@ impl DTetraData for TetrahedronData {
         let d = self.p4;
         let e = point;
         is_negative(determinant5x5(
-            1.0, a.x, a.y, a.z, a.x.powi(2) + a.y.powi(2) + a.z.powi(2),
-            1.0, b.x, b.y, b.z, b.x.powi(2) + b.y.powi(2) + b.z.powi(2),
-            1.0, c.x, c.y, c.z, c.x.powi(2) + c.y.powi(2) + c.z.powi(2),
-            1.0, d.x, d.y, d.z, d.x.powi(2) + d.y.powi(2) + d.z.powi(2),
-            1.0, e.x, e.y, e.z, e.x.powi(2) + e.y.powi(2) + e.z.powi(2),
+            [
+                [1.0, a.x, a.y, a.z, a.x.powi(2) + a.y.powi(2) + a.z.powi(2)],
+                [1.0, b.x, b.y, b.z, b.x.powi(2) + b.y.powi(2) + b.z.powi(2)],
+                [1.0, c.x, c.y, c.z, c.x.powi(2) + c.y.powi(2) + c.z.powi(2)],
+                [1.0, d.x, d.y, d.z, d.x.powi(2) + d.y.powi(2) + d.z.powi(2)],
+                [1.0, e.x, e.y, e.z, e.x.powi(2) + e.y.powi(2) + e.z.powi(2)],
+            ]
         ))
     }
 
     #[rustfmt::skip]
     fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
         let determinant = determinant4x4(
-            1.0, self.p1.x, self.p1.y, self.p1.z,
-            1.0, self.p2.x, self.p2.y, self.p2.z,
-            1.0, self.p3.x, self.p3.y, self.p3.z,
-            1.0, self.p4.x, self.p4.y, self.p4.z,
+            [
+                [1.0, self.p1.x, self.p1.y, self.p1.z],
+                [1.0, self.p2.x, self.p2.y, self.p2.z],
+                [1.0, self.p3.x, self.p3.y, self.p3.z],
+                [1.0, self.p4.x, self.p4.y, self.p4.z],
+            ]
         );
         is_positive(determinant)
     }
@@ -160,28 +164,36 @@ impl DTetraData for TetrahedronData {
         let v3 = self.p3.x.powi(2) + self.p3.y.powi(2) + self.p3.z.powi(2);
         let v4 = self.p4.x.powi(2) + self.p4.y.powi(2) + self.p4.z.powi(2);
         let dx = determinant4x4(
-            v1, self.p1.y, self.p1.z, 1.0,
-            v2, self.p2.y, self.p2.z, 1.0,
-            v3, self.p3.y, self.p3.z, 1.0,
-            v4, self.p4.y, self.p4.z, 1.0,
+            [
+                [v1, self.p1.y, self.p1.z, 1.0],
+                [v2, self.p2.y, self.p2.z, 1.0],
+                [v3, self.p3.y, self.p3.z, 1.0],
+                [v4, self.p4.y, self.p4.z, 1.0],
+            ]
         );
         let dy = -determinant4x4(
-            v1, self.p1.x, self.p1.z, 1.0,
-            v2, self.p2.x, self.p2.z, 1.0,
-            v3, self.p3.x, self.p3.z, 1.0,
-            v4, self.p4.x, self.p4.z, 1.0,
+            [
+                [v1, self.p1.x, self.p1.z, 1.0],
+                [v2, self.p2.x, self.p2.z, 1.0],
+                [v3, self.p3.x, self.p3.z, 1.0],
+                [v4, self.p4.x, self.p4.z, 1.0],
+            ]
         );
         let dz = determinant4x4(
-            v1, self.p1.x, self.p1.y, 1.0,
-            v2, self.p2.x, self.p2.y, 1.0,
-            v3, self.p3.x, self.p3.y, 1.0,
-            v4, self.p4.x, self.p4.y, 1.0,
+            [
+                [v1, self.p1.x, self.p1.y, 1.0],
+                [v2, self.p2.x, self.p2.y, 1.0],
+                [v3, self.p3.x, self.p3.y, 1.0],
+                [v4, self.p4.x, self.p4.y, 1.0],
+            ]
         );
         let a = determinant4x4(
-            self.p1.x, self.p1.y, self.p1.z, 1.0,
-            self.p2.x, self.p2.y, self.p2.z, 1.0,
-            self.p3.x, self.p3.y, self.p3.z, 1.0,
-            self.p4.x, self.p4.y, self.p4.z, 1.0,
+            [
+                [self.p1.x, self.p1.y, self.p1.z, 1.0],
+                [self.p2.x, self.p2.y, self.p2.z, 1.0],
+                [self.p3.x, self.p3.y, self.p3.z, 1.0],
+                [self.p4.x, self.p4.y, self.p4.z, 1.0],
+            ]
         );
         Point3d::new(dx,dy,dz) / (2.0 * a)
     }
