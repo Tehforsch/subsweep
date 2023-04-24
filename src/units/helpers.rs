@@ -22,3 +22,7 @@ impl<const D: Dimension> Quantity<MVec, D> {
         return Self::new(x, y, Quantity::<f64, D>::zero());
     }
 }
+
+pub trait Num: num_traits::Float {}
+
+impl<T> Num for T where T: num_traits::Float {}

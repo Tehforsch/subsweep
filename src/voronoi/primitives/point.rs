@@ -5,8 +5,8 @@ use std::ops::Sub;
 
 use glam::DVec2;
 use glam::DVec3;
-use num_traits::Num;
 
+use crate::prelude::Num;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
 
@@ -31,12 +31,23 @@ pub trait DVector:
     fn max_element(self) -> Self::Float;
 }
 
+pub trait DVector2d: DVector {
+    fn x(&self) -> <Self as DVector>::Float;
+    fn y(&self) -> <Self as DVector>::Float;
+}
+
+pub trait DVector3d: DVector {
+    fn x(&self) -> <Self as DVector>::Float;
+    fn y(&self) -> <Self as DVector>::Float;
+    fn z(&self) -> <Self as DVector>::Float;
+}
+
 pub trait MinMax {
     fn min(self, other: Self) -> Self;
     fn max(self, other: Self) -> Self;
 }
 
-macro_rules! impl_for_vector {
+macro_rules! impl_dvector_for_vector {
     ($vec: ident, $f: ty) => {
         impl DVector for $vec {
             type Float = $f;
@@ -77,13 +88,23 @@ macro_rules! impl_min_max_for_vector {
     };
 }
 
-impl_for_vector!(DVec2, f64);
-impl_for_vector!(DVec3, f64);
+impl_dvector_for_vector!(DVec2, f64);
+impl_dvector_for_vector!(DVec3, f64);
 
 impl_min_max_for_vector!(DVec2);
 impl_min_max_for_vector!(DVec3);
 impl_min_max_for_vector!(Vec2Length);
 impl_min_max_for_vector!(Vec3Length);
+
+impl DVector2d for Point2d {
+    fn x(&self) -> <Self as DVector>::Float {
+        self.x
+    }
+
+    fn y(&self) -> <Self as DVector>::Float {
+        self.y
+    }
+}
 
 impl DVector for f64 {
     type Float = f64;

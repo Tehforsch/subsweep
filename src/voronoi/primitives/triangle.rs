@@ -1,3 +1,4 @@
+use super::point::DVector2d;
 use super::Float;
 use super::Point2d;
 use super::Point3d;
@@ -129,8 +130,8 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
     }
 }
 
-impl TriangleData<Point2d> {
-    fn transform_point_to_canonical_coordinates(&self, point: Point2d) -> (Float, Float) {
+impl<V: DVector2d> TriangleData<V> {
+    fn transform_point_to_canonical_coordinates(&self, point: V) -> (V::Float, V::Float) {
         // We solve
         // p = p1 + r (p2 - p1) + s (p3 - p1)
         // where r and s are the coordinates of the point in the (two-dimensional) vector space
@@ -138,7 +139,7 @@ impl TriangleData<Point2d> {
         let a = self.p2 - self.p1;
         let b = self.p3 - self.p1;
         let c = point - self.p1;
-        let [r, s] = solve_system_of_equations([[a.x, b.x, c.x], [a.y, b.y, c.y]]);
+        let [r, s] = solve_system_of_equations([[a.x(), b.x(), c.x()], [a.y(), b.y(), c.y()]]);
         (r, s)
     }
 }

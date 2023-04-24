@@ -1,35 +1,27 @@
 use ordered_float::OrderedFloat;
 
-use crate::prelude::Float;
+use crate::prelude::Num;
 
 // MxN matrix: This type is just here for clarity, because the
 // internal storage is reversed, such that the order of indices is
 // as it would be in math, i.e. Matrix<M, N> has M rows and N columns.
-type Matrix<const M: usize, const N: usize> = [[Float; N]; M];
+type Matrix<const M: usize, const N: usize, F> = [[F; N]; M];
 
-fn swap_rows<const M: usize, const N: usize>(a: &mut Matrix<M, N>, r1: usize, r2: usize) {
-    for column in 0..N {
-        let temp = a[r1][column];
-        a[r1][column] = a[r2][column];
-        a[r2][column] = temp;
-    }
-}
-
-pub fn solve_system_of_equations<const M: usize>(mut a: Matrix<M, { M + 1 }>) -> [Float; M] {
+pub fn solve_system_of_equations<const M: usize, F: Num>(mut a: Matrix<M, { M + 1 }, F>) -> [F; M] {
     let n = M + 1;
     let mut h = 0;
     let mut k = 0;
     while h < M && k < n {
         let i_max = (h..M).max_by_key(|i| OrderedFloat(a[*i][k].abs())).unwrap();
-        if a[i_max][k] == 0.0 {
+        if a[i_max][k] == F::zero() {
             k += 1;
         } else {
             swap_rows(&mut a, h, i_max);
             for i in h + 1..M {
                 let f = a[i][k] / a[h][k];
-                a[i][k] = 0.0;
+                a[i][k] = F::zero();
                 for j in (k + 1)..n {
-                    a[i][j] -= a[h][j] * f;
+                    a[i][j] = a[i][j] - a[h][j] * f;
                 }
             }
             h += 1;
@@ -39,31 +31,42 @@ pub fn solve_system_of_equations<const M: usize>(mut a: Matrix<M, { M + 1 }>) ->
     backward_substitution(a)
 }
 
-pub fn backward_substitution<const M: usize>(a: Matrix<M, { M + 1 }>) -> [Float; M] {
-    let mut result = [0.0; M];
+fn swap_rows<const M: usize, const N: usize, F: Clone>(
+    a: &mut Matrix<M, N, F>,
+    r1: usize,
+    r2: usize,
+) {
+    for column in 0..N {
+        let temp = a[r1][column].clone();
+        a[r1][column] = a[r2][column].clone();
+        a[r2][column] = temp;
+    }
+}
+
+fn backward_substitution<const M: usize, F: Num>(a: Matrix<M, { M + 1 }, F>) -> [F; M] {
+    let mut result = [F::zero(); M];
     for i in (0..M).rev() {
-        debug_assert!(a[i][i].abs() > 0.0);
         result[i] = a[i][M];
         for j in (i + 1)..M {
-            result[i] -= a[i][j] * result[j];
+            result[i] = result[i] - a[i][j] * result[j];
         }
-        result[i] /= a[i][i];
+        result[i] = result[i] / a[i][i];
     }
     result
 }
 
 #[rustfmt::skip]
-pub fn determinant3x3(
-    a11: Float,
-    a12: Float,
-    a13: Float,
-    a21: Float,
-    a22: Float,
-    a23: Float,
-    a31: Float,
-    a32: Float,
-    a33: Float,
-) -> Float {
+pub fn determinant3x3<F: Num>(
+    a11: F,
+    a12: F,
+    a13: F,
+    a21: F,
+    a22: F,
+    a23: F,
+    a31: F,
+    a32: F,
+    a33: F,
+) -> F {
       a11 * a22 * a33
     + a12 * a23 * a31
     + a13 * a21 * a32
@@ -73,24 +76,24 @@ pub fn determinant3x3(
 }
 
 #[rustfmt::skip]
-pub fn determinant4x4(
-    a11: Float,
-    a12: Float,
-    a13: Float,
-    a14: Float,
-    a21: Float,
-    a22: Float,
-    a23: Float,
-    a24: Float,
-    a31: Float,
-    a32: Float,
-    a33: Float,
-    a34: Float,
-    a41: Float,
-    a42: Float,
-    a43: Float,
-    a44: Float,
-) -> Float {
+pub fn determinant4x4<F: Num>(
+    a11: F,
+    a12: F,
+    a13: F,
+    a14: F,
+    a21: F,
+    a22: F,
+    a23: F,
+    a24: F,
+    a31: F,
+    a32: F,
+    a33: F,
+    a34: F,
+    a41: F,
+    a42: F,
+    a43: F,
+    a44: F,
+) -> F {
       a11 * determinant3x3(a22,a23,a24,a32,a33,a34,a42,a43,a44)
     - a21 * determinant3x3(a12,a13,a14,a32,a33,a34,a42,a43,a44)
     + a31 * determinant3x3(a12,a13,a14,a22,a23,a24,a42,a43,a44)
@@ -98,33 +101,33 @@ pub fn determinant4x4(
 }
 
 #[rustfmt::skip]
-pub fn determinant5x5(
-    a11: Float,
-    a12: Float,
-    a13: Float,
-    a14: Float,
-    a15: Float,
-    a21: Float,
-    a22: Float,
-    a23: Float,
-    a24: Float,
-    a25: Float,
-    a31: Float,
-    a32: Float,
-    a33: Float,
-    a34: Float,
-    a35: Float,
-    a41: Float,
-    a42: Float,
-    a43: Float,
-    a44: Float,
-    a45: Float,
-    a51: Float,
-    a52: Float,
-    a53: Float,
-    a54: Float,
-    a55: Float,
-) -> Float {
+pub fn determinant5x5<F: Num>(
+    a11: F,
+    a12: F,
+    a13: F,
+    a14: F,
+    a15: F,
+    a21: F,
+    a22: F,
+    a23: F,
+    a24: F,
+    a25: F,
+    a31: F,
+    a32: F,
+    a33: F,
+    a34: F,
+    a35: F,
+    a41: F,
+    a42: F,
+    a43: F,
+    a44: F,
+    a45: F,
+    a51: F,
+    a52: F,
+    a53: F,
+    a54: F,
+    a55: F,
+) -> F {
       a11 * determinant4x4(a22, a23, a24, a25, a32, a33, a34, a35, a42, a43, a44, a45, a52, a53, a54, a55)
     - a21 * determinant4x4(a12, a13, a14, a15, a32, a33, a34, a35, a42, a43, a44, a45, a52, a53, a54, a55)
     + a31 * determinant4x4(a12, a13, a14, a15, a22, a23, a24, a25, a42, a43, a44, a45, a52, a53, a54, a55)
