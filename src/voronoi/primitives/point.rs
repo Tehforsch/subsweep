@@ -5,8 +5,8 @@ use std::ops::Sub;
 
 use glam::DVec2;
 use glam::DVec3;
+use num_traits::Num;
 
-use super::Float;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
 
@@ -17,17 +17,18 @@ pub trait DVector:
     Sized
     + Sub<Self, Output = Self>
     + Add<Self, Output = Self>
-    + Mul<Float, Output = Self>
-    + Div<Float, Output = Self>
+    + Mul<Self::Float, Output = Self>
+    + Div<Self::Float, Output = Self>
     + Copy
     + Clone
     + MinMax
 {
-    fn distance(&self, p: Self) -> Float;
-    fn distance_squared(&self, p: Self) -> Float;
+    type Float: Num;
+    fn distance(&self, p: Self) -> Self::Float;
+    fn distance_squared(&self, p: Self) -> Self::Float;
     fn normalize(&self) -> Self;
-    fn dot(self, other: Self) -> Float;
-    fn max_element(self) -> Float;
+    fn dot(self, other: Self) -> Self::Float;
+    fn max_element(self) -> Self::Float;
 }
 
 pub trait MinMax {
@@ -36,13 +37,14 @@ pub trait MinMax {
 }
 
 macro_rules! impl_for_vector {
-    ($vec: ident) => {
+    ($vec: ident, $f: ty) => {
         impl DVector for $vec {
-            fn distance(&self, p: Self) -> Float {
+            type Float = $f;
+            fn distance(&self, p: Self) -> $f {
                 (*self - p).length()
             }
 
-            fn distance_squared(&self, p: Self) -> Float {
+            fn distance_squared(&self, p: Self) -> $f {
                 (*self - p).length_squared()
             }
 
@@ -50,11 +52,11 @@ macro_rules! impl_for_vector {
                 $vec::normalize(*self)
             }
 
-            fn dot(self, other: Self) -> Float {
+            fn dot(self, other: Self) -> $f {
                 $vec::dot(self, other)
             }
 
-            fn max_element(self) -> Float {
+            fn max_element(self) -> $f {
                 $vec::max_element(self)
             }
         }
@@ -75,8 +77,8 @@ macro_rules! impl_min_max_for_vector {
     };
 }
 
-impl_for_vector!(DVec2);
-impl_for_vector!(DVec3);
+impl_for_vector!(DVec2, f64);
+impl_for_vector!(DVec3, f64);
 
 impl_min_max_for_vector!(DVec2);
 impl_min_max_for_vector!(DVec3);
@@ -84,11 +86,13 @@ impl_min_max_for_vector!(Vec2Length);
 impl_min_max_for_vector!(Vec3Length);
 
 impl DVector for f64 {
-    fn distance(&self, p: Self) -> Float {
+    type Float = f64;
+
+    fn distance(&self, p: Self) -> f64 {
         (*self - p).abs()
     }
 
-    fn distance_squared(&self, p: Self) -> Float {
+    fn distance_squared(&self, p: Self) -> f64 {
         (*self - p).powi(2)
     }
 
@@ -96,11 +100,11 @@ impl DVector for f64 {
         self.signum()
     }
 
-    fn dot(self, other: Self) -> Float {
+    fn dot(self, other: Self) -> f64 {
         self * other
     }
 
-    fn max_element(self) -> Float {
+    fn max_element(self) -> f64 {
         self
     }
 }

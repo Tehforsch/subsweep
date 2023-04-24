@@ -11,7 +11,6 @@ use super::TetraIndex;
 use super::Triangulation;
 use crate::hash_map::HashSet;
 use crate::voronoi::delaunay::dimension::DTetra;
-use crate::voronoi::primitives::DVector;
 use crate::voronoi::DDimension;
 
 #[derive(PartialEq, Eq)]
@@ -56,7 +55,6 @@ fn find_breadth_first<D>(
 where
     D: DDimension,
     Triangulation<D>: Delaunay<D>,
-    Point<D>: DVector,
 {
     let mut already_checked: HashSet<TetraIndex> = HashSet::default();
     let mut to_check: BinaryHeap<CheckData> = BinaryHeap::default();

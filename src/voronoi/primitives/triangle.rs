@@ -142,6 +142,7 @@ impl TriangleData<Point2d> {
         (r, s)
     }
 }
+
 impl DTetraData for TriangleData<Point2d> {
     type Dimension = TwoD;
     fn all_encompassing<'a>(extent: &Extent<Point2d>) -> Self {

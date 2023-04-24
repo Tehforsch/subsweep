@@ -343,7 +343,6 @@ mod tests {
     ) where
         D: DDimension + TestDimension + Clone + Debug,
         Triangulation<D>: Delaunay<D>,
-        Point<D>: DVector,
         Cell<D>: DCell<Dimension = D>,
     {
         for (t, tetra) in sub_triangulation_data.triangulation.tetras.iter() {

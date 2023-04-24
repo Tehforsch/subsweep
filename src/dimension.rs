@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use crate::domain::IntoKey;
+use crate::prelude::Float;
 use crate::simulation_box::PeriodicWrapType2d;
 use crate::simulation_box::PeriodicWrapType3d;
 use crate::units::Length;
@@ -14,7 +15,7 @@ use crate::voronoi::DVector;
 pub trait Dimension {
     const NUM: i32;
     type Length;
-    type Point: Clone + Copy + DVector + IntoKey + Debug + Visualizable;
+    type Point: Clone + Copy + DVector<Float = Float> + IntoKey + Debug + Visualizable;
     type UnitPoint: Clone + Copy + IntoKey + Debug;
     type WrapType: Default + Clone + Debug + PartialEq + Eq + std::hash::Hash + Copy;
 }
