@@ -35,6 +35,9 @@ generational-arena = "0.2.8"
 generic-tests = "0.1.2"
 bimap = "0.6.3"
 ndarray = "0.15.6"
+num-traits = "0.2.15"
+array-init = "2.1.0"
+rug = "1.19.2"
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"] }

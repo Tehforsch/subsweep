@@ -1,3 +1,4 @@
+use array_init::from_iter;
 use ordered_float::OrderedFloat;
 
 use crate::prelude::Num;
@@ -6,6 +7,8 @@ use crate::prelude::Num;
 // internal storage is reversed, such that the order of indices is
 // as it would be in math, i.e. Matrix<M, N> has M rows and N columns.
 type Matrix<const M: usize, const N: usize, F> = [[F; N]; M];
+
+type PrecisionFloat = rug::Rational;
 
 pub fn solve_system_of_equations<const M: usize, F: Num>(mut a: Matrix<M, { M + 1 }, F>) -> [F; M] {
     let n = M + 1;
@@ -53,6 +56,35 @@ fn backward_substitution<const M: usize, F: Num>(a: Matrix<M, { M + 1 }, F>) -> 
         result[i] = result[i] / a[i][i];
     }
     result
+}
+
+fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFloat> {
+    let iter = m.into_iter().map(|row| {
+        let x: [PrecisionFloat; D] = from_iter(
+            row.into_iter()
+                .map(|x| PrecisionFloat::from_f64(x).unwrap()),
+        )
+        .unwrap();
+        x
+    });
+    let arr: Matrix<D, D, PrecisionFloat> = from_iter(iter).unwrap();
+    arr
+}
+
+fn exact_function<const D: usize, T>(
+    m: Matrix<D, D, f64>,
+    f: fn(&Matrix<D, D, f64>) -> T,
+    error: fn(&Matrix<D, D, f64>) -> f64,
+    f_arbitrary_precision: fn(&Matrix<D, D, PrecisionFloat>) -> T,
+) -> T {
+    const ERROR_TRESHOLD: f64 = 1e-6;
+    let error = error(&m);
+    if error > ERROR_TRESHOLD {
+        f(&m)
+    } else {
+        let m = lift_matrix(m);
+        f_arbitrary_precision(&m)
+    }
 }
 
 #[rustfmt::skip]
