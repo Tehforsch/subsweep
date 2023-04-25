@@ -11,7 +11,9 @@ use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::face_info::FaceInfo;
 use crate::voronoi::math::determinant3x3;
+use crate::voronoi::math::determinant3x3_sign;
 use crate::voronoi::math::solve_system_of_equations;
+use crate::voronoi::math::Sign;
 use crate::voronoi::precision_error::is_negative;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
@@ -193,13 +195,18 @@ impl DTetraData for TriangleData<Point2d> {
         let b = self.p2;
         let c = self.p3;
         let d = point;
-        is_negative(determinant3x3(
+        let sign = determinant3x3_sign(
             [
                 [b.x - a.x, b.y - a.y, (b.x - a.x).powi(2) + (b.y - a.y).powi(2)],
                 [c.x - a.x, c.y - a.y, (c.x - a.x).powi(2) + (c.y - a.y).powi(2)],
                 [d.x - a.x, d.y - a.y, (d.x - a.x).powi(2) + (d.y - a.y).powi(2)]
             ]
-        ))
+        );
+        match sign {
+            Sign::Positive => Ok(false),
+            Sign::Negative => Ok(true),
+            Sign::Zero => panic!("Degenerate case in circumcircle test."),
+        }
     }
 
     #[rustfmt::skip]

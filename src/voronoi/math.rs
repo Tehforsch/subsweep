@@ -1,6 +1,8 @@
+use std::cmp::Ordering;
+
 use array_init::from_iter;
 use num::FromPrimitive;
-use num::Signed;
+use num::Zero;
 
 use crate::prelude::Num;
 
@@ -74,32 +76,59 @@ fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFl
     arr
 }
 
-fn determinant3x3_error(m: &Matrix<3, 3, f64>) -> f64 {
-    1e-6
+#[derive(Copy, Clone)]
+pub enum Sign {
+    Positive,
+    Negative,
+    Zero,
 }
 
-fn exact_function<const D: usize, T>(
-    m: Matrix<D, D, f64>,
-    f: fn(Matrix<D, D, f64>) -> T,
-    error: fn(&Matrix<D, D, f64>) -> f64,
-    f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> T,
-) -> T {
-    const ERROR_TRESHOLD: f64 = 1e-6;
-    let error = error(&m);
-    if error > ERROR_TRESHOLD {
-        f(m)
-    } else {
-        let m = lift_matrix(m);
-        f_arbitrary_precision(m)
+impl Sign {
+    fn of<T: Zero + PartialOrd>(t: T) -> Self {
+        match t.partial_cmp(&T::zero()).unwrap() {
+            Ordering::Less => Sign::Negative,
+            Ordering::Equal => Sign::Zero,
+            Ordering::Greater => Sign::Positive,
+        }
+    }
+
+    fn is_positive(self) -> bool {
+        match self {
+            Sign::Positive => true,
+            _ => false,
+        }
+    }
+
+    fn is_negative(self) -> bool {
+        match self {
+            Sign::Negative => true,
+            _ => false,
+        }
     }
 }
 
-fn determinant3x3_exact_is_positive(a: Matrix<3, 3, f64>) -> bool {
-    exact_function(
+// I would use a HRTB here, but these arent stable for non-lifetime bindings
+// as far as I can tell.
+fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
+    m: Matrix<D, D, f64>,
+    f: fn(Matrix<D, D, f64>) -> f64,
+    f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
+) -> Sign {
+    const ERROR_TRESHOLD: f64 = 1e-9;
+    let val = f(m.clone());
+    if val.abs() > ERROR_TRESHOLD {
+        Sign::of(f(m))
+    } else {
+        let m = lift_matrix(m);
+        Sign::of(f_arbitrary_precision(m))
+    }
+}
+
+pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
+    determine_sign_with_arbitrary_precision_if_necessary(
         a,
-        |m| Signed::is_positive(&determinant3x3::<f64>(m)),
-        determinant3x3_error,
-        |m| Signed::is_positive(&determinant3x3::<PrecisionFloat>(m)),
+        |m| determinant3x3::<f64>(m.clone()),
+        |m| determinant3x3::<PrecisionFloat>(m),
     )
 }
 
