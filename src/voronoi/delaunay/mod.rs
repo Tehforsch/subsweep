@@ -204,10 +204,7 @@ where
 
     fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
         let tetra = self.make_positively_oriented_tetra(tetra);
-        debug_assert!(self
-            .get_tetra_data(&tetra)
-            .is_positively_oriented()
-            .unwrap());
+        debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
         let tetra_index = self.tetras.insert(tetra);
         self.update_connections_in_existing_tetra(tetra_index);
         tetra_index
@@ -299,9 +296,7 @@ where
 
     fn circumcircle_contains_point(&self, tetra: &Tetra<D>, point: PointIndex) -> bool {
         let tetra_data = self.get_tetra_data(tetra);
-        tetra_data
-            .circumcircle_contains(self.points[point])
-            .unwrap()
+        tetra_data.circumcircle_contains(self.points[point])
     }
 }
 

@@ -225,7 +225,7 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             debug_assert!(self.faces[f].contains_point(pb));
             debug_assert!(self.faces[f].contains_point(pc));
         }
-        if tetra_data.is_positively_oriented().unwrap() {
+        if tetra_data.is_positively_oriented() {
             tetra
         } else {
             Tetra {

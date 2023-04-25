@@ -4,7 +4,6 @@ use array_init::from_iter;
 use num::FromPrimitive;
 use num::Zero;
 
-use super::precision_error::PrecisionError;
 use crate::prelude::Num;
 
 // MxN matrix: This type is just here for clarity, because the
@@ -93,17 +92,17 @@ impl Sign {
         }
     }
 
-    pub fn is_positive(self) -> Result<bool, PrecisionError> {
+    pub fn is_positive(self) -> bool {
         match self {
-            Sign::Positive => Ok(true),
-            _ => Ok(false),
+            Sign::Positive => true,
+            _ => false,
         }
     }
 
-    pub fn is_negative(self) -> Result<bool, PrecisionError> {
+    pub fn is_negative(self) -> bool {
         match self {
-            Sign::Negative => Ok(true),
-            _ => Ok(false),
+            Sign::Negative => true,
+            _ => false,
         }
     }
 
