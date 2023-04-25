@@ -1,5 +1,8 @@
+use std::ops::Sub;
+
+use num::One;
+
 use super::point::DVector2d;
-use super::DVector;
 use super::Float;
 use super::Point2d;
 use super::Point3d;
@@ -13,7 +16,8 @@ use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::face_info::FaceInfo;
 use crate::voronoi::math::determinant3x3_sign;
 use crate::voronoi::math::solve_system_of_equations;
-use crate::voronoi::precision_error::is_negative;
+use crate::voronoi::math::PrecisionPoint2d;
+use crate::voronoi::math::Sign;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::PointIndex;
 
@@ -130,7 +134,7 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
     }
 }
 
-impl<V: DVector2d + DVector> TriangleData<V> {
+impl<V: DVector2d + Clone + Sub<Output = V>> TriangleData<V> {
     fn transform_point_to_canonical_coordinates(&self, point: V) -> (V::Float, V::Float) {
         // We solve
         // p = p1 + r (p2 - p1) + s (p3 - p1)
@@ -141,6 +145,39 @@ impl<V: DVector2d + DVector> TriangleData<V> {
         let c = point - self.p1.clone();
         let [r, s] = solve_system_of_equations([[a.x(), b.x(), c.x()], [a.y(), b.y(), c.y()]]);
         (r, s)
+    }
+
+    fn generic_contains(&self, p: V) -> Result<bool, PrecisionError> {
+        let (r, s) = self.transform_point_to_canonical_coordinates(p);
+        let values = [r.clone(), s.clone(), V::Float::one() - (r + s)];
+        let is_definitely_outside = values.iter().any(|value| {
+            Sign::try_from_val(value)
+                .map(|sign| sign.is_negative())
+                .unwrap_or(false)
+        });
+        if is_definitely_outside {
+            Ok(false)
+        } else {
+            for value in values {
+                PrecisionError::check(&value)?;
+            }
+            Ok(true)
+        }
+    }
+}
+
+impl TriangleData<Point2d> {
+    fn arbitrary_precision_contains(&self, p: Point2d) -> bool {
+        let lifted = TriangleData {
+            p1: PrecisionPoint2d::new(self.p1),
+            p2: PrecisionPoint2d::new(self.p2),
+            p3: PrecisionPoint2d::new(self.p3),
+        };
+        lifted.generic_contains(PrecisionPoint2d::new(p)).unwrap()
+    }
+
+    fn f64_contains(&self, p: Point2d) -> Result<bool, PrecisionError> {
+        self.generic_contains(p)
     }
 }
 
@@ -157,20 +194,8 @@ impl DTetraData for TriangleData<Point2d> {
     }
 
     fn contains(&self, p: Point2d) -> bool {
-        todo!()
-        // let (r, s) = self.transform_point_to_canonical_coordinates(p);
-        // let values = [r, s, 1.0 - (r + s)];
-        // let is_definitely_outside = values
-        //     .iter()
-        //     .any(|value| is_negative(*value).unwrap_or(false));
-        // if is_definitely_outside {
-        //     Ok(false)
-        // } else {
-        //     for value in values {
-        //         PrecisionError::check(value)?;
-        //     }
-        //     Ok(true)
-        // }
+        self.f64_contains(p)
+            .unwrap_or_else(|_| self.arbitrary_precision_contains(p))
     }
 
     fn distance_to_point(&self, p: Point2d) -> Float {
@@ -262,21 +287,22 @@ impl TriangleData<Point3d> {
         r: Float,
         s: Float,
     ) -> Result<IntersectionType, PrecisionError> {
-        let identifiers = [
-            (is_negative(r)?, EdgeIdentifier::Two),
-            (is_negative(s)?, EdgeIdentifier::Three),
-            (is_negative(1.0 - (r + s))?, EdgeIdentifier::One),
-        ]
-        .into_iter()
-        .filter(|(state, _)| *state)
-        .map(|(_, id)| id)
-        .collect::<Vec<_>>();
-        Ok(match identifiers.len() {
-            0 => IntersectionType::Inside,
-            1 => IntersectionType::OutsideOneEdge(identifiers[0]),
-            2 => IntersectionType::OutsideTwoEdges(identifiers[0], identifiers[1]),
-            _ => panic!("Possibly degenerate case of point lying on one of the edges."),
-        })
+        todo!()
+        // let identifiers = [
+        //     (is_negative(r)?, EdgeIdentifier::Two),
+        //     (is_negative(s)?, EdgeIdentifier::Three),
+        //     (is_negative(1.0 - (r + s))?, EdgeIdentifier::One),
+        // ]
+        // .into_iter()
+        // .filter(|(state, _)| *state)
+        // .map(|(_, id)| id)
+        // .collect::<Vec<_>>();
+        // Ok(match identifiers.len() {
+        //     0 => IntersectionType::Inside,
+        //     1 => IntersectionType::OutsideOneEdge(identifiers[0]),
+        //     2 => IntersectionType::OutsideTwoEdges(identifiers[0], identifiers[1]),
+        //     _ => panic!("Possibly degenerate case of point lying on one of the edges."),
+        // })
     }
 
     pub fn distance_to_point(&self, p: Point3d) -> Float {

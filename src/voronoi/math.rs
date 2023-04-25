@@ -8,6 +8,7 @@ use num::Signed;
 use num::Zero;
 
 use super::precision_error::PrecisionError;
+use super::Point2d;
 use super::Point3d;
 use crate::prelude::Num;
 use crate::units::helpers::FloatError;
@@ -32,6 +33,21 @@ impl PrecisionPoint3d {
             x: PrecisionFloat::from_f64(p.x).unwrap(),
             y: PrecisionFloat::from_f64(p.y).unwrap(),
             z: PrecisionFloat::from_f64(p.z).unwrap(),
+        }
+    }
+}
+
+#[derive(Add, Sub, Clone)]
+pub struct PrecisionPoint2d {
+    pub x: PrecisionFloat,
+    pub y: PrecisionFloat,
+}
+
+impl PrecisionPoint2d {
+    pub fn new(p: Point2d) -> Self {
+        Self {
+            x: PrecisionFloat::from_f64(p.x).unwrap(),
+            y: PrecisionFloat::from_f64(p.y).unwrap(),
         }
     }
 }
@@ -136,17 +152,14 @@ impl Sign {
     }
 
     pub fn try_from_val<T: Zero + PartialOrd + Signed + FloatError>(
-        val: T,
+        val: &T,
     ) -> Result<Self, PrecisionError> {
-        if val.is_too_close_to_zero() {
-            Err(PrecisionError)
-        } else {
-            Ok(match val.partial_cmp(&T::zero()).unwrap() {
-                Ordering::Less => Sign::Negative,
-                Ordering::Equal => Sign::Zero,
-                Ordering::Greater => Sign::Positive,
-            })
-        }
+        PrecisionError::check(val)?;
+        Ok(match val.partial_cmp(&T::zero()).unwrap() {
+            Ordering::Less => Sign::Negative,
+            Ordering::Equal => Sign::Zero,
+            Ordering::Greater => Sign::Positive,
+        })
     }
 
     pub fn is_positive(self) -> bool {
@@ -179,7 +192,7 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
     f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
 ) -> Sign {
     let val = f(m.clone());
-    Sign::try_from_val(val).unwrap_or_else(|_| {
+    Sign::try_from_val(&val).unwrap_or_else(|_| {
         let m = lift_matrix(m);
         Sign::of(f_arbitrary_precision(m))
     })

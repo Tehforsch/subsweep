@@ -1,3 +1,4 @@
+use num::traits::NumOps;
 use num::BigRational;
 use num::Signed;
 
@@ -26,7 +27,10 @@ impl<const D: Dimension> Quantity<MVec, D> {
     }
 }
 
-pub trait Num: num::Num + Clone + Signed + PartialOrd + FloatError + std::fmt::Debug {}
+pub trait Num:
+    num::Num + Clone + Signed + PartialOrd + FloatError + std::fmt::Debug + NumOps
+{
+}
 
 impl<T> Num for T where T: num::Num + Clone + Signed + PartialOrd + FloatError + std::fmt::Debug {}
 

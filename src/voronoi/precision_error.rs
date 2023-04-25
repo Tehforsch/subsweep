@@ -1,22 +1,16 @@
-pub const EPSILON: f64 = 1e-30;
+use num::Signed;
+
+use crate::units::helpers::FloatError;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PrecisionError;
 
 impl PrecisionError {
-    pub fn check(a: f64) -> Result<(), PrecisionError> {
-        if a.abs() < EPSILON {
+    pub fn check<F: Signed + FloatError>(a: &F) -> Result<(), PrecisionError> {
+        if FloatError::is_too_close_to_zero(a) {
             Err(PrecisionError)
         } else {
             Ok(())
         }
     }
-}
-
-pub fn is_negative(a: f64) -> Result<bool, PrecisionError> {
-    PrecisionError::check(a).map(|_| a < 0.0)
-}
-
-pub fn is_positive(a: f64) -> Result<bool, PrecisionError> {
-    PrecisionError::check(a).map(|_| a > 0.0)
 }

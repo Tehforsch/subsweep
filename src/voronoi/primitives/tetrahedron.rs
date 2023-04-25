@@ -255,8 +255,8 @@ fn points_are_on_same_side_of_triangle<P: DVector3d + Sub<Output = P> + Dot + Cl
 ) -> Result<bool, PrecisionError> {
     let (p_a, p_b, p_c) = triangle;
     let normal = (p_b - p_a.clone()).cross(&(p_c - p_a.clone()));
-    let dot_1_sign = Sign::try_from_val((p1 - p_a.clone()).dot(normal.clone()))?;
-    let dot_2_sign = Sign::try_from_val((p2 - p_a).dot(normal))?;
+    let dot_1_sign = Sign::try_from_val(&(p1 - p_a.clone()).dot(normal.clone()))?;
+    let dot_2_sign = Sign::try_from_val(&(p2 - p_a).dot(normal))?;
     Ok((dot_1_sign * dot_2_sign)
         .panic_if_zero("Degenerate case: point on line of triangle.")
         .is_positive())

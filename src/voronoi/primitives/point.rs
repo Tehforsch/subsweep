@@ -10,6 +10,7 @@ use crate::prelude::Num;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
 use crate::voronoi::math::PrecisionFloat;
+use crate::voronoi::math::PrecisionPoint2d;
 use crate::voronoi::math::PrecisionPoint3d;
 
 pub type Point2d = glam::DVec2;
@@ -135,6 +136,20 @@ impl DVector3d for PrecisionPoint3d {
             y: self.z.clone() * other.x.clone() - other.z.clone() * self.x.clone(),
             z: self.x.clone() * other.y.clone() - other.x.clone() * self.y.clone(),
         }
+    }
+}
+
+impl Vector for PrecisionPoint2d {
+    type Float = PrecisionFloat;
+}
+
+impl DVector2d for PrecisionPoint2d {
+    fn x(&self) -> <Self as Vector>::Float {
+        self.x.clone()
+    }
+
+    fn y(&self) -> <Self as Vector>::Float {
+        self.x.clone()
     }
 }
 
