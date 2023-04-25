@@ -1,3 +1,4 @@
+use num::BigRational;
 use num::Signed;
 
 use super::Dimension;
@@ -25,6 +26,24 @@ impl<const D: Dimension> Quantity<MVec, D> {
     }
 }
 
-pub trait Num: num::Num + Clone + Signed + PartialOrd + std::fmt::Debug {}
+pub trait Num: num::Num + Clone + Signed + PartialOrd + FloatError + std::fmt::Debug {}
 
-impl<T> Num for T where T: num::Num + Clone + Signed + PartialOrd + std::fmt::Debug {}
+impl<T> Num for T where T: num::Num + Clone + Signed + PartialOrd + FloatError + std::fmt::Debug {}
+
+pub const ERROR_TRESHOLD: f64 = 1e-9;
+
+pub trait FloatError {
+    fn is_too_close_to_zero(&self) -> bool;
+}
+
+impl FloatError for f64 {
+    fn is_too_close_to_zero(&self) -> bool {
+        self.abs() < ERROR_TRESHOLD
+    }
+}
+
+impl FloatError for BigRational {
+    fn is_too_close_to_zero(&self) -> bool {
+        false
+    }
+}

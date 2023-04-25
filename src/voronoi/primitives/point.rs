@@ -9,37 +9,44 @@ use glam::DVec3;
 use crate::prelude::Num;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
+use crate::voronoi::math::PrecisionFloat;
+use crate::voronoi::math::PrecisionPoint3d;
 
 pub type Point2d = glam::DVec2;
 pub type Point3d = glam::DVec3;
 
+pub trait Vector {
+    type Float: Num;
+}
+
 pub trait DVector:
-    Sized
+    Vector
+    + Dot
+    + Sized
     + Sub<Self, Output = Self>
     + Add<Self, Output = Self>
     + Mul<Self::Float, Output = Self>
     + Div<Self::Float, Output = Self>
-    + Copy
     + Clone
     + MinMax
 {
-    type Float: Num;
     fn distance(&self, p: Self) -> Self::Float;
     fn distance_squared(&self, p: Self) -> Self::Float;
     fn normalize(&self) -> Self;
-    fn dot(self, other: Self) -> Self::Float;
     fn max_element(self) -> Self::Float;
 }
 
-pub trait DVector2d: DVector {
-    fn x(&self) -> <Self as DVector>::Float;
-    fn y(&self) -> <Self as DVector>::Float;
+pub trait Dot: Vector {
+    fn dot(self, other: Self) -> Self::Float;
 }
 
-pub trait DVector3d: DVector {
-    fn x(&self) -> <Self as DVector>::Float;
-    fn y(&self) -> <Self as DVector>::Float;
-    fn z(&self) -> <Self as DVector>::Float;
+pub trait DVector2d: Vector {
+    fn x(&self) -> <Self as Vector>::Float;
+    fn y(&self) -> <Self as Vector>::Float;
+}
+
+pub trait DVector3d {
+    fn cross(&self, other: &Self) -> Self;
 }
 
 pub trait MinMax {
@@ -49,8 +56,17 @@ pub trait MinMax {
 
 macro_rules! impl_dvector_for_vector {
     ($vec: ident, $f: ty) => {
-        impl DVector for $vec {
+        impl Vector for $vec {
             type Float = $f;
+        }
+
+        impl Dot for $vec {
+            fn dot(self, other: Self) -> $f {
+                $vec::dot(self, other)
+            }
+        }
+
+        impl DVector for $vec {
             fn distance(&self, p: Self) -> $f {
                 (*self - p).length()
             }
@@ -61,10 +77,6 @@ macro_rules! impl_dvector_for_vector {
 
             fn normalize(&self) -> Self {
                 $vec::normalize(*self)
-            }
-
-            fn dot(self, other: Self) -> $f {
-                $vec::dot(self, other)
             }
 
             fn max_element(self) -> $f {
@@ -97,18 +109,52 @@ impl_min_max_for_vector!(Vec2Length);
 impl_min_max_for_vector!(Vec3Length);
 
 impl DVector2d for Point2d {
-    fn x(&self) -> <Self as DVector>::Float {
+    fn x(&self) -> <Self as Vector>::Float {
         self.x
     }
 
-    fn y(&self) -> <Self as DVector>::Float {
+    fn y(&self) -> <Self as Vector>::Float {
         self.y
     }
 }
 
-impl DVector for f64 {
-    type Float = f64;
+impl DVector3d for Point3d {
+    fn cross(&self, other: &Self) -> Self {
+        Point3d::cross(*self, *other)
+    }
+}
 
+impl Vector for PrecisionPoint3d {
+    type Float = PrecisionFloat;
+}
+
+impl DVector3d for PrecisionPoint3d {
+    fn cross(&self, other: &Self) -> Self {
+        Self {
+            x: self.y.clone() * other.z.clone() - other.y.clone() * self.z.clone(),
+            y: self.z.clone() * other.x.clone() - other.z.clone() * self.x.clone(),
+            z: self.x.clone() * other.y.clone() - other.x.clone() * self.y.clone(),
+        }
+    }
+}
+
+impl Dot for PrecisionPoint3d {
+    fn dot(self, other: Self) -> Self::Float {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+}
+
+impl Vector for f64 {
+    type Float = f64;
+}
+
+impl Dot for f64 {
+    fn dot(self, other: Self) -> f64 {
+        self * other
+    }
+}
+
+impl DVector for f64 {
     fn distance(&self, p: Self) -> f64 {
         (*self - p).abs()
     }
@@ -119,10 +165,6 @@ impl DVector for f64 {
 
     fn normalize(&self) -> Self {
         self.signum()
-    }
-
-    fn dot(self, other: Self) -> f64 {
-        self * other
     }
 
     fn max_element(self) -> f64 {

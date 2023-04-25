@@ -5,7 +5,6 @@ use super::PointIndex;
 use crate::dimension::Dimension;
 use crate::extent::Extent;
 use crate::prelude::Float;
-use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::visualizer::Visualizable;
 
 pub trait DDimension: Dimension {
@@ -69,7 +68,7 @@ pub trait DTetraData:
     type Dimension: DDimension;
 
     fn all_encompassing(extent: &Extent<Point<Self::Dimension>>) -> Self;
-    fn contains(&self, p: Point<Self::Dimension>) -> Result<bool, PrecisionError>;
+    fn contains(&self, p: Point<Self::Dimension>) -> bool;
     fn distance_to_point(&self, p: Point<Self::Dimension>) -> Float;
     fn circumcircle_contains(&self, point: <Self::Dimension as Dimension>::Point) -> bool;
     fn is_positively_oriented(&self) -> bool;

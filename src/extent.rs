@@ -36,7 +36,7 @@ impl<P: Add<P, Output = P> + Sub<P, Output = P> + Div<f64, Output = P> + Clone +
 
 impl<P> Extent<P>
 where
-    P: DVector,
+    P: DVector + Copy,
 {
     pub fn max_side_length(&self) -> P::Float {
         let side_length = self.max - self.min;

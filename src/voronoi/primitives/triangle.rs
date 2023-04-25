@@ -1,4 +1,5 @@
 use super::point::DVector2d;
+use super::DVector;
 use super::Float;
 use super::Point2d;
 use super::Point3d;
@@ -129,15 +130,15 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
     }
 }
 
-impl<V: DVector2d> TriangleData<V> {
+impl<V: DVector2d + DVector> TriangleData<V> {
     fn transform_point_to_canonical_coordinates(&self, point: V) -> (V::Float, V::Float) {
         // We solve
         // p = p1 + r (p2 - p1) + s (p3 - p1)
         // where r and s are the coordinates of the point in the (two-dimensional) vector space
         // spanned by the (linearly independent) vectors given by (p2 - p1) and (p3 - p1).
-        let a = self.p2 - self.p1;
-        let b = self.p3 - self.p1;
-        let c = point - self.p1;
+        let a = self.p2.clone() - self.p1.clone();
+        let b = self.p3.clone() - self.p1.clone();
+        let c = point - self.p1.clone();
         let [r, s] = solve_system_of_equations([[a.x(), b.x(), c.x()], [a.y(), b.y(), c.y()]]);
         (r, s)
     }
@@ -155,20 +156,21 @@ impl DTetraData for TriangleData<Point2d> {
         Self { p1, p2, p3 }
     }
 
-    fn contains(&self, p: Point2d) -> Result<bool, PrecisionError> {
-        let (r, s) = self.transform_point_to_canonical_coordinates(p);
-        let values = [r, s, 1.0 - (r + s)];
-        let is_definitely_outside = values
-            .iter()
-            .any(|value| is_negative(*value).unwrap_or(false));
-        if is_definitely_outside {
-            Ok(false)
-        } else {
-            for value in values {
-                PrecisionError::check(value)?;
-            }
-            Ok(true)
-        }
+    fn contains(&self, p: Point2d) -> bool {
+        todo!()
+        // let (r, s) = self.transform_point_to_canonical_coordinates(p);
+        // let values = [r, s, 1.0 - (r + s)];
+        // let is_definitely_outside = values
+        //     .iter()
+        //     .any(|value| is_negative(*value).unwrap_or(false));
+        // if is_definitely_outside {
+        //     Ok(false)
+        // } else {
+        //     for value in values {
+        //         PrecisionError::check(value)?;
+        //     }
+        //     Ok(true)
+        // }
     }
 
     fn distance_to_point(&self, p: Point2d) -> Float {
@@ -341,7 +343,6 @@ mod tests {
     use super::IntersectionType;
     use super::TriangleData;
     use crate::voronoi::delaunay::dimension::DTetraData;
-    use crate::voronoi::precision_error::PrecisionError;
     use crate::voronoi::primitives::Point2d;
     use crate::voronoi::primitives::Point3d;
 
@@ -394,37 +395,23 @@ mod tests {
             p2: Point2d::new(4.0, 2.0),
             p3: Point2d::new(2.0, 6.0),
         };
-        assert_eq!(triangle.contains(Point2d::new(3.0, 3.0)), Ok(true));
+        assert_eq!(triangle.contains(Point2d::new(3.0, 3.0)), true);
 
-        assert_eq!(triangle.contains(Point2d::new(1.0, 1.0)), Ok(false));
-        assert_eq!(triangle.contains(Point2d::new(2.0, 9.0)), Ok(false));
-        assert_eq!(triangle.contains(Point2d::new(9.0, 2.0)), Ok(false));
-        assert_eq!(triangle.contains(Point2d::new(-1.0, 2.0)), Ok(false));
+        assert_eq!(triangle.contains(Point2d::new(1.0, 1.0)), false);
+        assert_eq!(triangle.contains(Point2d::new(2.0, 9.0)), false);
+        assert_eq!(triangle.contains(Point2d::new(9.0, 2.0)), false);
+        assert_eq!(triangle.contains(Point2d::new(-1.0, 2.0)), false);
 
-        assert_eq!(
-            triangle.contains(Point2d::new(2.0, 2.0)),
-            Err(PrecisionError)
-        );
-        assert_eq!(
-            triangle.contains(Point2d::new(4.0, 2.0)),
-            Err(PrecisionError)
-        );
-        assert_eq!(
-            triangle.contains(Point2d::new(2.0, 6.0)),
-            Err(PrecisionError)
-        );
+        let should_panic = |p| {
+            std::panic::catch_unwind(|| triangle.contains(p)).unwrap_err();
+        };
 
-        assert_eq!(
-            triangle.contains(Point2d::new(3.0, 2.0)),
-            Err(PrecisionError)
-        );
-        assert_eq!(
-            triangle.contains(Point2d::new(2.0, 4.0)),
-            Err(PrecisionError)
-        );
-        assert_eq!(
-            triangle.contains(Point2d::new(3.0, 4.0)),
-            Err(PrecisionError)
-        );
+        should_panic(Point2d::new(2.0, 2.0));
+        should_panic(Point2d::new(4.0, 2.0));
+        should_panic(Point2d::new(2.0, 6.0));
+
+        should_panic(Point2d::new(3.0, 2.0));
+        should_panic(Point2d::new(2.0, 4.0));
+        should_panic(Point2d::new(3.0, 4.0));
     }
 }

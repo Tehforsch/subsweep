@@ -1,4 +1,8 @@
+use std::ops::Sub;
+
 use super::super::delaunay::face_info::FaceInfo;
+use super::point::DVector3d;
+use super::point::Dot;
 use super::triangle::TriangleData;
 use super::Float;
 use super::Point3d;
@@ -9,7 +13,8 @@ use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::math::determinant4x4;
 use crate::voronoi::math::determinant4x4_sign;
 use crate::voronoi::math::determinant5x5_sign;
-use crate::voronoi::precision_error::is_positive;
+use crate::voronoi::math::PrecisionPoint3d;
+use crate::voronoi::math::Sign;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::PointIndex;
 
@@ -67,6 +72,56 @@ impl FromIterator<Point3d> for TetrahedronData {
     }
 }
 
+impl TetrahedronData {
+    fn f64_contains(&self, point: Point3d) -> Result<bool, PrecisionError> {
+        Ok(
+            points_are_on_same_side_of_triangle(point, self.p1, (self.p2, self.p3, self.p4))?
+                && points_are_on_same_side_of_triangle(
+                    point,
+                    self.p2,
+                    (self.p1, self.p3, self.p4),
+                )?
+                && points_are_on_same_side_of_triangle(
+                    point,
+                    self.p3,
+                    (self.p1, self.p2, self.p4),
+                )?
+                && points_are_on_same_side_of_triangle(
+                    point,
+                    self.p4,
+                    (self.p1, self.p2, self.p3),
+                )?,
+        )
+    }
+
+    fn arbitrary_precision_contains(&self, point: Point3d) -> bool {
+        let p1 = PrecisionPoint3d::new(self.p1);
+        let p2 = PrecisionPoint3d::new(self.p2);
+        let p3 = PrecisionPoint3d::new(self.p3);
+        let p4 = PrecisionPoint3d::new(self.p4);
+        let point = PrecisionPoint3d::new(point);
+        points_are_on_same_side_of_triangle(
+            point.clone(),
+            p1.clone(),
+            (p2.clone(), p3.clone(), p4.clone()),
+        )
+        .unwrap()
+            && points_are_on_same_side_of_triangle(
+                point.clone(),
+                p2.clone(),
+                (p1.clone(), p3.clone(), p4.clone()),
+            )
+            .unwrap()
+            && points_are_on_same_side_of_triangle(
+                point.clone(),
+                p3.clone(),
+                (p1.clone(), p2.clone(), p4.clone()),
+            )
+            .unwrap()
+            && points_are_on_same_side_of_triangle(point, p4, (p1, p2, p3)).unwrap()
+    }
+}
+
 impl DTetraData for TetrahedronData {
     type Dimension = ThreeD;
 
@@ -83,18 +138,13 @@ impl DTetraData for TetrahedronData {
     }
 
     #[rustfmt::skip]
-    fn contains(&self, point: Point3d) -> Result<bool, PrecisionError> {
-        Ok(
-               points_are_on_same_side_of_triangle(point, self.p1, (self.p2, self.p3, self.p4))?
-            && points_are_on_same_side_of_triangle(point, self.p2, (self.p1, self.p3, self.p4))?
-            && points_are_on_same_side_of_triangle(point, self.p3, (self.p1, self.p2, self.p4))?
-            && points_are_on_same_side_of_triangle(point, self.p4, (self.p1, self.p2, self.p3))?,
-        )
+    fn contains(&self, point: Point3d) -> bool {
+        self.f64_contains(point).unwrap_or_else(|_| self.arbitrary_precision_contains(point))
     }
 
     /// This only works if the point is outside of the tetrahedron
     fn distance_to_point(&self, p: Point3d) -> Float {
-        if self.contains(p).unwrap() {
+        if self.contains(p) {
             return 0.0;
         }
         let a1 = TriangleData {
@@ -198,16 +248,18 @@ impl DTetraData for TetrahedronData {
     }
 }
 
-fn points_are_on_same_side_of_triangle(
-    p1: Point3d,
-    p2: Point3d,
-    triangle: (Point3d, Point3d, Point3d),
+fn points_are_on_same_side_of_triangle<P: DVector3d + Sub<Output = P> + Dot + Clone>(
+    p1: P,
+    p2: P,
+    triangle: (P, P, P),
 ) -> Result<bool, PrecisionError> {
     let (p_a, p_b, p_c) = triangle;
-    let normal = (p_b - p_a).cross(p_c - p_a);
-    let dot_1_sign = (p1 - p_a).dot(normal).signum();
-    let dot_2_sign = (p2 - p_a).dot(normal).signum();
-    is_positive(dot_1_sign * dot_2_sign)
+    let normal = (p_b - p_a.clone()).cross(&(p_c - p_a.clone()));
+    let dot_1_sign = Sign::try_from_val((p1 - p_a.clone()).dot(normal.clone()))?;
+    let dot_2_sign = Sign::try_from_val((p2 - p_a).dot(normal))?;
+    Ok((dot_1_sign * dot_2_sign)
+        .panic_if_zero("Degenerate case: point on line of triangle.")
+        .is_positive())
 }
 
 #[cfg(test)]

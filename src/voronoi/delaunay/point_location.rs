@@ -42,9 +42,7 @@ where
     Triangulation<D>: Delaunay<D>,
 {
     let tetra_data = t.get_tetra_data(tetra);
-    tetra_data
-        .contains(point)
-        .unwrap_or_else(|_| todo!("Point wants to be inserted onto an edge."))
+    tetra_data.contains(point)
 }
 
 fn find_breadth_first<D>(

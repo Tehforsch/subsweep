@@ -1,17 +1,40 @@
 use std::cmp::Ordering;
 
 use array_init::from_iter;
+use derive_more::Add;
+use derive_more::Sub;
 use num::FromPrimitive;
+use num::Signed;
 use num::Zero;
 
+use super::precision_error::PrecisionError;
+use super::Point3d;
 use crate::prelude::Num;
+use crate::units::helpers::FloatError;
 
 // MxN matrix: This type is just here for clarity, because the
 // internal storage is reversed, such that the order of indices is
 // as it would be in math, i.e. Matrix<M, N> has M rows and N columns.
 type Matrix<const M: usize, const N: usize, F> = [[F; N]; M];
 
-type PrecisionFloat = num::BigRational;
+pub type PrecisionFloat = num::BigRational;
+
+#[derive(Add, Sub, Clone)]
+pub struct PrecisionPoint3d {
+    pub x: PrecisionFloat,
+    pub y: PrecisionFloat,
+    pub z: PrecisionFloat,
+}
+
+impl PrecisionPoint3d {
+    pub fn new(p: Point3d) -> Self {
+        Self {
+            x: PrecisionFloat::from_f64(p.x).unwrap(),
+            y: PrecisionFloat::from_f64(p.y).unwrap(),
+            z: PrecisionFloat::from_f64(p.z).unwrap(),
+        }
+    }
+}
 
 pub fn solve_system_of_equations<const M: usize, F: Num>(mut a: Matrix<M, { M + 1 }, F>) -> [F; M] {
     let n = M + 1;
@@ -83,12 +106,46 @@ pub enum Sign {
     Zero,
 }
 
+impl std::ops::Mul<Sign> for Sign {
+    type Output = Self;
+
+    fn mul(self, rhs: Sign) -> Self::Output {
+        match self {
+            Sign::Positive => match rhs {
+                Sign::Positive => Sign::Positive,
+                Sign::Negative => Sign::Negative,
+                Sign::Zero => Sign::Zero,
+            },
+            Sign::Negative => match rhs {
+                Sign::Positive => Sign::Negative,
+                Sign::Negative => Sign::Positive,
+                Sign::Zero => Sign::Zero,
+            },
+            Sign::Zero => Sign::Zero,
+        }
+    }
+}
+
 impl Sign {
-    fn of<T: Zero + PartialOrd>(t: T) -> Self {
-        match t.partial_cmp(&T::zero()).unwrap() {
+    pub fn of<T: Zero + PartialOrd>(val: T) -> Self {
+        match val.partial_cmp(&T::zero()).unwrap() {
             Ordering::Less => Sign::Negative,
             Ordering::Equal => Sign::Zero,
             Ordering::Greater => Sign::Positive,
+        }
+    }
+
+    pub fn try_from_val<T: Zero + PartialOrd + Signed + FloatError>(
+        val: T,
+    ) -> Result<Self, PrecisionError> {
+        if val.is_too_close_to_zero() {
+            Err(PrecisionError)
+        } else {
+            Ok(match val.partial_cmp(&T::zero()).unwrap() {
+                Ordering::Less => Sign::Negative,
+                Ordering::Equal => Sign::Zero,
+                Ordering::Greater => Sign::Positive,
+            })
         }
     }
 
@@ -121,14 +178,11 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
     f: fn(Matrix<D, D, f64>) -> f64,
     f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
 ) -> Sign {
-    const ERROR_TRESHOLD: f64 = 1e-9;
     let val = f(m.clone());
-    if val.abs() > ERROR_TRESHOLD {
-        Sign::of(f(m))
-    } else {
+    Sign::try_from_val(val).unwrap_or_else(|_| {
         let m = lift_matrix(m);
         Sign::of(f_arbitrary_precision(m))
-    }
+    })
 }
 
 pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
