@@ -1,3 +1,5 @@
+use num::Signed;
+
 use super::Dimension;
 use super::Quantity;
 
@@ -23,6 +25,6 @@ impl<const D: Dimension> Quantity<MVec, D> {
     }
 }
 
-pub trait Num: num_traits::Float {}
+pub trait Num: num::Num + Clone + Signed + PartialOrd + std::fmt::Debug {}
 
-impl<T> Num for T where T: num_traits::Float {}
+impl<T> Num for T where T: num::Num + Clone + Signed + PartialOrd + std::fmt::Debug {}
