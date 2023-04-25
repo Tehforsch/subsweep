@@ -4,6 +4,7 @@ use array_init::from_iter;
 use num::FromPrimitive;
 use num::Zero;
 
+use super::precision_error::PrecisionError;
 use crate::prelude::Num;
 
 // MxN matrix: This type is just here for clarity, because the
@@ -92,18 +93,25 @@ impl Sign {
         }
     }
 
-    fn is_positive(self) -> bool {
+    pub fn is_positive(self) -> Result<bool, PrecisionError> {
         match self {
-            Sign::Positive => true,
-            _ => false,
+            Sign::Positive => Ok(true),
+            _ => Ok(false),
         }
     }
 
-    fn is_negative(self) -> bool {
+    pub fn is_negative(self) -> Result<bool, PrecisionError> {
         match self {
-            Sign::Negative => true,
-            _ => false,
+            Sign::Negative => Ok(true),
+            _ => Ok(false),
         }
+    }
+
+    pub(crate) fn panic_if_zero(&self, arg: &'static str) -> &Self {
+        if let Self::Zero = self {
+            panic!("{}", arg)
+        }
+        self
     }
 }
 
@@ -129,6 +137,22 @@ pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
         a,
         |m| determinant3x3::<f64>(m.clone()),
         |m| determinant3x3::<PrecisionFloat>(m),
+    )
+}
+
+pub fn determinant4x4_sign(a: Matrix<4, 4, f64>) -> Sign {
+    determine_sign_with_arbitrary_precision_if_necessary(
+        a,
+        |m| determinant4x4::<f64>(m.clone()),
+        |m| determinant4x4::<PrecisionFloat>(m),
+    )
+}
+
+pub fn determinant5x5_sign(a: Matrix<5, 5, f64>) -> Sign {
+    determine_sign_with_arbitrary_precision_if_necessary(
+        a,
+        |m| determinant5x5::<f64>(m.clone()),
+        |m| determinant5x5::<PrecisionFloat>(m),
     )
 }
 

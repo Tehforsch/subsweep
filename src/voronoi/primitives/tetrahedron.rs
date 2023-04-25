@@ -7,8 +7,8 @@ use crate::extent::Extent;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::math::determinant4x4;
-use crate::voronoi::math::determinant5x5;
-use crate::voronoi::precision_error::is_negative;
+use crate::voronoi::math::determinant4x4_sign;
+use crate::voronoi::math::determinant5x5_sign;
 use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::PointIndex;
@@ -133,7 +133,7 @@ impl DTetraData for TetrahedronData {
         let c = self.p3;
         let d = self.p4;
         let e = point;
-        is_negative(determinant5x5(
+        determinant5x5_sign(
             [
                 [1.0, a.x, a.y, a.z, a.x.powi(2) + a.y.powi(2) + a.z.powi(2)],
                 [1.0, b.x, b.y, b.z, b.x.powi(2) + b.y.powi(2) + b.z.powi(2)],
@@ -141,20 +141,19 @@ impl DTetraData for TetrahedronData {
                 [1.0, d.x, d.y, d.z, d.x.powi(2) + d.y.powi(2) + d.z.powi(2)],
                 [1.0, e.x, e.y, e.z, e.x.powi(2) + e.y.powi(2) + e.z.powi(2)],
             ]
-        ))
+        ).panic_if_zero("Degenerate case in circumcircle test").is_negative()
     }
 
     #[rustfmt::skip]
     fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
-        let determinant = determinant4x4(
+        determinant4x4_sign(
             [
                 [1.0, self.p1.x, self.p1.y, self.p1.z],
                 [1.0, self.p2.x, self.p2.y, self.p2.z],
                 [1.0, self.p3.x, self.p3.y, self.p3.z],
                 [1.0, self.p4.x, self.p4.y, self.p4.z],
             ]
-        );
-        is_positive(determinant)
+        ).panic_if_zero("Zero volume tetra encountered").is_positive()
     }
 
     #[rustfmt::skip]

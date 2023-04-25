@@ -10,12 +10,9 @@ use crate::voronoi::delaunay::dimension::DFaceData;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::face_info::FaceInfo;
-use crate::voronoi::math::determinant3x3;
 use crate::voronoi::math::determinant3x3_sign;
 use crate::voronoi::math::solve_system_of_equations;
-use crate::voronoi::math::Sign;
 use crate::voronoi::precision_error::is_negative;
-use crate::voronoi::precision_error::is_positive;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::PointIndex;
 
@@ -202,23 +199,19 @@ impl DTetraData for TriangleData<Point2d> {
                 [d.x - a.x, d.y - a.y, (d.x - a.x).powi(2) + (d.y - a.y).powi(2)]
             ]
         );
-        match sign {
-            Sign::Positive => Ok(false),
-            Sign::Negative => Ok(true),
-            Sign::Zero => panic!("Degenerate case in circumcircle test."),
-        }
+        sign.panic_if_zero("Degenerate case in circumcircle test.").is_negative()
     }
 
     #[rustfmt::skip]
     fn is_positively_oriented(&self) -> Result<bool, PrecisionError> {
-        let determinant = determinant3x3(
+        let sign = determinant3x3_sign(
             [
                 [1.0, self.p1.x, self.p1.y],
                 [1.0, self.p2.x, self.p2.y],
                 [1.0, self.p3.x, self.p3.y],
             ]
         );
-        is_positive(determinant)
+        sign.panic_if_zero("Zero volume tetra encountered").is_positive()
     }
 
     fn get_center_of_circumcircle(&self) -> Point2d {
