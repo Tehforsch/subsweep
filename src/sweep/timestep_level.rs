@@ -1,14 +1,9 @@
-use bevy::prelude::Component;
-use derive_custom::Named;
 use mpi::traits::Equivalence;
 
 use crate::units::helpers::Float;
 use crate::units::Time;
 
-#[derive(
-    Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Component, Equivalence, Hash, Named,
-)]
-#[name("timestep_level")]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Equivalence, Hash)]
 pub struct TimestepLevel(pub usize);
 
 fn find_index_of_lowest_set_bit_in_int(iteration: u32) -> Option<u32> {

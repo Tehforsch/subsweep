@@ -43,7 +43,6 @@ use crate::grid::RemoteNeighbour;
 use crate::hash_map::HashMap;
 use crate::parameters::TimestepParameters;
 use crate::particle::AllParticles;
-use crate::particle::HaloParticle;
 use crate::particle::ParticleId;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
@@ -87,16 +86,6 @@ impl RaxiomPlugin for SweepPlugin {
         .add_derived_component::<components::Flux>()
         .add_derived_component::<Density>()
         .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
-        .add_component_no_io::<TimestepLevel>()
-        .add_startup_system_to_stage(
-            SimulationStartupStages::InsertDerivedComponents,
-            initialize_timestep_levels_system::<LocalParticle>,
-        )
-        // For haloes
-        .add_startup_system_to_stage(
-            SimulationStartupStages::InsertComponentsAfterGrid,
-            initialize_timestep_levels_system::<HaloParticle>,
-        )
         .add_startup_system_to_stage(SimulationStartupStages::Sweep, init_sweep_system)
         .add_system_to_stage(SimulationStages::ForceCalculation, run_sweep_system)
         .add_parameter_type::<SweepParameters>();
@@ -424,7 +413,7 @@ fn init_sweep_system(
         &IonizedHydrogenFraction,
         &Source,
     )>,
-    levels_query: AllParticles<(&ParticleId, &TimestepLevel)>,
+    levels_query: AllParticles<&ParticleId>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
@@ -453,7 +442,7 @@ fn init_sweep_system(
         .collect();
     let levels: HashMap<_, _> = levels_query
         .iter()
-        .map(|(id, level)| (*id, *level))
+        .map(|id| (*id, TimestepLevel(sweep_parameters.num_timestep_levels - 1)))
         .collect();
     #[cfg(test)]
     assert!(!cells.is_empty() && !sites.is_empty() && !levels.is_empty());
@@ -493,32 +482,12 @@ fn initialize_directions_system(mut commands: Commands, parameters: Res<SweepPar
 pub fn initialize_sweep_components_system(
     mut commands: Commands,
     local_particles: Query<Entity, With<LocalParticle>>,
-    halo_particles: Query<Entity, With<HaloParticle>>,
-    sweep_parameters: Res<SweepParameters>,
 ) {
     for entity in local_particles.iter() {
         commands.entity(entity).insert((
             Density(units::Density::zero()),
             components::IonizedHydrogenFraction(Dimensionless::zero()),
-            TimestepLevel(sweep_parameters.num_timestep_levels - 1),
             Source(SourceRate::zero()),
         ));
-    }
-    for entity in halo_particles.iter() {
-        commands
-            .entity(entity)
-            .insert((TimestepLevel(sweep_parameters.num_timestep_levels - 1),));
-    }
-}
-
-pub fn initialize_timestep_levels_system<F: Component>(
-    mut commands: Commands,
-    particles: Query<Entity, With<F>>,
-    sweep_parameters: Res<SweepParameters>,
-) {
-    for entity in particles.iter() {
-        commands
-            .entity(entity)
-            .insert((TimestepLevel(sweep_parameters.num_timestep_levels - 1),));
     }
 }
