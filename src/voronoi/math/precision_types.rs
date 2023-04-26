@@ -5,10 +5,13 @@ use num::Signed;
 
 use super::super::Point2d;
 use super::super::Point3d;
+use super::traits::Cross3d;
 use super::traits::Dot;
 use super::traits::Vector;
 use super::traits::Vector2d;
 use super::traits::Vector3d;
+use crate::impl_vector2d;
+use crate::impl_vector3d;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PrecisionError;
@@ -79,7 +82,7 @@ impl Vector for PrecisionPoint3d {
     type Float = PrecisionFloat;
 }
 
-impl Vector3d for PrecisionPoint3d {
+impl Cross3d for PrecisionPoint3d {
     fn cross(&self, other: &Self) -> Self {
         Self {
             x: self.y.clone() * other.z.clone() - other.y.clone() * self.z.clone(),
@@ -87,32 +90,13 @@ impl Vector3d for PrecisionPoint3d {
             z: self.x.clone() * other.y.clone() - other.x.clone() * self.y.clone(),
         }
     }
-
-    fn x(&self) -> <Self as Vector>::Float {
-        self.x.clone()
-    }
-
-    fn y(&self) -> <Self as Vector>::Float {
-        self.y.clone()
-    }
-
-    fn z(&self) -> <Self as Vector>::Float {
-        self.z.clone()
-    }
 }
+
+impl_vector2d!(PrecisionPoint2d);
+impl_vector3d!(PrecisionPoint3d);
 
 impl Vector for PrecisionPoint2d {
     type Float = PrecisionFloat;
-}
-
-impl Vector2d for PrecisionPoint2d {
-    fn x(&self) -> <Self as Vector>::Float {
-        self.x.clone()
-    }
-
-    fn y(&self) -> <Self as Vector>::Float {
-        self.y.clone()
-    }
 }
 
 impl Dot for PrecisionPoint3d {

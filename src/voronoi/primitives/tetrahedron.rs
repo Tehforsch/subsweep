@@ -12,6 +12,7 @@ use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::math::precision_types::PrecisionError;
 use crate::voronoi::math::precision_types::PrecisionPoint3d;
+use crate::voronoi::math::traits::Cross3d;
 use crate::voronoi::math::utils::determinant4x4;
 use crate::voronoi::math::utils::determinant4x4_sign;
 use crate::voronoi::math::utils::determinant5x5_sign;
@@ -248,7 +249,7 @@ impl DTetraData for TetrahedronData {
     }
 }
 
-fn points_are_on_same_side_of_triangle<P: Vector3d + Sub<Output = P> + Dot + Clone>(
+fn points_are_on_same_side_of_triangle<P: Vector3d + Cross3d + Sub<Output = P> + Dot + Clone>(
     p1: P,
     p2: P,
     triangle: (P, P, P),
