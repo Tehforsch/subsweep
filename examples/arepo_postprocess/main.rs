@@ -22,6 +22,7 @@ use raxiom::units::Dimensionless;
 use raxiom::units::PhotonFlux;
 use raxiom::units::SourceRate;
 use raxiom::units::VecLength;
+use sources::add_single_source_system;
 use sources::read_sources_system;
 use sources::set_source_terms_system;
 use unit_reader::ArepoUnitReader;
@@ -29,7 +30,15 @@ use unit_reader::ArepoUnitReader;
 #[raxiom_parameters("postprocess")]
 pub struct Parameters {
     initial_fraction_ionized_hydrogen: Dimensionless,
-    sources_from_ics: bool,
+    sources: SourceType,
+}
+
+#[derive(Default)]
+#[raxiom_parameters]
+enum SourceType {
+    #[default]
+    FromIcs,
+    SingleSource(SourceRate),
 }
 
 fn read_vec(data: &[Float]) -> Position {
@@ -48,18 +57,23 @@ fn main() {
     let cosmology = sim.add_parameter_type_and_get_result::<Cosmology>().clone();
     let unit_reader = Box::new(ArepoUnitReader::new(cosmology));
     let parameters = sim.add_parameter_type_and_get_result::<Parameters>();
-    if parameters.sources_from_ics {
-        sim.add_startup_system_to_stage(
+    match parameters.sources {
+        SourceType::FromIcs => {
+            sim.add_startup_system(
+                read_sources_system
+                    .after(open_file_system)
+                    .before(close_file_system),
+            );
+        }
+        SourceType::SingleSource(_) => {
+            sim.add_startup_system(add_single_source_system);
+        }
+    }
+    sim.add_parameter_type::<Parameters>()
+        .add_startup_system_to_stage(
             SimulationStartupStages::InsertComponentsAfterGrid,
             set_source_terms_system,
         )
-        .add_startup_system(
-            read_sources_system
-                .after(open_file_system)
-                .before(close_file_system),
-        );
-    }
-    sim.add_parameter_type::<Parameters>()
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,
             insert_missing_components_system,

@@ -34,6 +34,8 @@ use crate::bpass::bpass_lookup;
 use crate::cosmology::Cosmology;
 use crate::read_vec;
 use crate::unit_reader::ArepoUnitReader;
+use crate::Parameters;
+use crate::SourceType;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
 pub struct DistanceToSourceData(Length);
@@ -52,14 +54,21 @@ pub struct StellarFormationTime(pub Dimensionless);
 #[derive(Clone, Debug, Equivalence)]
 pub struct Source {
     position: VecLength,
-    age: Time,
-    metallicity: Dimensionless,
-    mass: Mass,
+    rate: SourceRate,
 }
 
 impl Source {
-    fn get_source_term(&self) -> SourceRate {
-        bpass_lookup(self.age, self.metallicity, self.mass)
+    fn new(
+        position: VecLength,
+        metallicity: Dimensionless,
+        mass: Mass,
+        formation_time: Dimensionless,
+    ) -> Source {
+        let age = formation_time_to_age(formation_time);
+        Self {
+            position,
+            rate: bpass_lookup(age, metallicity, mass),
+        }
     }
 }
 
@@ -117,11 +126,8 @@ fn read_sources(files: &InputFiles, cosmology: &Cosmology) -> Vec<Source> {
         .zip(metallicity)
         .zip(formation_time)
         .zip(mass)
-        .map(|(((position, metallicity), formation_time), mass)| Source {
-            position: *position,
-            metallicity: *metallicity,
-            mass: *mass,
-            age: formation_time_to_age(*formation_time),
+        .map(|(((position, metallicity), formation_time), mass)| {
+            Source::new(*position, *metallicity, *mass, *formation_time)
         })
         .collect()
 }
@@ -133,6 +139,22 @@ pub fn read_sources_system(
 ) {
     let sources = read_sources(&files, &cosmology);
     commands.insert_resource(Sources { sources });
+}
+
+pub(super) fn add_single_source_system(
+    box_size: Res<SimulationBox>,
+    parameters: Res<Parameters>,
+    mut commands: Commands,
+) {
+    let center = box_size.center;
+    if let SourceType::SingleSource(rate) = parameters.sources {
+        commands.insert_resource(Sources {
+            sources: vec![Source {
+                position: center,
+                rate,
+            }],
+        })
+    }
 }
 
 pub fn set_source_terms_system(
@@ -156,7 +178,7 @@ pub fn set_source_terms_system(
                 })
                 .min_by_key(|(dist, _)| *dist);
             let (_, mut source_term) = closest.unwrap();
-            **source_term += s.get_source_term();
+            **source_term += s.rate;
         }
     }
     let total: SourceRate = particles

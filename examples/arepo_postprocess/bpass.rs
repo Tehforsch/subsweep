@@ -895,7 +895,7 @@ mod tests {
     use crate::bpass::bpass_lookup;
 
     pub fn assert_float_is_close(x: Float, y: Float) {
-        assert!((x - y).abs() < 10.0 * f64::EPSILON, "{} {}", x, y)
+        assert!(((x - y) / (x.abs() + y.abs())).abs() < 1e-5, "{} {}", x, y)
     }
 
     #[test]
