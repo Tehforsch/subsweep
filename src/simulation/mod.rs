@@ -310,6 +310,10 @@ impl Simulation {
         self.app.world.get_resource_mut::<T>()
     }
 
+    pub fn get_non_send_resource<T: 'static>(&self) -> Option<&T> {
+        self.app.world.get_non_send_resource::<T>()
+    }
+
     pub fn unwrap_resource<T: Resource>(&self) -> &T {
         self.app.world.get_resource::<T>().unwrap()
     }

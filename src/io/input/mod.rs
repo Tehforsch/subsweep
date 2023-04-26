@@ -117,8 +117,14 @@ impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
                 name: self.descriptor.dataset_name().into(),
             },
         );
-        sim.insert_non_send_resource(self.descriptor.clone())
-            .add_startup_system(
+        let input_plugin_for_type_been_added_previously = sim
+            .get_non_send_resource::<InputDatasetDescriptor<T>>()
+            .is_some();
+        // Always use the last descriptor that has been added for a particular type.
+        sim.insert_non_send_resource(self.descriptor.clone());
+        // Only add read_dataset_system if it has not been added by another DatasetInputPlugin earlier.
+        if !input_plugin_for_type_been_added_previously {
+            sim.add_startup_system(
                 read_dataset_system::<T>
                     .after(open_file_system)
                     .after(spawn_entities_system)
@@ -126,6 +132,7 @@ impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
                     .label(ReadDatasetLabel)
                     .ambiguous_with(ReadDatasetLabel),
             );
+        }
     }
 }
 
@@ -214,8 +221,6 @@ fn read_dataset_system<T: ToDataset + Component>(
     spawned_entities: Res<SpawnedEntities>,
     parameters: Res<InputParameters>,
 ) {
-    let name = descriptor.dataset_name();
-    debug!("Reading dataset {}", name);
     let should_insert = |i: usize| {
         if let Some(shrink_factor) = parameters.shrink_factor {
             i.rem_euclid(shrink_factor) == 0
@@ -231,13 +236,13 @@ fn read_dataset_system<T: ToDataset + Component>(
     {
         commands.entity(*entity).insert(item);
     }
-    debug!("Finished reading dataset {}", name);
 }
 
 pub fn read_dataset<'a, T: ToDataset>(
     descriptor: &'a InputDatasetDescriptor<T>,
     files: &'a InputFiles,
 ) -> impl Iterator<Item = T> + 'a {
+    info!("Reading dataset {}", descriptor.dataset_name());
     let factor_read = T::dimension().base_conversion_factor();
     files.iter().flat_map(move |file| {
         let (set, factor_written) = read_dataset_for_file(descriptor, file);
