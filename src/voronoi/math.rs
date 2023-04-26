@@ -7,11 +7,11 @@ use num::FromPrimitive;
 use num::Signed;
 use num::Zero;
 
+use super::math_traits::Num;
+use super::precision_error::FloatError;
 use super::precision_error::PrecisionError;
 use super::Point2d;
 use super::Point3d;
-use crate::prelude::Num;
-use crate::units::helpers::FloatError;
 
 // MxN matrix: This type is just here for clarity, because the
 // internal storage is reversed, such that the order of indices is

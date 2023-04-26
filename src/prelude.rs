@@ -21,6 +21,5 @@ pub use crate::sweep::SweepPlugin;
 pub use crate::units;
 pub use crate::units::helpers::Float;
 pub use crate::units::helpers::MVec;
-pub use crate::units::helpers::Num;
 pub use crate::voronoi::constructor::Constructor;
 pub use crate::voronoi::constructor::ParallelVoronoiGridConstruction;

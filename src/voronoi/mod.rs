@@ -3,6 +3,7 @@ pub mod constructor;
 pub mod delaunay;
 mod indexed_arena;
 pub mod math;
+pub mod math_traits;
 mod precision_error;
 mod primitives;
 #[cfg(test)]

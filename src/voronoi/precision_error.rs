@@ -1,6 +1,5 @@
+use num::BigRational;
 use num::Signed;
-
-use crate::units::helpers::FloatError;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PrecisionError;
@@ -12,5 +11,23 @@ impl PrecisionError {
         } else {
             Ok(())
         }
+    }
+}
+
+pub const ERROR_TRESHOLD: f64 = 1e-9;
+
+pub trait FloatError {
+    fn is_too_close_to_zero(&self) -> bool;
+}
+
+impl FloatError for f64 {
+    fn is_too_close_to_zero(&self) -> bool {
+        self.abs() < ERROR_TRESHOLD
+    }
+}
+
+impl FloatError for BigRational {
+    fn is_too_close_to_zero(&self) -> bool {
+        false
     }
 }

@@ -6,12 +6,12 @@ use std::ops::Sub;
 use glam::DVec2;
 use glam::DVec3;
 
-use crate::prelude::Num;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
 use crate::voronoi::math::PrecisionFloat;
 use crate::voronoi::math::PrecisionPoint2d;
 use crate::voronoi::math::PrecisionPoint3d;
+use crate::voronoi::math_traits::Num;
 
 pub type Point2d = glam::DVec2;
 pub type Point3d = glam::DVec3;

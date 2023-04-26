@@ -1,7 +1,3 @@
-use num::traits::NumOps;
-use num::BigRational;
-use num::Signed;
-
 use super::Dimension;
 use super::Quantity;
 
@@ -24,30 +20,5 @@ impl<const D: Dimension> Quantity<MVec, D> {
         return Self::new(x, y);
         #[cfg(not(feature = "2d"))]
         return Self::new(x, y, Quantity::<f64, D>::zero());
-    }
-}
-
-pub trait Num:
-    num::Num + Clone + Signed + PartialOrd + FloatError + std::fmt::Debug + NumOps
-{
-}
-
-impl<T> Num for T where T: num::Num + Clone + Signed + PartialOrd + FloatError + std::fmt::Debug {}
-
-pub const ERROR_TRESHOLD: f64 = 1e-9;
-
-pub trait FloatError {
-    fn is_too_close_to_zero(&self) -> bool;
-}
-
-impl FloatError for f64 {
-    fn is_too_close_to_zero(&self) -> bool {
-        self.abs() < ERROR_TRESHOLD
-    }
-}
-
-impl FloatError for BigRational {
-    fn is_too_close_to_zero(&self) -> bool {
-        false
     }
 }
