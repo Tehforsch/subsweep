@@ -46,8 +46,11 @@ pub trait DVector2d: Vector {
     fn y(&self) -> <Self as Vector>::Float;
 }
 
-pub trait DVector3d {
+pub trait DVector3d: Vector {
     fn cross(&self, other: &Self) -> Self;
+    fn x(&self) -> <Self as Vector>::Float;
+    fn y(&self) -> <Self as Vector>::Float;
+    fn z(&self) -> <Self as Vector>::Float;
 }
 
 pub trait MinMax {
@@ -123,6 +126,18 @@ impl DVector3d for Point3d {
     fn cross(&self, other: &Self) -> Self {
         Point3d::cross(*self, *other)
     }
+
+    fn x(&self) -> <Self as Vector>::Float {
+        self.x
+    }
+
+    fn y(&self) -> <Self as Vector>::Float {
+        self.y
+    }
+
+    fn z(&self) -> <Self as Vector>::Float {
+        self.z
+    }
 }
 
 impl Vector for PrecisionPoint3d {
@@ -137,6 +152,18 @@ impl DVector3d for PrecisionPoint3d {
             z: self.x.clone() * other.y.clone() - other.x.clone() * self.y.clone(),
         }
     }
+
+    fn x(&self) -> <Self as Vector>::Float {
+        self.x.clone()
+    }
+
+    fn y(&self) -> <Self as Vector>::Float {
+        self.y.clone()
+    }
+
+    fn z(&self) -> <Self as Vector>::Float {
+        self.z.clone()
+    }
 }
 
 impl Vector for PrecisionPoint2d {
@@ -149,7 +176,7 @@ impl DVector2d for PrecisionPoint2d {
     }
 
     fn y(&self) -> <Self as Vector>::Float {
-        self.x.clone()
+        self.y.clone()
     }
 }
 

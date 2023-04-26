@@ -1,8 +1,10 @@
+use std::ops::Add;
 use std::ops::Sub;
 
 use num::One;
 
 use super::point::DVector2d;
+use super::point::DVector3d;
 use super::Float;
 use super::Point2d;
 use super::Point3d;
@@ -17,6 +19,7 @@ use crate::voronoi::delaunay::face_info::FaceInfo;
 use crate::voronoi::math::determinant3x3_sign;
 use crate::voronoi::math::solve_system_of_equations;
 use crate::voronoi::math::PrecisionPoint2d;
+use crate::voronoi::math::PrecisionPoint3d;
 use crate::voronoi::math::Sign;
 use crate::voronoi::precision_error::PrecisionError;
 use crate::voronoi::PointIndex;
@@ -134,7 +137,7 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
     }
 }
 
-impl<V: DVector2d + Clone + Sub<Output = V>> TriangleData<V> {
+impl<V: DVector2d + Clone + Sub<Output = V> + std::fmt::Debug> TriangleData<V> {
     fn transform_point_to_canonical_coordinates(&self, point: V) -> (V::Float, V::Float) {
         // We solve
         // p = p1 + r (p2 - p1) + s (p3 - p1)
@@ -152,7 +155,10 @@ impl<V: DVector2d + Clone + Sub<Output = V>> TriangleData<V> {
         let values = [r.clone(), s.clone(), V::Float::one() - (r + s)];
         let is_definitely_outside = values.iter().any(|value| {
             Sign::try_from_val(value)
-                .map(|sign| sign.is_negative())
+                .map(|sign| {
+                    sign.panic_if_zero("Degenerate case of point on edge of triangle")
+                        .is_negative()
+                })
                 .unwrap_or(false)
         });
         if is_definitely_outside {
@@ -259,50 +265,82 @@ impl DTetraData for TriangleData<Point2d> {
     }
 }
 
-impl TriangleData<Point3d> {
-    pub fn get_line_intersection_type(
+impl<V: DVector3d + Clone + Add<Output = V> + Sub<Output = V>> TriangleData<V> {
+    pub fn generic_get_line_intersection_type(
         &self,
-        q1: Point3d,
-        q2: Point3d,
+        q1: V,
+        q2: V,
     ) -> Result<IntersectionType, PrecisionError> {
         // We solve the line-triangle intersection equation
         // p1 + r (p2 - p1) + s (p3 - p1) = q1 + t (q2 - q1)
         // for r, s, and t.
         // r and s are the coordinates of the point in the (two-dimensional) vector space
         // spanned by the (linearly independent) vectors given by (p2 - p1) and (p3 - p1).
-        let a = self.p2 - self.p1;
-        let b = self.p3 - self.p1;
-        let k = q2 - q1;
-        let c = q1 - self.p1;
+        let a = self.p2.clone() - self.p1.clone();
+        let b = self.p3.clone() - self.p1.clone();
+        let k = q2 - q1.clone();
+        let c = q1 - self.p1.clone();
         let [r, s, _] = solve_system_of_equations([
-            [a.x, b.x, -k.x, c.x],
-            [a.y, b.y, -k.y, c.y],
-            [a.z, b.z, -k.z, c.z],
+            [a.x(), b.x(), -k.x(), c.x()],
+            [a.y(), b.y(), -k.y(), c.y()],
+            [a.z(), b.z(), -k.z(), c.z()],
         ]);
         self.get_intersection_type(r, s)
     }
 
     fn get_intersection_type(
         &self,
-        r: Float,
-        s: Float,
+        r: V::Float,
+        s: V::Float,
     ) -> Result<IntersectionType, PrecisionError> {
-        todo!()
-        // let identifiers = [
-        //     (is_negative(r)?, EdgeIdentifier::Two),
-        //     (is_negative(s)?, EdgeIdentifier::Three),
-        //     (is_negative(1.0 - (r + s))?, EdgeIdentifier::One),
-        // ]
-        // .into_iter()
-        // .filter(|(state, _)| *state)
-        // .map(|(_, id)| id)
-        // .collect::<Vec<_>>();
-        // Ok(match identifiers.len() {
-        //     0 => IntersectionType::Inside,
-        //     1 => IntersectionType::OutsideOneEdge(identifiers[0]),
-        //     2 => IntersectionType::OutsideTwoEdges(identifiers[0], identifiers[1]),
-        //     _ => panic!("Possibly degenerate case of point lying on one of the edges."),
-        // })
+        let signs: Result<Vec<_>, PrecisionError> =
+            [r.clone(), s.clone(), V::Float::one() - (r + s)]
+                .into_iter()
+                .map(|x| {
+                    let sign = Sign::try_from_val(&x);
+                    if let Ok(sign) = sign {
+                        sign.panic_if_zero(
+                            "Degenerate case of point on line (implement 4-to-4 flip)",
+                        );
+                    }
+                    sign
+                })
+                .collect();
+        let identifiers = signs?
+            .into_iter()
+            .zip([
+                EdgeIdentifier::Two,
+                EdgeIdentifier::Three,
+                EdgeIdentifier::One,
+            ])
+            .filter(|(sign, _)| sign.is_negative())
+            .map(|(_, id)| id)
+            .collect::<Vec<_>>();
+        Ok(match identifiers.len() {
+            0 => IntersectionType::Inside,
+            1 => IntersectionType::OutsideOneEdge(identifiers[0]),
+            2 => IntersectionType::OutsideTwoEdges(identifiers[0], identifiers[1]),
+            _ => panic!("Possibly degenerate case of point lying on one of the edges."),
+        })
+    }
+}
+
+impl TriangleData<Point3d> {
+    pub fn get_line_intersection_type(&self, q1: Point3d, q2: Point3d) -> IntersectionType {
+        self.generic_get_line_intersection_type(q1, q2)
+            .unwrap_or_else(|_| {
+                let precision_self = TriangleData {
+                    p1: PrecisionPoint3d::new(self.p1),
+                    p2: PrecisionPoint3d::new(self.p2),
+                    p3: PrecisionPoint3d::new(self.p3),
+                };
+                precision_self
+                    .generic_get_line_intersection_type(
+                        PrecisionPoint3d::new(q1),
+                        PrecisionPoint3d::new(q2),
+                    )
+                    .unwrap()
+            })
     }
 
     pub fn distance_to_point(&self, p: Point3d) -> Float {
@@ -388,30 +426,43 @@ mod tests {
             let type_ = face.get_line_intersection_type(q1, q2);
             assert_eq!(type_, intersection_type);
         };
-        check_two_d_point(0.3, 0.3, Ok(IntersectionType::Inside));
+        check_two_d_point(0.3, 0.3, IntersectionType::Inside);
         check_two_d_point(
             -0.1,
             0.3,
-            Ok(IntersectionType::OutsideOneEdge(EdgeIdentifier::Two)),
+            IntersectionType::OutsideOneEdge(EdgeIdentifier::Two),
         );
         check_two_d_point(
             0.3,
             -0.1,
-            Ok(IntersectionType::OutsideOneEdge(EdgeIdentifier::Three)),
+            IntersectionType::OutsideOneEdge(EdgeIdentifier::Three),
         );
         check_two_d_point(
             0.6,
             0.6,
-            Ok(IntersectionType::OutsideOneEdge(EdgeIdentifier::One)),
+            IntersectionType::OutsideOneEdge(EdgeIdentifier::One),
         );
         check_two_d_point(
             -0.1,
             -0.1,
-            Ok(IntersectionType::OutsideTwoEdges(
-                EdgeIdentifier::Two,
-                EdgeIdentifier::Three,
-            )),
+            IntersectionType::OutsideTwoEdges(EdgeIdentifier::Two, EdgeIdentifier::Three),
         );
+        std::panic::catch_unwind(|| {
+            check_two_d_point(
+                0.0,
+                0.5,
+                IntersectionType::OutsideTwoEdges(EdgeIdentifier::Two, EdgeIdentifier::Three),
+            )
+        })
+        .unwrap_err();
+        std::panic::catch_unwind(|| {
+            check_two_d_point(
+                0.5,
+                0.0,
+                IntersectionType::OutsideTwoEdges(EdgeIdentifier::Two, EdgeIdentifier::Three),
+            )
+        })
+        .unwrap_err();
     }
 
     #[test]

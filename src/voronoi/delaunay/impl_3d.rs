@@ -350,10 +350,7 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
         let p2 = t2.find_point_opposite(check.face);
         let intersection_type = self
             .get_face_data(shared_face)
-            .get_line_intersection_type(self.points[p1], self.points[p2])
-            .unwrap_or_else(|_| {
-                todo!("Handle case of degenerate intersection type (4-to-4 flip?)")
-            });
+            .get_line_intersection_type(self.points[p1], self.points[p2]);
         match intersection_type {
             IntersectionType::Inside => {
                 self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face)

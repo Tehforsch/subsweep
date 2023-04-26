@@ -20,7 +20,7 @@ type Matrix<const M: usize, const N: usize, F> = [[F; N]; M];
 
 pub type PrecisionFloat = num::BigRational;
 
-#[derive(Add, Sub, Clone)]
+#[derive(Add, Sub, Clone, Debug)]
 pub struct PrecisionPoint3d {
     pub x: PrecisionFloat,
     pub y: PrecisionFloat,
@@ -37,7 +37,7 @@ impl PrecisionPoint3d {
     }
 }
 
-#[derive(Add, Sub, Clone)]
+#[derive(Add, Sub, Clone, Debug)]
 pub struct PrecisionPoint2d {
     pub x: PrecisionFloat,
     pub y: PrecisionFloat,
@@ -176,7 +176,7 @@ impl Sign {
         }
     }
 
-    pub(crate) fn panic_if_zero(&self, arg: &'static str) -> &Self {
+    pub fn panic_if_zero(&self, arg: &'static str) -> &Self {
         if let Self::Zero = self {
             panic!("{}", arg)
         }
