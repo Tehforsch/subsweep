@@ -1,8 +1,8 @@
 use std::ops::Sub;
 
 use super::super::delaunay::face_info::FaceInfo;
-use super::super::math::traits::DVector3d;
 use super::super::math::traits::Dot;
+use super::super::math::traits::Vector3d;
 use super::triangle::TriangleData;
 use super::Float;
 use super::Point3d;
@@ -248,7 +248,7 @@ impl DTetraData for TetrahedronData {
     }
 }
 
-fn points_are_on_same_side_of_triangle<P: DVector3d + Sub<Output = P> + Dot + Clone>(
+fn points_are_on_same_side_of_triangle<P: Vector3d + Sub<Output = P> + Dot + Clone>(
     p1: P,
     p2: P,
     triangle: (P, P, P),

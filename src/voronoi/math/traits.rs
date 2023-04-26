@@ -46,12 +46,12 @@ pub trait Dot: Vector {
     fn dot(self, other: Self) -> Self::Float;
 }
 
-pub trait DVector2d: Vector {
+pub trait Vector2d: Vector {
     fn x(&self) -> <Self as Vector>::Float;
     fn y(&self) -> <Self as Vector>::Float;
 }
 
-pub trait DVector3d: Vector {
+pub trait Vector3d: Vector {
     fn cross(&self, other: &Self) -> Self;
     fn x(&self) -> <Self as Vector>::Float;
     fn y(&self) -> <Self as Vector>::Float;
@@ -117,7 +117,7 @@ impl_min_max_for_vector!(DVec3);
 impl_min_max_for_vector!(Vec2Length);
 impl_min_max_for_vector!(Vec3Length);
 
-impl DVector2d for Point2d {
+impl Vector2d for Point2d {
     fn x(&self) -> <Self as Vector>::Float {
         self.x
     }
@@ -127,7 +127,7 @@ impl DVector2d for Point2d {
     }
 }
 
-impl DVector3d for Point3d {
+impl Vector3d for Point3d {
     fn cross(&self, other: &Self) -> Self {
         Point3d::cross(*self, *other)
     }

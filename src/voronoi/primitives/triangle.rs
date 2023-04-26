@@ -3,8 +3,8 @@ use std::ops::Sub;
 
 use num::One;
 
-use super::super::math::traits::DVector2d;
-use super::super::math::traits::DVector3d;
+use super::super::math::traits::Vector2d;
+use super::super::math::traits::Vector3d;
 use super::Float;
 use super::Point2d;
 use super::Point3d;
@@ -137,7 +137,7 @@ impl FromIterator<Point2d> for TriangleData<Point2d> {
     }
 }
 
-impl<V: DVector2d + Clone + Sub<Output = V> + std::fmt::Debug> TriangleData<V> {
+impl<V: Vector2d + Clone + Sub<Output = V> + std::fmt::Debug> TriangleData<V> {
     fn transform_point_to_canonical_coordinates(&self, point: V) -> (V::Float, V::Float) {
         // We solve
         // p = p1 + r (p2 - p1) + s (p3 - p1)
@@ -265,7 +265,7 @@ impl DTetraData for TriangleData<Point2d> {
     }
 }
 
-impl<V: DVector3d + Clone + Add<Output = V> + Sub<Output = V>> TriangleData<V> {
+impl<V: Vector3d + Clone + Add<Output = V> + Sub<Output = V>> TriangleData<V> {
     pub fn generic_get_line_intersection_type(
         &self,
         q1: V,
