@@ -1,6 +1,8 @@
+use bevy::prelude::debug;
 use hdf5::Dataset;
 use raxiom::io::UnitReader;
 use raxiom::units::Dimension;
+use raxiom::units::NONE;
 
 use crate::cosmology::Cosmology;
 
@@ -79,6 +81,10 @@ impl UnitReader for ArepoUnitReader {
             .expect("No scale factor in dataset")
             .read_scalar()
             .unwrap();
+        if cgs == 0.0 {
+            assert_eq!(dimension, NONE);
+            debug!("Unit scale factor is 0 in dimensionless dataset. Assuming 1.");
+        }
         cosmology_scale_factor * cgs_to_si * cgs
     }
 
