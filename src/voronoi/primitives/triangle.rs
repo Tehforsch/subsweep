@@ -19,9 +19,9 @@ use crate::voronoi::delaunay::face_info::FaceInfo;
 use crate::voronoi::math::determinant3x3_sign;
 use crate::voronoi::math::solve_system_of_equations;
 use crate::voronoi::math::Sign;
-use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::precision_error::PrecisionPoint2d;
-use crate::voronoi::precision_error::PrecisionPoint3d;
+use crate::voronoi::precision_types::PrecisionError;
+use crate::voronoi::precision_types::PrecisionPoint2d;
+use crate::voronoi::precision_types::PrecisionPoint3d;
 use crate::voronoi::PointIndex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -14,8 +14,8 @@ use crate::voronoi::math::determinant4x4;
 use crate::voronoi::math::determinant4x4_sign;
 use crate::voronoi::math::determinant5x5_sign;
 use crate::voronoi::math::Sign;
-use crate::voronoi::precision_error::PrecisionError;
-use crate::voronoi::precision_error::PrecisionPoint3d;
+use crate::voronoi::precision_types::PrecisionError;
+use crate::voronoi::precision_types::PrecisionPoint3d;
 use crate::voronoi::PointIndex;
 
 #[derive(Clone, Debug)]

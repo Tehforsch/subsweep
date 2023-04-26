@@ -8,7 +8,7 @@ use glam::DVec3;
 use num::traits::NumOps;
 use num::Signed;
 
-use super::precision_error::FloatError;
+use super::precision_types::FloatError;
 use super::Point2d;
 use super::Point3d;
 use crate::units::Vec2Length;
