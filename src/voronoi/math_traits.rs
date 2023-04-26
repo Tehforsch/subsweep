@@ -13,9 +13,6 @@ use super::Point2d;
 use super::Point3d;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
-use crate::voronoi::math::PrecisionFloat;
-use crate::voronoi::math::PrecisionPoint2d;
-use crate::voronoi::math::PrecisionPoint3d;
 
 pub trait Num:
     num::Num + Clone + Signed + PartialOrd + FloatError + std::fmt::Debug + NumOps
@@ -145,52 +142,6 @@ impl DVector3d for Point3d {
 
     fn z(&self) -> <Self as Vector>::Float {
         self.z
-    }
-}
-
-impl Vector for PrecisionPoint3d {
-    type Float = PrecisionFloat;
-}
-
-impl DVector3d for PrecisionPoint3d {
-    fn cross(&self, other: &Self) -> Self {
-        Self {
-            x: self.y.clone() * other.z.clone() - other.y.clone() * self.z.clone(),
-            y: self.z.clone() * other.x.clone() - other.z.clone() * self.x.clone(),
-            z: self.x.clone() * other.y.clone() - other.x.clone() * self.y.clone(),
-        }
-    }
-
-    fn x(&self) -> <Self as Vector>::Float {
-        self.x.clone()
-    }
-
-    fn y(&self) -> <Self as Vector>::Float {
-        self.y.clone()
-    }
-
-    fn z(&self) -> <Self as Vector>::Float {
-        self.z.clone()
-    }
-}
-
-impl Vector for PrecisionPoint2d {
-    type Float = PrecisionFloat;
-}
-
-impl DVector2d for PrecisionPoint2d {
-    fn x(&self) -> <Self as Vector>::Float {
-        self.x.clone()
-    }
-
-    fn y(&self) -> <Self as Vector>::Float {
-        self.y.clone()
-    }
-}
-
-impl Dot for PrecisionPoint3d {
-    fn dot(self, other: Self) -> Self::Float {
-        self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
 

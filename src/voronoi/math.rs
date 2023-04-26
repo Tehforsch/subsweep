@@ -1,8 +1,6 @@
 use std::cmp::Ordering;
 
 use array_init::from_iter;
-use derive_more::Add;
-use derive_more::Sub;
 use num::FromPrimitive;
 use num::Signed;
 use num::Zero;
@@ -10,47 +8,12 @@ use num::Zero;
 use super::math_traits::Num;
 use super::precision_error::FloatError;
 use super::precision_error::PrecisionError;
-use super::Point2d;
-use super::Point3d;
+use super::precision_error::PrecisionFloat;
 
 // MxN matrix: This type is just here for clarity, because the
 // internal storage is reversed, such that the order of indices is
 // as it would be in math, i.e. Matrix<M, N> has M rows and N columns.
 type Matrix<const M: usize, const N: usize, F> = [[F; N]; M];
-
-pub type PrecisionFloat = num::BigRational;
-
-#[derive(Add, Sub, Clone, Debug)]
-pub struct PrecisionPoint3d {
-    pub x: PrecisionFloat,
-    pub y: PrecisionFloat,
-    pub z: PrecisionFloat,
-}
-
-impl PrecisionPoint3d {
-    pub fn new(p: Point3d) -> Self {
-        Self {
-            x: PrecisionFloat::from_f64(p.x).unwrap(),
-            y: PrecisionFloat::from_f64(p.y).unwrap(),
-            z: PrecisionFloat::from_f64(p.z).unwrap(),
-        }
-    }
-}
-
-#[derive(Add, Sub, Clone, Debug)]
-pub struct PrecisionPoint2d {
-    pub x: PrecisionFloat,
-    pub y: PrecisionFloat,
-}
-
-impl PrecisionPoint2d {
-    pub fn new(p: Point2d) -> Self {
-        Self {
-            x: PrecisionFloat::from_f64(p.x).unwrap(),
-            y: PrecisionFloat::from_f64(p.y).unwrap(),
-        }
-    }
-}
 
 pub fn solve_system_of_equations<const M: usize, F: Num>(mut a: Matrix<M, { M + 1 }, F>) -> [F; M] {
     let n = M + 1;
