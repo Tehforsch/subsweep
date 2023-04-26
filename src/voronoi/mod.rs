@@ -22,8 +22,8 @@ pub use delaunay::dimension::DTetra;
 use delaunay::Delaunay;
 use delaunay::PointIndex;
 pub use delaunay::Triangulation;
-pub use primitives::point::DVector;
-pub use primitives::point::MinMax;
+pub use math_traits::DVector;
+pub use math_traits::MinMax;
 pub use primitives::Point2d;
 pub use primitives::Point3d;
 pub use triangulation_data::TriangulationData;
@@ -66,7 +66,7 @@ mod tests {
     use crate::dimension::TwoD;
     use crate::grid::ParticleType;
     use crate::prelude::ParticleId;
-    use crate::voronoi::primitives::point::DVector;
+    use crate::voronoi::DVector;
 
     #[instantiate_tests(<TwoD>)]
     mod two_d {}

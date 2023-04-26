@@ -1,11 +1,9 @@
 pub mod line;
-pub mod point;
 pub mod polygon3d;
 pub mod tetrahedron;
 pub mod triangle;
 
 pub type Float = crate::prelude::Float;
 
-pub use point::DVector;
-pub use point::Point2d;
-pub use point::Point3d;
+pub type Point2d = glam::DVec2;
+pub type Point3d = glam::DVec3;

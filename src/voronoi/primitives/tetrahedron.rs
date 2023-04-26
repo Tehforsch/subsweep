@@ -1,8 +1,8 @@
 use std::ops::Sub;
 
 use super::super::delaunay::face_info::FaceInfo;
-use super::point::DVector3d;
-use super::point::Dot;
+use super::super::math_traits::DVector3d;
+use super::super::math_traits::Dot;
 use super::triangle::TriangleData;
 use super::Float;
 use super::Point3d;

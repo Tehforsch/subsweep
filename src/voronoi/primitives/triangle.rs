@@ -3,8 +3,8 @@ use std::ops::Sub;
 
 use num::One;
 
-use super::point::DVector2d;
-use super::point::DVector3d;
+use super::super::math_traits::DVector2d;
+use super::super::math_traits::DVector3d;
 use super::Float;
 use super::Point2d;
 use super::Point3d;
