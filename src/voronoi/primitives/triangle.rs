@@ -3,8 +3,8 @@ use std::ops::Sub;
 
 use num::One;
 
-use super::super::math_traits::DVector2d;
-use super::super::math_traits::DVector3d;
+use super::super::math::traits::DVector2d;
+use super::super::math::traits::DVector3d;
 use super::Float;
 use super::Point2d;
 use super::Point3d;
@@ -16,12 +16,12 @@ use crate::voronoi::delaunay::dimension::DFaceData;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::face_info::FaceInfo;
-use crate::voronoi::math::determinant3x3_sign;
-use crate::voronoi::math::solve_system_of_equations;
-use crate::voronoi::math::Sign;
-use crate::voronoi::precision_types::PrecisionError;
-use crate::voronoi::precision_types::PrecisionPoint2d;
-use crate::voronoi::precision_types::PrecisionPoint3d;
+use crate::voronoi::math::precision_types::PrecisionError;
+use crate::voronoi::math::precision_types::PrecisionPoint2d;
+use crate::voronoi::math::precision_types::PrecisionPoint3d;
+use crate::voronoi::math::utils::determinant3x3_sign;
+use crate::voronoi::math::utils::solve_system_of_equations;
+use crate::voronoi::math::utils::Sign;
 use crate::voronoi::PointIndex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

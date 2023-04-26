@@ -5,10 +5,10 @@ use num::FromPrimitive;
 use num::Signed;
 use num::Zero;
 
-use super::math_traits::Num;
 use super::precision_types::FloatError;
 use super::precision_types::PrecisionError;
 use super::precision_types::PrecisionFloat;
+use super::traits::Num;
 
 // MxN matrix: This type is just here for clarity, because the
 // internal storage is reversed, such that the order of indices is

@@ -1,8 +1,8 @@
 use std::ops::Sub;
 
 use super::super::delaunay::face_info::FaceInfo;
-use super::super::math_traits::DVector3d;
-use super::super::math_traits::Dot;
+use super::super::math::traits::DVector3d;
+use super::super::math::traits::Dot;
 use super::triangle::TriangleData;
 use super::Float;
 use super::Point3d;
@@ -10,12 +10,12 @@ use crate::dimension::ThreeD;
 use crate::extent::Extent;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
-use crate::voronoi::math::determinant4x4;
-use crate::voronoi::math::determinant4x4_sign;
-use crate::voronoi::math::determinant5x5_sign;
-use crate::voronoi::math::Sign;
-use crate::voronoi::precision_types::PrecisionError;
-use crate::voronoi::precision_types::PrecisionPoint3d;
+use crate::voronoi::math::precision_types::PrecisionError;
+use crate::voronoi::math::precision_types::PrecisionPoint3d;
+use crate::voronoi::math::utils::determinant4x4;
+use crate::voronoi::math::utils::determinant4x4_sign;
+use crate::voronoi::math::utils::determinant5x5_sign;
+use crate::voronoi::math::utils::Sign;
 use crate::voronoi::PointIndex;
 
 #[derive(Clone, Debug)]

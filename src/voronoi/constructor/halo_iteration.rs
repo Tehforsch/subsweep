@@ -262,7 +262,7 @@ mod tests {
     use crate::voronoi::delaunay::dimension::DTetra;
     use crate::voronoi::delaunay::Delaunay;
     use crate::voronoi::delaunay::PointKind;
-    use crate::voronoi::math_traits::DVector;
+    use crate::voronoi::math::traits::DVector;
     use crate::voronoi::test_utils::TestDimension;
     use crate::voronoi::visualizer::Visualizable;
     use crate::voronoi::Cell;

@@ -17,7 +17,7 @@ use self::dimension::DTetra;
 use self::dimension::DTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
-use super::math_traits::DVector;
+use super::math::traits::DVector;
 use super::primitives::Float;
 use crate::communication::Rank;
 use crate::dimension::Dimension;

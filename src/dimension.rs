@@ -9,7 +9,7 @@ use crate::units::MVec2;
 use crate::units::MVec3;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
-use crate::voronoi::math_traits::DVector;
+use crate::voronoi::math::traits::DVector;
 use crate::voronoi::visualizer::Visualizable;
 
 pub trait Dimension {

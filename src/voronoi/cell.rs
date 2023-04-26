@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use super::delaunay::dimension::DDimension;
 use super::delaunay::FaceIndex;
 use super::delaunay::PointIndex;
-use super::math_traits::DVector;
+use super::math::traits::DVector;
 use super::primitives::polygon3d::Polygon3d;
 use super::primitives::Point2d;
 use super::primitives::Point3d;

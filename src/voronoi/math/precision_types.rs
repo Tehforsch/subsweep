@@ -3,12 +3,12 @@ use derive_more::Sub;
 use num::FromPrimitive;
 use num::Signed;
 
-use super::math_traits::DVector2d;
-use super::math_traits::DVector3d;
-use super::math_traits::Dot;
-use super::math_traits::Vector;
-use super::Point2d;
-use super::Point3d;
+use super::super::Point2d;
+use super::super::Point3d;
+use super::traits::DVector2d;
+use super::traits::DVector3d;
+use super::traits::Dot;
+use super::traits::Vector;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PrecisionError;
