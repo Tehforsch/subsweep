@@ -14,6 +14,7 @@ use crate::named::Named;
 use crate::parameters::SimulationBox;
 use crate::particle::ParticlePlugin;
 use crate::prelude::Particles;
+use crate::prelude::WorldSize;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::units;
@@ -58,6 +59,10 @@ impl RaxiomPlugin for SimulationPlugin {
                 SimulationStartupStages::InsertComponents,
                 check_particles_in_simulation_box_system,
             )
+            .add_startup_system_to_stage(
+                SimulationStartupStages::InsertComponents,
+                show_num_cores_system,
+            )
             .add_system_to_stage(
                 SimulationStages::Integration,
                 show_time_system.after(time_system),
@@ -98,4 +103,8 @@ pub fn time_system(mut time: ResMut<Time>, parameters: Res<TimestepParameters>) 
 
 pub fn show_time_system(time: Res<self::Time>) {
     info!("Time: {:?}", **time);
+}
+
+pub fn show_num_cores_system(world_size: Res<WorldSize>) {
+    info!("Running on {} MPI ranks", **world_size);
 }
