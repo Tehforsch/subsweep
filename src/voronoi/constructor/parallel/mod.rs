@@ -57,6 +57,7 @@ where
     box_: SimulationBox,
     halo_cache: HaloCache<D>,
     extent: Extent<Point<D>>,
+    num_points_local: usize,
 }
 
 fn find_wrapped_point(
@@ -82,6 +83,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         decomposition: &'a Decomposition,
         box_: SimulationBox,
         halo_cache: HaloCache<ActiveDimension>,
+        num_points_local: usize,
     ) -> Self {
         let data_comm = ExchangeCommunicator::<MpiSearchData<ActiveDimension>>::new();
         let result_comm = ExchangeCommunicator::<MpiSearchResult<ActiveDimension>>::new();
@@ -96,6 +98,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
             box_,
             halo_cache,
             extent: extent,
+            num_points_local,
         }
     }
 
@@ -247,5 +250,12 @@ impl<'a> RadiusSearch<ActiveDimension> for ParallelSearch<'a, ActiveDimension> {
 
     fn rank(&self) -> Rank {
         self.data_comm.rank()
+    }
+
+    fn num_points(&mut self) -> usize {
+        let num_points: SendNum = self
+            .finished_comm
+            .all_gather_sum(&SendNum(self.num_points_local));
+        num_points.0
     }
 }

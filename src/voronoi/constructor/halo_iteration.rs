@@ -64,6 +64,7 @@ pub trait RadiusSearch<D: Dimension> {
     fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>>;
     fn determine_global_extent(&self) -> Option<Extent<Point<D>>>;
     fn everyone_finished(&mut self, num_undecided_this_rank: usize) -> bool;
+    fn num_points(&mut self) -> usize;
     fn rank(&self) -> Rank;
 }
 
@@ -317,6 +318,10 @@ mod tests {
 
         fn rank(&self) -> Rank {
             0
+        }
+
+        fn num_points(&mut self) -> usize {
+            self.points.len()
         }
     }
 

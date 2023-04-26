@@ -51,7 +51,7 @@ where
 {
     pub fn construct_from_iter<'b, F>(
         iter: impl Iterator<Item = (ParticleId, Point<D>)> + 'b,
-        search: F,
+        mut search: F,
     ) -> Self
     where
         F: RadiusSearch<D>,
@@ -62,7 +62,7 @@ where
             .determine_global_extent()
             .unwrap_or_else(|| get_extent(points.iter().map(|p| p.1)).unwrap());
         let characteristic_length =
-            get_characteristic_length::<D>(extent.max_side_length(), points.len());
+            get_characteristic_length::<D>(extent.max_side_length(), search.num_points());
         let extent = extent.including_periodic_images();
         let (triangulation, map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);

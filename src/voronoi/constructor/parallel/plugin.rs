@@ -59,7 +59,14 @@ pub fn construct_grid_system(
     box_: Res<SimulationBox>,
     map: Res<IdEntityMap>,
 ) {
-    let search = ParallelSearch::new(&tree, &decomposition, box_.clone(), HaloCache::default());
+    let num_points_local = particles.iter().count();
+    let search = ParallelSearch::new(
+        &tree,
+        &decomposition,
+        box_.clone(),
+        HaloCache::default(),
+        num_points_local,
+    );
     let cons = Constructor::<ActiveDimension>::construct_from_iter(
         particles.iter().map(|(_, i, p)| (*i, p.value_unchecked())),
         search,

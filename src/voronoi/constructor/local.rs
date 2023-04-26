@@ -25,4 +25,8 @@ impl<D: DDimension> RadiusSearch<D> for Local {
     fn rank(&self) -> Rank {
         0
     }
+
+    fn num_points(&mut self) -> usize {
+        0
+    }
 }
