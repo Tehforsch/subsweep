@@ -23,6 +23,7 @@ use raxiom::prelude::ParallelVoronoiGridConstruction;
 use raxiom::prelude::ParticleId;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationStartupStages;
+use raxiom::simulation_plugin::SimulationPlugin;
 use raxiom::stages::SimulationStagesPlugin;
 use raxiom::sweep::initialize_sweep_components_system;
 use raxiom::sweep::DirectionsSpecification;
@@ -67,6 +68,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             move |commands: Commands| insert_particles_system(commands, num_particles),
         )
         .add_plugin(ParallelVoronoiGridConstruction)
+        .add_plugin(SimulationPlugin)
         .add_plugin(SweepPlugin);
     sim.update();
     sim

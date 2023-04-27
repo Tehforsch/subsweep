@@ -6,6 +6,7 @@ pub struct TimesteppingState {
     max_timestep: Time,
     max_num_timestep_levels: usize,
     current_lowest_allowed: TimestepLevel,
+    first_update_at_highest_level_done: bool,
 }
 
 impl TimesteppingState {
@@ -14,6 +15,7 @@ impl TimesteppingState {
             max_timestep,
             max_num_timestep_levels,
             current_lowest_allowed: TimestepLevel(max_num_timestep_levels - 1),
+            first_update_at_highest_level_done: false,
         }
     }
 
@@ -30,8 +32,15 @@ impl TimesteppingState {
     }
 
     pub fn advance_allowed_levels(&mut self) {
-        if self.current_lowest_allowed.0 > 0 {
+        // Decrease the lowest allowed timestep level but only if
+        // we have already done one additional run with only the highest level.
+        // Doing this aligns the timesteps with the max_timestep cadence since
+        // Sum_{i=1}^n (Δt (1/2)^i) = Δt (1 - (1/2)^n)
+        if self.first_update_at_highest_level_done && self.current_lowest_allowed.0 > 0 {
             self.current_lowest_allowed -= 1;
+        }
+        if !self.first_update_at_highest_level_done {
+            self.first_update_at_highest_level_done = true;
         }
     }
 
