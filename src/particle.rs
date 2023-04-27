@@ -6,7 +6,6 @@ use bevy::prelude::Component;
 use bevy::prelude::Or;
 use bevy::prelude::Query;
 use bevy::prelude::With;
-use derive_more::Display;
 use mpi::traits::Equivalence;
 
 use crate::communication::Rank;
@@ -17,10 +16,22 @@ use crate::prelude::SimulationStartupStages;
 use crate::simulation::RaxiomPlugin;
 
 #[derive(
-    Component, Clone, Debug, PartialEq, Eq, Hash, Equivalence, Copy, Display, Named, PartialOrd, Ord,
+    Component, Clone, Debug, PartialEq, Eq, Hash, Equivalence, Copy, Named, PartialOrd, Ord,
 )]
 #[name = "id"]
-pub struct ParticleId(pub u64);
+pub struct ParticleId {
+    pub index: u32,
+    pub rank: Rank,
+}
+
+impl ParticleId {
+    pub fn test(index: usize) -> Self {
+        Self {
+            index: index as u32,
+            rank: 0,
+        }
+    }
+}
 
 #[derive(Component)]
 pub struct LocalParticle;

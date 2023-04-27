@@ -12,12 +12,15 @@ pub fn main() {
 }
 
 fn construct_voronoi_3d(points: Vec<Point3d>) {
-    let _ = Constructor::<ThreeD>::new(
-        points
-            .iter()
-            .enumerate()
-            .map(|(i, p)| (ParticleId(i as u64), *p)),
-    )
+    let _ = Constructor::<ThreeD>::new(points.iter().enumerate().map(|(i, p)| {
+        (
+            ParticleId {
+                index: i as u32,
+                rank: 0,
+            },
+            *p,
+        )
+    }))
     .voronoi();
 }
 

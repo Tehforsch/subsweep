@@ -5,6 +5,7 @@ mod indexed_arena;
 pub mod math;
 mod precision_error;
 mod primitives;
+#[cfg(test)]
 mod test_utils;
 pub mod triangulation_data;
 mod utils;
@@ -84,7 +85,7 @@ mod tests {
                 .points
                 .iter()
                 .enumerate()
-                .map(|(i, (p, _))| (ParticleType::Local(ParticleId(i as u64)), p))
+                .map(|(i, (p, _))| (ParticleType::Local(ParticleId::test(i)), p))
                 .collect();
             check(
                 &TriangulationData::from_triangulation_and_map(t.clone(), map),
@@ -194,15 +195,15 @@ mod quantitative_tests {
         use crate::dimension::ThreeD;
         use crate::voronoi::primitives::Point3d;
         let points = vec![
-            (ParticleId(0), Point3d::new(0.0, 0.0, 0.0)),
-            (ParticleId(1), Point3d::new(0.6, 0.1, 0.1)),
-            (ParticleId(2), Point3d::new(0.1, 0.5, 0.1)),
-            (ParticleId(3), Point3d::new(0.1, 0.1, 0.4)),
-            (ParticleId(4), Point3d::new(0.1, 0.1, 0.1)),
+            (ParticleId::test(0), Point3d::new(0.0, 0.0, 0.0)),
+            (ParticleId::test(1), Point3d::new(0.6, 0.1, 0.1)),
+            (ParticleId::test(2), Point3d::new(0.1, 0.5, 0.1)),
+            (ParticleId::test(3), Point3d::new(0.1, 0.1, 0.4)),
+            (ParticleId::test(4), Point3d::new(0.1, 0.1, 0.1)),
         ];
         let cons = Constructor::new(points.into_iter());
         let last_point_index = cons
-            .get_point_by_cell(ParticleType::Local(ParticleId(4)))
+            .get_point_by_cell(ParticleType::Local(ParticleId::test(4)))
             .unwrap();
         let grid: VoronoiGrid<ThreeD> = cons.voronoi();
         assert_eq!(grid.cells.len(), 5);
@@ -217,22 +218,22 @@ mod quantitative_tests {
         assert_eq!(cell.points.len(), 4);
         assert_float_is_close(cell.volume(), 0.0703125);
         for face in cell.faces.iter() {
-            if face.connection == ParticleType::Local(ParticleId(0)) {
+            if face.connection == ParticleType::Local(ParticleId::test(0)) {
                 assert_float_is_close(face.area, 0.4871392896287468);
                 assert_float_is_close(face.normal.x, -(1.0f64 / 3.0).sqrt());
                 assert_float_is_close(face.normal.y, -(1.0f64 / 3.0).sqrt());
                 assert_float_is_close(face.normal.z, -(1.0f64 / 3.0).sqrt());
-            } else if face.connection == ParticleType::Local(ParticleId(1)) {
+            } else if face.connection == ParticleType::Local(ParticleId::test(1)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 1.0);
                 assert_float_is_close(face.normal.y, 0.0);
                 assert_float_is_close(face.normal.z, 0.0);
-            } else if face.connection == ParticleType::Local(ParticleId(2)) {
+            } else if face.connection == ParticleType::Local(ParticleId::test(2)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 0.0);
                 assert_float_is_close(face.normal.y, 1.0);
                 assert_float_is_close(face.normal.z, 0.0);
-            } else if face.connection == ParticleType::Local(ParticleId(3)) {
+            } else if face.connection == ParticleType::Local(ParticleId::test(3)) {
                 assert_float_is_close(face.area, 0.28125);
                 assert_float_is_close(face.normal.x, 0.0);
                 assert_float_is_close(face.normal.y, 0.0);

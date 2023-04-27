@@ -34,7 +34,7 @@ impl std::fmt::Display for ParticleInfo {
         write!(
             f,
             "(rank={:>3} id={:>6} level={:>2})",
-            self.rank, self.id, self.level.0
+            self.rank, self.id.index, self.level.0
         )
     }
 }

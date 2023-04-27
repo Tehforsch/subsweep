@@ -245,7 +245,15 @@ impl GridConstructor {
             .into_iter()
             .enumerate()
         {
-            constructor.ids.insert(integer_pos, ParticleId(i as u64));
+            let pos = constructor.to_pos(integer_pos);
+            let rank = (constructor.rank_function)(pos);
+            constructor.ids.insert(
+                integer_pos,
+                ParticleId {
+                    index: i as u32,
+                    rank: rank as Rank,
+                },
+            );
         }
         constructor.construct_neighbours();
         constructor.spawn_local_cells(commands);

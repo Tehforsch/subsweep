@@ -152,18 +152,15 @@ pub(super) fn check_particle_extent_system(
 
 fn determine_particle_ids_system(
     mut commands: Commands,
-    world_rank: Res<WorldRank>,
+    rank: Res<WorldRank>,
     particles: Particles<Entity>,
 ) {
-    // Ugly and hacky but most likely safe and nice for debugging.
-    const MAX_NUM_PARTICLES_PER_RANK: u64 = 1000000000;
-    if particles.iter().count() as u64 > MAX_NUM_PARTICLES_PER_RANK {
-        panic!("Too many particles on rank - change ID scheme to account for this");
-    }
     let mut map = BiMap::default();
     for (i, entity) in particles.iter().enumerate() {
-        let id: u64 = MAX_NUM_PARTICLES_PER_RANK * (**world_rank as u64) + i as u64;
-        let id = ParticleId(id);
+        let id = ParticleId {
+            index: i as u32,
+            rank: **rank,
+        };
         commands.entity(entity).insert(id);
         map.insert(id, entity);
     }

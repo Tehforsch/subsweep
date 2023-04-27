@@ -38,11 +38,11 @@ pub trait TestDimension: DDimension {
         (
             p1.into_iter()
                 .enumerate()
-                .map(|(i, p)| (ParticleId(i as u64), p))
+                .map(|(i, p)| (ParticleId::test(i), p))
                 .collect(),
             p2.into_iter()
                 .enumerate()
-                .map(|(i, p)| (ParticleId(len_p1 as u64 + i as u64), p))
+                .map(|(i, p)| (ParticleId::test(len_p1 + i), p))
                 .collect(),
         )
     }

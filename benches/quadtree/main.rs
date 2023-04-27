@@ -42,7 +42,7 @@ fn get_quadtree(num_parts: usize) -> QuadTree<Empty, LeafData> {
             for z in 0..num_parts_per_dimension {
                 particles.push(LeafData {
                     pos: get_p(x, y, z),
-                    id: ParticleId(0),
+                    id: ParticleId::test(0),
                 });
             }
         }

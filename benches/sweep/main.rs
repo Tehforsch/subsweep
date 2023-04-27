@@ -105,7 +105,7 @@ fn insert_particles_system(mut commands: Commands, num_particles: usize) {
     for (i, p) in points.into_iter().enumerate() {
         commands.spawn((
             Position(VecLength::new_unchecked(p)),
-            ParticleId(i as u64),
+            ParticleId::test(i),
             LocalParticle,
         ));
     }
