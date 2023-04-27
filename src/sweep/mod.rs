@@ -12,6 +12,7 @@ mod task;
 #[cfg(test)]
 mod tests;
 pub mod timestep_level;
+mod timestep_state;
 
 use bevy::prelude::*;
 use derive_more::Into;
@@ -30,6 +31,7 @@ use self::site::Site;
 pub use self::task::FluxData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
+use self::timestep_state::TimesteppingState;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::MpiWorld;
@@ -89,50 +91,6 @@ impl RaxiomPlugin for SweepPlugin {
         .add_startup_system_to_stage(SimulationStartupStages::Sweep, init_sweep_system)
         .add_system_to_stage(SimulationStages::ForceCalculation, run_sweep_system)
         .add_parameter_type::<SweepParameters>();
-    }
-}
-
-#[derive(Clone, Copy)]
-struct TimesteppingState {
-    max_timestep: Time,
-    num_timestep_levels: usize,
-    current_lowest_allowed: TimestepLevel,
-}
-
-impl TimesteppingState {
-    fn new(max_timestep: Time, num_timestep_levels: usize) -> Self {
-        Self {
-            max_timestep,
-            num_timestep_levels,
-            current_lowest_allowed: TimestepLevel(0),
-        }
-    }
-
-    fn iter_levels_in_sweep_order(self) -> impl Iterator<Item = TimestepLevel> {
-        (0..(2usize.pow(self.num_timestep_levels as u32 - 1))).map(move |i| {
-            TimestepLevel::lowest_active_from_iteration(self.num_timestep_levels, i as u32)
-        })
-    }
-
-    fn iter_allowed_levels(self) -> impl Iterator<Item = TimestepLevel> {
-        (self.current_lowest_allowed.0..self.num_timestep_levels)
-            .map(move |level| TimestepLevel(level))
-    }
-
-    fn timestep_at_level(self, level: TimestepLevel) -> Time {
-        level.to_timestep(self.max_timestep)
-    }
-
-    fn get_desired_level_from_desired_timestep(self, desired_timestep: Time) -> TimestepLevel {
-        let mut level = TimestepLevel::from_max_timestep_and_desired_timestep(
-            self.num_timestep_levels,
-            self.max_timestep,
-            desired_timestep,
-        );
-        if level < self.current_lowest_allowed {
-            level = self.current_lowest_allowed;
-        }
-        level
     }
 }
 
