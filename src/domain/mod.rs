@@ -27,7 +27,6 @@ use crate::named::Named;
 use crate::parameters::SimulationBox;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
-use crate::prelude::SimulationStartupStages;
 use crate::prelude::WorldSize;
 use crate::quadtree::QuadTreeConfig;
 use crate::simulation::RaxiomPlugin;
@@ -69,6 +68,7 @@ pub enum DomainStartupStages {
     Decomposition,
     SetOutgoingEntities,
     Exchange,
+    ParticleIds,
     TreeConstruction,
 }
 
@@ -86,7 +86,7 @@ impl RaxiomPlugin for DomainPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<TreeParameters>()
             .add_startup_system_to_stage(
-                SimulationStartupStages::InsertDerivedComponents,
+                DomainStartupStages::ParticleIds,
                 determine_particle_ids_system,
             )
             .add_startup_system_to_stage(

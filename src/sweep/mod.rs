@@ -87,7 +87,6 @@ impl RaxiomPlugin for SweepPlugin {
         .add_derived_component::<components::Flux>()
         .add_derived_component::<Density>()
         .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
-        .add_component_no_io::<ParticleId>()
         .add_component_no_io::<TimestepLevel>()
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertDerivedComponents,

@@ -40,6 +40,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainStartupStages::Decomposition.as_label(),
             DomainStartupStages::SetOutgoingEntities.as_label(),
             DomainStartupStages::Exchange.as_label(),
+            DomainStartupStages::ParticleIds.as_label(),
             DomainStartupStages::TreeConstruction.as_label(),
             SimulationStartupStages::InsertGrid.as_label(),
             SimulationStartupStages::InsertComponentsAfterGrid.as_label(),
