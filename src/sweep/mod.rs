@@ -31,7 +31,7 @@ use self::site::Site;
 pub use self::task::FluxData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
-use self::timestep_state::TimesteppingState;
+use self::timestep_state::TimestepState;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::MpiWorld;
@@ -106,7 +106,7 @@ struct Sweep<C: Chemistry> {
     to_send: DataByRank<Queue<FluxData<C>>>,
     to_solve_count: CountByDir,
     to_receive_count: DataByRank<usize>,
-    timestepping_state: TimesteppingState,
+    timestep_state: TimestepState,
     timestep_safety_factor: Dimensionless,
     current_level: TimestepLevel,
     communicator: SweepCommunicator<C>,
@@ -131,8 +131,7 @@ impl<C: Chemistry> Sweep<C> {
             assert!(level.0 < parameters.num_timestep_levels);
         }
         let communicator = SweepCommunicator::<C>::new();
-        let timestepping_state =
-            TimesteppingState::new(max_timestep, parameters.num_timestep_levels);
+        let timestep_state = TimestepState::new(max_timestep, parameters.num_timestep_levels);
         Sweep {
             cells: Cells::new(cells, &levels),
             sites: Sites::<C>::new(sites, &levels),
@@ -144,7 +143,7 @@ impl<C: Chemistry> Sweep<C> {
             to_solve_count: CountByDir::empty(),
             to_receive_count: DataByRank::empty(),
             timestep_safety_factor,
-            timestepping_state,
+            timestep_state,
             current_level: TimestepLevel(0),
             communicator,
             check_deadlock: parameters.check_deadlock,
@@ -154,13 +153,13 @@ impl<C: Chemistry> Sweep<C> {
 
     pub fn run_sweeps(&mut self) -> Time {
         self.print_cell_counts();
-        for level in self.timestepping_state.iter_levels_in_sweep_order() {
+        for level in self.timestep_state.iter_levels_in_sweep_order() {
             self.current_level = level;
             self.single_sweep();
         }
         self.update_timestep_levels();
-        let time_elapsed = self.timestepping_state.current_max_timestep();
-        self.timestepping_state.advance_allowed_levels();
+        let time_elapsed = self.timestep_state.current_max_timestep();
+        self.timestep_state.advance_allowed_levels();
         time_elapsed
     }
 
@@ -171,7 +170,7 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     pub fn print_cell_counts(&mut self) {
-        for level in self.timestepping_state.iter_allowed_levels() {
+        for level in self.timestep_state.iter_allowed_levels() {
             let global_count = self.count_cells_global(level);
             info!("Sweep: {:>10} cells at level {:>2}", global_count, level.0);
         }
@@ -363,7 +362,7 @@ impl<C: Chemistry> Sweep<C> {
     fn update_chemistry(&mut self) {
         for (entity, cell) in self.cells.enumerate_active(self.current_level) {
             let (level, site) = self.sites.get_mut_with_level(*entity);
-            let timestep = self.timestepping_state.timestep_at_level(level);
+            let timestep = self.timestep_state.timestep_at_level(level);
             let source = site.source_per_direction_bin(&self.directions);
             let flux = site.total_incoming_flux() + source;
             let change_timescale =
@@ -371,7 +370,7 @@ impl<C: Chemistry> Sweep<C> {
                     .update(site, flux, timestep, cell.volume, cell.size);
             let desired_timestep = self.timestep_safety_factor * change_timescale;
             let desired_level = self
-                .timestepping_state
+                .timestep_state
                 .get_desired_level_from_desired_timestep(desired_timestep);
             self.new_levels.insert(*entity, desired_level);
         }

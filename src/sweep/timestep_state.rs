@@ -2,14 +2,14 @@ use super::timestep_level::TimestepLevel;
 use crate::units::Time;
 
 #[derive(Clone, Copy)]
-pub struct TimesteppingState {
+pub struct TimestepState {
     max_timestep: Time,
     max_num_timestep_levels: usize,
     current_lowest_allowed: TimestepLevel,
     first_update_at_highest_level_done: bool,
 }
 
-impl TimesteppingState {
+impl TimestepState {
     pub fn new(max_timestep: Time, max_num_timestep_levels: usize) -> Self {
         Self {
             max_timestep,
