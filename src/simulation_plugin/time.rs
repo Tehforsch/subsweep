@@ -10,9 +10,9 @@ use crate::named::Named;
 #[derive(H5Type, Clone, Copy, Deref, DerefMut, Named, Resource, From)]
 #[repr(transparent)]
 #[name = "time"]
-pub struct Time(pub crate::units::Time);
+pub struct SimulationTime(pub crate::units::Time);
 
-impl ToAttribute for Time {
+impl ToAttribute for SimulationTime {
     type Output = crate::units::Time;
 
     fn to_value(&self) -> Self::Output {

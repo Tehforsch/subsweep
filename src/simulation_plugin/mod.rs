@@ -6,7 +6,7 @@ use mpi::traits::Equivalence;
 
 pub use self::parameters::SimulationParameters;
 pub use self::parameters::TimestepParameters;
-pub use self::time::Time;
+pub use self::time::SimulationTime;
 use crate::components::Position;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
@@ -27,7 +27,7 @@ pub struct SimulationPlugin;
 pub enum SimulationStages {
     ForceCalculation,
     Integration,
-    SetTimestep,
+    Final,
 }
 
 #[derive(StageLabel)]
@@ -52,9 +52,9 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_parameter_type::<SimulationBox>()
             .add_required_component::<Position>()
             .add_plugin(ParticlePlugin)
-            .add_plugin(OutputPlugin::<Attribute<Time>>::default())
+            .add_plugin(OutputPlugin::<Attribute<SimulationTime>>::default())
             .add_event::<StopSimulationEvent>()
-            .insert_resource(Time(units::Time::seconds(0.00)))
+            .insert_resource(SimulationTime(units::Time::seconds(0.00)))
             .add_startup_system_to_stage(
                 SimulationStartupStages::InsertComponents,
                 check_particles_in_simulation_box_system,
@@ -63,11 +63,7 @@ impl RaxiomPlugin for SimulationPlugin {
                 SimulationStartupStages::InsertComponents,
                 show_num_cores_system,
             )
-            .add_system_to_stage(
-                SimulationStages::Integration,
-                show_time_system.after(time_system),
-            )
-            .add_system_to_stage(SimulationStages::Integration, time_system)
+            .add_system_to_stage(SimulationStages::Final, show_time_system)
             .add_system_to_stage(CoreStage::PostUpdate, stop_simulation_system);
     }
 }
@@ -87,7 +83,7 @@ fn check_particles_in_simulation_box_system(
 
 pub fn stop_simulation_system(
     parameters: Res<SimulationParameters>,
-    current_time: Res<Time>,
+    current_time: Res<SimulationTime>,
     mut stop_sim: EventWriter<StopSimulationEvent>,
 ) {
     if let Some(time) = parameters.final_time {
@@ -97,11 +93,7 @@ pub fn stop_simulation_system(
     }
 }
 
-pub fn time_system(mut time: ResMut<Time>, parameters: Res<TimestepParameters>) {
-    **time += parameters.max_timestep;
-}
-
-pub fn show_time_system(time: Res<self::Time>) {
+pub fn show_time_system(time: Res<self::SimulationTime>) {
     info!("Time: {:?}", **time);
 }
 

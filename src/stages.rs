@@ -20,10 +20,10 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             DomainStages::TopLevelTreeConstruction.as_label(),
             DomainStages::Decomposition.as_label(),
             DomainStages::Exchange.as_label(),
-            SimulationStages::SetTimestep.as_label(),
             SimulationStages::ForceCalculation.as_label(),
             SimulationStages::Integration.as_label(),
             OutputStages::Output.as_label(),
+            SimulationStages::Final.as_label(),
         ];
         for window in stages.windows(2) {
             sim.add_stage_after(

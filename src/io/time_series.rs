@@ -20,7 +20,7 @@ use crate::named::Named;
 use crate::parameters::OutputParameters;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation_plugin::Time;
+use crate::simulation_plugin::SimulationTime;
 
 pub const TIME_DATASET_IDENTIFIER: &str = "time";
 
@@ -86,13 +86,16 @@ fn initialize_output_files_system<T: TimeSeries>(
     let file = File::create(time_series_dir.join(filename))
         .expect("Failed to open time series output file");
     // Initialize empty datasets
-    create_empty_dataset::<Time>(&file, &DatasetDescriptor::default_for::<Time>());
+    create_empty_dataset::<SimulationTime>(
+        &file,
+        &DatasetDescriptor::default_for::<SimulationTime>(),
+    );
     create_empty_dataset::<T>(&file, &descriptor);
 }
 
 pub fn output_time_series_system<T: TimeSeries>(
     mut event_reader: EventReader<T>,
-    time: Res<Time>,
+    time: Res<SimulationTime>,
     parameters: Res<OutputParameters>,
     descriptor: NonSend<OutputDatasetDescriptor<T>>,
 ) where

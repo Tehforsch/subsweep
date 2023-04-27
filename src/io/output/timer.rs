@@ -6,8 +6,8 @@ use bevy::prelude::ResMut;
 use bevy::prelude::Resource;
 
 use super::parameters::OutputParameters;
+use crate::simulation_plugin::SimulationTime;
 use crate::simulation_plugin::StopSimulationEvent;
-use crate::simulation_plugin::Time;
 use crate::units;
 
 #[derive(Resource)]
@@ -27,7 +27,7 @@ impl Timer {
     }
 
     pub fn run_criterion(
-        time: Res<Time>,
+        time: Res<SimulationTime>,
         timer: Res<Self>,
         events: EventReader<StopSimulationEvent>,
     ) -> ShouldRun {

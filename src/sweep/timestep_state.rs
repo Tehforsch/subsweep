@@ -13,7 +13,7 @@ impl TimesteppingState {
         Self {
             max_timestep,
             max_num_timestep_levels,
-            current_lowest_allowed: TimestepLevel(1),
+            current_lowest_allowed: TimestepLevel(max_num_timestep_levels - 1),
         }
     }
 
@@ -27,6 +27,12 @@ impl TimesteppingState {
     pub fn iter_allowed_levels(self) -> impl Iterator<Item = TimestepLevel> {
         (self.current_lowest_allowed.0..self.max_num_timestep_levels)
             .map(move |level| TimestepLevel(level))
+    }
+
+    pub fn advance_allowed_levels(&mut self) {
+        if self.current_lowest_allowed.0 > 0 {
+            self.current_lowest_allowed -= 1;
+        }
     }
 
     pub fn timestep_at_level(self, level: TimestepLevel) -> Time {
@@ -55,6 +61,10 @@ impl TimesteppingState {
         let first_bit = find_index_of_lowest_set_bit_in_int(iteration)
             .unwrap_or(self.max_num_timestep_levels as u32 - 1);
         TimestepLevel(self.max_num_timestep_levels - 1 - first_bit as usize)
+    }
+
+    pub fn current_max_timestep(&self) -> Time {
+        self.max_timestep * self.current_lowest_allowed.as_factor()
     }
 }
 

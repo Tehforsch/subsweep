@@ -1,4 +1,5 @@
 use std::ops::Add;
+use std::ops::SubAssign;
 
 use mpi::traits::Equivalence;
 
@@ -13,6 +14,12 @@ impl Add<usize> for TimestepLevel {
 
     fn add(self, rhs: usize) -> Self::Output {
         Self(self.0 + rhs)
+    }
+}
+
+impl SubAssign<usize> for TimestepLevel {
+    fn sub_assign(&mut self, rhs: usize) {
+        self.0 -= rhs;
     }
 }
 

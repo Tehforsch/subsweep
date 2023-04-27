@@ -48,6 +48,7 @@ use crate::particle::AllParticles;
 use crate::particle::ParticleId;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
+use crate::simulation_plugin::SimulationTime;
 use crate::sweep::chemistry::HydrogenOnly;
 use crate::sweep::chemistry::HydrogenOnlySpecies;
 use crate::units::Dimensionless;
@@ -151,13 +152,16 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    pub fn run_sweeps(&mut self) {
+    pub fn run_sweeps(&mut self) -> Time {
         self.print_cell_counts();
         for level in self.timestepping_state.iter_levels_in_sweep_order() {
             self.current_level = level;
             self.single_sweep();
         }
         self.update_timestep_levels();
+        let time_elapsed = self.timestepping_state.current_max_timestep();
+        self.timestepping_state.advance_allowed_levels();
+        time_elapsed
     }
 
     fn count_cells_global(&mut self, level: TimestepLevel) -> usize {
@@ -464,9 +468,11 @@ fn init_sweep_system(
 fn run_sweep_system(
     mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
     mut sites_query: Particles<(&ParticleId, &mut IonizedHydrogenFraction)>,
+    mut time: ResMut<SimulationTime>,
 ) {
     let solver = (*solver).as_mut().unwrap();
-    solver.run_sweeps();
+    let time_elapsed = solver.run_sweeps();
+    **time += time_elapsed;
     for (id, mut fraction) in sites_query.iter_mut() {
         let site = solver.sites.get(*id);
         **fraction = site.species.ionized_hydrogen_fraction;
