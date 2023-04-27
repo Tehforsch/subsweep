@@ -1,6 +1,7 @@
 mod parameters;
 mod time;
 
+use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
@@ -28,6 +29,7 @@ pub enum SimulationStages {
     Initial,
     ForceCalculation,
     Integration,
+    Final,
 }
 
 #[derive(StageLabel)]
@@ -64,7 +66,8 @@ impl RaxiomPlugin for SimulationPlugin {
                 show_num_cores_system,
             )
             .add_system_to_stage(SimulationStages::Initial, show_time_system)
-            .add_system_to_stage(CoreStage::PostUpdate, stop_simulation_system);
+            .add_system_to_stage(SimulationStages::Final, exit_system)
+            .add_system_to_stage(SimulationStages::Initial, stop_simulation_system);
     }
 }
 
@@ -81,7 +84,7 @@ fn check_particles_in_simulation_box_system(
     }
 }
 
-pub fn stop_simulation_system(
+fn stop_simulation_system(
     parameters: Res<SimulationParameters>,
     current_time: Res<SimulationTime>,
     mut stop_sim: EventWriter<StopSimulationEvent>,
@@ -93,10 +96,16 @@ pub fn stop_simulation_system(
     }
 }
 
-pub fn show_time_system(time: Res<self::SimulationTime>) {
+fn show_time_system(time: Res<SimulationTime>) {
     info!("Time: {:?}", **time);
 }
 
-pub fn show_num_cores_system(world_size: Res<WorldSize>) {
+fn exit_system(mut evs: EventWriter<AppExit>, mut stop_sim: EventReader<StopSimulationEvent>) {
+    if stop_sim.iter().count() > 0 {
+        evs.send(AppExit);
+    }
+}
+
+fn show_num_cores_system(world_size: Res<WorldSize>) {
     info!("Running on {} MPI ranks", **world_size);
 }
