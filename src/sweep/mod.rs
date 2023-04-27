@@ -100,18 +100,23 @@ struct TimesteppingState {
 }
 
 impl TimesteppingState {
-    fn timestep(self) -> Time {
-        self.max_timestep * self.current_lowest_allowed.as_factor()
+    fn new(max_timestep: Time, num_timestep_levels: usize) -> Self {
+        Self {
+            max_timestep,
+            num_timestep_levels,
+            current_lowest_allowed: TimestepLevel(0),
+        }
     }
 
-    fn iter_levels(self) -> impl Iterator<Item = TimestepLevel> {
+    fn iter_levels_in_sweep_order(self) -> impl Iterator<Item = TimestepLevel> {
         (0..(2usize.pow(self.num_timestep_levels as u32 - 1))).map(move |i| {
             TimestepLevel::lowest_active_from_iteration(self.num_timestep_levels, i as u32)
         })
     }
 
-    fn iter_possible_levels(self) -> impl Iterator<Item = TimestepLevel> {
-        (0..self.num_timestep_levels).map(move |level| TimestepLevel(level))
+    fn iter_allowed_levels(self) -> impl Iterator<Item = TimestepLevel> {
+        (self.current_lowest_allowed.0..self.num_timestep_levels)
+            .map(move |level| TimestepLevel(level))
     }
 
     fn timestep_at_level(self, level: TimestepLevel) -> Time {
@@ -167,11 +172,8 @@ impl<C: Chemistry> Sweep<C> {
             assert!(level.0 < parameters.num_timestep_levels);
         }
         let communicator = SweepCommunicator::<C>::new();
-        let timestepping_state = TimesteppingState {
-            max_timestep,
-            num_timestep_levels: parameters.num_timestep_levels,
-            current_lowest_allowed: TimestepLevel(0),
-        };
+        let timestepping_state =
+            TimesteppingState::new(max_timestep, parameters.num_timestep_levels);
         Sweep {
             cells: Cells::new(cells, &levels),
             sites: Sites::<C>::new(sites, &levels),
@@ -193,7 +195,7 @@ impl<C: Chemistry> Sweep<C> {
 
     pub fn run_sweeps(&mut self) {
         self.print_cell_counts();
-        for level in self.timestepping_state.iter_levels() {
+        for level in self.timestepping_state.iter_levels_in_sweep_order() {
             self.current_level = level;
             self.single_sweep();
         }
@@ -207,7 +209,7 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     pub fn print_cell_counts(&mut self) {
-        for level in self.timestepping_state.iter_possible_levels() {
+        for level in self.timestepping_state.iter_allowed_levels() {
             let global_count = self.count_cells_global(level);
             info!("Sweep: {:>10} cells at level {:>2}", global_count, level.0);
         }
