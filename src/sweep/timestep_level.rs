@@ -41,7 +41,11 @@ impl TimestepLevel {
     }
 
     pub fn to_timestep(&self, max_timestep: Time) -> Time {
-        max_timestep / (2.0 as Float).powi(self.0 as i32)
+        max_timestep * self.as_factor()
+    }
+
+    pub fn as_factor(&self) -> f64 {
+        (0.5 as Float).powi(self.0 as i32)
     }
 }
 

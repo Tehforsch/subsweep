@@ -91,7 +91,8 @@ impl Chemistry for HydrogenOnly {
         }
         .get_new_abundance();
         site.species.ionized_hydrogen_fraction = new_fraction;
-        let change_timescale = (old_fraction / ((old_fraction - new_fraction) / timestep)).abs();
+        let relative_change = (old_fraction / (old_fraction - new_fraction)).abs();
+        let change_timescale = relative_change * timestep;
         change_timescale
     }
 }
