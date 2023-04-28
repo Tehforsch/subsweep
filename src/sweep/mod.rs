@@ -238,8 +238,8 @@ impl<C: Chemistry> Sweep<C> {
             .into_iter()
             .map(|rank| (rank, 0))
             .collect();
-        for (entity, cell) in self.cells.enumerate_active(self.current_level) {
-            let mut site = self.sites.get_mut(*entity);
+        for (id, cell) in self.cells.enumerate_active(self.current_level) {
+            let mut site = self.sites.get_mut(id);
             site.num_missing_upwind = CountByDir::new(self.directions.len(), 0);
             for (dir_index, dir) in self.directions.enumerate() {
                 for (face, neighbour) in cell.neighbours.iter() {
@@ -268,10 +268,7 @@ impl<C: Chemistry> Sweep<C> {
                 self.sites
                     .enumerate_active(self.current_level)
                     .filter(move |(_, site)| site.num_missing_upwind[dir_index] == 0)
-                    .map(move |(id, _)| Task {
-                        id: *id,
-                        dir: dir_index,
-                    })
+                    .map(move |(id, _)| Task { id, dir: dir_index })
             })
             .collect();
         tasks
@@ -360,8 +357,8 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn update_chemistry(&mut self) {
-        for (entity, cell) in self.cells.enumerate_active(self.current_level) {
-            let (level, site) = self.sites.get_mut_with_level(*entity);
+        for (id, cell) in self.cells.enumerate_active(self.current_level) {
+            let (level, site) = self.sites.get_mut_with_level(id);
             let timestep = self.timestep_state.timestep_at_level(level);
             let source = site.source_per_direction_bin(&self.directions);
             let flux = site.total_incoming_flux() + source;
@@ -372,7 +369,7 @@ impl<C: Chemistry> Sweep<C> {
             let desired_level = self
                 .timestep_state
                 .get_desired_level_from_desired_timestep(desired_timestep);
-            self.new_levels.insert(*entity, desired_level);
+            self.new_levels.insert(id, desired_level);
         }
     }
 
@@ -390,10 +387,7 @@ impl<C: Chemistry> Sweep<C> {
         for (id, level, cell) in self.cells.enumerate_with_levels() {
             for (_, neighbour) in cell.neighbours.iter() {
                 if let ParticleType::Remote(neighbour) = neighbour {
-                    data[neighbour.rank].push(TimestepLevelData {
-                        id: *id,
-                        level: level,
-                    });
+                    data[neighbour.rank].push(TimestepLevelData { id, level: level });
                 }
             }
         }
