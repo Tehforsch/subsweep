@@ -164,8 +164,10 @@ impl<C: Chemistry> Sweep<C> {
     fn print_cell_counts(&mut self, cell_counts_per_level: &[usize]) {
         for level in self.timestep_state.iter_allowed_levels() {
             info!(
-                "Sweep: {:>10} cells at level {:>2}",
-                cell_counts_per_level[level.0], level.0
+                "Sweep: {:>10} cells at level {:>2} ({:>10.1} yr)",
+                cell_counts_per_level[level.0],
+                level.0,
+                self.timestep_state.timestep_at_level(level).in_years(),
             );
         }
     }
