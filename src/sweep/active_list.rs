@@ -92,6 +92,12 @@ impl<T> ActiveList<T> {
         &item
     }
 
+    pub(crate) fn get_level(&self, id: ParticleId) -> TimestepLevel {
+        debug_assert!(id.rank == self.rank);
+        let level = self.levels[id.index as usize];
+        level
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.items.iter()
     }

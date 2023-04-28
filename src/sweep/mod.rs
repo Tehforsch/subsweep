@@ -275,7 +275,11 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn is_active(&self, id: ParticleId) -> bool {
-        self.levels[&id].is_active(self.current_level)
+        if id.rank == self.communicator.rank() {
+            self.cells.get_level(id).is_active(self.current_level)
+        } else {
+            self.levels[&id].is_active(self.current_level)
+        }
     }
 
     fn get_outgoing_flux(&mut self, task: &Task) -> Flux<C> {
