@@ -44,7 +44,7 @@ use crate::grid::ParticleType;
 use crate::grid::RemoteNeighbour;
 use crate::hash_map::HashMap;
 use crate::parameters::TimestepParameters;
-use crate::particle::AllParticles;
+use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
@@ -100,7 +100,7 @@ struct Sweep<C: Chemistry> {
     directions: Directions,
     cells: Cells,
     sites: Sites<C>,
-    levels: HashMap<ParticleId, TimestepLevel>,
+    halo_levels: HashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
     to_send: DataByRank<Queue<FluxData<C>>>,
     to_solve_count: CountByDir,
@@ -118,7 +118,7 @@ impl<C: Chemistry> Sweep<C> {
         directions: &Directions,
         cells: HashMap<ParticleId, Cell>,
         sites: HashMap<ParticleId, Site<C>>,
-        levels: HashMap<ParticleId, TimestepLevel>,
+        halo_ids: Vec<ParticleId>,
         max_timestep: Time,
         timestep_safety_factor: Dimensionless,
         parameters: &SweepParameters,
@@ -126,15 +126,14 @@ impl<C: Chemistry> Sweep<C> {
         world_rank: Rank,
         chemistry: C,
     ) -> Sweep<C> {
-        for level in levels.values() {
-            assert!(level.0 < parameters.num_timestep_levels);
-        }
+        let initial_level = TimestepLevel(parameters.num_timestep_levels - 1);
         let communicator = SweepCommunicator::<C>::new();
         let timestep_state = TimestepState::new(max_timestep, parameters.num_timestep_levels);
+        let halo_levels = halo_ids.into_iter().map(|id| (id, initial_level)).collect();
         Sweep {
-            cells: Cells::new(cells, &levels),
-            sites: Sites::<C>::new(sites, &levels),
-            levels,
+            cells: Cells::new(cells, initial_level),
+            sites: Sites::<C>::new(sites, initial_level),
+            halo_levels,
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
             directions: directions.clone(),
@@ -237,24 +236,23 @@ impl<C: Chemistry> Sweep<C> {
             .map(|rank| (rank, 0))
             .collect();
         for (id, cell) in self.cells.enumerate_active(self.current_level) {
-            let mut site = self.sites.get_mut(id);
-            site.num_missing_upwind = CountByDir::new(self.directions.len(), 0);
+            let mut num_missing_upwind = CountByDir::new(self.directions.len(), 0);
             for (dir_index, dir) in self.directions.enumerate() {
                 for (face, neighbour) in cell.neighbours.iter() {
                     if !face.points_upwind(dir) || neighbour.is_boundary() {
                         continue;
                     }
-                    let is_active =
-                        self.levels[&neighbour.unwrap_id()].is_active(self.current_level);
+                    let is_active = self.is_active(neighbour.unwrap_id());
                     if !is_active {
                         continue;
                     }
-                    site.num_missing_upwind[dir_index] += 1;
+                    num_missing_upwind[dir_index] += 1;
                     if let ParticleType::Remote(neighbour) = neighbour {
                         self.to_receive_count[neighbour.rank] += 1;
                     }
                 }
             }
+            self.sites.get_mut(id).num_missing_upwind = num_missing_upwind;
         }
     }
 
@@ -272,12 +270,16 @@ impl<C: Chemistry> Sweep<C> {
         tasks
     }
 
-    fn is_active(&self, id: ParticleId) -> bool {
+    fn get_level(&self, id: ParticleId) -> TimestepLevel {
         if id.rank == self.communicator.rank() {
-            self.cells.get_level(id).is_active(self.current_level)
+            self.cells.get_level(id)
         } else {
-            self.levels[&id].is_active(self.current_level)
+            self.halo_levels[&id]
         }
+    }
+
+    fn is_active(&self, id: ParticleId) -> bool {
+        self.get_level(id).is_active(self.current_level)
     }
 
     fn get_outgoing_flux(&mut self, task: &Task) -> Flux<C> {
@@ -378,7 +380,6 @@ impl<C: Chemistry> Sweep<C> {
                 .get_desired_level_from_desired_timestep(desired_timestep);
             *level = desired_level;
             self.cells.set_level(id, desired_level);
-            *self.levels.get_mut(&id).unwrap() = desired_level;
         }
         self.communicate_levels();
     }
@@ -396,7 +397,7 @@ impl<C: Chemistry> Sweep<C> {
         }
         for (_, levels) in levels_comm.exchange_all(data).iter() {
             for level_data in levels {
-                self.levels.insert(level_data.id, level_data.level);
+                self.halo_levels.insert(level_data.id, level_data.level);
             }
         }
     }
@@ -412,7 +413,7 @@ fn init_sweep_system(
         &IonizedHydrogenFraction,
         &Source,
     )>,
-    levels_query: AllParticles<&ParticleId>,
+    haloes: HaloParticles<&ParticleId>,
     timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
@@ -439,17 +440,14 @@ fn init_sweep_system(
             )
         })
         .collect();
-    let levels: HashMap<_, _> = levels_query
-        .iter()
-        .map(|id| (*id, TimestepLevel(sweep_parameters.num_timestep_levels - 1)))
-        .collect();
+    let halo_ids: Vec<_> = haloes.iter().map(|id| *id).collect();
     #[cfg(test)]
-    assert!(!cells.is_empty() && !sites.is_empty() && !levels.is_empty());
+    assert!(!cells.is_empty() && !sites.is_empty());
     *solver = Some(Sweep::new(
         &directions,
         cells,
         sites,
-        levels,
+        halo_ids,
         timestep.max_timestep,
         sweep_parameters.timestep_safety_factor,
         &sweep_parameters,

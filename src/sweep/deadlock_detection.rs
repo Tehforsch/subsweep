@@ -50,12 +50,12 @@ impl<C: Chemistry> Sweep<C> {
         Dependency {
             p1: ParticleInfo {
                 id: p1,
-                level: self.levels[&p1],
+                level: self.get_level(p1),
                 rank: rank1,
             },
             p2: ParticleInfo {
                 id: p2,
-                level: self.levels[&p2],
+                level: self.get_level(p2),
                 rank: rank2,
             },
         }

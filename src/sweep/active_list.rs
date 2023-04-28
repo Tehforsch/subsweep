@@ -10,10 +10,7 @@ pub struct ActiveList<T> {
 }
 
 impl<T> ActiveList<T> {
-    pub fn new(
-        mut map: HashMap<ParticleId, T>,
-        level_map: &HashMap<ParticleId, TimestepLevel>,
-    ) -> Self {
+    pub fn new(mut map: HashMap<ParticleId, T>, initial_level: TimestepLevel) -> Self {
         let rank = map.iter().next().unwrap().0.rank;
         assert!(map.keys().all(|id| id.rank == rank));
         let mut items = Vec::with_capacity(map.len());
@@ -24,9 +21,8 @@ impl<T> ActiveList<T> {
                 rank,
             };
             let t = map.remove(&id).unwrap();
-            let level = level_map[&id];
             items.push(t);
-            levels.push(level);
+            levels.push(initial_level);
         }
         // Make sure there are no items left.
         assert_eq!(map.len(), 0);
