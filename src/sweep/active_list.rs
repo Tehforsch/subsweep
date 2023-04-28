@@ -63,6 +63,29 @@ impl<T> ActiveList<T> {
             .map(|(i, (level, t))| (self.get_id_from_index(i), *level, t))
     }
 
+    pub fn enumerate_with_levels_mut(
+        &mut self,
+    ) -> impl Iterator<Item = (ParticleId, &mut TimestepLevel, &T)> {
+        self.levels
+            .iter_mut()
+            .zip(self.items.iter())
+            .enumerate()
+            .map(|(i, (level, t))| {
+                (
+                    ParticleId {
+                        index: i as u32,
+                        rank: self.rank,
+                    },
+                    level,
+                    t,
+                )
+            })
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.items.iter()
+    }
+
     pub fn get_mut_and_active_state(
         &mut self,
         id: ParticleId,
@@ -92,22 +115,14 @@ impl<T> ActiveList<T> {
         &item
     }
 
-    pub(crate) fn get_level(&self, id: ParticleId) -> TimestepLevel {
+    pub fn get_level(&self, id: ParticleId) -> TimestepLevel {
         debug_assert!(id.rank == self.rank);
         let level = self.levels[id.index as usize];
         level
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.items.iter()
-    }
-
-    pub(crate) fn update_levels(&mut self, new_levels: &HashMap<ParticleId, TimestepLevel>) {
-        assert_eq!(self.items.len(), new_levels.len());
-        for (id, level) in new_levels.iter() {
-            if id.rank == self.rank {
-                self.levels[id.index as usize] = *level;
-            }
-        }
+    pub fn set_level(&mut self, id: ParticleId, level: TimestepLevel) {
+        debug_assert!(id.rank == self.rank);
+        self.levels[id.index as usize] = level;
     }
 }

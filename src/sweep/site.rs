@@ -5,6 +5,7 @@ use super::Species;
 use crate::sweep::chemistry::Photons;
 use crate::units::helpers::Float;
 use crate::units::Density;
+use crate::units::Time;
 
 #[derive(Debug)]
 pub struct Site<C: Chemistry> {
@@ -13,6 +14,7 @@ pub struct Site<C: Chemistry> {
     pub outgoing_total_flux: Vec<C::Photons>,
     pub species: Species<C>,
     pub density: Density,
+    pub change_timescale: Time,
     source: C::Photons,
 }
 
@@ -30,6 +32,7 @@ impl<C: Chemistry> Site<C> {
             num_missing_upwind: CountByDir::empty(),
             incoming_total_flux: directions.enumerate().map(|_| C::Photons::zero()).collect(),
             outgoing_total_flux: directions.enumerate().map(|_| C::Photons::zero()).collect(),
+            change_timescale: Time::zero(),
         }
     }
 

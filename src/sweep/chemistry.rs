@@ -31,7 +31,7 @@ pub trait Chemistry: Sized + 'static {
         incoming_flux: Self::Photons,
     ) -> Self::Photons;
 
-    fn update(
+    fn update_abundances(
         &self,
         site: &mut Site<Self>,
         flux: Self::Photons,
@@ -72,7 +72,7 @@ impl Chemistry for HydrogenOnly {
         }
     }
 
-    fn update(
+    fn update_abundances(
         &self,
         site: &mut Site<Self>,
         flux: Self::Photons,

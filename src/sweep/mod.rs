@@ -101,7 +101,6 @@ struct Sweep<C: Chemistry> {
     cells: Cells,
     sites: Sites<C>,
     levels: HashMap<ParticleId, TimestepLevel>,
-    new_levels: HashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
     to_send: DataByRank<Queue<FluxData<C>>>,
     to_solve_count: CountByDir,
@@ -136,7 +135,6 @@ impl<C: Chemistry> Sweep<C> {
             cells: Cells::new(cells, &levels),
             sites: Sites::<C>::new(sites, &levels),
             levels,
-            new_levels: HashMap::default(),
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
             directions: directions.clone(),
@@ -157,9 +155,9 @@ impl<C: Chemistry> Sweep<C> {
             self.current_level = level;
             self.single_sweep();
         }
-        self.update_timestep_levels();
         let time_elapsed = self.timestep_state.current_max_timestep();
         self.timestep_state.advance_allowed_levels();
+        self.update_timestep_levels();
         time_elapsed
     }
 
@@ -366,21 +364,22 @@ impl<C: Chemistry> Sweep<C> {
             let timestep = self.timestep_state.timestep_at_level(level);
             let source = site.source_per_direction_bin(&self.directions);
             let flux = site.total_incoming_flux() + source;
-            let change_timescale =
+            site.change_timescale =
                 self.chemistry
-                    .update(site, flux, timestep, cell.volume, cell.size);
-            let desired_timestep = self.timestep_safety_factor * change_timescale;
-            let desired_level = self
-                .timestep_state
-                .get_desired_level_from_desired_timestep(desired_timestep);
-            self.new_levels.insert(id, desired_level);
+                    .update_abundances(site, flux, timestep, cell.volume, cell.size);
         }
     }
 
     fn update_timestep_levels(&mut self) {
-        self.cells.update_levels(&self.new_levels);
-        self.sites.update_levels(&self.new_levels);
-        self.levels.extend(self.new_levels.drain());
+        for (id, level, site) in self.sites.enumerate_with_levels_mut() {
+            let desired_timestep = self.timestep_safety_factor * site.change_timescale;
+            let desired_level = self
+                .timestep_state
+                .get_desired_level_from_desired_timestep(desired_timestep);
+            *level = desired_level;
+            self.cells.set_level(id, desired_level);
+            *self.levels.get_mut(&id).unwrap() = desired_level;
+        }
         self.communicate_levels();
     }
 
