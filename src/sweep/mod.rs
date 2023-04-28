@@ -131,8 +131,8 @@ impl<C: Chemistry> Sweep<C> {
         let timestep_state = TimestepState::new(max_timestep, parameters.num_timestep_levels);
         let halo_levels = halo_ids.into_iter().map(|id| (id, initial_level)).collect();
         Sweep {
-            cells: Cells::new(cells, initial_level),
-            sites: Sites::<C>::new(sites, initial_level),
+            cells: Cells::new(cells, parameters.num_timestep_levels, initial_level),
+            sites: Sites::<C>::new(sites, parameters.num_timestep_levels, initial_level),
             halo_levels,
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
@@ -381,6 +381,8 @@ impl<C: Chemistry> Sweep<C> {
             *level = desired_level;
             self.cells.set_level(id, desired_level);
         }
+        self.sites.update_bins();
+        self.cells.update_bins();
         self.communicate_levels();
     }
 

@@ -6,11 +6,18 @@ use crate::particle::ParticleId;
 pub struct ActiveList<T> {
     items: Vec<T>,
     levels: Vec<TimestepLevel>,
+    max_num_levels: usize,
+    valid: bool,
+    bins: Vec<Vec<usize>>,
     rank: Rank,
 }
 
 impl<T> ActiveList<T> {
-    pub fn new(mut map: HashMap<ParticleId, T>, initial_level: TimestepLevel) -> Self {
+    pub fn new(
+        mut map: HashMap<ParticleId, T>,
+        max_num_levels: usize,
+        initial_level: TimestepLevel,
+    ) -> Self {
         let rank = map.iter().next().unwrap().0.rank;
         assert!(map.keys().all(|id| id.rank == rank));
         let mut items = Vec::with_capacity(map.len());
@@ -26,11 +33,16 @@ impl<T> ActiveList<T> {
         }
         // Make sure there are no items left.
         assert_eq!(map.len(), 0);
-        Self {
+        let mut list = Self {
             items,
             levels: levels,
             rank,
-        }
+            valid: false,
+            bins: vec![],
+            max_num_levels,
+        };
+        list.update_bins();
+        list
     }
 
     fn get_id_from_index(&self, index: usize) -> ParticleId {
@@ -44,11 +56,13 @@ impl<T> ActiveList<T> {
         &self,
         current_level: TimestepLevel,
     ) -> impl Iterator<Item = (ParticleId, &T)> {
-        self.levels
+        assert!(self.valid);
+        self.bins[current_level.0..self.max_num_levels]
             .iter()
-            .enumerate()
-            .filter(move |(_, level)| level.is_active(current_level))
-            .map(|(i, _)| (self.get_id_from_index(i), &self.items[i]))
+            .flat_map(|bin| {
+                bin.iter()
+                    .map(|i| (self.get_id_from_index(*i), &self.items[*i]))
+            })
     }
 
     pub fn enumerate_with_levels(&self) -> impl Iterator<Item = (ParticleId, TimestepLevel, &T)> {
@@ -62,6 +76,7 @@ impl<T> ActiveList<T> {
     pub fn enumerate_with_levels_mut(
         &mut self,
     ) -> impl Iterator<Item = (ParticleId, &mut TimestepLevel, &T)> {
+        self.valid = false;
         self.levels
             .iter_mut()
             .zip(self.items.iter())
@@ -119,6 +134,19 @@ impl<T> ActiveList<T> {
 
     pub fn set_level(&mut self, id: ParticleId, level: TimestepLevel) {
         debug_assert!(id.rank == self.rank);
+        self.valid = false;
         self.levels[id.index as usize] = level;
+    }
+
+    pub(crate) fn update_bins(&mut self) {
+        let mut bins = vec![];
+        for _ in 0..self.max_num_levels {
+            bins.push(vec![]);
+        }
+        for (i, level) in self.levels.iter().enumerate() {
+            bins[level.0].push(i);
+        }
+        self.bins = bins;
+        self.valid = true;
     }
 }
