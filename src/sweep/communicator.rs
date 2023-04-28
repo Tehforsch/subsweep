@@ -62,13 +62,13 @@ impl<C: Chemistry> SweepCommunicator<C> {
             if data.is_empty() {
                 continue;
             }
-            if self.requests[*rank].is_none() {
-                self.send_buffers[*rank].append(data);
-                self.requests[*rank] = scope(|scope| {
+            if self.requests[rank].is_none() {
+                self.send_buffers[rank].append(data);
+                self.requests[rank] = scope(|scope| {
                     let scoped_request = self.communicator.immediate_send_vec(
                         scope,
-                        *rank,
-                        &self.send_buffers[*rank][..],
+                        rank,
+                        &self.send_buffers[rank][..],
                     );
                     scoped_request.map(to_unscoped)
                 });
@@ -117,7 +117,7 @@ impl<C: Chemistry> Drop for SweepCommunicator<C> {
     fn drop(&mut self) {
         for (rank, request) in self.requests.iter() {
             if let Some(request) = request {
-                self.wait_for_request(*rank, *request);
+                self.wait_for_request(rank, *request);
                 return;
             }
         }

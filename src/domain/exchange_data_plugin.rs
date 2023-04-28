@@ -137,7 +137,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
             // This allocates a new buffer every time. An alternative would be
             // to keep this at maximum size, trading performance for memory overhead
             buffer.insert(
-                *rank,
+                rank,
                 entities
                     .iter()
                     .map(|entity| query.get(*entity).unwrap().clone())

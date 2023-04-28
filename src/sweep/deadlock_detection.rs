@@ -107,9 +107,9 @@ impl<C: Chemistry> Sweep<C> {
         warn!("Checking for deadlocks at level: {}", self.current_level.0);
         for (rank, data) in received.iter() {
             let d1: HashSet<_> = data.iter().cloned().collect();
-            let d2: HashSet<_> = dependencies[*rank].iter().cloned().collect();
+            let d2: HashSet<_> = dependencies[rank].iter().cloned().collect();
             if d1 != d2 {
-                if self.communicator.rank() < *rank {
+                if self.communicator.rank() < rank {
                     println!("On rank {}:", self.communicator.rank());
                     print_diff(&d1, &d2);
                     println!("On rank {}:", rank);

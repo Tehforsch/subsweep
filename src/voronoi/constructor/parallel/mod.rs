@@ -133,8 +133,8 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
 
         for (rank, data) in incoming.iter() {
             for search in data {
-                let result = self.get_haloes_from_search(*rank, search);
-                new_haloes[*rank].extend(result.map(|x| x.to_equivalent()));
+                let result = self.get_haloes_from_search(rank, search);
+                new_haloes[rank].extend(result.map(|x| x.to_equivalent()));
             }
         }
         new_haloes
