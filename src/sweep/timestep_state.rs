@@ -31,6 +31,10 @@ impl TimestepState {
             .map(move |level| TimestepLevel(level))
     }
 
+    pub(crate) fn iter_all_levels(&self) -> impl Iterator<Item = TimestepLevel> {
+        (0..self.max_num_timestep_levels).map(move |level| TimestepLevel(level))
+    }
+
     pub fn advance_allowed_levels(&mut self) {
         // Decrease the lowest allowed timestep level but only if
         // we have already done one additional run with only the highest level.

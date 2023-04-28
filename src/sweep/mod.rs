@@ -148,29 +148,41 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    pub fn run_sweeps(&mut self) -> Time {
-        self.print_cell_counts();
-        for level in self.timestep_state.iter_levels_in_sweep_order() {
-            self.current_level = level;
-            self.single_sweep();
-        }
-        let time_elapsed = self.timestep_state.current_max_timestep();
-        self.timestep_state.advance_allowed_levels();
-        self.update_timestep_levels();
-        time_elapsed
-    }
-
     fn count_cells_global(&mut self, level: TimestepLevel) -> usize {
         let local_count = self.cells.enumerate_active(level).count();
         let mut count_communicator = MpiWorld::new();
         count_communicator.all_gather_sum(&CellCount(local_count))
     }
 
-    pub fn print_cell_counts(&mut self) {
+    fn get_cell_counts_per_level(&mut self) -> Vec<usize> {
+        self.timestep_state
+            .iter_all_levels()
+            .map(|level| self.count_cells_global(level))
+            .collect()
+    }
+
+    fn print_cell_counts(&mut self, cell_counts_per_level: &[usize]) {
         for level in self.timestep_state.iter_allowed_levels() {
-            let global_count = self.count_cells_global(level);
-            info!("Sweep: {:>10} cells at level {:>2}", global_count, level.0);
+            info!(
+                "Sweep: {:>10} cells at level {:>2}",
+                cell_counts_per_level[level.0], level.0
+            );
         }
+    }
+
+    pub fn run_sweeps(&mut self) -> Time {
+        let counts = self.get_cell_counts_per_level();
+        self.print_cell_counts(&counts);
+        for level in self.timestep_state.iter_levels_in_sweep_order() {
+            if counts[level.0] > 0 {
+                self.current_level = level;
+                self.single_sweep();
+            }
+        }
+        let time_elapsed = self.timestep_state.current_max_timestep();
+        self.timestep_state.advance_allowed_levels();
+        self.update_timestep_levels();
+        time_elapsed
     }
 
     fn single_sweep(&mut self) {
