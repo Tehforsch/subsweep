@@ -122,7 +122,7 @@ impl SimulationBox {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum WrapType {
     #[default]
     NoWrap,
@@ -144,7 +144,18 @@ impl WrapType {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+impl std::fmt::Debug for WrapType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            WrapType::NoWrap => "=",
+            WrapType::Minus => "-",
+            WrapType::Plus => "+",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct PeriodicWrapType2d {
     pub x: WrapType,
     pub y: WrapType,
@@ -169,7 +180,7 @@ impl PeriodicWrapType2d {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct PeriodicWrapType3d {
     pub x: WrapType,
     pub y: WrapType,
@@ -194,6 +205,18 @@ impl PeriodicWrapType3d {
         let y_dist = VecLength::new_y(box_.side_lengths().y());
         let z_dist = VecLength::new_z(box_.side_lengths().z());
         x_dist * self.x.as_sign() + y_dist * self.y.as_sign() + z_dist * self.z.as_sign()
+    }
+}
+
+impl std::fmt::Debug for PeriodicWrapType3d {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}{:?}{:?}", self.x, self.y, self.z)
+    }
+}
+
+impl std::fmt::Debug for PeriodicWrapType2d {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}{:?}", self.x, self.y)
     }
 }
 

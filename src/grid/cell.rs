@@ -13,7 +13,7 @@ pub type FaceArea = crate::units::Length;
 #[cfg(not(feature = "2d"))]
 pub type FaceArea = crate::units::Area;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Copy)]
+#[derive(Clone, PartialEq, Eq, Hash, Copy)]
 pub enum ParticleType {
     Local(ParticleId),
     Remote(RemoteNeighbour),
@@ -50,6 +50,34 @@ impl ParticleType {
             Self::LocalPeriodic(periodic) => periodic.id,
             Self::RemotePeriodic(periodic) => periodic.id,
             _ => panic!("Unwrap id called on boundary neighbour"),
+        }
+    }
+}
+
+impl std::fmt::Debug for ParticleType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParticleType::Local(id) => write!(f, "Local({} @ {})", id.index, id.rank),
+            ParticleType::Remote(p) => {
+                assert_eq!(p.rank, p.id.rank);
+                write!(f, "Remote({} @ {})", p.id.index, p.id.rank)
+            }
+            ParticleType::LocalPeriodic(p) => {
+                write!(
+                    f,
+                    "Periodic({} @ {}, {:?})",
+                    p.id.index, p.id.rank, p.periodic_wrap_type
+                )
+            }
+            ParticleType::RemotePeriodic(p) => {
+                assert_eq!(p.rank, p.id.rank);
+                write!(
+                    f,
+                    "RemotePeriodic({} @ {}, {:?})",
+                    p.id.index, p.id.rank, p.periodic_wrap_type
+                )
+            }
+            ParticleType::Boundary => write!(f, "Boundary"),
         }
     }
 }
