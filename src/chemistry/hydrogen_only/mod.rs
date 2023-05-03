@@ -31,9 +31,11 @@ impl HydrogenOnlySpecies {
         temperature: Temperature,
         density: Density,
     ) -> HydrogenOnlySpecies {
-        let molecular_weight = 1.0 / (ionized_hydrogen_fraction + 1.0);
-        let internal_energy = temperature.to_internal_energy(molecular_weight);
-        let internal_energy_density = internal_energy * density;
+        let internal_energy_density = EnergyDensity::from_temperature_hydrogen_only(
+            temperature,
+            ionized_hydrogen_fraction,
+            density,
+        );
         Self {
             ionized_hydrogen_fraction,
             internal_energy_density,
@@ -43,8 +45,11 @@ impl HydrogenOnlySpecies {
 
 impl Site<HydrogenOnly> {
     pub(crate) fn get_temperature(&self, density: Density) -> Temperature {
-        let molecular_weight = 1.0 / (self.species.ionized_hydrogen_fraction + 1.0);
-        (self.species.internal_energy_density / density).to_temperature(molecular_weight)
+        Temperature::from_internal_energy_density_hydrogen_only(
+            self.species.internal_energy_density,
+            self.species.ionized_hydrogen_fraction,
+            density,
+        )
     }
 }
 

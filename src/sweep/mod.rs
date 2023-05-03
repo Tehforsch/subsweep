@@ -513,7 +513,7 @@ pub fn initialize_sweep_components_system(
         commands.entity(entity).insert((
             Density(units::Density::zero()),
             components::IonizedHydrogenFraction(Dimensionless::zero()),
-            components::Temperature(Temperature::zero()),
+            components::Temperature(Temperature::kelvins(1000.0)),
             Source(SourceRate::zero()),
         ));
     }

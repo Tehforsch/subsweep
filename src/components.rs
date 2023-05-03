@@ -23,8 +23,3 @@ pub struct Mass(pub crate::units::Mass);
 #[repr(transparent)]
 #[name = "density"]
 pub struct Density(pub crate::units::Density);
-
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
-#[name = "internal_energy"]
-#[repr(transparent)]
-pub struct InternalEnergy(pub crate::units::Energy);
