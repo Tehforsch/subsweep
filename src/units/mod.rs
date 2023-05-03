@@ -70,6 +70,10 @@ unit_system!(
     {
         joules_per_kilogram, 1.0, "J/kg"
     },
+    ENERGYPERTIME, EnergyPerTime, mass: 1, length: 2, time: -3,
+    {
+        ergs_per_s, 1e-7, "erg/s"
+    },
     AREA, Area, length: 2,
     {
     },
@@ -136,6 +140,14 @@ unit_system!(
     },
     INVERSE_TIME_SQUARED, InverseTimeSquared, time: -2,
     {
+    },
+    RATE, Rate, length: 3, time: -1,
+    {
+        centimeters_cubed_per_s, 1e-6, "cm^3/s"
+    },
+    HEATING_RATE, HeatingRate, length: 3, time: -1,
+    {
+        ergs_centimeters_cubed_per_s, 1e-13, "erg cm^3/s"
     }
 );
 

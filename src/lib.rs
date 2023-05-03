@@ -14,6 +14,7 @@ pub(crate) mod command_line_options;
 pub mod communication;
 pub mod components;
 pub(crate) mod config;
+pub mod cosmology;
 pub mod dimension;
 pub mod domain;
 pub mod extent;

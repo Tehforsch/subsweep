@@ -5,9 +5,11 @@ use crate::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::Density;
 use crate::units::Dimensionless;
-use crate::units::EnergyDensity;
+use crate::units::EnergyPerTime;
+use crate::units::HeatingRate;
 use crate::units::Length;
 use crate::units::PhotonFlux;
+use crate::units::Rate;
 use crate::units::Temperature;
 use crate::units::Time;
 use crate::units::Volume;
@@ -17,12 +19,13 @@ use crate::units::PROTON_MASS;
 #[derive(Resource)]
 pub struct HydrogenOnly {
     pub flux_treshold: PhotonFlux,
+    pub scale_factor: Dimensionless,
 }
 
 #[derive(Debug)]
 pub struct HydrogenOnlySpecies {
     pub ionized_hydrogen_fraction: Dimensionless,
-    pub internal_energy_density: EnergyDensity,
+    pub temperature: Temperature,
 }
 
 impl HydrogenOnlySpecies {
@@ -31,25 +34,10 @@ impl HydrogenOnlySpecies {
         temperature: Temperature,
         density: Density,
     ) -> HydrogenOnlySpecies {
-        let internal_energy_density = EnergyDensity::from_temperature_hydrogen_only(
-            temperature,
-            ionized_hydrogen_fraction,
-            density,
-        );
         Self {
             ionized_hydrogen_fraction,
-            internal_energy_density,
+            temperature,
         }
-    }
-}
-
-impl Site<HydrogenOnly> {
-    pub(crate) fn get_temperature(&self, density: Density) -> Temperature {
-        Temperature::from_internal_energy_density_hydrogen_only(
-            self.species.internal_energy_density,
-            self.species.ionized_hydrogen_fraction,
-            density,
-        )
     }
 }
 
@@ -85,12 +73,13 @@ impl Chemistry for HydrogenOnly {
         let old_fraction = site.species.ionized_hydrogen_fraction;
         Solver {
             ionized_hydrogen_fraction: &mut site.species.ionized_hydrogen_fraction,
-            internal_energy_density: &mut site.species.internal_energy_density,
+            temperature: &mut site.species.temperature,
             timestep,
             density: site.density,
             volume,
             length,
             flux,
+            scale_factor: self.scale_factor,
         }
         .timestep();
         let relative_change =
@@ -102,16 +91,63 @@ impl Chemistry for HydrogenOnly {
 
 pub(crate) struct Solver<'a> {
     pub ionized_hydrogen_fraction: &'a mut Dimensionless,
-    pub internal_energy_density: &'a mut EnergyDensity,
+    pub temperature: &'a mut Temperature,
     pub timestep: Time,
     pub density: Density,
     pub volume: Volume,
     pub length: Length,
     pub flux: PhotonFlux,
+    pub scale_factor: Dimensionless,
 }
 
 impl<'a> Solver<'a> {
+    fn collision_fit_function(&self) -> f64 {
+        let temperature = self.temperature.in_kelvins();
+        temperature.sqrt() / (1.0 + (temperature / 1e5).sqrt()) * (-157809.1 / temperature).exp()
+    }
+
+    fn case_b_recombination_rate(&self) -> Rate {
+        let lambda = Temperature::kelvins(315614.0) / *self.temperature;
+        Rate::centimeters_cubed_per_s(
+            2.753e-14 * lambda.powf(1.5) / (1.0 + (lambda / 2.74).powf(0.407)).powf(2.242),
+        )
+    }
+
+    fn case_b_recombination_cooling_rate(&self) -> HeatingRate {
+        let lambda = Temperature::kelvins(315614.0) / *self.temperature;
+        HeatingRate::ergs_centimeters_cubed_per_s(
+            3.435e-30 * self.temperature.in_kelvins() * lambda.powf(1.97)
+                / (1.0 + (lambda / 2.25).powf(0.376)).powf(3.72),
+        )
+    }
+
+    fn collisional_ionization_rate(&self) -> Rate {
+        Rate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
+    }
+
+    fn collisional_ionization_cooling_rate(&self) -> HeatingRate {
+        HeatingRate::ergs_centimeters_cubed_per_s(1.27e-21 * self.collision_fit_function())
+    }
+
+    fn collisional_excitation_cooling_rate(&self) -> HeatingRate {
+        let temperature = self.temperature.in_kelvins();
+        HeatingRate::ergs_centimeters_cubed_per_s(
+            7.5e-19 / (1.0 + (temperature / 1e5).sqrt()) * (-118348.0 / temperature).exp(),
+        )
+    }
+
+    fn bremstrahlung_cooling_rate(&self) -> HeatingRate {
+        HeatingRate::ergs_centimeters_cubed_per_s(1.42e-27 * self.temperature.in_kelvins().sqrt())
+    }
+
+    fn compton_cooling_rate(&self) -> EnergyPerTime {
+        let x = (2.727 / self.scale_factor).value();
+        EnergyPerTime::ergs_per_s(1.017e-37 * x.powi(4) * (self.temperature.in_kelvins() - x))
+    }
+
     pub fn timestep(&mut self) {
+        self.update_temperature();
+        let temperature = self.temperature.in_kelvins();
         let hydrogen_number_density = self.density / PROTON_MASS;
         let num_hydrogen_atoms = hydrogen_number_density * self.volume;
         let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
@@ -133,6 +169,14 @@ impl<'a> Solver<'a> {
             Dimensionless::dimensionless(1.0),
         )
     }
+
+    fn update_temperature(&mut self) {
+        // let temperature = self.temperature.in_kelvins();
+        // let photo_heating_rate = 1.0;
+        // let heating = photo_heating_rate * self.flux;
+        todo!()
+        // let cooling = collisional_ionization + collisional_excitation + recombination + bremsstrahlung + compton;
+    }
 }
 
 #[cfg(not(feature = "2d"))]
@@ -141,8 +185,8 @@ mod tests {
     use super::Solver;
     use crate::units::Amount;
     use crate::units::Dimensionless;
-    use crate::units::EnergyDensity;
     use crate::units::Length;
+    use crate::units::Temperature;
     use crate::units::Time;
     use crate::units::Volume;
     use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
@@ -179,12 +223,13 @@ mod tests {
                 let mut final_ionized_hydrogen_fraction = initial_ionized_hydrogen_fraction;
                 Solver {
                     ionized_hydrogen_fraction: &mut final_ionized_hydrogen_fraction,
-                    internal_energy_density: &mut EnergyDensity::zero(),
+                    temperature: &mut Temperature::kelvins(1000.0),
                     timestep,
                     density: number_density * PROTON_MASS,
                     volume,
                     length,
                     flux,
+                    scale_factor: Dimensionless::dimensionless(1.0),
                 }
                 .timestep();
                 assert!(

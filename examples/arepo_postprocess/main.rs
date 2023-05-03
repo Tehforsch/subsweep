@@ -2,18 +2,17 @@
 #![feature(generic_const_exprs)]
 
 mod bpass;
-mod cosmology;
 mod sources;
 mod unit_reader;
 
 use bevy::prelude::*;
-use cosmology::Cosmology;
 use derive_more::From;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 use raxiom::components;
 use raxiom::components::Density;
 use raxiom::components::Position;
+use raxiom::cosmology::Cosmology;
 use raxiom::io::input::close_file_system;
 use raxiom::io::input::open_file_system;
 use raxiom::io::input::DatasetInputPlugin;

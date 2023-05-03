@@ -1,10 +1,9 @@
 use bevy::prelude::debug;
 use hdf5::Dataset;
+use raxiom::cosmology::Cosmology;
 use raxiom::io::UnitReader;
 use raxiom::units::Dimension;
 use raxiom::units::NONE;
-
-use crate::cosmology::Cosmology;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "to_cgs";
 pub const LENGTH_IDENTIFIER: &str = "length_scaling";

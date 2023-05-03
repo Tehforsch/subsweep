@@ -13,6 +13,7 @@ use ordered_float::OrderedFloat;
 use raxiom::communication::MpiWorld;
 use raxiom::components;
 use raxiom::components::Position;
+use raxiom::cosmology::Cosmology;
 use raxiom::domain::Decomposition;
 use raxiom::domain::IntoKey;
 use raxiom::io::input::read_dataset;
@@ -31,7 +32,6 @@ use raxiom::units::Time;
 use raxiom::units::VecLength;
 
 use crate::bpass::bpass_lookup;
-use crate::cosmology::Cosmology;
 use crate::read_vec;
 use crate::unit_reader::ArepoUnitReader;
 use crate::Parameters;

@@ -38,6 +38,7 @@ use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::components::Density;
+use crate::cosmology::Cosmology;
 use crate::grid::Cell;
 use crate::grid::FaceArea;
 use crate::grid::ParticleType;
@@ -436,6 +437,7 @@ fn init_sweep_system(
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
     mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
+    cosmology: Res<Cosmology>,
 ) {
     let cells: HashMap<_, _> = cells_query
         .iter()
@@ -476,6 +478,7 @@ fn init_sweep_system(
         **world_rank,
         HydrogenOnly {
             flux_treshold: sweep_parameters.significant_flux_treshold,
+            scale_factor: cosmology.scale_factor(),
         },
     ));
 }
@@ -484,7 +487,6 @@ fn run_sweep_system(
     mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
     mut sites_query: Particles<(
         &ParticleId,
-        &Density,
         &mut IonizedHydrogenFraction,
         &mut components::Temperature,
     )>,
@@ -493,10 +495,10 @@ fn run_sweep_system(
     let solver = (*solver).as_mut().unwrap();
     let time_elapsed = solver.run_sweeps();
     **time += time_elapsed;
-    for (id, density, mut fraction, mut temperature) in sites_query.iter_mut() {
+    for (id, mut fraction, mut temperature) in sites_query.iter_mut() {
         let site = solver.sites.get(*id);
         **fraction = site.species.ionized_hydrogen_fraction;
-        **temperature = site.get_temperature(**density);
+        **temperature = site.species.temperature;
     }
 }
 
