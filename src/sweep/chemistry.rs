@@ -13,9 +13,12 @@ use super::chemistry_solver::Solver;
 use super::site::Site;
 use crate::grid::Cell;
 use crate::units::helpers::Float;
+use crate::units::Density;
 use crate::units::Dimensionless;
+use crate::units::EnergyDensity;
 use crate::units::Length;
 use crate::units::PhotonFlux;
+use crate::units::Temperature;
 use crate::units::Time;
 use crate::units::Volume;
 use crate::units::PROTON_MASS;
@@ -49,6 +52,30 @@ pub struct HydrogenOnly {
 #[derive(Debug)]
 pub struct HydrogenOnlySpecies {
     pub ionized_hydrogen_fraction: Dimensionless,
+    pub internal_energy_density: EnergyDensity,
+}
+
+impl HydrogenOnlySpecies {
+    pub(crate) fn new(
+        ionized_hydrogen_fraction: Dimensionless,
+        temperature: Temperature,
+        density: Density,
+    ) -> HydrogenOnlySpecies {
+        let molecular_weight = 1.0 / (ionized_hydrogen_fraction + 1.0);
+        let internal_energy = temperature.to_internal_energy(molecular_weight);
+        let internal_energy_density = internal_energy * density;
+        Self {
+            ionized_hydrogen_fraction,
+            internal_energy_density,
+        }
+    }
+}
+
+impl Site<HydrogenOnly> {
+    pub(crate) fn get_temperature(&self, density: Density) -> Temperature {
+        let molecular_weight = 1.0 / (self.species.ionized_hydrogen_fraction + 1.0);
+        (self.species.internal_energy_density / density).to_temperature(molecular_weight)
+    }
 }
 
 impl Chemistry for HydrogenOnly {

@@ -53,6 +53,7 @@ use crate::sweep::chemistry::HydrogenOnly;
 use crate::sweep::chemistry::HydrogenOnlySpecies;
 use crate::units::Dimensionless;
 use crate::units::SourceRate;
+use crate::units::Temperature;
 use crate::units::Time;
 
 pub type Flux<C> = <C as Chemistry>::Photons;
@@ -88,6 +89,7 @@ impl RaxiomPlugin for SweepPlugin {
         .add_derived_component::<Source>()
         .add_derived_component::<components::Flux>()
         .add_derived_component::<Density>()
+        .add_derived_component::<components::Temperature>()
         .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
         .add_startup_system_to_stage(SimulationStartupStages::Sweep, init_sweep_system)
         .add_system_to_stage(SimulationStages::ForceCalculation, run_sweep_system)
@@ -427,6 +429,7 @@ fn init_sweep_system(
         &ParticleId,
         &Density,
         &IonizedHydrogenFraction,
+        &components::Temperature,
         &Source,
     )>,
     haloes: HaloParticles<&ParticleId>,
@@ -442,19 +445,23 @@ fn init_sweep_system(
         .collect();
     let sites: HashMap<_, _> = sites_query
         .iter()
-        .map(|(_, id, density, ionized_hydrogen_fraction, source)| {
-            (
-                *id,
-                Site::<HydrogenOnly>::new(
-                    &directions,
-                    HydrogenOnlySpecies {
-                        ionized_hydrogen_fraction: **ionized_hydrogen_fraction,
-                    },
-                    **density,
-                    **source,
-                ),
-            )
-        })
+        .map(
+            |(_, id, density, ionized_hydrogen_fraction, temperature, source)| {
+                (
+                    *id,
+                    Site::<HydrogenOnly>::new(
+                        &directions,
+                        HydrogenOnlySpecies::new(
+                            **ionized_hydrogen_fraction,
+                            **temperature,
+                            **density,
+                        ),
+                        **density,
+                        **source,
+                    ),
+                )
+            },
+        )
         .collect();
     let halo_ids: Vec<_> = haloes.iter().map(|id| *id).collect();
     #[cfg(test)]
@@ -477,15 +484,21 @@ fn init_sweep_system(
 
 fn run_sweep_system(
     mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
-    mut sites_query: Particles<(&ParticleId, &mut IonizedHydrogenFraction)>,
+    mut sites_query: Particles<(
+        &ParticleId,
+        &Density,
+        &mut IonizedHydrogenFraction,
+        &mut components::Temperature,
+    )>,
     mut time: ResMut<SimulationTime>,
 ) {
     let solver = (*solver).as_mut().unwrap();
     let time_elapsed = solver.run_sweeps();
     **time += time_elapsed;
-    for (id, mut fraction) in sites_query.iter_mut() {
+    for (id, density, mut fraction, mut temperature) in sites_query.iter_mut() {
         let site = solver.sites.get(*id);
         **fraction = site.species.ionized_hydrogen_fraction;
+        **temperature = site.get_temperature(**density);
     }
 }
 
@@ -502,6 +515,7 @@ pub fn initialize_sweep_components_system(
         commands.entity(entity).insert((
             Density(units::Density::zero()),
             components::IonizedHydrogenFraction(Dimensionless::zero()),
+            components::Temperature(Temperature::zero()),
             Source(SourceRate::zero()),
         ));
     }

@@ -17,6 +17,11 @@ pub struct AbsorptionRate(pub crate::units::PhotonFlux);
 pub struct IonizedHydrogenFraction(pub crate::units::Dimensionless);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "temperature"]
+#[repr(transparent)]
+pub struct Temperature(pub crate::units::Temperature);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "source"]
 #[repr(transparent)]
 pub struct Source(pub crate::units::SourceRate);
