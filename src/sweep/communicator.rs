@@ -1,8 +1,8 @@
 use mpi::request::scope;
 use mpi::request::Request;
 
-use super::chemistry::Chemistry;
 use super::task::FluxData;
+use crate::chemistry::Chemistry;
 use crate::communication::DataByRank;
 use crate::communication::MpiWorld;
 use crate::communication::Rank;

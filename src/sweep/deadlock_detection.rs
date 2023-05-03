@@ -1,9 +1,9 @@
 use bevy::prelude::warn;
 use mpi::traits::Equivalence;
 
-use super::chemistry::Chemistry;
 use super::timestep_level::TimestepLevel;
 use super::Sweep;
+use crate::chemistry::Chemistry;
 use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;

@@ -9,6 +9,7 @@
 #![allow(clippy::type_complexity)]
 #![doc = include_str!("../README.md")]
 
+pub mod chemistry;
 pub(crate) mod command_line_options;
 pub mod communication;
 pub mod components;

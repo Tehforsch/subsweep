@@ -1,8 +1,8 @@
-use super::chemistry::Chemistry;
 use super::count_by_dir::CountByDir;
 use super::direction::Directions;
 use super::Species;
-use crate::sweep::chemistry::Photons;
+use crate::chemistry::Chemistry;
+use crate::chemistry::Photons;
 use crate::units::helpers::Float;
 use crate::units::Density;
 use crate::units::Time;

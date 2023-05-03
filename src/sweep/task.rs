@@ -3,8 +3,8 @@ use mpi::internal::memoffset::offset_of;
 use mpi::traits::Equivalence;
 use mpi::Address;
 
-use super::chemistry::Chemistry;
 use super::direction::DirectionIndex;
+use super::Chemistry;
 use super::Flux;
 use crate::particle::ParticleId;
 
