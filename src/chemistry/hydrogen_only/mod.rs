@@ -83,24 +83,26 @@ impl Chemistry for HydrogenOnly {
         length: Length,
     ) -> Time {
         let old_fraction = site.species.ionized_hydrogen_fraction;
-        let new_fraction = Solver {
-            ionized_hydrogen_fraction: site.species.ionized_hydrogen_fraction,
+        Solver {
+            ionized_hydrogen_fraction: &mut site.species.ionized_hydrogen_fraction,
+            internal_energy_density: &mut site.species.internal_energy_density,
             timestep,
             density: site.density,
             volume,
             length,
             flux,
         }
-        .get_new_abundance();
-        site.species.ionized_hydrogen_fraction = new_fraction;
-        let relative_change = (old_fraction / (old_fraction - new_fraction)).abs();
+        .timestep();
+        let relative_change =
+            (old_fraction / (old_fraction - site.species.ionized_hydrogen_fraction)).abs();
         let change_timescale = relative_change * timestep;
         change_timescale
     }
 }
 
-pub struct Solver {
-    pub ionized_hydrogen_fraction: Dimensionless,
+pub(crate) struct Solver<'a> {
+    pub ionized_hydrogen_fraction: &'a mut Dimensionless,
+    pub internal_energy_density: &'a mut EnergyDensity,
     pub timestep: Time,
     pub density: Density,
     pub volume: Volume,
@@ -108,25 +110,25 @@ pub struct Solver {
     pub flux: PhotonFlux,
 }
 
-impl Solver {
-    pub fn get_new_abundance(mut self) -> Dimensionless {
+impl<'a> Solver<'a> {
+    pub fn timestep(&mut self) {
         let hydrogen_number_density = self.density / PROTON_MASS;
         let num_hydrogen_atoms = hydrogen_number_density * self.volume;
         let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
-            * (hydrogen_number_density * self.ionized_hydrogen_fraction).powi::<2>()
+            * (hydrogen_number_density * *self.ionized_hydrogen_fraction).powi::<2>()
             * self.volume;
         let num_recombined_hydrogen_atoms = (recombination_rate * self.timestep).to_amount();
-        self.ionized_hydrogen_fraction -=
+        *self.ionized_hydrogen_fraction -=
             num_recombined_hydrogen_atoms / num_hydrogen_atoms.to_amount();
         let neutral_hydrogen_number_density =
-            self.density / PROTON_MASS * (1.0 - self.ionized_hydrogen_fraction);
+            self.density / PROTON_MASS * (1.0 - *self.ionized_hydrogen_fraction);
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         let absorbed_fraction =
             1.0 - (-neutral_hydrogen_number_density * sigma * self.length).exp();
         let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.flux) * self.timestep;
-        self.ionized_hydrogen_fraction +=
+        *self.ionized_hydrogen_fraction +=
             num_newly_ionized_hydrogen_atoms / num_hydrogen_atoms.to_amount();
-        self.ionized_hydrogen_fraction.clamp(
+        *self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
             Dimensionless::dimensionless(0.0),
             Dimensionless::dimensionless(1.0),
         )
@@ -139,6 +141,7 @@ mod tests {
     use super::Solver;
     use crate::units::Amount;
     use crate::units::Dimensionless;
+    use crate::units::EnergyDensity;
     use crate::units::Length;
     use crate::units::Time;
     use crate::units::Volume;
@@ -173,15 +176,17 @@ mod tests {
                     * (number_density * initial_ionized_hydrogen_fraction).powi::<2>()
                     * volume;
                 let flux = recombination_rate * Amount::one_unchecked();
-                let final_ionized_hydrogen_fraction = Solver {
-                    ionized_hydrogen_fraction: initial_ionized_hydrogen_fraction,
+                let mut final_ionized_hydrogen_fraction = initial_ionized_hydrogen_fraction;
+                Solver {
+                    ionized_hydrogen_fraction: &mut final_ionized_hydrogen_fraction,
+                    internal_energy_density: &mut EnergyDensity::zero(),
                     timestep,
                     density: number_density * PROTON_MASS,
                     volume,
                     length,
                     flux,
                 }
-                .get_new_abundance();
+                .timestep();
                 assert!(
                     ((initial_ionized_hydrogen_fraction - final_ionized_hydrogen_fraction)
                         / (initial_ionized_hydrogen_fraction + 1e-20))
