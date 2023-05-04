@@ -55,3 +55,12 @@ impl Dimensionless {
         *self * Amount::one_unchecked()
     }
 }
+
+impl<const D: Dimension, S: Clone> Quantity<S, D>
+where
+    Quantity<S, { D.remove_amount() }>:,
+{
+    pub fn remove_amount(&self) -> Quantity<S, { D.remove_amount() }> {
+        Quantity(self.0.clone())
+    }
+}

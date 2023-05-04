@@ -61,7 +61,9 @@ unit_system!(
     },
     ENERGY, Energy, mass: 1, length: 2, time: -2,
     {
-        joules, 1.0, "J"
+        joules, 1.0, "J",
+        electron_volts, 1.602176634e-19, "eV"
+
     },
     ENERGY_DENSITY, EnergyDensity, mass: 1, length: -1, time: -2,
     {
@@ -128,6 +130,7 @@ unit_system!(
     },
     CROSS_SECTION_3D, CrossSection3D, length: 2,
     {
+        centimeters_squared, 1e-4, "cm^2"
     },
     SOURCE_RATE, SourceRate, time: -1, amount: 1,
     {
@@ -145,9 +148,12 @@ unit_system!(
     {
         centimeters_cubed_per_s, 1e-6, "cm^3/s"
     },
-    HEATING_RATE, HeatingRate, length: 3, time: -1,
+    HEATING_TERM, HeatingTerm, length: 5, time: -3, mass: 1,
     {
         ergs_centimeters_cubed_per_s, 1e-13, "erg cm^3/s"
+    },
+    HEATING_RATE, HeatingRate, length: -1, time: -3, mass: 1,
+    {
     }
 );
 

@@ -15,6 +15,7 @@ macro_rules! constant {
 constant!(GRAVITY_CONSTANT, 6.67430e-11, length: 3, time: -2, mass: -1);
 constant!(BOLTZMANN_CONSTANT, 1.380649e-23, temperature: -1, length: 2, time: -2, mass: 1);
 constant!(PROTON_MASS, 1.67262192369e-27, mass: 1);
+constant!(SPEED_OF_LIGHT, 299792458.0, length: 1, time: -1);
 pub const GAMMA: Float = 5.0 / 3.0;
 
 #[cfg(not(feature = "2d"))]

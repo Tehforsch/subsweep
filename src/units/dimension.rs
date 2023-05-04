@@ -50,4 +50,16 @@ impl Dimension {
             * (TEMPERATURE_TO_SI).powi(*temperature)
             * (AMOUNT_TO_SI).powi(*amount)
     }
+
+    pub const fn remove_amount(self) -> Self {
+        Self {
+            length: self.length,
+            time: self.time,
+            mass: self.mass,
+            temperature: self.temperature,
+            amount: 0,
+            h: self.h,
+            a: self.a,
+        }
+    }
 }

@@ -3,8 +3,12 @@ use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use derive_custom::Named;
 use derive_more::From;
+use diman::Quotient;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
+
+use crate::units::EnergyDensity;
+use crate::units::Time;
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "absorption_rate"]
@@ -30,3 +34,8 @@ pub struct Source(pub crate::units::SourceRate);
 #[name = "flux"]
 #[repr(transparent)]
 pub struct Flux(pub crate::units::PhotonFlux);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "heating_rate"]
+#[repr(transparent)]
+pub struct HeatingRate(pub Quotient<EnergyDensity, Time>);

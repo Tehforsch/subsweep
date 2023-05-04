@@ -14,11 +14,13 @@ mod timestep_state;
 
 use bevy::prelude::*;
 use derive_more::Into;
+use diman::Quotient;
 use mpi::traits::Equivalence;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
 use self::active_list::ActiveList;
+use self::components::HeatingRate;
 use self::components::IonizedHydrogenFraction;
 use self::components::Source;
 use self::count_by_dir::CountByDir;
@@ -44,6 +46,7 @@ use crate::grid::FaceArea;
 use crate::grid::ParticleType;
 use crate::grid::RemoteNeighbour;
 use crate::hash_map::HashMap;
+use crate::io::output::parameters::OutputParameters;
 use crate::parameters::TimestepParameters;
 use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
@@ -51,6 +54,7 @@ use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation_plugin::SimulationTime;
 use crate::units::Dimensionless;
+use crate::units::EnergyDensity;
 use crate::units::SourceRate;
 use crate::units::Temperature;
 use crate::units::Time;
@@ -84,6 +88,10 @@ impl RaxiomPlugin for SweepPlugin {
             SimulationStartupStages::InsertComponents,
             initialize_directions_system,
         )
+        .add_startup_system_to_stage(
+            SimulationStartupStages::InsertDerivedComponents,
+            initialize_optional_components_system,
+        )
         .add_derived_component::<IonizedHydrogenFraction>()
         .add_derived_component::<Source>()
         .add_derived_component::<components::Flux>()
@@ -93,6 +101,9 @@ impl RaxiomPlugin for SweepPlugin {
         .add_startup_system_to_stage(SimulationStartupStages::Sweep, init_sweep_system)
         .add_system_to_stage(SimulationStages::ForceCalculation, run_sweep_system)
         .add_parameter_type::<SweepParameters>();
+        if output_heating_rate(&sim.get_parameters::<OutputParameters>()) {
+            sim.add_derived_component::<HeatingRate>();
+        }
     }
 }
 
@@ -451,11 +462,7 @@ fn init_sweep_system(
                     *id,
                     Site::<HydrogenOnly>::new(
                         &directions,
-                        HydrogenOnlySpecies::new(
-                            **ionized_hydrogen_fraction,
-                            **temperature,
-                            **density,
-                        ),
+                        HydrogenOnlySpecies::new(**ionized_hydrogen_fraction, **temperature),
                         **density,
                         **source,
                     ),
@@ -490,6 +497,7 @@ fn run_sweep_system(
         &mut IonizedHydrogenFraction,
         &mut components::Temperature,
     )>,
+    mut heating_rate_query: Particles<(&ParticleId, &mut HeatingRate)>,
     mut time: ResMut<SimulationTime>,
 ) {
     let solver = (*solver).as_mut().unwrap();
@@ -499,6 +507,10 @@ fn run_sweep_system(
         let site = solver.sites.get(*id);
         **fraction = site.species.ionized_hydrogen_fraction;
         **temperature = site.species.temperature;
+    }
+    for (id, mut heating_rate) in heating_rate_query.iter_mut() {
+        let site = solver.sites.get(*id);
+        **heating_rate = site.species.heating_rate;
     }
 }
 
@@ -518,5 +530,23 @@ pub fn initialize_sweep_components_system(
             components::Temperature(Temperature::kelvins(1000.0)),
             Source(SourceRate::zero()),
         ));
+    }
+}
+
+fn output_heating_rate(parameters: &OutputParameters) -> bool {
+    parameters.fields.contains(&HeatingRate::name().into())
+}
+
+fn initialize_optional_components_system(
+    mut commands: Commands,
+    output_parameters: Res<OutputParameters>,
+    local_particles: Query<Entity, With<LocalParticle>>,
+) {
+    if output_heating_rate(&output_parameters) {
+        for entity in local_particles.iter() {
+            commands
+                .entity(entity)
+                .insert(HeatingRate(Quotient::<EnergyDensity, Time>::zero()));
+        }
     }
 }

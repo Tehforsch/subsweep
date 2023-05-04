@@ -1,13 +1,18 @@
 use bevy::prelude::Resource;
+use diman::Quotient;
 
 use super::Chemistry;
 use crate::grid::Cell;
 use crate::sweep::site::Site;
+use crate::units::CrossSection;
 use crate::units::Density;
 use crate::units::Dimensionless;
+use crate::units::Energy;
 use crate::units::EnergyPerTime;
 use crate::units::HeatingRate;
+use crate::units::HeatingTerm;
 use crate::units::Length;
+use crate::units::NumberDensity;
 use crate::units::PhotonFlux;
 use crate::units::Rate;
 use crate::units::Temperature;
@@ -15,6 +20,7 @@ use crate::units::Time;
 use crate::units::Volume;
 use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
 use crate::units::PROTON_MASS;
+use crate::units::SPEED_OF_LIGHT;
 
 #[derive(Resource)]
 pub struct HydrogenOnly {
@@ -26,17 +32,18 @@ pub struct HydrogenOnly {
 pub struct HydrogenOnlySpecies {
     pub ionized_hydrogen_fraction: Dimensionless,
     pub temperature: Temperature,
+    pub heating_rate: HeatingRate,
 }
 
 impl HydrogenOnlySpecies {
     pub(crate) fn new(
         ionized_hydrogen_fraction: Dimensionless,
         temperature: Temperature,
-        density: Density,
     ) -> HydrogenOnlySpecies {
         Self {
             ionized_hydrogen_fraction,
             temperature,
+            heating_rate: HeatingRate::zero(),
         }
     }
 }
@@ -71,17 +78,20 @@ impl Chemistry for HydrogenOnly {
         length: Length,
     ) -> Time {
         let old_fraction = site.species.ionized_hydrogen_fraction;
-        Solver {
-            ionized_hydrogen_fraction: &mut site.species.ionized_hydrogen_fraction,
-            temperature: &mut site.species.temperature,
+        let mut solver = Solver {
+            ionized_hydrogen_fraction: site.species.ionized_hydrogen_fraction,
+            temperature: site.species.temperature,
             timestep,
             density: site.density,
             volume,
             length,
             flux,
             scale_factor: self.scale_factor,
-        }
-        .timestep();
+        };
+        let heating_rate = solver.timestep();
+        site.species.temperature = solver.temperature;
+        site.species.ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
+        site.species.heating_rate = heating_rate;
         let relative_change =
             (old_fraction / (old_fraction - site.species.ionized_hydrogen_fraction)).abs();
         let change_timescale = relative_change * timestep;
@@ -89,9 +99,9 @@ impl Chemistry for HydrogenOnly {
     }
 }
 
-pub(crate) struct Solver<'a> {
-    pub ionized_hydrogen_fraction: &'a mut Dimensionless,
-    pub temperature: &'a mut Temperature,
+pub(crate) struct Solver {
+    pub ionized_hydrogen_fraction: Dimensionless,
+    pub temperature: Temperature,
     pub timestep: Time,
     pub density: Density,
     pub volume: Volume,
@@ -100,22 +110,23 @@ pub(crate) struct Solver<'a> {
     pub scale_factor: Dimensionless,
 }
 
-impl<'a> Solver<'a> {
+// All numbers taken from Rosdahl et al (2015)
+impl Solver {
     fn collision_fit_function(&self) -> f64 {
         let temperature = self.temperature.in_kelvins();
         temperature.sqrt() / (1.0 + (temperature / 1e5).sqrt()) * (-157809.1 / temperature).exp()
     }
 
     fn case_b_recombination_rate(&self) -> Rate {
-        let lambda = Temperature::kelvins(315614.0) / *self.temperature;
+        let lambda = Temperature::kelvins(315614.0) / self.temperature;
         Rate::centimeters_cubed_per_s(
             2.753e-14 * lambda.powf(1.5) / (1.0 + (lambda / 2.74).powf(0.407)).powf(2.242),
         )
     }
 
-    fn case_b_recombination_cooling_rate(&self) -> HeatingRate {
-        let lambda = Temperature::kelvins(315614.0) / *self.temperature;
-        HeatingRate::ergs_centimeters_cubed_per_s(
+    fn case_b_recombination_cooling_rate(&self) -> HeatingTerm {
+        let lambda = Temperature::kelvins(315614.0) / self.temperature;
+        HeatingTerm::ergs_centimeters_cubed_per_s(
             3.435e-30 * self.temperature.in_kelvins() * lambda.powf(1.97)
                 / (1.0 + (lambda / 2.25).powf(0.376)).powf(3.72),
         )
@@ -125,19 +136,19 @@ impl<'a> Solver<'a> {
         Rate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
     }
 
-    fn collisional_ionization_cooling_rate(&self) -> HeatingRate {
-        HeatingRate::ergs_centimeters_cubed_per_s(1.27e-21 * self.collision_fit_function())
+    fn collisional_ionization_cooling_rate(&self) -> HeatingTerm {
+        HeatingTerm::ergs_centimeters_cubed_per_s(1.27e-21 * self.collision_fit_function())
     }
 
-    fn collisional_excitation_cooling_rate(&self) -> HeatingRate {
+    fn collisional_excitation_cooling_rate(&self) -> HeatingTerm {
         let temperature = self.temperature.in_kelvins();
-        HeatingRate::ergs_centimeters_cubed_per_s(
+        HeatingTerm::ergs_centimeters_cubed_per_s(
             7.5e-19 / (1.0 + (temperature / 1e5).sqrt()) * (-118348.0 / temperature).exp(),
         )
     }
 
-    fn bremstrahlung_cooling_rate(&self) -> HeatingRate {
-        HeatingRate::ergs_centimeters_cubed_per_s(1.42e-27 * self.temperature.in_kelvins().sqrt())
+    fn bremstrahlung_cooling_rate(&self) -> HeatingTerm {
+        HeatingTerm::ergs_centimeters_cubed_per_s(1.42e-27 * self.temperature.in_kelvins().sqrt())
     }
 
     fn compton_cooling_rate(&self) -> EnergyPerTime {
@@ -145,37 +156,90 @@ impl<'a> Solver<'a> {
         EnergyPerTime::ergs_per_s(1.017e-37 * x.powi(4) * (self.temperature.in_kelvins() - x))
     }
 
-    pub fn timestep(&mut self) {
-        self.update_temperature();
-        let temperature = self.temperature.in_kelvins();
-        let hydrogen_number_density = self.density / PROTON_MASS;
+    fn photoheating(&self) -> Quotient<Energy, Time> {
+        let rydberg = Energy::electron_volts(13.65693);
+        let average_energy: Energy = Energy::electron_volts(0.4298);
+        let average_cross_section: CrossSection = CrossSection::centimeters_squared(5.475e-14);
+        let photon_density = self.flux * self.length / SPEED_OF_LIGHT;
+        self.neutral_hydrogen_number_density()
+            * SPEED_OF_LIGHT
+            * photon_density.remove_amount()
+            * (rydberg - average_energy)
+            * average_cross_section
+    }
+
+    fn hydrogen_number_density(&self) -> NumberDensity {
+        self.density / PROTON_MASS
+    }
+
+    fn neutral_hydrogen_number_density(&self) -> NumberDensity {
+        self.density / PROTON_MASS * self.ionized_hydrogen_fraction
+    }
+
+    fn ionized_hydrogen_number_density(&self) -> NumberDensity {
+        self.density / PROTON_MASS * self.ionized_hydrogen_fraction
+    }
+
+    fn electron_number_density(&self) -> NumberDensity {
+        // Assume zero ionized helium
+        self.ionized_hydrogen_number_density()
+    }
+
+    fn get_heating_rate(&self) -> EnergyPerTime {
+        let photoheating = self.photoheating();
+        let ne = self.electron_number_density();
+        let nh_neutral = self.hydrogen_number_density();
+        let nh_ionized = self.ionized_hydrogen_number_density();
+        let collisional = (self.collisional_excitation_cooling_rate()
+            + self.collisional_ionization_cooling_rate())
+            * ne
+            * nh_neutral;
+        let recombination = self.case_b_recombination_cooling_rate() * ne * nh_ionized;
+        let bremsstrahlung = self.bremstrahlung_cooling_rate() * ne * nh_ionized;
+        let compton = self.compton_cooling_rate() * ne;
+        photoheating
+            - self.volume
+                * ((collisional + recombination + bremsstrahlung).remove_amount() + compton)
+    }
+
+    fn update_temperature(&mut self) -> HeatingRate {
+        let rate = self.get_heating_rate();
+        let internal_energy_change = rate * self.timestep / self.volume;
+        let temperature_change = Temperature::from_internal_energy_density_hydrogen_only(
+            internal_energy_change,
+            self.ionized_hydrogen_fraction,
+            self.density,
+        );
+        if temperature_change > Temperature::kelvins(1e0) {
+            dbg!(rate, internal_energy_change, temperature_change);
+        }
+        self.temperature += temperature_change;
+        rate / self.volume
+    }
+
+    pub fn timestep(&mut self) -> HeatingRate {
+        let heating_rate = self.update_temperature();
+        let hydrogen_number_density = self.hydrogen_number_density();
         let num_hydrogen_atoms = hydrogen_number_density * self.volume;
         let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
-            * (hydrogen_number_density * *self.ionized_hydrogen_fraction).powi::<2>()
+            * (hydrogen_number_density * self.ionized_hydrogen_fraction).powi::<2>()
             * self.volume;
         let num_recombined_hydrogen_atoms = (recombination_rate * self.timestep).to_amount();
-        *self.ionized_hydrogen_fraction -=
+        self.ionized_hydrogen_fraction -=
             num_recombined_hydrogen_atoms / num_hydrogen_atoms.to_amount();
         let neutral_hydrogen_number_density =
-            self.density / PROTON_MASS * (1.0 - *self.ionized_hydrogen_fraction);
+            self.density / PROTON_MASS * (1.0 - self.ionized_hydrogen_fraction);
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         let absorbed_fraction =
             1.0 - (-neutral_hydrogen_number_density * sigma * self.length).exp();
         let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.flux) * self.timestep;
-        *self.ionized_hydrogen_fraction +=
+        self.ionized_hydrogen_fraction +=
             num_newly_ionized_hydrogen_atoms / num_hydrogen_atoms.to_amount();
-        *self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
+        self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
             Dimensionless::dimensionless(0.0),
             Dimensionless::dimensionless(1.0),
-        )
-    }
-
-    fn update_temperature(&mut self) {
-        // let temperature = self.temperature.in_kelvins();
-        // let photo_heating_rate = 1.0;
-        // let heating = photo_heating_rate * self.flux;
-        todo!()
-        // let cooling = collisional_ionization + collisional_excitation + recombination + bremsstrahlung + compton;
+        );
+        heating_rate
     }
 }
 
@@ -220,18 +284,18 @@ mod tests {
                     * (number_density * initial_ionized_hydrogen_fraction).powi::<2>()
                     * volume;
                 let flux = recombination_rate * Amount::one_unchecked();
-                let mut final_ionized_hydrogen_fraction = initial_ionized_hydrogen_fraction;
-                Solver {
-                    ionized_hydrogen_fraction: &mut final_ionized_hydrogen_fraction,
-                    temperature: &mut Temperature::kelvins(1000.0),
+                let mut solver = Solver {
+                    ionized_hydrogen_fraction: initial_ionized_hydrogen_fraction,
+                    temperature: Temperature::kelvins(1000.0),
                     timestep,
                     density: number_density * PROTON_MASS,
                     volume,
                     length,
                     flux,
                     scale_factor: Dimensionless::dimensionless(1.0),
-                }
-                .timestep();
+                };
+                solver.timestep();
+                let final_ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
                 assert!(
                     ((initial_ionized_hydrogen_fraction - final_ionized_hydrogen_fraction)
                         / (initial_ionized_hydrogen_fraction + 1e-20))

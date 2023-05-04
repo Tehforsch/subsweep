@@ -13,7 +13,7 @@ pub enum Cosmology {
 impl Cosmology {
     pub fn scale_factor(&self) -> Dimensionless {
         match self {
-            Cosmology::Cosmological { a, h } => Dimensionless::dimensionless(*a),
+            Cosmology::Cosmological { a, h: _ } => Dimensionless::dimensionless(*a),
             Cosmology::NonCosmological => Dimensionless::dimensionless(1.0),
         }
     }
