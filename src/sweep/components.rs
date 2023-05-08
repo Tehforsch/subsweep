@@ -31,9 +31,9 @@ pub struct Temperature(pub crate::units::Temperature);
 pub struct Source(pub crate::units::SourceRate);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
-#[name = "flux"]
+#[name = "rate"]
 #[repr(transparent)]
-pub struct Flux(pub crate::units::PhotonRate);
+pub struct Rate(pub crate::units::PhotonRate);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "heating_rate"]

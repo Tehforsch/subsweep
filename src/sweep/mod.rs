@@ -94,7 +94,7 @@ impl RaxiomPlugin for SweepPlugin {
         )
         .add_derived_component::<IonizedHydrogenFraction>()
         .add_derived_component::<Source>()
-        .add_derived_component::<components::Flux>()
+        .add_derived_component::<components::Rate>()
         .add_derived_component::<Density>()
         .add_derived_component::<components::Temperature>()
         .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)

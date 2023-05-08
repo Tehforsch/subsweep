@@ -136,7 +136,7 @@ fn insert_missing_components_system(
         );
         commands.entity(entity).insert((
             components::IonizedHydrogenFraction(ionized_hydrogen_fraction),
-            components::Flux(PhotonRate::zero()),
+            components::Rate(PhotonRate::zero()),
             components::Source(SourceRate::zero()),
             components::Temperature(temperature),
         ));
