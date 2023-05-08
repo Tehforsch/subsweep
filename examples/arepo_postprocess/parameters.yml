@@ -9,7 +9,7 @@ postprocess:
 sweep:
   directions: 1
   num_timestep_levels: 4
-  significant_flux_treshold: 1e20 photons s^-1
+  significant_rate_treshold: 1e20 photons s^-1
   timestep_safety_factor: 0.1
   check_deadlock: false
 visualization:

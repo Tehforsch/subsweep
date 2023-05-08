@@ -5,7 +5,7 @@ use mpi::Address;
 
 use super::direction::DirectionIndex;
 use super::Chemistry;
-use super::Flux;
+use super::Rate;
 use crate::particle::ParticleId;
 
 #[derive(Debug)]
@@ -15,10 +15,10 @@ pub struct Task {
 }
 
 #[derive(Clone, Debug)]
-pub struct FluxData<C: Chemistry> {
+pub struct RateData<C: Chemistry> {
     pub id: ParticleId,
     pub dir: DirectionIndex,
-    pub flux: Flux<C>,
+    pub rate: Rate<C>,
 }
 
 impl PartialOrd for Task {
@@ -41,21 +41,21 @@ impl PartialEq for Task {
     }
 }
 
-unsafe impl<C: Chemistry> Equivalence for FluxData<C> {
+unsafe impl<C: Chemistry> Equivalence for RateData<C> {
     type Out = UserDatatype;
 
     fn equivalent_datatype() -> Self::Out {
         UserDatatype::structured(
             &[1, 1, 1],
             &[
-                offset_of!(FluxData<C>, id) as Address,
-                offset_of!(FluxData<C>, dir) as Address,
-                offset_of!(FluxData<C>, flux) as Address,
+                offset_of!(RateData<C>, id) as Address,
+                offset_of!(RateData<C>, dir) as Address,
+                offset_of!(RateData<C>, rate) as Address,
             ],
             &[
                 UserDatatype::contiguous(1, &ParticleId::equivalent_datatype()),
                 UserDatatype::contiguous(1, &DirectionIndex::equivalent_datatype()),
-                UserDatatype::contiguous(1, &Flux::<C>::equivalent_datatype()),
+                UserDatatype::contiguous(1, &Rate::<C>::equivalent_datatype()),
             ],
         )
     }

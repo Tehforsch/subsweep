@@ -1,7 +1,7 @@
 use mpi::request::scope;
 use mpi::request::Request;
 
-use super::task::FluxData;
+use super::task::RateData;
 use crate::chemistry::Chemistry;
 use crate::communication::DataByRank;
 use crate::communication::MpiWorld;
@@ -11,13 +11,13 @@ use crate::communication::SizedCommunicator;
 type OutstandingRequest = mpi::ffi::MPI_Request;
 
 pub struct SweepCommunicator<C: Chemistry> {
-    communicator: MpiWorld<FluxData<C>>,
-    send_buffers: DataByRank<Vec<FluxData<C>>>,
+    communicator: MpiWorld<RateData<C>>,
+    send_buffers: DataByRank<Vec<RateData<C>>>,
     requests: DataByRank<Option<OutstandingRequest>>,
 }
 
 fn to_unscoped<'a, C: Chemistry>(
-    scoped_request: Request<'a, [FluxData<C>], &mpi::request::LocalScope<'a>>,
+    scoped_request: Request<'a, [RateData<C>], &mpi::request::LocalScope<'a>>,
 ) -> OutstandingRequest {
     // SAFETY:
     // We only overwrite the data in a send buffer whenever the previous request is finished.
@@ -27,7 +27,7 @@ fn to_unscoped<'a, C: Chemistry>(
 
 impl<C: Chemistry> SweepCommunicator<C> {
     pub fn new() -> Self {
-        let communicator = MpiWorld::<FluxData<C>>::new();
+        let communicator = MpiWorld::<RateData<C>>::new();
         let send_buffers = DataByRank::from_communicator(&communicator);
         let requests = DataByRank::from_communicator(&communicator);
         Self {
@@ -56,7 +56,7 @@ impl<C: Chemistry> SweepCommunicator<C> {
         }
     }
 
-    pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<FluxData<C>>>) {
+    pub fn try_send_all(&mut self, to_send: &mut DataByRank<Vec<RateData<C>>>) {
         self.update_pending_requests();
         for (rank, data) in to_send.iter_mut() {
             if data.is_empty() {
@@ -76,7 +76,7 @@ impl<C: Chemistry> SweepCommunicator<C> {
         }
     }
 
-    pub fn try_recv(&mut self, rank: Rank) -> Option<Vec<FluxData<C>>> {
+    pub fn try_recv(&mut self, rank: Rank) -> Option<Vec<RateData<C>>> {
         self.communicator.try_receive_vec(rank)
     }
 
@@ -104,9 +104,9 @@ impl<C: Chemistry> SweepCommunicator<C> {
     fn to_scoped_request<'a, Sc: mpi::request::Scope<'a>>(
         &self,
         scope: Sc,
-        data: &'a Vec<FluxData<C>>,
+        data: &'a Vec<RateData<C>>,
         request: OutstandingRequest,
-    ) -> Request<'a, [FluxData<C>], Sc> {
+    ) -> Request<'a, [RateData<C>], Sc> {
         unsafe { Request::from_raw(request, data, scope) }
     }
 }

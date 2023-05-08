@@ -19,7 +19,7 @@ use raxiom::communication::SizedCommunicator;
 use raxiom::communication::MPI_UNIVERSE;
 use raxiom::prelude::ParticleId;
 use raxiom::sweep::DirectionIndex;
-use raxiom::sweep::FluxData;
+use raxiom::sweep::RateData;
 use raxiom::sweep::SweepCommunicator;
 use raxiom::units::PhotonRate;
 
@@ -72,15 +72,15 @@ fn exchange_all() {
 }
 
 fn sweep_communicator() {
-    let mut world = MpiWorld::<FluxData>::new(Tag::default());
+    let mut world = MpiWorld::<RateData>::new(Tag::default());
     let rank = world.rank();
     let mut comm = SweepCommunicator::new(&mut world);
     let size = 10000;
     let num_iterations = 100;
     let make_data = |to_rank| {
-        let f = FluxData {
+        let f = RateData {
             dir: DirectionIndex(0),
-            flux: PhotonRate::zero(),
+            rate: PhotonRate::zero(),
             id: ParticleId(0),
         };
         // Make this large so that it will require buffered communication

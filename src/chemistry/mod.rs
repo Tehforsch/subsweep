@@ -23,17 +23,17 @@ pub trait Chemistry: Sized + 'static {
     type Photons: Photons;
     type Species: Debug;
 
-    fn get_outgoing_flux(
+    fn get_outgoing_rate(
         &self,
         cell: &Cell,
         site: &mut Site<Self>,
-        incoming_flux: Self::Photons,
+        incoming_rate: Self::Photons,
     ) -> Self::Photons;
 
     fn update_abundances(
         &self,
         site: &mut Site<Self>,
-        flux: Self::Photons,
+        rate: Self::Photons,
         timestep: Time,
         volume: Volume,
         length: Length,

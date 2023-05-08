@@ -24,7 +24,7 @@ use crate::units::SPEED_OF_LIGHT;
 
 #[derive(Resource)]
 pub struct HydrogenOnly {
-    pub flux_treshold: PhotonRate,
+    pub rate_treshold: PhotonRate,
     pub scale_factor: Dimensionless,
 }
 
@@ -52,27 +52,27 @@ impl Chemistry for HydrogenOnly {
     type Photons = PhotonRate;
     type Species = HydrogenOnlySpecies;
 
-    fn get_outgoing_flux(
+    fn get_outgoing_rate(
         &self,
         cell: &Cell,
         site: &mut Site<Self>,
-        incoming_flux: Self::Photons,
+        incoming_rate: Self::Photons,
     ) -> PhotonRate {
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.species.ionized_hydrogen_fraction);
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-        if incoming_flux < self.flux_treshold {
+        if incoming_rate < self.rate_treshold {
             PhotonRate::zero()
         } else {
             let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-            incoming_flux * absorbed_fraction
+            incoming_rate * absorbed_fraction
         }
     }
 
     fn update_abundances(
         &self,
         site: &mut Site<Self>,
-        flux: Self::Photons,
+        rate: Self::Photons,
         timestep: Time,
         volume: Volume,
         length: Length,
@@ -85,7 +85,7 @@ impl Chemistry for HydrogenOnly {
             density: site.density,
             volume,
             length,
-            flux,
+            rate,
             scale_factor: self.scale_factor,
         };
         let heating_rate = solver.timestep();
@@ -106,7 +106,7 @@ pub(crate) struct Solver {
     pub density: Density,
     pub volume: Volume,
     pub length: Length,
-    pub flux: PhotonRate,
+    pub rate: PhotonRate,
     pub scale_factor: Dimensionless,
 }
 
@@ -160,7 +160,7 @@ impl Solver {
         let rydberg = Energy::electron_volts(13.65693);
         let average_energy: Energy = Energy::electron_volts(0.4298);
         let average_cross_section: CrossSection = CrossSection::centimeters_squared(5.475e-14);
-        let photon_density = self.flux * self.length / SPEED_OF_LIGHT;
+        let photon_density = self.rate * self.length / SPEED_OF_LIGHT;
         self.neutral_hydrogen_number_density()
             * SPEED_OF_LIGHT
             * photon_density.remove_amount()
@@ -232,7 +232,7 @@ impl Solver {
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         let absorbed_fraction =
             1.0 - (-neutral_hydrogen_number_density * sigma * self.length).exp();
-        let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.flux) * self.timestep;
+        let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.rate) * self.timestep;
         self.ionized_hydrogen_fraction +=
             num_newly_ionized_hydrogen_atoms / num_hydrogen_atoms.to_amount();
         self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
@@ -279,11 +279,11 @@ mod tests {
                 let number_density = 1e5 / Volume::cubic_meters(1.0);
                 let length = Length::kiloparsec(100.0);
                 let volume = length.powi::<3>();
-                // Set up flux such that recombination should be in equillibrium with ionization
+                // Set up rate such that recombination should be in equillibrium with ionization
                 let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
                     * (number_density * initial_ionized_hydrogen_fraction).powi::<2>()
                     * volume;
-                let flux = recombination_rate * Amount::one_unchecked();
+                let rate = recombination_rate * Amount::one_unchecked();
                 let mut solver = Solver {
                     ionized_hydrogen_fraction: initial_ionized_hydrogen_fraction,
                     temperature: Temperature::kelvins(1000.0),
@@ -291,7 +291,7 @@ mod tests {
                     density: number_density * PROTON_MASS,
                     volume,
                     length,
-                    flux,
+                    rate,
                     scale_factor: Dimensionless::dimensionless(1.0),
                 };
                 solver.timestep();

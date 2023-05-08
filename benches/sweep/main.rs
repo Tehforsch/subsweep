@@ -51,7 +51,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         .add_parameters_explicitly(SweepParameters {
             directions: dirs.clone(),
             num_timestep_levels: num_timestep_levels,
-            significant_flux_treshold: PhotonRate::zero(),
+            significant_rate_treshold: PhotonRate::zero(),
             timestep_safety_factor: timestep_safety_factor,
             check_deadlock: false,
         })

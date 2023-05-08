@@ -27,7 +27,7 @@ use self::count_by_dir::CountByDir;
 pub use self::direction::DirectionIndex;
 use self::direction::Directions;
 use self::site::Site;
-pub use self::task::FluxData;
+pub use self::task::RateData;
 use self::task::Task;
 use self::timestep_level::TimestepLevel;
 use self::timestep_state::TimestepState;
@@ -59,7 +59,7 @@ use crate::units::SourceRate;
 use crate::units::Temperature;
 use crate::units::Time;
 
-pub type Flux<C> = <C as Chemistry>::Photons;
+pub type Rate<C> = <C as Chemistry>::Photons;
 pub type Species<C> = <C as Chemistry>::Species;
 
 pub type SweepCommunicator<C> = self::communicator::SweepCommunicator<C>;
@@ -114,7 +114,7 @@ struct Sweep<C: Chemistry> {
     sites: Sites<C>,
     halo_levels: HashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
-    to_send: DataByRank<Queue<FluxData<C>>>,
+    to_send: DataByRank<Queue<RateData<C>>>,
     to_solve_count: CountByDir,
     to_receive_count: DataByRank<usize>,
     timestep_state: TimestepState,
@@ -241,7 +241,7 @@ impl<C: Chemistry> Sweep<C> {
         if let Some(received) = received {
             self.to_receive_count[rank] -= received.len();
             for d in received.into_iter() {
-                self.handle_local_neighbour(d.flux, d.dir, d.id);
+                self.handle_local_neighbour(d.rate, d.dir, d.id);
             }
         }
     }
@@ -308,20 +308,20 @@ impl<C: Chemistry> Sweep<C> {
         self.get_level(id).is_active(self.current_level)
     }
 
-    fn get_outgoing_flux(&mut self, task: &Task) -> Flux<C> {
+    fn get_outgoing_rate(&mut self, task: &Task) -> Rate<C> {
         let cell = &self.cells.get(task.id);
         let site = self.sites.get_mut(task.id);
         let source = site.source_per_direction_bin(&self.directions);
-        let incoming_flux = site.incoming_total_flux[task.dir.0].clone() + source;
-        self.chemistry.get_outgoing_flux(cell, site, incoming_flux)
+        let incoming_rate = site.incoming_total_rate[task.dir.0].clone() + source;
+        self.chemistry.get_outgoing_rate(cell, site, incoming_rate)
     }
 
     fn solve_task(&mut self, task: Task) {
-        let outgoing_flux = self.get_outgoing_flux(&task);
+        let outgoing_rate = self.get_outgoing_rate(&task);
         let site = self.sites.get_mut(task.id);
-        let outgoing_flux_correction =
-            outgoing_flux.clone() - site.outgoing_total_flux[task.dir.0].clone();
-        site.outgoing_total_flux[task.dir.0] = outgoing_flux;
+        let outgoing_rate_correction =
+            outgoing_rate.clone() - site.outgoing_total_rate[task.dir.0].clone();
+        site.outgoing_total_rate[task.dir.0] = outgoing_rate;
         let cell = &self.cells.get(task.id);
         self.to_solve_count.reduce(task.dir);
         // This is very inefficient, let's see if this ever becomes a bottleneck
@@ -333,16 +333,16 @@ impl<C: Chemistry> Sweep<C> {
         for (face, neighbour) in neighbours.iter() {
             if face.points_downwind(&self.directions[task.dir]) {
                 let effective_area = face.area * face.normal.dot(*self.directions[task.dir]);
-                let flux_correction_this_cell =
-                    outgoing_flux_correction.clone() * (effective_area / total_effective_area);
+                let rate_correction_this_cell =
+                    outgoing_rate_correction.clone() * (effective_area / total_effective_area);
                 match neighbour {
                     ParticleType::Local(neighbour_id) => self.handle_local_neighbour(
-                        flux_correction_this_cell,
+                        rate_correction_this_cell,
                         task.dir,
                         *neighbour_id,
                     ),
                     ParticleType::Remote(remote) => {
-                        self.handle_remote_neighbour(&task, flux_correction_this_cell, remote)
+                        self.handle_remote_neighbour(&task, rate_correction_this_cell, remote)
                     }
                     ParticleType::Boundary => {}
                     ParticleType::LocalPeriodic(_) => {}
@@ -354,14 +354,14 @@ impl<C: Chemistry> Sweep<C> {
 
     fn handle_local_neighbour(
         &mut self,
-        incoming_flux_correction: Flux<C>,
+        incoming_rate_correction: Rate<C>,
         dir: DirectionIndex,
         neighbour: ParticleId,
     ) {
         let (site, is_active) = self
             .sites
             .get_mut_and_active_state(neighbour, self.current_level);
-        site.incoming_total_flux[*dir] += incoming_flux_correction;
+        site.incoming_total_rate[*dir] += incoming_rate_correction;
         if is_active {
             let num_remaining = site.num_missing_upwind.reduce(dir);
             if num_remaining == 0 {
@@ -373,16 +373,16 @@ impl<C: Chemistry> Sweep<C> {
     fn handle_remote_neighbour(
         &mut self,
         task: &Task,
-        flux_correction: Flux<C>,
+        rate_correction: Rate<C>,
         remote: &RemoteNeighbour,
     ) {
         if self.is_active(remote.id) {
-            let flux_data = FluxData {
+            let rate_data = RateData {
                 dir: task.dir,
-                flux: flux_correction,
+                rate: rate_correction,
                 id: remote.id,
             };
-            self.to_send[remote.rank].push(flux_data);
+            self.to_send[remote.rank].push(rate_data);
         }
     }
 
@@ -391,10 +391,10 @@ impl<C: Chemistry> Sweep<C> {
             let (level, site) = self.sites.get_mut_with_level(id);
             let timestep = self.timestep_state.timestep_at_level(level);
             let source = site.source_per_direction_bin(&self.directions);
-            let flux = site.total_incoming_flux() + source;
+            let rate = site.total_incoming_rate() + source;
             site.change_timescale =
                 self.chemistry
-                    .update_abundances(site, flux, timestep, cell.volume, cell.size);
+                    .update_abundances(site, rate, timestep, cell.volume, cell.size);
         }
     }
 
@@ -484,7 +484,7 @@ fn init_sweep_system(
         **world_size,
         **world_rank,
         HydrogenOnly {
-            flux_treshold: sweep_parameters.significant_flux_treshold,
+            rate_treshold: sweep_parameters.significant_rate_treshold,
             scale_factor: cosmology.scale_factor(),
         },
     ));

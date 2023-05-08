@@ -8,7 +8,7 @@ use crate::units::VecDimensionless;
 pub struct SweepParameters {
     pub directions: DirectionsSpecification,
     pub num_timestep_levels: usize,
-    pub significant_flux_treshold: PhotonRate,
+    pub significant_rate_treshold: PhotonRate,
     pub timestep_safety_factor: Dimensionless,
     pub check_deadlock: bool,
 }
