@@ -68,6 +68,9 @@ unit_system!(
     ENERGY_DENSITY, EnergyDensity, mass: 1, length: -1, time: -2,
     {
     },
+    ENERGY_RATE_DENSITY, EnergyRateDensity, mass: 1, length: -1, time: -3,
+    {
+    },
     ENERGYPERMASS, EnergyPerMass, mass: 0, length: 2, time: -2,
     {
         joules_per_kilogram, 1.0, "J/kg"
@@ -113,6 +116,7 @@ unit_system!(
     },
     NUMBERDENSITY3D, NumberDensity3D, length: -3,
     {
+        particles_per_centimeter_cubed, 1e6, "1/cm^3"
     },
     NUMBERDENSITY2D, NumberDensity2D, length: -2,
     {
@@ -124,6 +128,10 @@ unit_system!(
     PHOTON_RATE, PhotonRate, time: -1, amount: 1,
     {
         photons_per_s, 1.0, "photons/s"
+    },
+    PHOTON_FLUX, PhotonFlux, time: -1, amount: 1, length: -2,
+    {
+        photons_per_s_per_cm_squared, 1.0, "photons cm^-2 s^-1"
     },
     CROSS_SECTION_2D, CrossSection2D, length: 1,
     {
