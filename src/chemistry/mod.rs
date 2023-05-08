@@ -15,7 +15,7 @@ use crate::sweep::site::Site;
 use crate::units::helpers::Float;
 use crate::units::Dimensionless;
 use crate::units::Length;
-use crate::units::PhotonFlux;
+use crate::units::PhotonRate;
 use crate::units::Time;
 use crate::units::Volume;
 
@@ -55,8 +55,8 @@ pub trait Photons:
     fn zero() -> Self;
 }
 
-impl Photons for PhotonFlux {
+impl Photons for PhotonRate {
     fn zero() -> Self {
-        PhotonFlux::zero()
+        PhotonRate::zero()
     }
 }

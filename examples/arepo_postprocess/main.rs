@@ -21,7 +21,7 @@ use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
 use raxiom::prelude::*;
 use raxiom::units::Dimensionless;
-use raxiom::units::PhotonFlux;
+use raxiom::units::PhotonRate;
 use raxiom::units::SourceRate;
 use raxiom::units::Temperature;
 use raxiom::units::VecLength;
@@ -136,7 +136,7 @@ fn insert_missing_components_system(
         );
         commands.entity(entity).insert((
             components::IonizedHydrogenFraction(ionized_hydrogen_fraction),
-            components::Flux(PhotonFlux::zero()),
+            components::Flux(PhotonRate::zero()),
             components::Source(SourceRate::zero()),
             components::Temperature(temperature),
         ));

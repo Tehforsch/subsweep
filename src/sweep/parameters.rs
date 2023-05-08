@@ -1,14 +1,14 @@
 use derive_custom::raxiom_parameters;
 
 use crate::units::Dimensionless;
-use crate::units::PhotonFlux;
+use crate::units::PhotonRate;
 use crate::units::VecDimensionless;
 
 #[raxiom_parameters("sweep")]
 pub struct SweepParameters {
     pub directions: DirectionsSpecification,
     pub num_timestep_levels: usize,
-    pub significant_flux_treshold: PhotonFlux,
+    pub significant_flux_treshold: PhotonRate,
     pub timestep_safety_factor: Dimensionless,
     pub check_deadlock: bool,
 }

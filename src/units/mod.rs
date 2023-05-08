@@ -121,7 +121,7 @@ unit_system!(
     {
         photons, 1.0, "photons"
     },
-    PHOTON_FLUX, PhotonFlux, time: -1, amount: 1,
+    PHOTON_RATE, PhotonRate, time: -1, amount: 1,
     {
         photons_per_s, 1.0, "photons/s"
     },

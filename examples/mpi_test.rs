@@ -21,7 +21,7 @@ use raxiom::prelude::ParticleId;
 use raxiom::sweep::DirectionIndex;
 use raxiom::sweep::FluxData;
 use raxiom::sweep::SweepCommunicator;
-use raxiom::units::PhotonFlux;
+use raxiom::units::PhotonRate;
 
 pub fn main() {
     let fns: &[(&str, fn())] = &[
@@ -80,7 +80,7 @@ fn sweep_communicator() {
     let make_data = |to_rank| {
         let f = FluxData {
             dir: DirectionIndex(0),
-            flux: PhotonFlux::zero(),
+            flux: PhotonRate::zero(),
             id: ParticleId(0),
         };
         // Make this large so that it will require buffered communication

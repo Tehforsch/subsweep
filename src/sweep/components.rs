@@ -13,7 +13,7 @@ use crate::units::Time;
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "absorption_rate"]
 #[repr(transparent)]
-pub struct AbsorptionRate(pub crate::units::PhotonFlux);
+pub struct AbsorptionRate(pub crate::units::PhotonRate);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "ionized_hydrogen_fraction"]
@@ -33,7 +33,7 @@ pub struct Source(pub crate::units::SourceRate);
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "flux"]
 #[repr(transparent)]
-pub struct Flux(pub crate::units::PhotonFlux);
+pub struct Flux(pub crate::units::PhotonRate);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "heating_rate"]

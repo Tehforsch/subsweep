@@ -13,7 +13,7 @@ use crate::units::HeatingRate;
 use crate::units::HeatingTerm;
 use crate::units::Length;
 use crate::units::NumberDensity;
-use crate::units::PhotonFlux;
+use crate::units::PhotonRate;
 use crate::units::Rate;
 use crate::units::Temperature;
 use crate::units::Time;
@@ -24,7 +24,7 @@ use crate::units::SPEED_OF_LIGHT;
 
 #[derive(Resource)]
 pub struct HydrogenOnly {
-    pub flux_treshold: PhotonFlux,
+    pub flux_treshold: PhotonRate,
     pub scale_factor: Dimensionless,
 }
 
@@ -49,7 +49,7 @@ impl HydrogenOnlySpecies {
 }
 
 impl Chemistry for HydrogenOnly {
-    type Photons = PhotonFlux;
+    type Photons = PhotonRate;
     type Species = HydrogenOnlySpecies;
 
     fn get_outgoing_flux(
@@ -57,12 +57,12 @@ impl Chemistry for HydrogenOnly {
         cell: &Cell,
         site: &mut Site<Self>,
         incoming_flux: Self::Photons,
-    ) -> PhotonFlux {
+    ) -> PhotonRate {
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.species.ionized_hydrogen_fraction);
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
         if incoming_flux < self.flux_treshold {
-            PhotonFlux::zero()
+            PhotonRate::zero()
         } else {
             let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
             incoming_flux * absorbed_fraction
@@ -106,7 +106,7 @@ pub(crate) struct Solver {
     pub density: Density,
     pub volume: Volume,
     pub length: Length,
-    pub flux: PhotonFlux,
+    pub flux: PhotonRate,
     pub scale_factor: Dimensionless,
 }
 

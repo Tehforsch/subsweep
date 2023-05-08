@@ -30,7 +30,7 @@ use raxiom::sweep::DirectionsSpecification;
 use raxiom::sweep::SweepPlugin;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
-use raxiom::units::PhotonFlux;
+use raxiom::units::PhotonRate;
 use raxiom::units::Time;
 use raxiom::units::VecLength;
 use raxiom::voronoi::Point3d;
@@ -51,7 +51,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         .add_parameters_explicitly(SweepParameters {
             directions: dirs.clone(),
             num_timestep_levels: num_timestep_levels,
-            significant_flux_treshold: PhotonFlux::zero(),
+            significant_flux_treshold: PhotonRate::zero(),
             timestep_safety_factor: timestep_safety_factor,
             check_deadlock: false,
         })
