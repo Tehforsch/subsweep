@@ -1,3 +1,4 @@
+use std::array::IntoIter;
 use std::ops::Add;
 use std::ops::Sub;
 
@@ -83,16 +84,20 @@ pub struct TriangleWithFaces {
 impl DTetra for TriangleWithFaces {
     type Dimension = TwoD;
 
-    fn faces(&self) -> Box<dyn Iterator<Item = &FaceInfo> + '_> {
-        Box::new([&self.f1, &self.f2, &self.f3].into_iter())
+    type PointsIter = IntoIter<PointIndex, 3>;
+    type FacesIter<'a> = IntoIter<&'a FaceInfo, 3>;
+    type FacesMutIter<'a> = IntoIter<&'a mut FaceInfo, 3>;
+
+    fn points(&self) -> Self::PointsIter {
+        [self.p1, self.p2, self.p3].into_iter()
     }
 
-    fn faces_mut(&mut self) -> Box<dyn Iterator<Item = &mut FaceInfo> + '_> {
-        Box::new([&mut self.f1, &mut self.f2, &mut self.f3].into_iter())
+    fn faces(&self) -> Self::FacesIter<'_> {
+        [&self.f1, &self.f2, &self.f3].into_iter()
     }
 
-    fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_> {
-        Box::new([self.p1, self.p2, self.p3].into_iter())
+    fn faces_mut(&mut self) -> Self::FacesMutIter<'_> {
+        [&mut self.f1, &mut self.f2, &mut self.f3].into_iter()
     }
 
     fn contains_point(&self, p: PointIndex) -> bool {
