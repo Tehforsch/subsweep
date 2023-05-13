@@ -24,7 +24,7 @@ use crate::communication::SizedCommunicator;
 use crate::dimension::ActiveDimension;
 use crate::dimension::ActiveWrapType;
 use crate::dimension::Point;
-use crate::domain::Decomposition;
+use crate::domain::DecompositionState;
 use crate::domain::QuadTree;
 use crate::extent::Extent;
 use crate::parameters::SimulationBox;
@@ -53,7 +53,7 @@ where
     result_comm: ExchangeCommunicator<MpiSearchResult<D>>,
     finished_comm: Communicator<SendNum>,
     tree: &'a QuadTree,
-    decomposition: &'a Decomposition,
+    decomposition: &'a DecompositionState,
     box_: SimulationBox,
     halo_cache: HaloCache<D>,
     extent: Extent<Point<D>>,
@@ -80,7 +80,7 @@ fn find_wrapped_point(
 impl<'a> ParallelSearch<'a, ActiveDimension> {
     fn new(
         tree: &'a QuadTree,
-        decomposition: &'a Decomposition,
+        decomposition: &'a DecompositionState,
         box_: SimulationBox,
         halo_cache: HaloCache<ActiveDimension>,
         num_points_local: usize,
@@ -115,7 +115,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
                 );
                 if self
                     .decomposition
-                    .rank_owns_part_of_search_radius(rank, &extent, &self.extent)
+                    .rank_owns_part_of_search_radius(rank, &extent, &self.box_)
                 {
                     outgoing[rank].push(search.to_equivalent());
                 }

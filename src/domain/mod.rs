@@ -36,7 +36,7 @@ use crate::simulation::Simulation;
 pub type DomainKey = crate::peano_hilbert::PeanoKey2d;
 #[cfg(feature = "3d")]
 pub type DomainKey = crate::peano_hilbert::PeanoKey3d;
-pub type Decomposition = decomposition::Decomposition<DomainKey>;
+pub type DecompositionState = decomposition::Decomposition<DomainKey>;
 
 /// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
 #[raxiom_parameters("tree")]
@@ -90,6 +90,10 @@ impl RaxiomPlugin for DomainPlugin {
                 determine_particle_ids_system,
             )
             .add_startup_system_to_stage(
+                DomainStartupStages::ParticleIds,
+                set_domain_extents_system,
+            )
+            .add_startup_system_to_stage(
                 DomainStartupStages::CheckParticleExtent,
                 check_particle_extent_system,
             )
@@ -129,14 +133,18 @@ pub fn construct_quad_tree_system(
     commands.insert_resource(QuadTree::new(&config.tree, particles, &box_));
 }
 
+fn communicate_extents(particles: &Particles<&Position>) -> Vec<Extent> {
+    let mut extent_communicator = MpiWorld::<CommunicatedOption<Extent>>::new();
+    let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
+    let all_extents = extent_communicator.all_gather(&extent.into());
+    all_extents.into_iter().filter_map(|x| x.into()).collect()
+}
+
 pub(super) fn check_particle_extent_system(
     particles: Particles<&Position>,
     box_: Res<SimulationBox>,
 ) {
-    let mut extent_communicator = MpiWorld::<CommunicatedOption<Extent>>::new();
-    let extent = Extent::from_positions(particles.iter().map(|x| &x.0));
-    let all_extents = extent_communicator.all_gather(&extent.into());
-    let all_extents: Vec<Extent> = all_extents.into_iter().filter_map(|x| x.into()).collect();
+    let all_extents = communicate_extents(&particles);
     let extent = Extent::get_all_encompassing(all_extents.iter())
         .expect("Failed to find simulation extent - are there no particles?");
     let volume_ratio = extent.volume() / box_.volume();
@@ -183,14 +191,14 @@ fn domain_decomposition_system(
         comm: MpiWorld::new(),
         local_counter,
     };
-    let decomp = Decomposition::new(&mut counter, **world_size);
+    let decomp = DecompositionState::new(&mut counter, **world_size);
     decomp.log_imbalance();
     commands.insert_resource(decomp);
 }
 
 fn set_outgoing_entities_system(
     mut outgoing_entities: ResMut<OutgoingEntities>,
-    decomposition: Res<Decomposition>,
+    decomposition: Res<DecompositionState>,
     world_rank: Res<WorldRank>,
     box_: Res<SimulationBox>,
     particles: Particles<(Entity, &Position)>,
@@ -202,4 +210,12 @@ fn set_outgoing_entities_system(
             outgoing_entities.add(rank, entity);
         }
     }
+}
+
+fn set_domain_extents_system(
+    mut decomposition: ResMut<DecompositionState>,
+    particles: Particles<&Position>,
+) {
+    let all_extents = communicate_extents(&particles);
+    decomposition.set_extents(all_extents);
 }

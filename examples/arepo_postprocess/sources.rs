@@ -14,7 +14,7 @@ use raxiom::communication::MpiWorld;
 use raxiom::components;
 use raxiom::components::Position;
 use raxiom::cosmology::Cosmology;
-use raxiom::domain::Decomposition;
+use raxiom::domain::DecompositionState;
 use raxiom::domain::IntoKey;
 use raxiom::io::input::read_dataset;
 use raxiom::io::input::InputFiles;
@@ -160,7 +160,7 @@ pub(super) fn add_single_source_system(
 pub fn set_source_terms_system(
     mut particles: Particles<(&Position, &mut components::Source)>,
     sources: Res<Sources>,
-    decomposition: Res<Decomposition>,
+    decomposition: Res<DecompositionState>,
     box_: Res<SimulationBox>,
     world_rank: Res<WorldRank>,
 ) {

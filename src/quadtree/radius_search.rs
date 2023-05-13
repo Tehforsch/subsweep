@@ -22,7 +22,7 @@ fn relative_bounding_box_overlap(dist: VecLength, total_size: VecLength) -> bool
 /// Returns whether the two bounding boxes given by
 /// the center coordinates pos1 and pos2 and the side lengths
 /// size1 and size2 overlap in a periodic box of size box_size
-pub(super) fn bounding_boxes_overlap_periodic(
+pub fn bounding_boxes_overlap_periodic(
     box_: &SimulationBox,
     pos1: &VecLength,
     size1: &VecLength,

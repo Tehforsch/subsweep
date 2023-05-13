@@ -32,6 +32,14 @@ impl<P: Add<P, Output = P> + Sub<P, Output = P> + Div<f64, Output = P> + Clone +
         let dist = self.max - self.min;
         Self::from_min_max(self.min - dist, self.max + dist)
     }
+
+    pub fn center(&self) -> P {
+        self.center
+    }
+
+    pub fn side_lengths(&self) -> P {
+        self.max - self.min
+    }
 }
 
 impl<P> Extent<P>

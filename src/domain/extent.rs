@@ -57,14 +57,6 @@ macro_rules! impl_extent {
                 }
             }
 
-            pub fn center(&self) -> $unit_vec {
-                self.center
-            }
-
-            pub fn side_lengths(&self) -> $unit_vec {
-                self.max - self.min
-            }
-
             pub fn from_positions<'a>(
                 positions: impl Iterator<Item = &'a $unit_vec>,
             ) -> Option<Self> {
