@@ -183,7 +183,6 @@ impl Solver {
 
     fn get_heating_rate(&self, absorbed_fraction: Dimensionless) -> EnergyRateDensity {
         let photoheating = self.photoheating(absorbed_fraction) / self.volume / self.timestep;
-        dbg!(photoheating);
         let ne = self.electron_number_density();
         let nh_neutral = self.hydrogen_number_density();
         let nh_ionized = self.ionized_hydrogen_number_density();
@@ -297,20 +296,21 @@ mod tests {
         }
     }
 
-    fn run(mut solver: Solver, final_time: Time, timestep: Time, out: &str) {
+    fn run(mut solver: Solver, final_time: Time, timestep: Time, out: &str, output_cadence: usize) {
         let mut lines = vec![];
         let mut time = Time::zero();
-        lines.push("t, xHI, T".into());
-        for _ in 0..(final_time / timestep).value() as usize {
+        lines.push("t,xHI,T".into());
+        for i in 0..(final_time / timestep).value() as usize {
             time += timestep;
             solver.timestep();
-            lines.push(
-                format!(
-                    "{}, {}, {}",
+            if i.rem_euclid(output_cadence) == 0 {
+                lines.push(format!(
+                    "{},{},{}",
                     time.in_megayears(),
                     solver.ionized_hydrogen_fraction.value(),
                     solver.temperature.in_kelvins()
                 ));
+            }
         }
         fs::write(out, lines.join("\n")).unwrap();
         dbg!(&solver);
@@ -318,34 +318,38 @@ mod tests {
 
     #[test]
     fn time_evolution() {
-        let ionized_hydrogen_fraction = Dimensionless::dimensionless(0.0);
-        let timestep = Time::megayears(1.0);
+        let timestep = Time::megayears(0.001);
         let length = Length::parsec(1.0);
         let volume = length.cubed();
-        let final_time = Time::megayears(10.0);
-        let flux = PhotonFlux::photons_per_s_per_cm_squared(1e5);
+        let final_time = Time::megayears(5000.0);
+        // let flux = PhotonFlux::photons_per_s_per_cm_squared(1e5);
+        let flux = PhotonFlux::photons_per_s_per_cm_squared(0.0);
         let area = volume / length;
         let rate = flux * area;
 
-        for temp_exp in [3, 4] {
-            let temperature = Temperature::kelvins(10.0f64.powi(temp_exp));
-            for exp in [-8, -2] {
-                let number_density = NumberDensity::particles_per_centimeter_cubed(10.0f64.powi(exp));
-                let density = number_density * PROTON_MASS;
+        for init_xhi in [0.0, 0.2, 0.5, 0.8, 1.0] {
+            let ionized_hydrogen_fraction = Dimensionless::dimensionless(init_xhi);
+            for temp_exp in [3, 4, 5, 6] {
+                let temperature = Temperature::kelvins(10.0f64.powi(temp_exp));
+                for exp in [-8, -6, -4, -2, 0, 2] {
+                    let number_density =
+                        NumberDensity::particles_per_centimeter_cubed(10.0f64.powi(exp));
+                    let density = number_density * PROTON_MASS;
 
-                let solver = Solver {
-                    ionized_hydrogen_fraction,
-                    temperature,
-                    timestep,
-                    density,
-                    volume,
-                    length,
-                    rate,
-                    scale_factor: Dimensionless::dimensionless(1.0),
-                };
+                    let solver = Solver {
+                        ionized_hydrogen_fraction,
+                        temperature,
+                        timestep,
+                        density,
+                        volume,
+                        length,
+                        rate,
+                        scale_factor: Dimensionless::dimensionless(1.0),
+                    };
 
-                let output = format!("out/{}_{}", temp_exp, exp);
-                run(solver, final_time, timestep, &output);
+                    let output = format!("out/{}_{}_{}", temp_exp, exp, init_xhi);
+                    run(solver, final_time, timestep, &output, 1000);
+                }
             }
         }
     }
