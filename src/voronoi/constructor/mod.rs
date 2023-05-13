@@ -95,6 +95,10 @@ where
         self.data.construct_voronoi()
     }
 
+    pub fn iter_voronoi_cells(&self) -> impl Iterator<Item = Cell<D>> + '_ {
+        self.data.iter_voronoi_cells()
+    }
+
     pub fn get_cell_by_point(&self, point_index: PointIndex) -> Option<ParticleType> {
         self.data
             .point_to_cell_map
@@ -116,11 +120,9 @@ where
 
 impl Constructor<ActiveDimension> {
     pub fn sweep_grid(&self) -> Vec<(ParticleType, grid::Cell)> {
-        let voronoi = self.voronoi();
-        debug!("Constructing sweep grid.");
-        voronoi
-            .cells
-            .iter()
+        let voronoi_cells = self.iter_voronoi_cells();
+        info!("Constructing sweep grid.");
+        voronoi_cells
             .map(|voronoi_cell| {
                 let particle_type = self.data.get_particle_type(voronoi_cell.delaunay_point);
                 let particle_type = match particle_type {

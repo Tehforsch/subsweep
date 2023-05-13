@@ -64,6 +64,12 @@ where
         }
     }
 
+    pub fn iter_voronoi_cells(&self) -> impl Iterator<Item = Cell<D>> + '_ {
+        self.triangulation
+            .iter_non_boundary_points()
+            .map(|p| Cell::<D>::new(self, p))
+    }
+
     pub fn get_particle_type(&self, p: PointIndex) -> ParticleType {
         if self.triangulation.point_kinds[&p] == PointKind::Outer {
             return ParticleType::Boundary;
