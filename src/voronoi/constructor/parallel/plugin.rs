@@ -9,7 +9,7 @@ use super::super::Constructor;
 use super::ParallelSearch;
 use crate::components::Position;
 use crate::dimension::ActiveDimension;
-use crate::domain::Decomposition;
+use crate::domain::DecompositionState;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
 use crate::grid::ParticleType;
@@ -55,7 +55,7 @@ pub fn construct_grid_system(
     mut commands: Commands,
     particles: Particles<(Entity, &ParticleId, &Position)>,
     tree: Res<QuadTree>,
-    decomposition: Res<Decomposition>,
+    decomposition: Res<DecompositionState>,
     box_: Res<SimulationBox>,
     map: Res<IdEntityMap>,
 ) {

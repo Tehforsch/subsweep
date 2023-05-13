@@ -13,19 +13,16 @@ use super::IntoKey;
 use crate::communication::communicator::Communicator;
 use crate::communication::Rank;
 use crate::extent::Extent;
+use crate::parameters::SimulationBox;
+use crate::quadtree::radius_search::bounding_boxes_overlap_periodic;
 use crate::units::MVec;
+use crate::units::VecLength;
 
 const LOAD_IMBALANCE_WARN_THRESHOLD: f64 = 0.1;
 
 struct Segment<K> {
     start: K,
     end: K,
-}
-
-impl<K: Key> Segment<K> {
-    fn overlaps(&self, min: K, max: K) -> bool {
-        !(self.end <= min || self.start >= max)
-    }
 }
 
 impl<K: Debug> Debug for Segment<K> {
@@ -62,7 +59,7 @@ pub struct Decomposition<K> {
     num_ranks: usize,
     cuts: Vec<K>,
     loads: Vec<Work>,
-    segments: Vec<Segment<K>>,
+    extents: Vec<Extent<VecLength>>,
 }
 
 impl<K: Key> Decomposition<K> {
@@ -83,7 +80,7 @@ impl<K: Key> Decomposition<K> {
             cuts,
             loads,
             num_ranks,
-            segments,
+            extents: vec![],
         }
     }
 
@@ -123,6 +120,10 @@ impl<K: Key> Decomposition<K> {
             }
         }
     }
+
+    pub(super) fn set_extents(&mut self, extents: Vec<Extent<VecLength>>) {
+        self.extents = extents;
+    }
 }
 
 impl Decomposition<DomainKey> {
@@ -130,19 +131,16 @@ impl Decomposition<DomainKey> {
         &self,
         rank: Rank,
         extent: &Extent<MVec>,
-        global: &Extent<MVec>,
+        box_: &SimulationBox,
     ) -> bool {
-        if global.contains_extent(extent) {
-            let (min, max) = extent.get_min_and_max_key(global);
-            self.segments[rank as usize].overlaps(min, max)
-        } else {
-            // This is not the best we can do, but for now I don't
-            // want to deal with having to periodically wrap extents
-            // and peano hilbert key segments. This is probably not a
-            // major bottleneck anyways, since most searches are
-            // non-periodic
-            true
-        }
+        let rank_extent = &self.extents[rank as usize];
+        bounding_boxes_overlap_periodic(
+            box_,
+            &VecLength::new_unchecked(extent.center()),
+            &VecLength::new_unchecked(extent.side_lengths()),
+            &rank_extent.center(),
+            &rank_extent.side_lengths(),
+        )
     }
 }
 
