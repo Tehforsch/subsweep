@@ -48,8 +48,11 @@ pub struct Triangle {
 
 impl DFace for Triangle {
     type Dimension = ThreeD;
-    fn points(&self) -> Box<dyn Iterator<Item = PointIndex>> {
-        Box::new([self.p1, self.p2, self.p3].into_iter())
+
+    type PointsIter = IntoIter<PointIndex, 3>;
+
+    fn points(&self) -> Self::PointsIter {
+        [self.p1, self.p2, self.p3].into_iter()
     }
 }
 
