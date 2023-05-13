@@ -18,9 +18,18 @@ pub trait DDimension: Dimension {
 pub trait DTetra: core::fmt::Debug {
     type Dimension: DDimension;
 
-    fn points(&self) -> Box<dyn Iterator<Item = PointIndex> + '_>;
-    fn faces(&self) -> Box<dyn Iterator<Item = &FaceInfo> + '_>;
-    fn faces_mut(&mut self) -> Box<dyn Iterator<Item = &mut FaceInfo> + '_>;
+    type PointsIter: Iterator<Item = PointIndex>;
+    type FacesIter<'a>: Iterator<Item = &'a FaceInfo>
+    where
+        Self: 'a;
+    type FacesMutIter<'a>: Iterator<Item = &'a mut FaceInfo>
+    where
+        Self: 'a;
+
+    fn points(&self) -> Self::PointsIter;
+    fn faces(&self) -> Self::FacesIter<'_>;
+    fn faces_mut(&mut self) -> Self::FacesMutIter<'_>;
+
     fn contains_point(&self, p1: PointIndex) -> bool;
 
     fn faces_and_points(&self) -> Box<dyn Iterator<Item = (&FaceInfo, PointIndex)> + '_> {

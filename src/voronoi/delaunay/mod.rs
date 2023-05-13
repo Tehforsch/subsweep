@@ -221,23 +221,20 @@ where
     }
 
     fn update_connections_in_existing_tetra(&mut self, tetra_index: TetraIndex) {
-        let tetra = &self.tetras[tetra_index];
-        let new_connections: Vec<_> = tetra
-            .faces_and_points()
-            .filter_map(|(face, point)| {
-                face.opposing.map(|opposing| {
-                    (
-                        opposing.tetra,
-                        face.face,
-                        ConnectionData {
-                            tetra: tetra_index,
-                            point,
-                        },
-                    )
-                })
+        let tetra = &self.tetras[tetra_index].clone();
+        let new_connections = tetra.faces_and_points().filter_map(|(face, point)| {
+            face.opposing.map(|opposing| {
+                (
+                    opposing.tetra,
+                    face.face,
+                    ConnectionData {
+                        tetra: tetra_index,
+                        point,
+                    },
+                )
             })
-            .collect();
-        for (tetra, face, connection) in new_connections.into_iter() {
+        });
+        for (tetra, face, connection) in new_connections {
             self.tetras[tetra].find_face_mut(face).opposing = Some(connection);
         }
     }
