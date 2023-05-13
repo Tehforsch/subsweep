@@ -1,3 +1,5 @@
+use std::array::IntoIter;
+
 use super::Point2d;
 use crate::dimension::TwoD;
 use crate::voronoi::delaunay::dimension::DFace;
@@ -12,8 +14,10 @@ pub struct Line {
 
 impl DFace for Line {
     type Dimension = TwoD;
-    fn points(&self) -> Box<dyn Iterator<Item = PointIndex>> {
-        Box::new([self.p1, self.p2].into_iter())
+
+    type PointsIter = IntoIter<PointIndex, 2>;
+    fn points(&self) -> Self::PointsIter {
+        [self.p1, self.p2].into_iter()
     }
 }
 

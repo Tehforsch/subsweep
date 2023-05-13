@@ -1,3 +1,5 @@
+use std::iter::Zip;
+
 use super::face_info::FaceInfo;
 use super::FaceIndex;
 use super::Point;
@@ -32,8 +34,8 @@ pub trait DTetra: core::fmt::Debug {
 
     fn contains_point(&self, p1: PointIndex) -> bool;
 
-    fn faces_and_points(&self) -> Box<dyn Iterator<Item = (&FaceInfo, PointIndex)> + '_> {
-        Box::new(self.faces().zip(self.points()))
+    fn faces_and_points(&self) -> Zip<Self::FacesIter<'_>, Self::PointsIter> {
+        self.faces().zip(self.points())
     }
 
     fn find_face(&self, face: FaceIndex) -> &FaceInfo {
@@ -87,7 +89,8 @@ pub trait DTetraData:
 pub trait DFace {
     type Dimension: DDimension;
 
-    fn points(&self) -> Box<dyn Iterator<Item = PointIndex>>;
+    type PointsIter: Iterator<Item = PointIndex>;
+    fn points(&self) -> Self::PointsIter;
 
     fn contains_point(&self, point: PointIndex) -> bool {
         self.points().any(|p| p == point)
