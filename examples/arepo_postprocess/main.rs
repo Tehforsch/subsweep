@@ -2,6 +2,7 @@
 #![feature(generic_const_exprs)]
 
 mod bpass;
+mod read_grid;
 mod sources;
 mod unit_reader;
 
@@ -25,6 +26,7 @@ use raxiom::units::PhotonRate;
 use raxiom::units::SourceRate;
 use raxiom::units::Temperature;
 use raxiom::units::VecLength;
+use read_grid::ReadSweepGridPlugin;
 use sources::add_single_source_system;
 use sources::read_sources_system;
 use sources::set_source_terms_system;
@@ -39,6 +41,15 @@ pub struct InternalEnergy(pub crate::units::EnergyPerMass);
 pub struct Parameters {
     initial_fraction_ionized_hydrogen: Dimensionless,
     sources: SourceType,
+    grid: GridParameters,
+}
+
+#[derive(Default)]
+#[raxiom_parameters]
+enum GridParameters {
+    #[default]
+    Construct,
+    Read,
 }
 
 #[derive(Default)]
@@ -64,7 +75,9 @@ fn main() {
         .build();
     let cosmology = sim.add_parameter_type_and_get_result::<Cosmology>().clone();
     let unit_reader = Box::new(ArepoUnitReader::new(cosmology));
-    let parameters = sim.add_parameter_type_and_get_result::<Parameters>();
+    let parameters = sim
+        .add_parameter_type_and_get_result::<Parameters>()
+        .clone();
     match parameters.sources {
         SourceType::FromIcs => {
             sim.add_startup_system(
@@ -77,6 +90,10 @@ fn main() {
             sim.add_startup_system(add_single_source_system);
         }
     }
+    match parameters.grid {
+        GridParameters::Construct => sim.add_plugin(ParallelVoronoiGridConstruction),
+        GridParameters::Read => sim.add_plugin(ReadSweepGridPlugin),
+    };
     sim.add_parameter_type::<Parameters>()
         .add_startup_system_to_stage(
             SimulationStartupStages::InsertComponentsAfterGrid,
@@ -90,7 +107,6 @@ fn main() {
             SimulationStartupStages::InsertGrid,
             remove_unnecessary_components_system,
         )
-        .add_plugin(ParallelVoronoiGridConstruction)
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
             InputDatasetDescriptor::<Position>::new(
                 DatasetDescriptor {
