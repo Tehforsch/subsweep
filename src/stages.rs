@@ -7,7 +7,7 @@ use crate::io::output::OutputStages;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
-use crate::simulation_plugin::SimulationStages;
+use crate::simulation_plugin::Stages;
 use crate::simulation_plugin::StartupStages;
 
 #[derive(Named)]
@@ -17,14 +17,14 @@ impl RaxiomPlugin for SimulationStagesPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),
-            SimulationStages::Initial.as_label(),
+            Stages::Initial.as_label(),
             DomainStages::TopLevelTreeConstruction.as_label(),
             DomainStages::Decomposition.as_label(),
             DomainStages::Exchange.as_label(),
-            SimulationStages::ForceCalculation.as_label(),
-            SimulationStages::Integration.as_label(),
+            Stages::ForceCalculation.as_label(),
+            Stages::Integration.as_label(),
             OutputStages::Output.as_label(),
-            SimulationStages::Final.as_label(),
+            Stages::Final.as_label(),
         ];
         for window in stages.windows(2) {
             sim.add_stage_after(
