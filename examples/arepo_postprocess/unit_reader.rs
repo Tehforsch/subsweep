@@ -1,6 +1,9 @@
 use bevy::prelude::debug;
 use hdf5::Dataset;
 use raxiom::cosmology::Cosmology;
+use raxiom::io::DatasetDescriptor;
+use raxiom::io::DatasetShape;
+use raxiom::io::InputDatasetDescriptor;
 use raxiom::io::UnitReader;
 use raxiom::units::Dimension;
 use raxiom::units::NONE;
@@ -11,6 +14,20 @@ pub const VELOCITY_IDENTIFIER: &str = "velocity_scaling";
 pub const MASS_IDENTIFIER: &str = "mass_scaling";
 pub const A_IDENTIFIER: &str = "a_scaling";
 pub const H_IDENTIFIER: &str = "h_scaling";
+
+pub fn make_descriptor<T, U: UnitReader + Clone + 'static>(
+    unit_reader: &U,
+    name: &str,
+    shape: DatasetShape<T>,
+) -> InputDatasetDescriptor<T> {
+    InputDatasetDescriptor::<T> {
+        descriptor: DatasetDescriptor {
+            dataset_name: name.into(),
+            unit_reader: Box::new(unit_reader.clone()),
+        },
+        shape,
+    }
+}
 
 #[derive(Clone)]
 pub struct ArepoUnitReader {

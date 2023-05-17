@@ -6,6 +6,8 @@ mod read_grid;
 mod sources;
 mod unit_reader;
 
+use std::path::PathBuf;
+
 use bevy::prelude::*;
 use derive_more::From;
 use hdf5::H5Type;
@@ -49,7 +51,7 @@ pub struct Parameters {
 enum GridParameters {
     #[default]
     Construct,
-    Read,
+    Read(PathBuf),
 }
 
 #[derive(Default)]
@@ -92,7 +94,7 @@ fn main() {
     }
     match parameters.grid {
         GridParameters::Construct => sim.add_plugin(ParallelVoronoiGridConstruction),
-        GridParameters::Read => sim.add_plugin(ReadSweepGridPlugin),
+        GridParameters::Read(_) => sim.add_plugin(ReadSweepGridPlugin),
     };
     sim.add_parameter_type::<Parameters>()
         .add_startup_system_to_stage(
