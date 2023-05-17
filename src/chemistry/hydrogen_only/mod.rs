@@ -14,7 +14,6 @@ use crate::units::HeatingTerm;
 use crate::units::Length;
 use crate::units::NumberDensity;
 use crate::units::PhotonRate;
-use crate::units::Rate;
 use crate::units::Temperature;
 use crate::units::Time;
 use crate::units::Volume;
@@ -117,23 +116,12 @@ impl Solver {
         temperature.sqrt() / (1.0 + (temperature / 1e5).sqrt()) * (-157809.1 / temperature).exp()
     }
 
-    fn case_b_recombination_rate(&self) -> Rate {
-        let lambda = Temperature::kelvins(315614.0) / self.temperature;
-        Rate::centimeters_cubed_per_s(
-            2.753e-14 * lambda.powf(1.5) / (1.0 + (lambda / 2.74).powf(0.407)).powf(2.242),
-        )
-    }
-
     fn case_b_recombination_cooling_rate(&self) -> HeatingTerm {
         let lambda = Temperature::kelvins(315614.0) / self.temperature;
         HeatingTerm::ergs_centimeters_cubed_per_s(
             3.435e-30 * self.temperature.in_kelvins() * lambda.powf(1.97)
                 / (1.0 + (lambda / 2.25).powf(0.376)).powf(3.72),
         )
-    }
-
-    fn collisional_ionization_rate(&self) -> Rate {
-        Rate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
     }
 
     fn collisional_ionization_cooling_rate(&self) -> HeatingTerm {
@@ -210,9 +198,6 @@ impl Solver {
             self.ionized_hydrogen_fraction,
             self.density,
         );
-        if temperature_change > Temperature::kelvins(1e0) {
-            dbg!(rate, internal_energy_change, temperature_change);
-        }
         self.temperature += temperature_change;
         rate / self.volume
     }
