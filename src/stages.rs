@@ -15,8 +15,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),
             Stages::Initial.as_label(),
-            Stages::ForceCalculation.as_label(),
-            Stages::Integration.as_label(),
+            Stages::Sweep.as_label(),
             Stages::Output.as_label(),
             Stages::Final.as_label(),
         ];
@@ -29,17 +28,16 @@ impl RaxiomPlugin for SimulationStagesPlugin {
         }
         let startup_stages = &[
             StartupStage::PostStartup.as_label(),
-            StartupStages::InsertComponents.as_label(),
+            StartupStages::ReadInput.as_label(),
             StartupStages::InsertDerivedComponents.as_label(),
-            StartupStages::CheckParticleExtent.as_label(),
             StartupStages::Decomposition.as_label(),
             StartupStages::SetOutgoingEntities.as_label(),
             StartupStages::Exchange.as_label(),
-            StartupStages::ParticleIds.as_label(),
+            StartupStages::AssignParticleIds.as_label(),
             StartupStages::TreeConstruction.as_label(),
             StartupStages::InsertGrid.as_label(),
             StartupStages::InsertComponentsAfterGrid.as_label(),
-            StartupStages::Sweep.as_label(),
+            StartupStages::InitSweep.as_label(),
             StartupStages::Final.as_label(),
         ];
         for window in startup_stages.windows(2) {

@@ -51,7 +51,7 @@ fn build_sim(sim: &mut Simulation) {
         .add_parameters_explicitly(SimulationParameters {
             final_time: Some(Time::zero()),
         })
-        .add_startup_system_to_stage(StartupStages::InsertComponents, spawn_particles_system);
+        .add_startup_system_to_stage(StartupStages::ReadInput, spawn_particles_system);
 }
 
 fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {

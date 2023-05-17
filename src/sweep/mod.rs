@@ -85,23 +85,20 @@ pub struct TimestepLevelData {
 
 impl RaxiomPlugin for SweepPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_startup_system_to_stage(
-            StartupStages::InsertComponents,
-            initialize_directions_system,
-        )
-        .add_startup_system_to_stage(
-            StartupStages::InsertDerivedComponents,
-            initialize_optional_components_system,
-        )
-        .add_derived_component::<IonizedHydrogenFraction>()
-        .add_derived_component::<Source>()
-        .add_derived_component::<components::Rate>()
-        .add_derived_component::<Density>()
-        .add_derived_component::<components::Temperature>()
-        .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
-        .add_startup_system_to_stage(StartupStages::Sweep, init_sweep_system)
-        .add_system_to_stage(Stages::ForceCalculation, run_sweep_system)
-        .add_parameter_type::<SweepParameters>();
+        sim.add_startup_system_to_stage(StartupStages::ReadInput, initialize_directions_system)
+            .add_startup_system_to_stage(
+                StartupStages::InsertDerivedComponents,
+                initialize_optional_components_system,
+            )
+            .add_derived_component::<IonizedHydrogenFraction>()
+            .add_derived_component::<Source>()
+            .add_derived_component::<components::Rate>()
+            .add_derived_component::<Density>()
+            .add_derived_component::<components::Temperature>()
+            .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
+            .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
+            .add_system_to_stage(Stages::Sweep, run_sweep_system)
+            .add_parameter_type::<SweepParameters>();
         if output_heating_rate(&sim.get_parameters::<OutputParameters>()) {
             sim.add_derived_component::<HeatingRate>();
         }
