@@ -27,6 +27,7 @@ use crate::named::Named;
 use crate::parameters::SimulationBox;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
+use crate::prelude::StartupStages;
 use crate::prelude::WorldSize;
 use crate::quadtree::QuadTreeConfig;
 use crate::simulation::RaxiomPlugin;
@@ -62,55 +63,29 @@ fn default_domain_tree_params() -> QuadTreeConfig {
 #[derive(Resource, Deref, DerefMut)]
 pub struct IdEntityMap(BiMap<ParticleId, Entity>);
 
-#[derive(StageLabel)]
-pub enum DomainStartupStages {
-    CheckParticleExtent,
-    Decomposition,
-    SetOutgoingEntities,
-    Exchange,
-    ParticleIds,
-    TreeConstruction,
-}
-
-#[derive(StageLabel)]
-pub enum DomainStages {
-    TopLevelTreeConstruction,
-    Decomposition,
-    Exchange,
-}
-
 #[derive(Named)]
 pub struct DomainPlugin;
 
 impl RaxiomPlugin for DomainPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<TreeParameters>()
+            .add_startup_system_to_stage(StartupStages::ParticleIds, determine_particle_ids_system)
+            .add_startup_system_to_stage(StartupStages::ParticleIds, set_domain_extents_system)
             .add_startup_system_to_stage(
-                DomainStartupStages::ParticleIds,
-                determine_particle_ids_system,
-            )
-            .add_startup_system_to_stage(
-                DomainStartupStages::ParticleIds,
-                set_domain_extents_system,
-            )
-            .add_startup_system_to_stage(
-                DomainStartupStages::CheckParticleExtent,
+                StartupStages::CheckParticleExtent,
                 check_particle_extent_system,
             )
+            .add_startup_system_to_stage(StartupStages::Decomposition, domain_decomposition_system)
             .add_startup_system_to_stage(
-                DomainStartupStages::Decomposition,
-                domain_decomposition_system,
-            )
-            .add_startup_system_to_stage(
-                DomainStartupStages::SetOutgoingEntities,
+                StartupStages::SetOutgoingEntities,
                 set_outgoing_entities_system,
             )
             .add_startup_system_to_stage(
-                DomainStartupStages::TreeConstruction,
+                StartupStages::TreeConstruction,
                 update_id_entity_map_system,
             )
             .add_startup_system_to_stage(
-                DomainStartupStages::TreeConstruction,
+                StartupStages::TreeConstruction,
                 construct_quad_tree_system,
             );
     }

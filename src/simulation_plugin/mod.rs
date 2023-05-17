@@ -23,12 +23,12 @@ use crate::units;
 #[derive(Named)]
 pub struct SimulationPlugin;
 
-// Cannot wait for stageless
 #[derive(StageLabel)]
 pub enum Stages {
     Initial,
     ForceCalculation,
     Integration,
+    Output,
     Final,
 }
 
@@ -36,6 +36,12 @@ pub enum Stages {
 pub enum StartupStages {
     InsertComponents,
     InsertDerivedComponents,
+    CheckParticleExtent,
+    Decomposition,
+    SetOutgoingEntities,
+    Exchange,
+    ParticleIds,
+    TreeConstruction,
     InsertGrid,
     InsertComponentsAfterGrid,
     Sweep,

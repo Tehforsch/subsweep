@@ -10,7 +10,6 @@ use bevy::prelude::info;
 use bevy::prelude::Res;
 use bevy::prelude::ResMut;
 use bevy::prelude::Resource;
-use bevy::prelude::StageLabel;
 use hdf5::File;
 
 pub use self::attribute::Attribute;
@@ -21,11 +20,6 @@ use self::timer::Timer;
 use crate::communication::WorldRank;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::prelude::WorldSize;
-
-#[derive(StageLabel)]
-pub enum OutputStages {
-    Output,
-}
 
 #[derive(Default, Resource)]
 pub(super) struct OutputFile {

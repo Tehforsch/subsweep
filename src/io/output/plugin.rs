@@ -8,11 +8,11 @@ use super::parameters::OutputParameters;
 use super::timer::Timer;
 use super::write_used_parameters_system;
 use super::OutputFile;
-use super::OutputStages;
 use crate::io::DatasetDescriptor;
 use crate::io::OutputDatasetDescriptor;
 use crate::named::Named;
 use crate::prelude::Simulation;
+use crate::prelude::Stages;
 use crate::simulation::RaxiomPlugin;
 
 pub(crate) trait IntoOutputSystem {
@@ -65,17 +65,17 @@ where
             .insert_resource(OutputFile::default())
             .add_startup_system(Timer::initialize_system)
             .add_system_to_stage(
-                OutputStages::Output,
+                Stages::Output,
                 open_file_system.with_run_criteria(Timer::run_criterion),
             )
             .add_system_to_stage(
-                OutputStages::Output,
+                Stages::Output,
                 close_file_system
                     .after(open_file_system)
                     .with_run_criteria(Timer::run_criterion),
             )
             .add_system_to_stage(
-                OutputStages::Output,
+                Stages::Output,
                 Timer::update_system
                     .after(close_file_system)
                     .with_run_criteria(Timer::run_criterion),
@@ -88,7 +88,7 @@ where
         );
         if OutputParameters::is_desired_field::<T>(sim) {
             sim.add_system_to_stage(
-                OutputStages::Output,
+                Stages::Output,
                 T::system()
                     .after(open_file_system)
                     .before(close_file_system)
