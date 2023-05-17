@@ -7,6 +7,7 @@ use super::to_dataset::SCALE_FACTOR_IDENTIFIER;
 use super::to_dataset::TEMPERATURE_IDENTIFIER;
 use super::to_dataset::TIME_IDENTIFIER;
 use crate::units::Dimension;
+use crate::units::NONE;
 
 pub trait UnitReaderClone {
     fn clone_box(&self) -> Box<dyn UnitReader>;
@@ -65,5 +66,18 @@ impl UnitReader for DefaultUnitReader {
             h,
             a,
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct IdReader;
+
+impl UnitReader for IdReader {
+    fn read_scale_factor(&self, _set: &Dataset) -> f64 {
+        1.0
+    }
+
+    fn read_dimension(&self, _set: &Dataset) -> Dimension {
+        NONE
     }
 }
