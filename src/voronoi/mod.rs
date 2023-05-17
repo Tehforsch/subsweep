@@ -26,7 +26,7 @@ pub use primitives::Point2d;
 pub use primitives::Point3d;
 pub use triangulation_data::TriangulationData;
 
-use crate::grid::ParticleType;
+use crate::sweep::grid::ParticleType;
 
 pub type CellIndex = ParticleType;
 
@@ -62,8 +62,8 @@ mod tests {
     use super::VoronoiGrid;
     use crate::dimension::ThreeD;
     use crate::dimension::TwoD;
-    use crate::grid::ParticleType;
     use crate::prelude::ParticleId;
+    use crate::sweep::grid::ParticleType;
     use crate::voronoi::DVector;
 
     #[instantiate_tests(<TwoD>)]
@@ -138,8 +138,8 @@ mod tests {
 #[cfg(test)]
 mod quantitative_tests {
     use super::VoronoiGrid;
-    use crate::grid::ParticleType;
     use crate::prelude::ParticleId;
+    use crate::sweep::grid::ParticleType;
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::Constructor;
     use crate::voronoi::DCell;

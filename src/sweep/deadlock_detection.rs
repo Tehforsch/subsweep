@@ -1,6 +1,7 @@
 use bevy::prelude::warn;
 use mpi::traits::Equivalence;
 
+use super::grid::ParticleType;
 use super::timestep_level::TimestepLevel;
 use super::Sweep;
 use crate::chemistry::Chemistry;
@@ -10,7 +11,6 @@ use crate::communication::DataByRank;
 use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
-use crate::grid::ParticleType;
 use crate::hash_map::HashSet;
 use crate::prelude::ParticleId;
 

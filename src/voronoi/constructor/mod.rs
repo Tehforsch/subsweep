@@ -26,11 +26,11 @@ use crate::dimension::ActiveWrapType;
 use crate::dimension::Point;
 use crate::extent::get_extent;
 use crate::extent::Extent;
-use crate::grid;
-use crate::grid::FaceArea;
-use crate::grid::ParticleType;
 use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
+use crate::sweep::grid;
+use crate::sweep::grid::FaceArea;
+use crate::sweep::grid::ParticleType;
 use crate::units::Length;
 use crate::units::VecDimensionless;
 use crate::units::Volume;
@@ -138,7 +138,7 @@ impl Constructor<ActiveDimension> {
                             .iter()
                             .map(|face| {
                                 (
-                                    crate::grid::Face {
+                                    crate::sweep::grid::Face {
                                         area: FaceArea::new_unchecked(face.area),
                                         normal: VecDimensionless::new_unchecked(face.normal),
                                     },

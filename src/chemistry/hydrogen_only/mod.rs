@@ -2,7 +2,7 @@ use bevy::prelude::Resource;
 use diman::Quotient;
 
 use super::Chemistry;
-use crate::grid::Cell;
+use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::CrossSection;
 use crate::units::Density;
