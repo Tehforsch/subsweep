@@ -25,7 +25,7 @@ pub struct SimulationPlugin;
 
 // Cannot wait for stageless
 #[derive(StageLabel)]
-pub enum SimulationStages {
+pub enum Stages {
     Initial,
     ForceCalculation,
     Integration,
@@ -62,9 +62,9 @@ impl RaxiomPlugin for SimulationPlugin {
                 check_particles_in_simulation_box_system,
             )
             .add_startup_system_to_stage(StartupStages::InsertComponents, show_num_cores_system)
-            .add_system_to_stage(SimulationStages::Initial, show_time_system)
-            .add_system_to_stage(SimulationStages::Final, exit_system)
-            .add_system_to_stage(SimulationStages::Initial, stop_simulation_system);
+            .add_system_to_stage(Stages::Initial, show_time_system)
+            .add_system_to_stage(Stages::Final, exit_system)
+            .add_system_to_stage(Stages::Initial, stop_simulation_system);
     }
 }
 

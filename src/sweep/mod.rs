@@ -100,7 +100,7 @@ impl RaxiomPlugin for SweepPlugin {
         .add_derived_component::<components::Temperature>()
         .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
         .add_startup_system_to_stage(StartupStages::Sweep, init_sweep_system)
-        .add_system_to_stage(SimulationStages::ForceCalculation, run_sweep_system)
+        .add_system_to_stage(Stages::ForceCalculation, run_sweep_system)
         .add_parameter_type::<SweepParameters>();
         if output_heating_rate(&sim.get_parameters::<OutputParameters>()) {
             sim.add_derived_component::<HeatingRate>();
