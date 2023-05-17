@@ -1,6 +1,9 @@
 use std::path::Path;
 
+use bevy::prelude::info;
+use bevy::prelude::Commands;
 use bevy::prelude::Component;
+use bevy::prelude::Entity;
 use bevy::prelude::Res;
 use bimap::BiMap;
 use derive_custom::Named;
@@ -266,19 +269,24 @@ impl Constructor {
 }
 
 fn read_grid_system(
-    p: Particles<(&ParticleId, &UniqueParticleId, &Mass, &Density)>,
+    mut commands: Commands,
+    p: Particles<(Entity, &ParticleId, &UniqueParticleId, &Mass, &Density)>,
     parameters: Res<Parameters>,
     cosmology: Res<Cosmology>,
 ) {
-    let mut constructor = Constructor::new(
-        p.iter()
-            .map(|(id1, id2, mass, density)| (id1.clone(), id2.clone(), **mass / **density))
-            .collect(),
-    );
     let grid_file = if let GridParameters::Read(ref path) = parameters.grid {
         path.clone()
     } else {
         unreachable!()
     };
+    info!("Reading grid from {:?}", grid_file);
+    let mut constructor = Constructor::new(
+        p.iter()
+            .map(|(_, id1, id2, mass, density)| (id1.clone(), id2.clone(), **mass / **density))
+            .collect(),
+    );
     constructor.add_connections(&grid_file, &cosmology);
+    for ((entity, _, _, _, _), cell) in p.iter().zip(constructor.cells) {
+        commands.entity(entity).insert(cell);
+    }
 }
