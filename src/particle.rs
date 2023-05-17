@@ -11,7 +11,7 @@ use crate::communication::Rank;
 use crate::components::Position;
 use crate::named::Named;
 use crate::prelude::Simulation;
-use crate::prelude::SimulationStartupStages;
+use crate::prelude::StartupStages;
 use crate::simulation::RaxiomPlugin;
 
 #[derive(
@@ -68,7 +68,7 @@ pub struct ParticlePlugin;
 
 impl RaxiomPlugin for ParticlePlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_startup_system_to_stage(SimulationStartupStages::Final, count_types_system);
+        sim.add_startup_system_to_stage(StartupStages::Final, count_types_system);
     }
 }
 

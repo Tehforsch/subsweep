@@ -14,7 +14,7 @@ use raxiom::mpidbg;
 use raxiom::prelude::Particles;
 use raxiom::prelude::RaxiomPlugin;
 use raxiom::prelude::Simulation;
-use raxiom::simulation_plugin::SimulationStartupStages;
+use raxiom::simulation_plugin::StartupStages;
 use raxiom::units::NONE;
 
 #[derive(Named)]
@@ -48,7 +48,7 @@ impl RaxiomPlugin for ReadSweepGridPlugin {
             },
         ))
         .add_component_no_io::<ArepoParticleId>()
-        .add_startup_system_to_stage(SimulationStartupStages::InsertGrid, print_ids_system);
+        .add_startup_system_to_stage(StartupStages::InsertGrid, print_ids_system);
     }
 }
 

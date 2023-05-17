@@ -96,15 +96,15 @@ fn main() {
     };
     sim.add_parameter_type::<Parameters>()
         .add_startup_system_to_stage(
-            SimulationStartupStages::InsertComponentsAfterGrid,
+            StartupStages::InsertComponentsAfterGrid,
             set_source_terms_system,
         )
         .add_startup_system_to_stage(
-            SimulationStartupStages::InsertDerivedComponents,
+            StartupStages::InsertDerivedComponents,
             insert_missing_components_system,
         )
         .add_startup_system_to_stage(
-            SimulationStartupStages::InsertGrid,
+            StartupStages::InsertGrid,
             remove_unnecessary_components_system,
         )
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(

@@ -17,7 +17,7 @@ use crate::particle::HaloParticle;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
-use crate::prelude::SimulationStartupStages;
+use crate::prelude::StartupStages;
 use crate::simulation::RaxiomPlugin;
 use crate::sweep::grid::ParticleType;
 use crate::units::VecLength;
@@ -28,7 +28,7 @@ pub struct ParallelVoronoiGridConstruction;
 
 impl RaxiomPlugin for ParallelVoronoiGridConstruction {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_startup_system_to_stage(SimulationStartupStages::InsertGrid, construct_grid_system);
+        sim.add_startup_system_to_stage(StartupStages::InsertGrid, construct_grid_system);
     }
 }
 

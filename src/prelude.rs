@@ -16,7 +16,7 @@ pub use crate::simulation::Simulation;
 pub use crate::simulation_box::SimulationBox;
 pub use crate::simulation_builder::SimulationBuilder;
 pub use crate::simulation_plugin::SimulationStages;
-pub use crate::simulation_plugin::SimulationStartupStages;
+pub use crate::simulation_plugin::StartupStages;
 pub use crate::simulation_plugin::StopSimulationEvent;
 pub use crate::sweep::SweepPlugin;
 pub use crate::units;
