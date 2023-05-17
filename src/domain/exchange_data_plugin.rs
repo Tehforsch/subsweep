@@ -13,7 +13,6 @@ use bevy::prelude::Resource;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 
-use super::DomainStartupStages;
 use super::TreeParameters;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
@@ -24,6 +23,7 @@ use crate::communication::WorldSize;
 use crate::named::Named;
 use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
+use crate::prelude::StartupStages;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 
@@ -84,24 +84,18 @@ where
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
             .try_add_parameter_type::<TreeParameters>();
-        sim.add_startup_system_to_stage(
-            DomainStartupStages::Exchange,
-            send_num_outgoing_entities_system,
-        )
-        .add_startup_system_to_stage(
-            DomainStartupStages::Exchange,
-            despawn_outgoing_entities_system,
-        )
-        .add_startup_system_to_stage(
-            DomainStartupStages::Exchange,
-            reset_outgoing_entities_system
-                .after(send_num_outgoing_entities_system)
-                .after(despawn_outgoing_entities_system),
-        )
-        .add_startup_system_to_stage(
-            DomainStartupStages::Exchange,
-            spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
-        );
+        sim.add_startup_system_to_stage(StartupStages::Exchange, send_num_outgoing_entities_system)
+            .add_startup_system_to_stage(StartupStages::Exchange, despawn_outgoing_entities_system)
+            .add_startup_system_to_stage(
+                StartupStages::Exchange,
+                reset_outgoing_entities_system
+                    .after(send_num_outgoing_entities_system)
+                    .after(despawn_outgoing_entities_system),
+            )
+            .add_startup_system_to_stage(
+                StartupStages::Exchange,
+                spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
+            );
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
@@ -112,16 +106,16 @@ where
                 size, rank,
             )));
         sim.add_well_ordered_system_to_startup_stage::<_, ExchangeDataStartupOrder>(
-            DomainStartupStages::Exchange,
+            StartupStages::Exchange,
             Self::exchange_buffers_system
                 .after(Self::fill_buffers_system)
                 .after(spawn_incoming_entities_system)
                 .before(reset_outgoing_entities_system),
             Self::exchange_buffers_system.as_system_label(),
         )
-        .add_startup_system_to_stage(DomainStartupStages::Exchange, Self::fill_buffers_system)
+        .add_startup_system_to_stage(StartupStages::Exchange, Self::fill_buffers_system)
         .add_startup_system_to_stage(
-            DomainStartupStages::Exchange,
+            StartupStages::Exchange,
             Self::reset_buffers_system.after(Self::exchange_buffers_system),
         );
     }

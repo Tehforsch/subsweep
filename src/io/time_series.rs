@@ -11,13 +11,13 @@ use hdf5::Dataset;
 use hdf5::File;
 
 use super::output::make_output_dirs_system;
-use super::output::OutputStages;
 use super::to_dataset::create_empty_dataset;
 use super::to_dataset::ToDataset;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
 use crate::named::Named;
 use crate::parameters::OutputParameters;
+use crate::prelude::Stages;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationTime;
@@ -56,7 +56,7 @@ impl<T: TimeSeries> RaxiomPlugin for TimeSeriesPlugin<T> {
                 .after(make_output_dirs_system)
                 .after(setup_time_series_output_system),
         )
-        .add_system_to_stage(OutputStages::Output, output_time_series_system::<T>);
+        .add_system_to_stage(Stages::Output, output_time_series_system::<T>);
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {

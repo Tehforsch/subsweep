@@ -1,9 +1,6 @@
 use bevy::ecs::schedule::StageLabelId;
 use bevy::prelude::*;
 
-use crate::domain::DomainStages;
-use crate::domain::DomainStartupStages;
-use crate::io::output::OutputStages;
 use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
@@ -18,12 +15,9 @@ impl RaxiomPlugin for SimulationStagesPlugin {
         let stages: &[StageLabelId] = &[
             CoreStage::Update.as_label(),
             Stages::Initial.as_label(),
-            DomainStages::TopLevelTreeConstruction.as_label(),
-            DomainStages::Decomposition.as_label(),
-            DomainStages::Exchange.as_label(),
             Stages::ForceCalculation.as_label(),
             Stages::Integration.as_label(),
-            OutputStages::Output.as_label(),
+            Stages::Output.as_label(),
             Stages::Final.as_label(),
         ];
         for window in stages.windows(2) {
@@ -37,12 +31,12 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             StartupStage::PostStartup.as_label(),
             StartupStages::InsertComponents.as_label(),
             StartupStages::InsertDerivedComponents.as_label(),
-            DomainStartupStages::CheckParticleExtent.as_label(),
-            DomainStartupStages::Decomposition.as_label(),
-            DomainStartupStages::SetOutgoingEntities.as_label(),
-            DomainStartupStages::Exchange.as_label(),
-            DomainStartupStages::ParticleIds.as_label(),
-            DomainStartupStages::TreeConstruction.as_label(),
+            StartupStages::CheckParticleExtent.as_label(),
+            StartupStages::Decomposition.as_label(),
+            StartupStages::SetOutgoingEntities.as_label(),
+            StartupStages::Exchange.as_label(),
+            StartupStages::ParticleIds.as_label(),
+            StartupStages::TreeConstruction.as_label(),
             StartupStages::InsertGrid.as_label(),
             StartupStages::InsertComponentsAfterGrid.as_label(),
             StartupStages::Sweep.as_label(),
