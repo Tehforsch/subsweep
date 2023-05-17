@@ -18,9 +18,7 @@ use raxiom::domain::DecompositionState;
 use raxiom::domain::IntoKey;
 use raxiom::io::input::read_dataset;
 use raxiom::io::input::InputFiles;
-use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
-use raxiom::io::InputDatasetDescriptor;
 use raxiom::prelude::Particles;
 use raxiom::prelude::SimulationBox;
 use raxiom::prelude::WorldRank;
@@ -33,6 +31,7 @@ use raxiom::units::VecLength;
 
 use crate::bpass::bpass_lookup;
 use crate::read_vec;
+use crate::unit_reader::make_descriptor;
 use crate::unit_reader::ArepoUnitReader;
 use crate::Parameters;
 use crate::SourceType;
@@ -82,41 +81,27 @@ pub struct Sources {
     sources: Vec<Source>,
 }
 
-fn make_descriptor<T>(
-    unit_reader: &ArepoUnitReader,
-    name: &str,
-    shape: DatasetShape<T>,
-) -> InputDatasetDescriptor<T> {
-    InputDatasetDescriptor::<T> {
-        descriptor: DatasetDescriptor {
-            dataset_name: name.into(),
-            unit_reader: Box::new(unit_reader.clone()),
-        },
-        shape,
-    }
-}
-
 fn read_sources(files: &InputFiles, cosmology: &Cosmology) -> Vec<Source> {
     let unit_reader = ArepoUnitReader::new(cosmology.clone());
-    let descriptor = &make_descriptor::<Position>(
+    let descriptor = &make_descriptor::<Position, _>(
         &unit_reader,
         "PartType4/Coordinates",
         DatasetShape::TwoDimensional(read_vec),
     );
     let position = read_dataset(&descriptor, files);
-    let descriptor = &make_descriptor::<Metallicity>(
+    let descriptor = &make_descriptor::<Metallicity, _>(
         &unit_reader,
         "PartType4/GFM_Metallicity",
         DatasetShape::OneDimensional,
     );
     let metallicity = read_dataset(&descriptor, files);
-    let descriptor = &make_descriptor::<StellarFormationTime>(
+    let descriptor = &make_descriptor::<StellarFormationTime, _>(
         &unit_reader,
         "PartType4/GFM_StellarFormationTime",
         DatasetShape::OneDimensional,
     );
     let formation_time = read_dataset(&descriptor, files);
-    let descriptor = &make_descriptor::<components::Mass>(
+    let descriptor = &make_descriptor::<components::Mass, _>(
         &unit_reader,
         "PartType4/Masses",
         DatasetShape::OneDimensional,

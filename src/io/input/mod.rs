@@ -245,13 +245,13 @@ pub fn read_dataset<'a, T: ToDataset>(
     info!("Reading dataset {}", descriptor.dataset_name());
     let factor_read = T::dimension().base_conversion_factor();
     files.iter().flat_map(move |file| {
-        let (set, factor_written) = read_dataset_for_file(descriptor, file);
+        let (set, factor_written) = read_dataset_and_conversion_factor_for_file(descriptor, file);
         set.into_iter()
             .map(move |item| item.convert_base_units(factor_written / factor_read))
     })
 }
 
-pub fn read_dataset_for_file<'a, T: ToDataset>(
+fn read_dataset_and_conversion_factor_for_file<'a, T: ToDataset>(
     descriptor: &'a InputDatasetDescriptor<T>,
     file: &'a File,
 ) -> (ArrayBase<OwnedRepr<T>, Dim<[usize; 1]>>, f64) {
@@ -279,4 +279,15 @@ pub fn read_dataset_for_file<'a, T: ToDataset>(
         "Mismatch in dimension while reading dataset {name}.",
     );
     (data, conversion_factor)
+}
+
+pub fn read_dataset_for_file<'a, T: ToDataset>(
+    descriptor: &'a InputDatasetDescriptor<T>,
+    file: &'a File,
+) -> Vec<T> {
+    let factor_read = T::dimension().base_conversion_factor();
+    let (set, factor_written) = read_dataset_and_conversion_factor_for_file(descriptor, file);
+    set.into_iter()
+        .map(|item| item.convert_base_units(factor_written / factor_read))
+        .collect()
 }
