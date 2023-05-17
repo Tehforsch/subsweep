@@ -10,7 +10,7 @@ use std::ops::Sub;
 
 use mpi::traits::Equivalence;
 
-use crate::grid::Cell;
+use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::helpers::Float;
 use crate::units::Dimensionless;

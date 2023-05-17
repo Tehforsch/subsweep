@@ -1,8 +1,8 @@
 use bevy::prelude::Commands;
 use bevy::prelude::Res;
 
-use crate::grid::init_cartesian_grid_system;
-use crate::grid::NumCellsSpec;
+use super::grid::init_cartesian_grid_system;
+use super::grid::NumCellsSpec;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
 use crate::parameters::SweepParameters;

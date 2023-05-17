@@ -14,9 +14,9 @@ use super::CellIndex;
 use crate::dimension::Point;
 use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
-use crate::grid::ParticleType;
 use crate::hash_map::HashSet;
 use crate::prelude::Float;
+use crate::sweep::grid::ParticleType;
 use crate::voronoi::delaunay::TetraIndex;
 use crate::voronoi::DTetra;
 

@@ -11,9 +11,9 @@ use super::DCell;
 use super::Triangulation;
 use super::VoronoiGrid;
 use crate::dimension::Point;
-use crate::grid::ParticleType;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashMap;
+use crate::sweep::grid::ParticleType;
 
 pub struct TriangulationData<D: DDimension> {
     pub triangulation: Triangulation<D>,

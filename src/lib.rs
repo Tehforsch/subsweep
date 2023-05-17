@@ -18,7 +18,6 @@ pub mod cosmology;
 pub mod dimension;
 pub mod domain;
 pub mod extent;
-pub mod grid;
 pub(crate) mod hash_map;
 pub mod io;
 pub(crate) mod parameter_plugin;

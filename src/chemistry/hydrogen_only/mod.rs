@@ -1,7 +1,7 @@
 use bevy::prelude::Resource;
 
 use super::Chemistry;
-use crate::grid::Cell;
+use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::Density;
 use crate::units::Dimensionless;

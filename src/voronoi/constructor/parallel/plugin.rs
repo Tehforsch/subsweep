@@ -12,7 +12,6 @@ use crate::dimension::ActiveDimension;
 use crate::domain::DecompositionState;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
-use crate::grid::ParticleType;
 use crate::parameters::SimulationBox;
 use crate::particle::HaloParticle;
 use crate::prelude::ParticleId;
@@ -20,6 +19,7 @@ use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::SimulationStartupStages;
 use crate::simulation::RaxiomPlugin;
+use crate::sweep::grid::ParticleType;
 use crate::units::VecLength;
 use crate::voronoi::constructor::halo_cache::HaloCache;
 
