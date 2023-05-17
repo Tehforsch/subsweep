@@ -69,10 +69,16 @@ pub struct DomainPlugin;
 impl RaxiomPlugin for DomainPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<TreeParameters>()
-            .add_startup_system_to_stage(StartupStages::ParticleIds, determine_particle_ids_system)
-            .add_startup_system_to_stage(StartupStages::ParticleIds, set_domain_extents_system)
             .add_startup_system_to_stage(
-                StartupStages::CheckParticleExtent,
+                StartupStages::AssignParticleIds,
+                determine_particle_ids_system,
+            )
+            .add_startup_system_to_stage(
+                StartupStages::AssignParticleIds,
+                set_domain_extents_system,
+            )
+            .add_startup_system_to_stage(
+                StartupStages::InsertDerivedComponents,
                 check_particle_extent_system,
             )
             .add_startup_system_to_stage(StartupStages::Decomposition, domain_decomposition_system)

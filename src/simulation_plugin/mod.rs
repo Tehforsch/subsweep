@@ -26,25 +26,23 @@ pub struct SimulationPlugin;
 #[derive(StageLabel)]
 pub enum Stages {
     Initial,
-    ForceCalculation,
-    Integration,
+    Sweep,
     Output,
     Final,
 }
 
 #[derive(StageLabel)]
 pub enum StartupStages {
-    InsertComponents,
+    ReadInput,
     InsertDerivedComponents,
-    CheckParticleExtent,
     Decomposition,
     SetOutgoingEntities,
     Exchange,
-    ParticleIds,
+    AssignParticleIds,
     TreeConstruction,
     InsertGrid,
     InsertComponentsAfterGrid,
-    Sweep,
+    InitSweep,
     Final,
 }
 
@@ -64,10 +62,10 @@ impl RaxiomPlugin for SimulationPlugin {
             .add_event::<StopSimulationEvent>()
             .insert_resource(SimulationTime(units::Time::seconds(0.00)))
             .add_startup_system_to_stage(
-                StartupStages::InsertComponents,
+                StartupStages::ReadInput,
                 check_particles_in_simulation_box_system,
             )
-            .add_startup_system_to_stage(StartupStages::InsertComponents, show_num_cores_system)
+            .add_startup_system_to_stage(StartupStages::ReadInput, show_num_cores_system)
             .add_system_to_stage(Stages::Initial, show_time_system)
             .add_system_to_stage(Stages::Final, exit_system)
             .add_system_to_stage(Stages::Initial, stop_simulation_system);

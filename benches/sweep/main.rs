@@ -63,10 +63,9 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             StartupStages::InsertComponentsAfterGrid,
             initialize_sweep_components_system,
         )
-        .add_startup_system_to_stage(
-            StartupStages::InsertComponents,
-            move |commands: Commands| insert_particles_system(commands, num_particles),
-        )
+        .add_startup_system_to_stage(StartupStages::ReadInput, move |commands: Commands| {
+            insert_particles_system(commands, num_particles)
+        })
         .add_plugin(ParallelVoronoiGridConstruction)
         .add_plugin(SimulationPlugin)
         .add_plugin(SweepPlugin);
