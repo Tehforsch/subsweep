@@ -8,7 +8,7 @@ use crate::named::Named;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationStages;
-use crate::simulation_plugin::SimulationStartupStages;
+use crate::simulation_plugin::StartupStages;
 
 #[derive(Named)]
 pub struct SimulationStagesPlugin;
@@ -35,18 +35,18 @@ impl RaxiomPlugin for SimulationStagesPlugin {
         }
         let startup_stages = &[
             StartupStage::PostStartup.as_label(),
-            SimulationStartupStages::InsertComponents.as_label(),
-            SimulationStartupStages::InsertDerivedComponents.as_label(),
+            StartupStages::InsertComponents.as_label(),
+            StartupStages::InsertDerivedComponents.as_label(),
             DomainStartupStages::CheckParticleExtent.as_label(),
             DomainStartupStages::Decomposition.as_label(),
             DomainStartupStages::SetOutgoingEntities.as_label(),
             DomainStartupStages::Exchange.as_label(),
             DomainStartupStages::ParticleIds.as_label(),
             DomainStartupStages::TreeConstruction.as_label(),
-            SimulationStartupStages::InsertGrid.as_label(),
-            SimulationStartupStages::InsertComponentsAfterGrid.as_label(),
-            SimulationStartupStages::Sweep.as_label(),
-            SimulationStartupStages::Final.as_label(),
+            StartupStages::InsertGrid.as_label(),
+            StartupStages::InsertComponentsAfterGrid.as_label(),
+            StartupStages::Sweep.as_label(),
+            StartupStages::Final.as_label(),
         ];
         for window in startup_stages.windows(2) {
             sim.add_startup_stage_after(

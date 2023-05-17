@@ -8,7 +8,7 @@ use crate::parameters::SimulationParameters;
 use crate::parameters::SweepParameters;
 use crate::parameters::TimestepParameters;
 use crate::parameters::TreeParameters;
-use crate::prelude::SimulationStartupStages;
+use crate::prelude::StartupStages;
 use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
@@ -50,7 +50,7 @@ fn setup_sweep_sim(sim: &mut Simulation, setup: SweepSetup) -> &mut Simulation {
             max_timestep: Time::seconds(1e-3),
         })
         .add_startup_system_to_stage(
-            SimulationStartupStages::InsertComponentsAfterGrid,
+            StartupStages::InsertComponentsAfterGrid,
             initialize_sweep_components_system,
         )
         .add_plugin(SweepPlugin)

@@ -11,7 +11,7 @@ use crate::prelude::LocalParticle;
 use crate::prelude::ThreeD;
 use crate::prelude::WorldRank;
 use crate::simulation::Simulation;
-use crate::simulation_plugin::SimulationStartupStages;
+use crate::simulation_plugin::StartupStages;
 use crate::stages::SimulationStagesPlugin;
 use crate::test_utils::build_local_communication_sim_with_custom_logic;
 use crate::units::Time;
@@ -51,10 +51,7 @@ fn build_sim(sim: &mut Simulation) {
         .add_parameters_explicitly(SimulationParameters {
             final_time: Some(Time::zero()),
         })
-        .add_startup_system_to_stage(
-            SimulationStartupStages::InsertComponents,
-            spawn_particles_system,
-        );
+        .add_startup_system_to_stage(StartupStages::InsertComponents, spawn_particles_system);
 }
 
 fn spawn_particles_system(mut commands: Commands, rank: Res<WorldRank>) {
