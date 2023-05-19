@@ -11,6 +11,7 @@ pub struct SweepParameters {
     pub significant_rate_treshold: PhotonRate,
     pub timestep_safety_factor: Dimensionless,
     pub check_deadlock: bool,
+    pub periodic: bool,
 }
 
 #[raxiom_parameters]

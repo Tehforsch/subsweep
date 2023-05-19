@@ -1,3 +1,5 @@
+mod remote_id_cache;
+
 use std::path::Path;
 
 use bevy::prelude::info;
@@ -32,12 +34,17 @@ use raxiom::simulation_plugin::StartupStages;
 use raxiom::sweep::grid::Cell;
 use raxiom::sweep::grid::Face;
 use raxiom::sweep::grid::ParticleType;
+use raxiom::sweep::grid::PeriodicNeighbour;
+use raxiom::sweep::grid::RemoteNeighbour;
+use raxiom::sweep::grid::RemotePeriodicNeighbour;
+use raxiom::sweep::SweepParameters;
 use raxiom::units;
 use raxiom::units::MVec;
 use raxiom::units::VecDimensionless;
 use raxiom::units::Volume;
 use raxiom::units::NONE;
 
+use self::remote_id_cache::RemoteIdCache;
 use crate::unit_reader::make_descriptor;
 use crate::unit_reader::ArepoUnitReader;
 use crate::GridParameters;
@@ -60,12 +67,15 @@ pub struct ReadSweepGridPlugin;
     PartialEq,
     Eq,
     Hash,
+    Copy,
 )]
 #[name = "UniqueParticleId"]
 #[repr(transparent)]
 pub struct UniqueParticleId(pub u64);
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
+#[derive(
+    H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named, Copy,
+)]
 #[name = "ConnectionTypeInt"]
 #[repr(transparent)]
 pub struct ConnectionTypeInt(pub i32);
@@ -105,18 +115,27 @@ impl ToDataset for ConnectionTypeInt {
     }
 }
 
-enum ConnectionType {
-    Local,
-    Invalid,
+#[derive(Debug)]
+struct ConnectionType {
+    periodic1: bool,
+    periodic2: bool,
+    valid: bool,
+}
+
+fn periodic_and_boundary_flags_from_bits(bits: i32) -> (bool, bool) {
+    let periodic = bits & 1 > 0;
+    let boundary = bits & 2 > 0;
+    (periodic, boundary)
 }
 
 impl From<ConnectionTypeInt> for ConnectionType {
     fn from(value: ConnectionTypeInt) -> Self {
-        use ConnectionType::*;
-        match *value {
-            0 => Local,
-            -1 => Invalid,
-            _ => unreachable!(),
+        let (periodic1, boundary1) = periodic_and_boundary_flags_from_bits(*value & (1 + 2));
+        let (periodic2, boundary2) = periodic_and_boundary_flags_from_bits((*value & (4 + 8)) >> 2);
+        ConnectionType {
+            periodic1,
+            periodic2,
+            valid: !(boundary1 || boundary2 || (periodic1 && periodic2)),
         }
     }
 }
@@ -153,8 +172,11 @@ struct Constructor {
     map: BiMap<ParticleId, UniqueParticleId>,
     cells: Vec<Cell>,
     unique_particle_id_to_index: HashMap<UniqueParticleId, usize>,
+    allow_periodic: bool,
+    remote_id_cache: RemoteIdCache,
 }
 
+#[derive(Debug)]
 struct Connection {
     area: Area,
     normal: FaceNormal,
@@ -214,7 +236,10 @@ fn read_connection_data(file: &Path, cosmology: &Cosmology) -> impl Iterator<Ite
 }
 
 impl Constructor {
-    fn new<'a>(particle_ids: Vec<(ParticleId, UniqueParticleId, Volume)>) -> Self {
+    fn new<'a>(
+        particle_ids: Vec<(ParticleId, UniqueParticleId, Volume)>,
+        allow_periodic: bool,
+    ) -> Self {
         let map = particle_ids
             .iter()
             .map(|(id1, id2, _)| (id1.clone(), id2.clone()))
@@ -236,6 +261,8 @@ impl Constructor {
             map,
             cells,
             unique_particle_id_to_index,
+            allow_periodic,
+            remote_id_cache: RemoteIdCache::new(),
         }
     }
 
@@ -246,6 +273,9 @@ impl Constructor {
     fn add_connections(&mut self, grid_file: &std::path::PathBuf, cosmology: &Cosmology) {
         let connections = read_connection_data(&grid_file, &cosmology);
         for connection in connections {
+            if !connection.type_.valid {
+                continue;
+            }
             let face1 = Face {
                 area: *connection.area,
                 normal: *connection.normal,
@@ -254,15 +284,59 @@ impl Constructor {
                 area: *connection.area,
                 normal: -*connection.normal,
             };
-            if let ConnectionType::Local = connection.type_ {
-                let ptype1 = ParticleType::Local(*self.map.get_by_right(&connection.id2).unwrap());
-                let ptype2 = ParticleType::Local(*self.map.get_by_right(&connection.id1).unwrap());
+            let ptype1 = self.get_particle_type(connection.id1, connection.type_.periodic1);
+            let ptype2 = self.get_particle_type(connection.id2, connection.type_.periodic2);
+            if ptype1.is_local() {
                 self.get_cell_by_id(connection.id1)
                     .neighbours
-                    .push((face1, ptype1));
+                    .push((face2, ptype2));
+            }
+            if ptype2.is_local() {
                 self.get_cell_by_id(connection.id2)
                     .neighbours
-                    .push((face2, ptype2));
+                    .push((face1, ptype1));
+            }
+        }
+    }
+
+    fn get_particle_type(&self, id: UniqueParticleId, is_periodic: bool) -> ParticleType {
+        let local_id = self.map.get_by_right(&id);
+        let is_local = local_id.is_some();
+        match (is_local, is_periodic) {
+            (true, false) => ParticleType::Local(*local_id.unwrap()),
+            (true, true) => {
+                if self.allow_periodic {
+                    // Find out periodic wrap type. Probably safe to
+                    // construct garbage but then again, I can let
+                    // Arepo tell me by doing some bit mangling
+                    let periodic_neighbour = PeriodicNeighbour {
+                        id: *local_id.unwrap(),
+                        periodic_wrap_type: todo!(),
+                    };
+                    ParticleType::LocalPeriodic(periodic_neighbour)
+                } else {
+                    ParticleType::Boundary
+                }
+            }
+            (false, true) => {
+                let (rank, id) = self.remote_id_cache.find(id);
+                ParticleType::Remote(RemoteNeighbour { id, rank })
+            }
+            (false, false) => {
+                let (rank, id) = self.remote_id_cache.find(id);
+                if self.allow_periodic {
+                    // Find out periodic wrap type. Probably safe to
+                    // construct garbage but then again, I can let
+                    // Arepo tell me by doing some bit mangling
+                    let remote_periodic_neighbour = RemotePeriodicNeighbour {
+                        id,
+                        rank,
+                        periodic_wrap_type: todo!(),
+                    };
+                    ParticleType::RemotePeriodic(remote_periodic_neighbour)
+                } else {
+                    ParticleType::Boundary
+                }
             }
         }
     }
@@ -272,6 +346,7 @@ fn read_grid_system(
     mut commands: Commands,
     p: Particles<(Entity, &ParticleId, &UniqueParticleId, &Mass, &Density)>,
     parameters: Res<Parameters>,
+    sweep_parameters: Res<SweepParameters>,
     cosmology: Res<Cosmology>,
 ) {
     let grid_file = if let GridParameters::Read(ref path) = parameters.grid {
@@ -284,6 +359,7 @@ fn read_grid_system(
         p.iter()
             .map(|(_, id1, id2, mass, density)| (id1.clone(), id2.clone(), **mass / **density))
             .collect(),
+        sweep_parameters.periodic,
     );
     constructor.add_connections(&grid_file, &cosmology);
     for ((entity, _, _, _, _), cell) in p.iter().zip(constructor.cells) {

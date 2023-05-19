@@ -54,6 +54,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             significant_rate_treshold: PhotonRate::zero(),
             timestep_safety_factor: timestep_safety_factor,
             check_deadlock: false,
+            periodic: false,
         })
         .add_parameters_explicitly(SimulationParameters { final_time: None })
         .add_parameters_explicitly(TimestepParameters {
