@@ -265,7 +265,7 @@ impl Constructor {
             cells,
             unique_particle_id_to_index,
             allow_periodic,
-            id_cache: IdCache::new(map),
+            id_cache: IdCache::new(map, rank),
             rank,
         }
     }
@@ -274,9 +274,43 @@ impl Constructor {
         &mut self.cells[self.unique_particle_id_to_index[&id]]
     }
 
-    fn add_connections(&mut self, grid_file: &std::path::PathBuf, cosmology: &Cosmology) {
-        let connections = read_connection_data(&grid_file, &cosmology);
-        for connection in connections {
+    fn get_particle_type(&mut self, id: UniqueParticleId, is_periodic: bool) -> ParticleType {
+        let id = self.id_cache.lookup(id).unwrap();
+        let is_local = id.rank == self.rank;
+        match (is_local, is_periodic) {
+            (true, false) => ParticleType::Local(id),
+            (true, true) => {
+                if self.allow_periodic {
+                    let periodic_neighbour = PeriodicNeighbour {
+                        id,
+                        periodic_wrap_type: get_periodic_wrap_type(),
+                    };
+                    ParticleType::LocalPeriodic(periodic_neighbour)
+                } else {
+                    ParticleType::Boundary
+                }
+            }
+            (false, true) => ParticleType::Remote(RemoteNeighbour { id, rank: id.rank }),
+            (false, false) => {
+                if self.allow_periodic {
+                    let remote_periodic_neighbour = RemotePeriodicNeighbour {
+                        id,
+                        rank: id.rank,
+                        periodic_wrap_type: get_periodic_wrap_type(),
+                    };
+                    ParticleType::RemotePeriodic(remote_periodic_neighbour)
+                } else {
+                    ParticleType::Boundary
+                }
+            }
+        }
+    }
+
+    fn add_connections(&mut self, connections: impl Iterator<Item = Connection>) {
+        let relevant_connections: Vec<_> = self.filter_relevant_connections(connections).collect();
+        self.add_lookup_requests(&relevant_connections);
+        self.id_cache.perform_lookup();
+        for connection in relevant_connections {
             if !connection.type_.valid {
                 continue;
             }
@@ -303,46 +337,32 @@ impl Constructor {
         }
     }
 
-    fn get_particle_type(&self, id: UniqueParticleId, is_periodic: bool) -> ParticleType {
-        let id = self.id_cache.find(id);
-        let is_local = id.rank == self.rank;
-        match (is_local, is_periodic) {
-            (true, false) => ParticleType::Local(id),
-            (true, true) => {
-                if self.allow_periodic {
-                    // Find out periodic wrap type. Probably safe to
-                    // construct garbage but then again, I can let
-                    // Arepo tell me by doing some bit mangling
-                    let periodic_neighbour = PeriodicNeighbour {
-                        id,
-                        periodic_wrap_type: get_periodic_wrap_type(),
-                    };
-                    ParticleType::LocalPeriodic(periodic_neighbour)
-                } else {
-                    ParticleType::Boundary
-                }
-            }
-            (false, true) => ParticleType::Remote(RemoteNeighbour { id, rank: id.rank }),
-            (false, false) => {
-                if self.allow_periodic {
-                    // Find out periodic wrap type. Probably safe to
-                    // construct garbage but then again, I can let
-                    // Arepo tell me by doing some bit mangling
-                    let remote_periodic_neighbour = RemotePeriodicNeighbour {
-                        id,
-                        rank: id.rank,
-                        periodic_wrap_type: get_periodic_wrap_type(),
-                    };
-                    ParticleType::RemotePeriodic(remote_periodic_neighbour)
-                } else {
-                    ParticleType::Boundary
-                }
-            }
+    fn filter_relevant_connections<'a>(
+        &'a self,
+        connections: impl Iterator<Item = Connection> + 'a,
+    ) -> impl Iterator<Item = Connection> + 'a {
+        connections.filter(|connection| {
+            let is_local1 = self.id_cache.is_local(connection.id1);
+            let is_local2 = self.id_cache.is_local(connection.id2);
+            let relevant = is_local1 || is_local2;
+            relevant
+        })
+    }
+
+    fn add_lookup_requests(&mut self, connections: &[Connection]) {
+        for connection in connections.iter() {
+            self.id_cache
+                .add_lookup_request_if_necessary(connection.id1);
+            self.id_cache
+                .add_lookup_request_if_necessary(connection.id2);
         }
     }
 }
 
 fn get_periodic_wrap_type() -> ActiveWrapType {
+    // Find out periodic wrap type. Probably safe to
+    // construct garbage but then again, I can let
+    // Arepo tell me by doing some bit mangling
     todo!()
 }
 
@@ -365,7 +385,8 @@ fn read_grid_system(
             .collect(),
         sweep_parameters.periodic,
     );
-    constructor.add_connections(&grid_file, &cosmology);
+    let connections = read_connection_data(&grid_file, &cosmology);
+    constructor.add_connections(connections);
     for ((entity, _, _, _, _), cell) in p.iter().zip(constructor.cells) {
         commands.entity(entity).insert(cell);
     }
