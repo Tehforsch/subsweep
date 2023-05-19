@@ -1,4 +1,4 @@
-mod remote_id_cache;
+mod id_cache;
 
 use std::path::Path;
 
@@ -7,7 +7,6 @@ use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Entity;
 use bevy::prelude::Res;
-use bimap::BiMap;
 use derive_custom::Named;
 use derive_more::Deref;
 use derive_more::DerefMut;
@@ -15,8 +14,12 @@ use derive_more::From;
 use hdf5::File;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
+use raxiom::communication::communicator::Communicator;
+use raxiom::communication::Rank;
+use raxiom::communication::SizedCommunicator;
 use raxiom::components::Density;
 use raxiom::cosmology::Cosmology;
+use raxiom::dimension::ActiveWrapType;
 use raxiom::hash_map::HashMap;
 use raxiom::io::input::read_dataset_for_file;
 use raxiom::io::input::DatasetInputPlugin;
@@ -44,7 +47,7 @@ use raxiom::units::VecDimensionless;
 use raxiom::units::Volume;
 use raxiom::units::NONE;
 
-use self::remote_id_cache::RemoteIdCache;
+use self::id_cache::IdCache;
 use crate::unit_reader::make_descriptor;
 use crate::unit_reader::ArepoUnitReader;
 use crate::GridParameters;
@@ -168,14 +171,6 @@ impl RaxiomPlugin for ReadSweepGridPlugin {
     }
 }
 
-struct Constructor {
-    map: BiMap<ParticleId, UniqueParticleId>,
-    cells: Vec<Cell>,
-    unique_particle_id_to_index: HashMap<UniqueParticleId, usize>,
-    allow_periodic: bool,
-    remote_id_cache: RemoteIdCache,
-}
-
 #[derive(Debug)]
 struct Connection {
     area: Area,
@@ -235,6 +230,14 @@ fn read_connection_data(file: &Path, cosmology: &Cosmology) -> impl Iterator<Ite
         )
 }
 
+struct Constructor {
+    cells: Vec<Cell>,
+    unique_particle_id_to_index: HashMap<UniqueParticleId, usize>,
+    allow_periodic: bool,
+    id_cache: IdCache,
+    rank: Rank,
+}
+
 impl Constructor {
     fn new<'a>(
         particle_ids: Vec<(ParticleId, UniqueParticleId, Volume)>,
@@ -242,7 +245,7 @@ impl Constructor {
     ) -> Self {
         let map = particle_ids
             .iter()
-            .map(|(id1, id2, _)| (id1.clone(), id2.clone()))
+            .map(|(id1, id2, _)| (id2.clone(), id1.clone()))
             .collect();
         let unique_particle_id_to_index = particle_ids
             .iter()
@@ -257,12 +260,13 @@ impl Constructor {
                 volume: *volume,
             })
             .collect();
+        let rank = Communicator::<usize>::new().rank();
         Self {
-            map,
             cells,
             unique_particle_id_to_index,
             allow_periodic,
-            remote_id_cache: RemoteIdCache::new(),
+            id_cache: IdCache::new(map),
+            rank,
         }
     }
 
@@ -300,38 +304,34 @@ impl Constructor {
     }
 
     fn get_particle_type(&self, id: UniqueParticleId, is_periodic: bool) -> ParticleType {
-        let local_id = self.map.get_by_right(&id);
-        let is_local = local_id.is_some();
+        let id = self.id_cache.find(id);
+        let is_local = id.rank == self.rank;
         match (is_local, is_periodic) {
-            (true, false) => ParticleType::Local(*local_id.unwrap()),
+            (true, false) => ParticleType::Local(id),
             (true, true) => {
                 if self.allow_periodic {
                     // Find out periodic wrap type. Probably safe to
                     // construct garbage but then again, I can let
                     // Arepo tell me by doing some bit mangling
                     let periodic_neighbour = PeriodicNeighbour {
-                        id: *local_id.unwrap(),
-                        periodic_wrap_type: todo!(),
+                        id,
+                        periodic_wrap_type: get_periodic_wrap_type(),
                     };
                     ParticleType::LocalPeriodic(periodic_neighbour)
                 } else {
                     ParticleType::Boundary
                 }
             }
-            (false, true) => {
-                let (rank, id) = self.remote_id_cache.find(id);
-                ParticleType::Remote(RemoteNeighbour { id, rank })
-            }
+            (false, true) => ParticleType::Remote(RemoteNeighbour { id, rank: id.rank }),
             (false, false) => {
-                let (rank, id) = self.remote_id_cache.find(id);
                 if self.allow_periodic {
                     // Find out periodic wrap type. Probably safe to
                     // construct garbage but then again, I can let
                     // Arepo tell me by doing some bit mangling
                     let remote_periodic_neighbour = RemotePeriodicNeighbour {
                         id,
-                        rank,
-                        periodic_wrap_type: todo!(),
+                        rank: id.rank,
+                        periodic_wrap_type: get_periodic_wrap_type(),
                     };
                     ParticleType::RemotePeriodic(remote_periodic_neighbour)
                 } else {
@@ -340,6 +340,10 @@ impl Constructor {
             }
         }
     }
+}
+
+fn get_periodic_wrap_type() -> ActiveWrapType {
+    todo!()
 }
 
 fn read_grid_system(
