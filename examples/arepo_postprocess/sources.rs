@@ -76,7 +76,7 @@ fn formation_time_to_age(_formation_time: Dimensionless) -> Time {
     Time::megayears(100.0)
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct Sources {
     sources: Vec<Source>,
 }
@@ -166,10 +166,6 @@ pub fn set_source_terms_system(
             **source_term += s.rate;
         }
     }
-    let total: SourceRate = particles
-        .iter()
-        .into_iter()
-        .map(|(_, source)| **source)
-        .sum();
+    let total: SourceRate = sources.sources.iter().map(|source| source.rate).sum();
     debug!("Total luminosity: {:+.2e}", total.in_photons_per_s());
 }
