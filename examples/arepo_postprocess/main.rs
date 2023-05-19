@@ -113,7 +113,7 @@ fn main() {
         )
         .add_startup_system_to_stage(
             StartupStages::InsertGrid,
-            remove_unnecessary_components_system,
+            remove_components_system::<InternalEnergy>,
         )
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
             InputDatasetDescriptor::<Position>::new(
@@ -167,11 +167,11 @@ fn insert_missing_components_system(
     }
 }
 
-fn remove_unnecessary_components_system(
+fn remove_components_system<C: Component>(
     mut commands: Commands,
-    particles: Particles<Entity, With<InternalEnergy>>,
+    particles: Particles<Entity, With<C>>,
 ) {
     for entity in particles.iter() {
-        commands.entity(entity).remove::<InternalEnergy>();
+        commands.entity(entity).remove::<C>();
     }
 }

@@ -48,6 +48,7 @@ use raxiom::units::Volume;
 use raxiom::units::NONE;
 
 use self::id_cache::IdCache;
+use crate::remove_components_system;
 use crate::unit_reader::make_descriptor;
 use crate::unit_reader::ArepoUnitReader;
 use crate::GridParameters;
@@ -165,6 +166,14 @@ impl RaxiomPlugin for ReadSweepGridPlugin {
                 ..Default::default()
             },
         ))
+        .add_startup_system_to_stage(
+            StartupStages::InsertComponentsAfterGrid,
+            remove_components_system::<UniqueParticleId>,
+        )
+        .add_startup_system_to_stage(
+            StartupStages::InsertComponentsAfterGrid,
+            remove_components_system::<Mass>,
+        )
         .add_component_no_io::<UniqueParticleId>()
         .add_component_no_io::<Mass>()
         .add_startup_system_to_stage(StartupStages::InsertGrid, read_grid_system);
