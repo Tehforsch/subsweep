@@ -84,4 +84,8 @@ impl IdCache {
             self.requests.insert(IdLookupRequest { id });
         }
     }
+
+    pub(crate) fn iter(&self) -> impl Iterator<Item = ParticleId> + '_ {
+        self.map.iter().map(|(_, id)| *id)
+    }
 }
