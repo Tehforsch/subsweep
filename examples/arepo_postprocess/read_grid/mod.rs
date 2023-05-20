@@ -29,6 +29,7 @@ use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
 use raxiom::prelude::Float;
+use raxiom::prelude::HaloParticle;
 use raxiom::prelude::ParticleId;
 use raxiom::prelude::Particles;
 use raxiom::prelude::RaxiomPlugin;
@@ -241,6 +242,7 @@ fn read_connection_data(file: &Path, cosmology: &Cosmology) -> impl Iterator<Ite
 
 struct Constructor {
     cells: Vec<Cell>,
+    haloes: Vec<ParticleId>,
     unique_particle_id_to_index: HashMap<UniqueParticleId, usize>,
     allow_periodic: bool,
     id_cache: IdCache,
@@ -272,6 +274,7 @@ impl Constructor {
         let rank = Communicator::<usize>::new().rank();
         Self {
             cells,
+            haloes: vec![],
             unique_particle_id_to_index,
             allow_periodic,
             id_cache: IdCache::new(map, rank),
@@ -299,8 +302,8 @@ impl Constructor {
                     ParticleType::Boundary
                 }
             }
-            (false, true) => ParticleType::Remote(RemoteNeighbour { id, rank: id.rank }),
-            (false, false) => {
+            (false, false) => ParticleType::Remote(RemoteNeighbour { id, rank: id.rank }),
+            (false, true) => {
                 if self.allow_periodic {
                     let remote_periodic_neighbour = RemotePeriodicNeighbour {
                         id,
@@ -319,6 +322,8 @@ impl Constructor {
         let relevant_connections: Vec<_> = self.filter_relevant_connections(connections).collect();
         self.add_lookup_requests(&relevant_connections);
         self.id_cache.perform_lookup();
+        self.haloes
+            .extend(self.id_cache.iter().filter(|id| id.rank != self.rank));
         for connection in relevant_connections {
             if !connection.type_.valid {
                 continue;
@@ -334,16 +339,17 @@ impl Constructor {
             let ptype1 = self.get_particle_type(connection.id1, connection.type_.periodic1);
             let ptype2 = self.get_particle_type(connection.id2, connection.type_.periodic2);
             if ptype1.is_local() {
-                self.get_cell_by_id(connection.id1)
-                    .neighbours
-                    .push((face2, ptype2));
+                self.add_neighbour(connection.id1, face2, ptype2);
             }
             if ptype2.is_local() {
-                self.get_cell_by_id(connection.id2)
-                    .neighbours
-                    .push((face1, ptype1));
+                self.add_neighbour(connection.id2, face1, ptype1);
             }
         }
+    }
+
+    fn add_neighbour(&mut self, id: UniqueParticleId, face: Face, neighbour: ParticleType) {
+        let cell = self.get_cell_by_id(id);
+        cell.neighbours.push((face, neighbour));
     }
 
     fn filter_relevant_connections<'a>(
@@ -398,5 +404,8 @@ fn read_grid_system(
     constructor.add_connections(connections);
     for ((entity, _, _, _, _), cell) in p.iter().zip(constructor.cells) {
         commands.entity(entity).insert(cell);
+    }
+    for halo_id in constructor.haloes {
+        commands.spawn((HaloParticle { rank: halo_id.rank }, halo_id));
     }
 }

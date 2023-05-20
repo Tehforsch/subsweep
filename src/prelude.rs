@@ -6,6 +6,7 @@ pub use crate::dimension::ThreeD;
 pub use crate::dimension::TwoD;
 pub use crate::domain::Extent;
 pub use crate::named::*;
+pub use crate::particle::HaloParticle;
 pub use crate::particle::LocalParticle;
 pub use crate::particle::ParticleId;
 pub use crate::particle::Particles;
