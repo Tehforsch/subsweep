@@ -21,7 +21,6 @@ pub const LENGTH_IDENTIFIER: &str = "scaling_length";
 pub const TIME_IDENTIFIER: &str = "scaling_time";
 pub const MASS_IDENTIFIER: &str = "scaling_mass";
 pub const TEMPERATURE_IDENTIFIER: &str = "scaling_temperature";
-pub const AMOUNT_IDENTIFIER: &str = "scaling_amount";
 pub const H_SCALING_IDENTIFIER: &str = "scaling_h";
 pub const A_SCALING_IDENTIFIER: &str = "scaling_a";
 
@@ -109,7 +108,6 @@ pub fn add_dimension_attrs<T: ToDataset>(dataset: &Dataset) {
         time,
         mass,
         temperature,
-        amount,
         h,
         a,
     } = dimension;
@@ -117,7 +115,6 @@ pub fn add_dimension_attrs<T: ToDataset>(dataset: &Dataset) {
     write_dimension(dataset, TIME_IDENTIFIER, time);
     write_dimension(dataset, MASS_IDENTIFIER, mass);
     write_dimension(dataset, TEMPERATURE_IDENTIFIER, temperature);
-    write_dimension(dataset, AMOUNT_IDENTIFIER, amount);
     write_dimension(dataset, H_SCALING_IDENTIFIER, h);
     write_dimension(dataset, A_SCALING_IDENTIFIER, a);
 }

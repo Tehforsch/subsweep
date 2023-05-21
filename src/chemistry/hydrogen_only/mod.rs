@@ -157,7 +157,7 @@ impl Solver {
 
     fn photoheating(&self, absorbed_fraction: Dimensionless) -> Energy {
         let num_absorbed_photons: Dimensionless =
-            (self.rate * self.length / SPEED_OF_LIGHT * absorbed_fraction).remove_amount();
+            self.rate * self.length / SPEED_OF_LIGHT * absorbed_fraction;
         let rydberg = Energy::electron_volts(13.65693);
         let average_energy: Energy = Energy::electron_volts(0.4298);
         let energy_per_photon = rydberg - average_energy;
@@ -192,8 +192,9 @@ impl Solver {
             * nh_neutral;
         let recombination = self.case_b_recombination_cooling_rate() * ne * nh_ionized;
         let bremsstrahlung = self.bremstrahlung_cooling_rate() * ne * nh_ionized;
-        let compton = self.compton_cooling_rate() * ne;
-        photoheating - ((collisional + recombination + bremsstrahlung).remove_amount() + compton)
+        let compton: EnergyRateDensity = self.compton_cooling_rate() * ne;
+        let cooling: EnergyRateDensity = collisional + recombination + bremsstrahlung + compton;
+        photoheating - cooling
     }
 
     fn update_temperature(&mut self, absorbed_fraction: Dimensionless) -> HeatingRate {
@@ -220,7 +221,7 @@ impl Solver {
         let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.rate) * self.timestep;
         let heating_rate = self.update_temperature(Dimensionless::dimensionless(absorbed_fraction));
         self.ionized_hydrogen_fraction +=
-            num_newly_ionized_hydrogen_atoms / (hydrogen_number_density * self.volume).to_amount();
+            num_newly_ionized_hydrogen_atoms / (hydrogen_number_density * self.volume);
         self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
             Dimensionless::dimensionless(0.0),
             Dimensionless::dimensionless(1.0),
@@ -235,7 +236,6 @@ mod tests {
     use std::fs;
 
     use super::Solver;
-    use crate::units::Amount;
     use crate::units::Dimensionless;
     use crate::units::Length;
     use crate::units::NumberDensity;
@@ -273,7 +273,7 @@ mod tests {
                 let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
                     * (number_density * initial_ionized_hydrogen_fraction).powi::<2>()
                     * volume;
-                let rate = recombination_rate * Amount::one_unchecked();
+                let rate = recombination_rate;
                 let mut solver = Solver {
                     ionized_hydrogen_fraction: initial_ionized_hydrogen_fraction,
                     temperature: Temperature::kelvins(1000.0),

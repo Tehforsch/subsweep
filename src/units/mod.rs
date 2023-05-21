@@ -121,15 +121,11 @@ unit_system!(
     NUMBERDENSITY2D, NumberDensity2D, length: -2,
     {
     },
-    AMOUNT, Amount, amount: 1,
-    {
-        photons, 1.0, "photons"
-    },
-    PHOTON_RATE, PhotonRate, time: -1, amount: 1,
+    PHOTON_RATE, PhotonRate, time: -1,
     {
         photons_per_s, 1.0, "photons/s"
     },
-    PHOTON_FLUX, PhotonFlux, time: -1, amount: 1, length: -2,
+    PHOTON_FLUX, PhotonFlux, time: -1, length: -2,
     {
         photons_per_s_per_cm_squared, 1.0, "photons cm^-2 s^-1"
     },
@@ -140,7 +136,7 @@ unit_system!(
     {
         centimeters_squared, 1e-4, "cm^2"
     },
-    SOURCE_RATE, SourceRate, time: -1, amount: 1,
+    SOURCE_RATE, SourceRate, time: -1,
     {
     },
     LENGTHMASS, LengthMass, mass: 1, length: 1,

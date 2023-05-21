@@ -1,4 +1,3 @@
-use super::Amount;
 use super::Density;
 use super::Dimension;
 use super::Dimensionless;
@@ -14,6 +13,12 @@ use crate::prelude::Float;
 impl<const D: Dimension> Quantity<Float, D> {
     pub fn one_unchecked() -> Self {
         Self(1.0)
+    }
+}
+
+impl<const D: Dimension, S> Quantity<S, D> {
+    pub fn dimension(&self) -> Dimension {
+        D
     }
 }
 
@@ -47,20 +52,5 @@ impl EnergyDensity {
         let molecular_weight = 1.0 / (ionized_hydrogen_fraction + 1.0);
         let internal_energy = temperature.to_internal_energy(molecular_weight);
         internal_energy * density
-    }
-}
-
-impl Dimensionless {
-    pub fn to_amount(&self) -> Amount {
-        *self * Amount::one_unchecked()
-    }
-}
-
-impl<const D: Dimension, S: Clone> Quantity<S, D>
-where
-    Quantity<S, { D.remove_amount() }>:,
-{
-    pub fn remove_amount(&self) -> Quantity<S, { D.remove_amount() }> {
-        Quantity(self.0.clone())
     }
 }

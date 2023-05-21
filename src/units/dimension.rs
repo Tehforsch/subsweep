@@ -4,7 +4,6 @@ const MASS_TO_SI: f64 = 1.0;
 const LENGTH_TO_SI: f64 = 1.0;
 const TIME_TO_SI: f64 = 1.0;
 const TEMPERATURE_TO_SI: f64 = 1.0;
-const AMOUNT_TO_SI: f64 = 1.0;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 #[diman_dimension]
@@ -13,7 +12,6 @@ pub struct Dimension {
     pub time: i32,
     pub mass: i32,
     pub temperature: i32,
-    pub amount: i32,
     pub h: i32,
     pub a: i32,
 }
@@ -23,7 +21,6 @@ pub const NONE: Dimension = Dimension {
     time: 0,
     mass: 0,
     temperature: 0,
-    amount: 0,
     h: 0,
     a: 0,
 };
@@ -40,7 +37,6 @@ impl Dimension {
             time,
             mass,
             temperature,
-            amount,
             h: _,
             a: _,
         } = self;
@@ -48,18 +44,5 @@ impl Dimension {
             * (TIME_TO_SI).powi(*time)
             * (MASS_TO_SI).powi(*mass)
             * (TEMPERATURE_TO_SI).powi(*temperature)
-            * (AMOUNT_TO_SI).powi(*amount)
-    }
-
-    pub const fn remove_amount(self) -> Self {
-        Self {
-            length: self.length,
-            time: self.time,
-            mass: self.mass,
-            temperature: self.temperature,
-            amount: 0,
-            h: self.h,
-            a: self.a,
-        }
     }
 }

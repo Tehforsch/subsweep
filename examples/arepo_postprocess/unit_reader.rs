@@ -76,7 +76,6 @@ impl ArepoUnitReader {
             mass,
             time,
             temperature: 0,
-            amount: 0,
             h,
             a,
         }

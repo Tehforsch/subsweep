@@ -1,6 +1,5 @@
 use hdf5::Dataset;
 
-use super::to_dataset::AMOUNT_IDENTIFIER;
 use super::to_dataset::LENGTH_IDENTIFIER;
 use super::to_dataset::MASS_IDENTIFIER;
 use super::to_dataset::SCALE_FACTOR_IDENTIFIER;
@@ -56,13 +55,11 @@ impl UnitReader for DefaultUnitReader {
             TEMPERATURE_IDENTIFIER,
             "No temperature scale factor in dataset",
         );
-        let amount: i32 = read_attr(AMOUNT_IDENTIFIER, "No amount scale factor in dataset");
         Dimension {
             length,
             mass,
             time,
             temperature,
-            amount,
             h,
             a,
         }
