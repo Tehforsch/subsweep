@@ -11,9 +11,3 @@ pub struct SimulationParameters {
     #[serde(default)]
     pub final_time: Option<Time>,
 }
-
-#[raxiom_parameters("timestep")]
-pub struct TimestepParameters {
-    /// The maximum timestep of the simulation
-    pub max_timestep: Time,
-}

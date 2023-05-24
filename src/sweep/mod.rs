@@ -48,7 +48,6 @@ use crate::components::Source;
 use crate::cosmology::Cosmology;
 use crate::hash_map::HashMap;
 use crate::io::output::parameters::OutputParameters;
-use crate::parameters::TimestepParameters;
 use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
 use crate::prelude::*;
@@ -441,7 +440,6 @@ fn init_sweep_system(
         &Source,
     )>,
     haloes: HaloParticles<&ParticleId>,
-    timestep: Res<TimestepParameters>,
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
@@ -476,7 +474,7 @@ fn init_sweep_system(
         cells,
         sites,
         halo_ids,
-        timestep.max_timestep,
+        sweep_parameters.max_timestep,
         sweep_parameters.timestep_safety_factor,
         &sweep_parameters,
         **world_size,

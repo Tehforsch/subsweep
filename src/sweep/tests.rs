@@ -6,7 +6,6 @@ use super::grid::NumCellsSpec;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
 use crate::parameters::SweepParameters;
-use crate::parameters::TimestepParameters;
 use crate::parameters::TreeParameters;
 use crate::prelude::StartupStages;
 use crate::prelude::WorldRank;
@@ -45,11 +44,9 @@ fn setup_sweep_sim(sim: &mut Simulation, setup: SweepSetup) -> &mut Simulation {
             timestep_safety_factor: setup.timestep_safety_factor,
             check_deadlock: false,
             periodic: false,
-        })
-        .add_parameters_explicitly(SimulationParameters { final_time: None })
-        .add_parameters_explicitly(TimestepParameters {
             max_timestep: Time::seconds(1e-3),
         })
+        .add_parameters_explicitly(SimulationParameters { final_time: None })
         .add_startup_system_to_stage(
             StartupStages::InsertComponentsAfterGrid,
             initialize_sweep_components_system,

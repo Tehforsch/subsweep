@@ -2,6 +2,7 @@ use derive_custom::raxiom_parameters;
 
 use crate::units::Dimensionless;
 use crate::units::PhotonRate;
+use crate::units::Time;
 use crate::units::VecDimensionless;
 
 #[raxiom_parameters("sweep")]
@@ -12,6 +13,8 @@ pub struct SweepParameters {
     pub timestep_safety_factor: Dimensionless,
     pub check_deadlock: bool,
     pub periodic: bool,
+    /// The maximum allowed timestep.
+    pub max_timestep: Time,
 }
 
 #[raxiom_parameters]

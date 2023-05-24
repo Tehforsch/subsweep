@@ -16,7 +16,6 @@ use raxiom::domain::DomainPlugin;
 use raxiom::parameters::SimulationBox;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::SweepParameters;
-use raxiom::parameters::TimestepParameters;
 use raxiom::parameters::TreeParameters;
 use raxiom::prelude::LocalParticle;
 use raxiom::prelude::ParallelVoronoiGridConstruction;
@@ -53,13 +52,11 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             num_timestep_levels: num_timestep_levels,
             significant_rate_treshold: PhotonRate::zero(),
             timestep_safety_factor: timestep_safety_factor,
+            max_timestep: Time::seconds(1e-3),
             check_deadlock: false,
             periodic: false,
         })
         .add_parameters_explicitly(SimulationParameters { final_time: None })
-        .add_parameters_explicitly(TimestepParameters {
-            max_timestep: Time::seconds(1e-3),
-        })
         .add_startup_system_to_stage(
             StartupStages::InsertComponentsAfterGrid,
             initialize_sweep_components_system,

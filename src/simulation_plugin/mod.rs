@@ -6,7 +6,6 @@ use bevy::prelude::*;
 use mpi::traits::Equivalence;
 
 pub use self::parameters::SimulationParameters;
-pub use self::parameters::TimestepParameters;
 pub use self::time::SimulationTime;
 use crate::components::Position;
 use crate::io::output::Attribute;
@@ -54,7 +53,6 @@ pub struct StopSimulationEvent;
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<SimulationParameters>()
-            .add_parameter_type::<TimestepParameters>()
             .add_parameter_type::<SimulationBox>()
             .add_required_component::<Position>()
             .add_plugin(ParticlePlugin)
