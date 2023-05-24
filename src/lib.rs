@@ -24,7 +24,6 @@ pub(crate) mod parameter_plugin;
 pub(crate) mod particle;
 mod peano_hilbert;
 pub mod quadtree;
-pub(crate) mod rand;
 pub(crate) mod simulation;
 pub(crate) mod simulation_box;
 pub(crate) mod simulation_builder;
