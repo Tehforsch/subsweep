@@ -52,7 +52,7 @@ pub fn bpass_lookup(age: Time, metallicity: Dimensionless, mass: Mass) -> Source
         l2,
         metallicity,
     );
-    SourceRate::photons_per_s(source_rate_per_mass * mass.in_solar())
+    SourceRate::photons_per_second(source_rate_per_mass * mass.in_solar())
 }
 
 const NUM_BPASS_AGES: usize = 51;

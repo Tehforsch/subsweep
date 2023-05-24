@@ -219,7 +219,7 @@ impl Solver {
         let absorbed_fraction =
             1.0 - (-self.neutral_hydrogen_number_density() * sigma * self.length).exp();
         let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.rate) * self.timestep;
-        let heating_rate = self.update_temperature(Dimensionless::dimensionless(absorbed_fraction));
+        let heating_rate = self.update_temperature(absorbed_fraction);
         self.ionized_hydrogen_fraction +=
             num_newly_ionized_hydrogen_atoms / (hydrogen_number_density * self.volume);
         self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
@@ -332,8 +332,7 @@ mod tests {
             for temp_exp in [3, 4, 5, 6] {
                 let temperature = Temperature::kelvins(10.0f64.powi(temp_exp));
                 for exp in [-8, -6, -4, -2, 0, 2] {
-                    let number_density =
-                        NumberDensity::particles_per_centimeter_cubed(10.0f64.powi(exp));
+                    let number_density = NumberDensity::per_centimeters_cubed(10.0f64.powi(exp));
                     let density = number_density * PROTON_MASS;
 
                     let solver = Solver {

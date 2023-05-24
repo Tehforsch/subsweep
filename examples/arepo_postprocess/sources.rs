@@ -167,5 +167,5 @@ pub fn set_source_terms_system(
         }
     }
     let total: SourceRate = sources.sources.iter().map(|source| source.rate).sum();
-    debug!("Total luminosity: {:+.2e}", total.in_photons_per_s());
+    debug!("Total luminosity: {:+.2e}", total.in_photons_per_second());
 }
