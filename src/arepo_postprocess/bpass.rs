@@ -892,7 +892,7 @@ mod tests {
     use raxiom::units::Mass;
     use raxiom::units::Time;
 
-    use crate::bpass::bpass_lookup;
+    use super::bpass_lookup;
 
     pub fn assert_float_is_close(x: Float, y: Float) {
         assert!(((x - y) / (x.abs() + y.abs())).abs() < 1e-5, "{} {}", x, y)
@@ -906,7 +906,7 @@ mod tests {
                 Dimensionless::dimensionless(metallicity),
                 Mass::solar(1.0),
             );
-            assert_float_is_close(source.in_photons_per_s(), desired_value_photons_per_s);
+            assert_float_is_close(source.in_photons_per_second(), desired_value_photons_per_s);
         };
         check_is_close(1e6, 1e-5, 4.22119750e+46);
         check_is_close(1e6, 3.5e-2, 3.37997788e+46);

@@ -110,3 +110,12 @@ fn exit_system(mut evs: EventWriter<AppExit>, mut stop_sim: EventReader<StopSimu
 fn show_num_cores_system(world_size: Res<WorldSize>) {
     info!("Running on {} MPI ranks", **world_size);
 }
+
+pub fn remove_components_system<C: Component>(
+    mut commands: Commands,
+    particles: Particles<Entity, With<C>>,
+) {
+    for entity in particles.iter() {
+        commands.entity(entity).remove::<C>();
+    }
+}

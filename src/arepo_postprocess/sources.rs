@@ -29,12 +29,12 @@ use raxiom::units::SourceRate;
 use raxiom::units::Time;
 use raxiom::units::VecLength;
 
-use crate::bpass::bpass_lookup;
-use crate::read_vec;
-use crate::unit_reader::make_descriptor;
-use crate::unit_reader::ArepoUnitReader;
-use crate::Parameters;
-use crate::SourceType;
+use super::bpass::bpass_lookup;
+use super::unit_reader::make_descriptor;
+use super::unit_reader::read_vec;
+use super::unit_reader::ArepoUnitReader;
+use super::Parameters;
+use super::SourceType;
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
 pub struct DistanceToSourceData(Length);
@@ -126,7 +126,7 @@ pub fn read_sources_system(
     commands.insert_resource(Sources { sources });
 }
 
-pub(super) fn add_single_source_system(
+pub fn add_single_source_system(
     box_size: Res<SimulationBox>,
     parameters: Res<Parameters>,
     mut commands: Commands,

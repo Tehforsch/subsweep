@@ -28,6 +28,7 @@ pub struct SimulationBuilder {
     pub log: bool,
     pub parameter_overrides: Vec<Override>,
     base_communication: Option<BaseCommunicationPlugin>,
+    require_parameter_file: bool,
 }
 
 impl Default for SimulationBuilder {
@@ -41,6 +42,7 @@ impl Default for SimulationBuilder {
             log: true,
             base_communication: None,
             parameter_overrides: vec![],
+            require_parameter_file: false,
         }
     }
 }
@@ -121,6 +123,11 @@ impl SimulationBuilder {
         self
     }
 
+    pub fn require_parameter_file(&mut self, require_parameter_file: bool) -> &mut Self {
+        self.require_parameter_file = require_parameter_file;
+        self
+    }
+
     pub fn log(&mut self, log: bool) -> &mut Self {
         self.log = log;
         self
@@ -130,6 +137,9 @@ impl SimulationBuilder {
         if let Some(ref file) = self.parameter_file_path {
             sim.add_parameters_from_file(file);
         } else {
+            if self.require_parameter_file {
+                panic!("No parameter file given. Use the --params argument to pass one.");
+            }
             sim.add_parameter_file_contents("{}".into());
         }
         sim.with_parameter_overrides(self.parameter_overrides.clone());

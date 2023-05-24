@@ -34,6 +34,7 @@ use raxiom::prelude::ParticleId;
 use raxiom::prelude::Particles;
 use raxiom::prelude::RaxiomPlugin;
 use raxiom::prelude::Simulation;
+use raxiom::simulation_plugin::remove_components_system;
 use raxiom::simulation_plugin::StartupStages;
 use raxiom::sweep::grid::Cell;
 use raxiom::sweep::grid::Face;
@@ -49,11 +50,10 @@ use raxiom::units::Volume;
 use raxiom::units::NONE;
 
 use self::id_cache::IdCache;
-use crate::remove_components_system;
-use crate::unit_reader::make_descriptor;
-use crate::unit_reader::ArepoUnitReader;
-use crate::GridParameters;
-use crate::Parameters;
+use super::unit_reader::make_descriptor;
+use super::unit_reader::ArepoUnitReader;
+use super::Parameters;
+use crate::arepo_postprocess::GridParameters;
 
 #[derive(Named)]
 pub struct ReadSweepGridPlugin;

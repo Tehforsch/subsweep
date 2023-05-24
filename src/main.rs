@@ -1,13 +1,18 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
-mod bpass;
-mod read_grid;
-mod sources;
-mod unit_reader;
+mod arepo_postprocess;
 
-use std::path::PathBuf;
-
+use arepo_postprocess::read_grid::ReadSweepGridPlugin;
+use arepo_postprocess::sources::add_single_source_system;
+use arepo_postprocess::sources::read_sources_system;
+use arepo_postprocess::sources::set_source_terms_system;
+use arepo_postprocess::sources::Sources;
+use arepo_postprocess::unit_reader::read_vec;
+use arepo_postprocess::unit_reader::ArepoUnitReader;
+use arepo_postprocess::GridParameters;
+use arepo_postprocess::Parameters;
+use arepo_postprocess::SourceType;
 use bevy::prelude::*;
 use derive_more::From;
 use hdf5::H5Type;
@@ -23,57 +28,17 @@ use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
 use raxiom::prelude::*;
-use raxiom::units::Dimensionless;
+use raxiom::simulation_plugin::remove_components_system;
 use raxiom::units::PhotonRate;
 use raxiom::units::SourceRate;
 use raxiom::units::Temperature;
-use raxiom::units::VecLength;
-use read_grid::ReadSweepGridPlugin;
-use sources::add_single_source_system;
-use sources::read_sources_system;
-use sources::set_source_terms_system;
-use sources::Sources;
-use unit_reader::ArepoUnitReader;
-
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
-#[name = "internal_energy"]
-#[repr(transparent)]
-pub struct InternalEnergy(pub crate::units::EnergyPerMass);
-
-#[raxiom_parameters("postprocess")]
-pub struct Parameters {
-    initial_fraction_ionized_hydrogen: Dimensionless,
-    sources: SourceType,
-    grid: GridParameters,
-}
-
-#[derive(Default)]
-#[raxiom_parameters]
-enum GridParameters {
-    #[default]
-    Construct,
-    Read(PathBuf),
-}
-
-#[derive(Default)]
-#[raxiom_parameters]
-enum SourceType {
-    #[default]
-    FromIcs,
-    SingleSource(SourceRate),
-}
-
-fn read_vec(data: &[Float]) -> Position {
-    Position(VecLength::new_unchecked(MVec::new(
-        data[0], data[1], data[2],
-    )))
-}
 
 fn main() {
     let mut sim = SimulationBuilder::new();
     let mut sim = sim
         .write_output(true)
         .read_initial_conditions(true)
+        .require_parameter_file(true)
         .update_from_command_line_options()
         .build();
     let cosmology = sim.add_parameter_type_and_get_result::<Cosmology>().clone();
@@ -146,6 +111,11 @@ fn main() {
         .run();
 }
 
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
+#[name = "internal_energy"]
+#[repr(transparent)]
+pub struct InternalEnergy(pub crate::units::EnergyPerMass);
+
 fn insert_missing_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &InternalEnergy, &Density)>,
@@ -164,14 +134,5 @@ fn insert_missing_components_system(
             components::Source(SourceRate::zero()),
             components::Temperature(temperature),
         ));
-    }
-}
-
-fn remove_components_system<C: Component>(
-    mut commands: Commands,
-    particles: Particles<Entity, With<C>>,
-) {
-    for entity in particles.iter() {
-        commands.entity(entity).remove::<C>();
     }
 }

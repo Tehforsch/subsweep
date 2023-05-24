@@ -1,11 +1,15 @@
 use bevy::prelude::debug;
 use hdf5::Dataset;
+use raxiom::components::Position;
 use raxiom::cosmology::Cosmology;
 use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
 use raxiom::io::InputDatasetDescriptor;
 use raxiom::io::UnitReader;
+use raxiom::prelude::Float;
+use raxiom::prelude::MVec;
 use raxiom::units::Dimension;
+use raxiom::units::VecLength;
 use raxiom::units::NONE;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "to_cgs";
@@ -14,6 +18,14 @@ pub const VELOCITY_IDENTIFIER: &str = "velocity_scaling";
 pub const MASS_IDENTIFIER: &str = "mass_scaling";
 pub const A_IDENTIFIER: &str = "a_scaling";
 pub const H_IDENTIFIER: &str = "h_scaling";
+
+/// This special reader exists arepo writes out different vector types
+/// than raxiom.
+pub fn read_vec(data: &[Float]) -> Position {
+    Position(VecLength::new_unchecked(MVec::new(
+        data[0], data[1], data[2],
+    )))
+}
 
 pub fn make_descriptor<T, U: UnitReader + Clone + 'static>(
     unit_reader: &U,
