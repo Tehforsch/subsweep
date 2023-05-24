@@ -9,30 +9,36 @@
 #![allow(clippy::type_complexity)]
 #![doc = include_str!("../README.md")]
 
-pub mod chemistry;
-pub(crate) mod command_line_options;
+mod chemistry;
+mod command_line_options;
 pub mod communication;
 pub mod components;
-pub(crate) mod config;
 pub mod cosmology;
 pub mod dimension;
 pub mod domain;
-pub mod extent;
+mod extent;
 pub mod hash_map;
 pub mod io;
-pub(crate) mod parameter_plugin;
-pub(crate) mod particle;
+/// Debug printing utilities for MPI simulations
+pub mod mpi_log;
+mod parameter_plugin;
+/// Contains all the parameter types of the simulation.
+pub mod parameters;
+mod particle;
 mod peano_hilbert;
+pub mod prelude;
 pub mod quadtree;
-pub(crate) mod simulation;
-pub(crate) mod simulation_box;
-pub(crate) mod simulation_builder;
+mod simulation;
+mod simulation_box;
+mod simulation_builder;
 pub mod simulation_plugin;
 pub mod stages;
 pub mod sweep;
+/// Compile-time units and quantities for the simulation.
+pub mod units;
 pub mod voronoi;
 
-pub mod named {
+mod named {
     pub use derive_custom::Named;
     pub use derive_traits::Named;
 }
@@ -41,14 +47,3 @@ pub mod named {
 pub(crate) mod test_examples;
 #[cfg(test)]
 pub(crate) mod test_utils;
-
-/// Debug printing utilities for MPI simulations
-pub mod mpi_log;
-/// Compile-time units and quantities for the simulation.
-pub mod units;
-
-/// Contains all the parameter types of the simulation.
-pub mod parameters;
-/// `use raxiom::prelude::*` to import some commonly used
-/// plugins and components when building a simulation.
-pub mod prelude;

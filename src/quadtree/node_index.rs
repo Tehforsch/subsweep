@@ -1,4 +1,4 @@
-use crate::config::TWO_TO_NUM_DIMENSIONS;
+use super::TWO_TO_NUM_DIMENSIONS;
 
 #[derive(Clone, Default, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub(super) enum NodeIndex {
@@ -38,7 +38,7 @@ impl From<NodeIndex> for u8 {
 #[cfg(test)]
 mod tests {
     use super::NodeIndex;
-    use crate::config::TWO_TO_NUM_DIMENSIONS;
+    use super::TWO_TO_NUM_DIMENSIONS;
 
     #[test]
     fn node_index_from_into() {

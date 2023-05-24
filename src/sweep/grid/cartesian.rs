@@ -10,7 +10,6 @@ use super::RemoteNeighbour;
 use super::RemotePeriodicNeighbour;
 use crate::communication::Rank;
 use crate::components::Position;
-use crate::config::NUM_DIMENSIONS;
 use crate::dimension::ActiveWrapType;
 use crate::hash_map::HashMap;
 use crate::parameters::SimulationBox;
@@ -25,6 +24,11 @@ use crate::simulation_box::WrapType;
 use crate::units::Length;
 use crate::units::VecLength;
 use crate::units::Volume;
+
+#[cfg(feature = "2d")]
+pub const NUM_DIMENSIONS: usize = 2;
+#[cfg(not(feature = "2d"))]
+pub const NUM_DIMENSIONS: usize = 3;
 
 #[raxiom_parameters]
 #[derive(Copy)]

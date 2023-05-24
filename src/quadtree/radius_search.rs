@@ -1,7 +1,7 @@
 use super::LeafDataType;
 use super::Node;
 use super::QuadTree;
-use crate::config::TWO_TO_NUM_DIMENSIONS;
+use super::TWO_TO_NUM_DIMENSIONS;
 use crate::parameters::SimulationBox;
 use crate::prelude::MVec;
 use crate::units::Length;

@@ -1,3 +1,4 @@
+pub use crate::cosmology::Cosmology;
 pub use crate::io::input::InputParameters;
 pub use crate::io::output::parameters::*;
 pub use crate::prelude::SimulationBox;

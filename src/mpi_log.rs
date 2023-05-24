@@ -66,6 +66,7 @@ macro_rules! mpidbg {
     };
 }
 
+#[allow(dead_code)]
 pub fn start_barrier() {
     let rank = crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst);
     let world = MPI_UNIVERSE.world();
@@ -74,6 +75,7 @@ pub fn start_barrier() {
     }
 }
 
+#[allow(dead_code)]
 pub fn end_barrier() {
     let rank = crate::mpi_log::RANK.load(std::sync::atomic::Ordering::SeqCst);
     let size = crate::mpi_log::SIZE.load(std::sync::atomic::Ordering::SeqCst);

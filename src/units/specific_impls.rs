@@ -3,6 +3,7 @@ use super::Dimension;
 use super::Dimensionless;
 use super::EnergyDensity;
 use super::EnergyPerMass;
+use super::Length;
 use super::Quantity;
 use super::Temperature;
 use super::BOLTZMANN_CONSTANT;
@@ -19,6 +20,20 @@ impl<const D: Dimension> Quantity<Float, D> {
 impl<const D: Dimension, S> Quantity<S, D> {
     pub fn dimension(&self) -> Dimension {
         D
+    }
+}
+
+#[cfg(feature = "3d")]
+impl super::Vec3Length {
+    pub fn from_vector_and_scale(m: super::MVec3, l: Length) -> super::Vec3Length {
+        super::Vec3Length::new(m.x * l, m.y * l, m.z * l)
+    }
+}
+
+#[cfg(feature = "2d")]
+impl super::Vec2Length {
+    pub fn from_vector_and_scale(m: super::MVec2, l: Length) -> super::Vec2Length {
+        super::Vec2Length::new(m.x * l, m.y * l)
     }
 }
 

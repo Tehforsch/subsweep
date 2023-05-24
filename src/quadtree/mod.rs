@@ -5,27 +5,15 @@ pub mod radius_search;
 use bevy::prelude::Resource;
 pub use config::QuadTreeConfig;
 
-use crate::config::TWO_TO_NUM_DIMENSIONS;
 use crate::domain::extent::Extent;
-use crate::units::Length;
-use crate::units::MVec2;
-use crate::units::MVec3;
-use crate::units::Vec2Length;
-use crate::units::Vec3Length;
 use crate::units::VecLength;
 
-impl Vec3Length {
-    fn from_vector_and_scale(m: MVec3, l: Length) -> Vec3Length {
-        Vec3Length::new(m.x * l, m.y * l, m.z * l)
-    }
-}
+#[cfg(feature = "2d")]
+pub const NUM_DIMENSIONS: usize = 2;
+#[cfg(not(feature = "2d"))]
+pub const NUM_DIMENSIONS: usize = 3;
 
-impl Vec2Length {
-    #[allow(dead_code)]
-    fn from_vector_and_scale(m: MVec2, l: Length) -> Vec2Length {
-        Vec2Length::new(m.x * l, m.y * l)
-    }
-}
+pub const TWO_TO_NUM_DIMENSIONS: usize = 2i32.pow(NUM_DIMENSIONS as u32) as usize;
 
 pub const MAX_DEPTH: usize = 32;
 
