@@ -5,7 +5,6 @@ use crate::components::Position;
 use crate::domain::DomainPlugin;
 use crate::parameters::SimulationBox;
 use crate::parameters::SimulationParameters;
-use crate::parameters::TreeParameters;
 use crate::prelude::Extent;
 use crate::prelude::LocalParticle;
 use crate::prelude::ThreeD;
@@ -40,9 +39,6 @@ fn build_sim(sim: &mut Simulation) {
         VecLength::meters(0.4, 0.4, 0.4),
     ));
     sim.add_parameter_file_contents("{}".into())
-        .add_parameters_explicitly(TreeParameters {
-            ..Default::default()
-        })
         .add_plugin(SimulationStagesPlugin)
         .add_plugin(ParallelVoronoiGridConstruction)
         .add_required_component::<Position>()

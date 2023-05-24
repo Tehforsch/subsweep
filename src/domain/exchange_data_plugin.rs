@@ -13,7 +13,6 @@ use bevy::prelude::Resource;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 
-use super::TreeParameters;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::Rank;
@@ -82,8 +81,7 @@ where
         let rank = **sim.unwrap_resource::<WorldRank>();
         let size = **sim.unwrap_resource::<WorldSize>();
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
-            .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)))
-            .try_add_parameter_type::<TreeParameters>();
+            .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)));
         sim.add_startup_system_to_stage(StartupStages::Exchange, send_num_outgoing_entities_system)
             .add_startup_system_to_stage(StartupStages::Exchange, despawn_outgoing_entities_system)
             .add_startup_system_to_stage(
@@ -101,10 +99,9 @@ where
     fn build_everywhere(&self, sim: &mut Simulation) {
         let rank = **sim.unwrap_resource::<WorldRank>();
         let size = **sim.unwrap_resource::<WorldSize>();
-        sim.try_add_parameter_type::<TreeParameters>()
-            .insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
-                size, rank,
-            )));
+        sim.insert_resource(ExchangeBuffers::<T>(DataByRank::from_size_and_rank(
+            size, rank,
+        )));
         sim.add_well_ordered_system_to_startup_stage::<_, ExchangeDataStartupOrder>(
             StartupStages::Exchange,
             Self::exchange_buffers_system

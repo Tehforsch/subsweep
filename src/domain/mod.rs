@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use bimap::BiMap;
-use derive_custom::raxiom_parameters;
 
 pub mod decomposition;
 mod exchange_data_plugin;
@@ -39,27 +38,6 @@ pub type DomainKey = crate::peano_hilbert::PeanoKey2d;
 pub type DomainKey = crate::peano_hilbert::PeanoKey3d;
 pub type DecompositionState = decomposition::Decomposition<DomainKey>;
 
-/// Parameters of the domain tree. See [QuadTreeConfig](crate::quadtree::QuadTreeConfig)
-#[raxiom_parameters("tree")]
-pub struct TreeParameters {
-    #[serde(default)]
-    pub tree: QuadTreeConfig,
-}
-
-impl Default for TreeParameters {
-    fn default() -> Self {
-        Self {
-            tree: default_domain_tree_params(),
-        }
-    }
-}
-
-fn default_domain_tree_params() -> QuadTreeConfig {
-    QuadTreeConfig {
-        ..Default::default()
-    }
-}
-
 #[derive(Resource, Deref, DerefMut)]
 pub struct IdEntityMap(BiMap<ParticleId, Entity>);
 
@@ -68,38 +46,27 @@ pub struct DomainPlugin;
 
 impl RaxiomPlugin for DomainPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_parameter_type::<TreeParameters>()
-            .add_startup_system_to_stage(
-                StartupStages::AssignParticleIds,
-                determine_particle_ids_system,
-            )
-            .add_startup_system_to_stage(
-                StartupStages::AssignParticleIds,
-                set_domain_extents_system,
-            )
-            .add_startup_system_to_stage(
-                StartupStages::InsertDerivedComponents,
-                check_particle_extent_system,
-            )
-            .add_startup_system_to_stage(StartupStages::Decomposition, domain_decomposition_system)
-            .add_startup_system_to_stage(
-                StartupStages::SetOutgoingEntities,
-                set_outgoing_entities_system,
-            )
-            .add_startup_system_to_stage(
-                StartupStages::TreeConstruction,
-                update_id_entity_map_system,
-            )
-            .add_startup_system_to_stage(
-                StartupStages::TreeConstruction,
-                construct_quad_tree_system,
-            );
+        sim.add_startup_system_to_stage(
+            StartupStages::AssignParticleIds,
+            determine_particle_ids_system,
+        )
+        .add_startup_system_to_stage(StartupStages::AssignParticleIds, set_domain_extents_system)
+        .add_startup_system_to_stage(
+            StartupStages::InsertDerivedComponents,
+            check_particle_extent_system,
+        )
+        .add_startup_system_to_stage(StartupStages::Decomposition, domain_decomposition_system)
+        .add_startup_system_to_stage(
+            StartupStages::SetOutgoingEntities,
+            set_outgoing_entities_system,
+        )
+        .add_startup_system_to_stage(StartupStages::TreeConstruction, update_id_entity_map_system)
+        .add_startup_system_to_stage(StartupStages::TreeConstruction, construct_quad_tree_system);
     }
 }
 
 pub fn construct_quad_tree_system(
     mut commands: Commands,
-    config: Res<TreeParameters>,
     particles: Particles<(&ParticleId, &Position)>,
     box_: Res<SimulationBox>,
 ) {
@@ -111,7 +78,8 @@ pub fn construct_quad_tree_system(
             pos: pos.0,
         })
         .collect();
-    commands.insert_resource(QuadTree::new(&config.tree, particles, &box_));
+    let config = QuadTreeConfig::default();
+    commands.insert_resource(QuadTree::new(&config, particles, &box_));
 }
 
 fn communicate_extents(particles: &Particles<&Position>) -> Vec<Extent> {

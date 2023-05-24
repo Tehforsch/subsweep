@@ -16,7 +16,6 @@ use raxiom::domain::DomainPlugin;
 use raxiom::parameters::SimulationBox;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::SweepParameters;
-use raxiom::parameters::TreeParameters;
 use raxiom::prelude::LocalParticle;
 use raxiom::prelude::ParallelVoronoiGridConstruction;
 use raxiom::prelude::ParticleId;
@@ -43,9 +42,6 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         .add_plugin(SimulationStagesPlugin)
         .add_plugin(DomainPlugin)
         .add_plugin(BaseCommunicationPlugin::new(1, 0))
-        .add_parameters_explicitly(TreeParameters {
-            ..Default::default()
-        })
         .add_parameters_explicitly(SimulationBox::cube_from_side_length(Length::meters(1e5)))
         .add_parameters_explicitly(SweepParameters {
             directions: dirs.clone(),
