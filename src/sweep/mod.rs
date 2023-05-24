@@ -1,6 +1,5 @@
 mod active_list;
 mod communicator;
-pub mod components;
 mod count_by_dir;
 mod deadlock_detection;
 mod direction;
@@ -21,9 +20,6 @@ pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
 use self::active_list::ActiveList;
-use self::components::HeatingRate;
-use self::components::IonizedHydrogenFraction;
-use self::components::Source;
 use self::count_by_dir::CountByDir;
 pub use self::direction::DirectionIndex;
 use self::direction::Directions;
@@ -44,7 +40,11 @@ use crate::communication::ExchangeCommunicator;
 use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
+use crate::components;
 use crate::components::Density;
+use crate::components::HeatingRate;
+use crate::components::IonizedHydrogenFraction;
+use crate::components::Source;
 use crate::cosmology::Cosmology;
 use crate::hash_map::HashMap;
 use crate::io::output::parameters::OutputParameters;
