@@ -118,7 +118,7 @@ where
         mut points: Vec<(T, Point<D>)>,
         extent: &Extent<Point<D>>,
     ) -> (Self, BiMap<T, PointIndex>) {
-        points.sort_by_key(|(_, p)| p.into_key(&extent));
+        points.sort_by_key(|(_, p)| p.into_key(extent));
         let mut triangulation = Self::all_encompassing(extent);
         let indices = points
             .iter()
@@ -318,7 +318,7 @@ pub(super) mod tests {
     mod three_d {}
 
     pub fn perform_triangulation_check_on_each_level_of_construction<D>(
-        check: impl Fn(&Triangulation<D>, usize) -> (),
+        check: impl Fn(&Triangulation<D>, usize),
     ) where
         D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,

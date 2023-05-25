@@ -46,7 +46,7 @@ impl<N, L> Node<N, L> {
 
     fn unwrap_tree(&self) -> &[QuadTree<N, L>; TWO_TO_NUM_DIMENSIONS] {
         if let Self::Tree(tree) = self {
-            &tree
+            tree
         } else {
             panic!("unwrap_tree called on Tree node")
         }

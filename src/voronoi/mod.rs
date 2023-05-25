@@ -73,7 +73,7 @@ mod tests {
     mod three_d {}
 
     pub fn perform_check_on_each_level_of_construction<D>(
-        check: impl Fn(&TriangulationData<D>, usize) -> (),
+        check: impl Fn(&TriangulationData<D>, usize),
     ) where
         D: DDimension + TestDimension + Clone,
         Triangulation<D>: Delaunay<D> + Clone,

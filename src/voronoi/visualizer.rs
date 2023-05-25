@@ -32,7 +32,7 @@ impl Visualizer {
     fn dump(&self) {
         let contents = self.statements.join("\n");
         if let Some(f) = &self.f {
-            fs::write(&f, &contents).unwrap();
+            fs::write(f, &contents).unwrap();
         } else {
             println!("{}", &contents);
         }
@@ -66,8 +66,7 @@ impl Visualizable for TriangleData<Point2d> {
         vec![format!(
             "Polygon {} {} {} {} {} {}",
             self.p1.x, self.p1.y, self.p2.x, self.p2.y, self.p3.x, self.p3.y,
-        )
-        .into()]
+        )]
     }
 }
 
@@ -123,25 +122,31 @@ where
 
 impl Visualizable for Point2d {
     fn get_statements(&self) -> Vec<String> {
-        vec![format!("Point {} {}", self.x, self.y).into()]
+        vec![format!("Point {} {}", self.x, self.y)]
     }
 }
 
 impl Visualizable for Point3d {
     fn get_statements(&self) -> Vec<String> {
-        vec![format!("Point {} {}", self.x, self.y).into()]
+        vec![format!("Point {} {}", self.x, self.y)]
     }
 }
 
 impl Visualizable for SearchData<TwoD> {
     fn get_statements(&self) -> Vec<String> {
-        vec![format!("Circle {} {} {}", self.point.x, self.point.y, self.radius).into()]
+        vec![format!(
+            "Circle {} {} {}",
+            self.point.x, self.point.y, self.radius
+        )]
     }
 }
 
 impl Visualizable for SearchData<ThreeD> {
     fn get_statements(&self) -> Vec<String> {
-        vec![format!("Circle {} {} {}", self.point.x, self.point.y, self.radius).into()]
+        vec![format!(
+            "Circle {} {} {}",
+            self.point.x, self.point.y, self.radius
+        )]
     }
 }
 
@@ -177,8 +182,8 @@ impl<T: Visualizable> Visualizable for Vec<T> {
 macro_rules! vis {
     ( $( $x:expr ),* ) => {
         {
-            let rank = crate::mpi_log::RANK.load(core::sync::atomic::Ordering::SeqCst);
-            let num_vis = crate::voronoi::visualizer::NUM_VIS.load(core::sync::atomic::Ordering::SeqCst);
+            let rank = $crate::mpi_log::RANK.load(core::sync::atomic::Ordering::SeqCst);
+            let num_vis = $crate::voronoi::visualizer::NUM_VIS.load(core::sync::atomic::Ordering::SeqCst);
             let folder = format!("vis/{:01}", rank);
             let folder = std::path::Path::new(&folder);
             if num_vis == 0 {
@@ -186,7 +191,7 @@ macro_rules! vis {
             }
             std::fs::create_dir_all(&folder).unwrap();
             let mut temp_vis = $crate::voronoi::visualizer::Visualizer::default();
-            crate::voronoi::visualizer::NUM_VIS.swap(num_vis+1, core::sync::atomic::Ordering::SeqCst);
+            $crate::voronoi::visualizer::NUM_VIS.swap(num_vis+1, core::sync::atomic::Ordering::SeqCst);
             temp_vis.f = Some(std::path::Path::new(&folder.join(&format!("{:03}", num_vis))).into());
             $(
                 temp_vis.add($x);

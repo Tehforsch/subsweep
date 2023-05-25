@@ -178,8 +178,8 @@ impl<T> Iterator for IntoIter<T> {
         while self.cursor < self.data.0.len() as i32 {
             let item = self.data.remove(&self.cursor);
             self.cursor += 1;
-            if item.is_some() {
-                return Some((self.cursor - 1 as i32, item.unwrap()));
+            if let Some(item) = item {
+                return Some((self.cursor - 1, item));
             }
         }
         None

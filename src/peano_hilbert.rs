@@ -109,7 +109,7 @@ impl PeanoKey3d {
 
             mask >>= 1
         }
-        return PeanoKey3d(key);
+        PeanoKey3d(key)
     }
 }
 
@@ -222,7 +222,7 @@ mod tests {
     use super::NUM_SUBDIVISIONS_2D;
 
     impl PeanoKey2d {
-        fn to_integer_pos(&self) -> (u64, u64) {
+        fn to_integer_pos(self) -> (u64, u64) {
             let mut t = self.0;
             let mut x = 0;
             let mut y = 0;

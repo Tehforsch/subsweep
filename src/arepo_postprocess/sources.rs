@@ -88,25 +88,25 @@ fn read_sources(files: &InputFiles, cosmology: &Cosmology) -> Vec<Source> {
         "PartType4/Coordinates",
         DatasetShape::TwoDimensional(read_vec),
     );
-    let position = read_dataset(&descriptor, files);
+    let position = read_dataset(descriptor, files);
     let descriptor = &make_descriptor::<Metallicity, _>(
         &unit_reader,
         "PartType4/GFM_Metallicity",
         DatasetShape::OneDimensional,
     );
-    let metallicity = read_dataset(&descriptor, files);
+    let metallicity = read_dataset(descriptor, files);
     let descriptor = &make_descriptor::<StellarFormationTime, _>(
         &unit_reader,
         "PartType4/GFM_StellarFormationTime",
         DatasetShape::OneDimensional,
     );
-    let formation_time = read_dataset(&descriptor, files);
+    let formation_time = read_dataset(descriptor, files);
     let descriptor = &make_descriptor::<components::Mass, _>(
         &unit_reader,
         "PartType4/Masses",
         DatasetShape::OneDimensional,
     );
-    let mass = read_dataset(&descriptor, files);
+    let mass = read_dataset(descriptor, files);
     position
         .zip(metallicity)
         .zip(formation_time)

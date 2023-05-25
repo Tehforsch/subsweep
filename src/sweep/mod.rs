@@ -98,7 +98,7 @@ impl RaxiomPlugin for SweepPlugin {
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
             .add_parameter_type::<SweepParameters>();
-        if output_heating_rate(&sim.get_parameters::<OutputParameters>()) {
+        if output_heating_rate(sim.get_parameters::<OutputParameters>()) {
             sim.add_derived_component::<HeatingRate>();
         }
     }
@@ -416,7 +416,7 @@ impl<C: Chemistry> Sweep<C> {
         for (id, level, cell) in self.cells.enumerate_with_levels() {
             for (_, neighbour) in cell.neighbours.iter() {
                 if let ParticleType::Remote(neighbour) = neighbour {
-                    data[neighbour.rank].push(TimestepLevelData { id, level: level });
+                    data[neighbour.rank].push(TimestepLevelData { id, level });
                 }
             }
         }
@@ -466,7 +466,7 @@ fn init_sweep_system(
             },
         )
         .collect();
-    let halo_ids: Vec<_> = haloes.iter().map(|id| *id).collect();
+    let halo_ids: Vec<_> = haloes.iter().copied().collect();
     #[cfg(test)]
     assert!(!cells.is_empty() && !sites.is_empty());
     *solver = Some(Sweep::new(

@@ -44,10 +44,10 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         .add_plugin(BaseCommunicationPlugin::new(1, 0))
         .add_parameters_explicitly(SimulationBox::cube_from_side_length(Length::meters(1e5)))
         .add_parameters_explicitly(SweepParameters {
-            directions: dirs.clone(),
-            num_timestep_levels: num_timestep_levels,
+            directions: dirs,
+            num_timestep_levels,
             significant_rate_treshold: PhotonRate::zero(),
-            timestep_safety_factor: timestep_safety_factor,
+            timestep_safety_factor,
             max_timestep: Time::seconds(1e-3),
             check_deadlock: false,
             periodic: false,

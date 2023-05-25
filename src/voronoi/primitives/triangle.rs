@@ -480,12 +480,12 @@ mod tests {
             p2: Point2d::new(4.0, 2.0),
             p3: Point2d::new(2.0, 6.0),
         };
-        assert_eq!(triangle.contains(Point2d::new(3.0, 3.0)), true);
+        assert!(triangle.contains(Point2d::new(3.0, 3.0)));
 
-        assert_eq!(triangle.contains(Point2d::new(1.0, 1.0)), false);
-        assert_eq!(triangle.contains(Point2d::new(2.0, 9.0)), false);
-        assert_eq!(triangle.contains(Point2d::new(9.0, 2.0)), false);
-        assert_eq!(triangle.contains(Point2d::new(-1.0, 2.0)), false);
+        assert!(!triangle.contains(Point2d::new(1.0, 1.0)));
+        assert!(!triangle.contains(Point2d::new(2.0, 9.0)));
+        assert!(!triangle.contains(Point2d::new(9.0, 2.0)));
+        assert!(!triangle.contains(Point2d::new(-1.0, 2.0)));
 
         let should_panic = |p| {
             std::panic::catch_unwind(|| triangle.contains(p)).unwrap_err();

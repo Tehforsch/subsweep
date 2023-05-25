@@ -477,6 +477,7 @@ mod tests {
     use crate::voronoi::primitives::Point3d;
     use crate::voronoi::Triangulation;
 
+    #[allow(clippy::redundant_field_names)]
     fn insert_tetra_with_neighbours(
         t: &mut Triangulation<ThreeD>,
         neighbours: &[(TetraIndex, PointIndex)],
@@ -504,7 +505,7 @@ mod tests {
                 });
             if let Some((face, connection_data)) = corresponding_neighbour {
                 FaceInfo {
-                    face: face,
+                    face,
                     opposing: Some(connection_data),
                 }
             } else {

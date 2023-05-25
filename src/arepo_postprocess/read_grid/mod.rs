@@ -162,7 +162,7 @@ impl RaxiomPlugin for ReadSweepGridPlugin {
             InputDatasetDescriptor::<Mass> {
                 descriptor: DatasetDescriptor {
                     dataset_name: "PartType0/Masses".into(),
-                    unit_reader: unit_reader,
+                    unit_reader,
                 },
                 ..Default::default()
             },
@@ -250,18 +250,18 @@ struct Constructor {
 }
 
 impl Constructor {
-    fn new<'a>(
+    fn new(
         particle_ids: Vec<(ParticleId, UniqueParticleId, Volume)>,
         allow_periodic: bool,
     ) -> Self {
         let map = particle_ids
             .iter()
-            .map(|(id1, id2, _)| (id2.clone(), id1.clone()))
+            .map(|(id1, id2, _)| (*id2, *id1))
             .collect();
         let unique_particle_id_to_index = particle_ids
             .iter()
             .enumerate()
-            .map(|(i, (_, id, _))| (id.clone(), i))
+            .map(|(i, (_, id, _))| (*id, i))
             .collect();
         let cells = particle_ids
             .iter()
@@ -359,8 +359,7 @@ impl Constructor {
         connections.filter(|connection| {
             let is_local1 = self.id_cache.is_local(connection.id1);
             let is_local2 = self.id_cache.is_local(connection.id2);
-            let relevant = is_local1 || is_local2;
-            relevant
+            is_local1 || is_local2
         })
     }
 
@@ -396,7 +395,7 @@ fn read_grid_system(
     info!("Reading grid from {:?}", grid_file);
     let mut constructor = Constructor::new(
         p.iter()
-            .map(|(_, id1, id2, mass, density)| (id1.clone(), id2.clone(), **mass / **density))
+            .map(|(_, id1, id2, mass, density)| (*id1, *id2, **mass / **density))
             .collect(),
         sweep_parameters.periodic,
     );

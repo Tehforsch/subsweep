@@ -92,8 +92,8 @@ impl Chemistry for HydrogenOnly {
         site.species.heating_rate = heating_rate;
         let relative_change =
             (old_fraction / (old_fraction - site.species.ionized_hydrogen_fraction)).abs();
-        let change_timescale = relative_change * timestep;
-        change_timescale
+        // Timescale of change
+        relative_change * timestep
     }
 }
 
@@ -131,7 +131,7 @@ impl Solver {
         )
     }
 
-    fn collisional_ionization_rate(&self) -> Rate {
+    fn _collisional_ionization_rate(&self) -> Rate {
         Rate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
     }
 

@@ -73,8 +73,8 @@ pub fn get_particles(n: i32, m: i32) -> Vec<crate::domain::LeafData> {
 }
 
 pub fn build_local_communication_sim_with_custom_logic(
-    _build: impl FnMut(&mut Simulation) -> (),
-    _check: impl FnMut(&mut Simulation) -> (),
+    _build: impl FnMut(&mut Simulation),
+    _check: impl FnMut(&mut Simulation),
     _num_ranks: usize,
 ) {
     todo!()

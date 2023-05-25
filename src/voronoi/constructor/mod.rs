@@ -142,7 +142,7 @@ impl Constructor<ActiveDimension> {
                                         area: FaceArea::new_unchecked(face.area),
                                         normal: VecDimensionless::new_unchecked(face.normal),
                                     },
-                                    face.connection.clone(),
+                                    face.connection,
                                 )
                             })
                             .collect(),

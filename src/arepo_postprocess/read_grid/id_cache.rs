@@ -59,7 +59,7 @@ impl IdCache {
         let mut outgoing_replies = DataByRank::empty();
         for (rank, incoming_requests) in incoming_requests.iter() {
             let outgoing_replies_this_rank: Vec<_> = incoming_requests
-                .into_iter()
+                .iter()
                 .filter_map(|incoming_request| {
                     self.lookup(incoming_request.id).map(|id| IdLookupReply {
                         request_id: incoming_request.id,

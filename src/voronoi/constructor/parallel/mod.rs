@@ -97,7 +97,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
             decomposition,
             box_,
             halo_cache,
-            extent: extent,
+            extent,
             num_points_local,
         }
     }
@@ -142,7 +142,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
 
     fn get_local_periodic_haloes(
         &mut self,
-        data: &Vec<SearchData<ActiveDimension>>,
+        data: &[SearchData<ActiveDimension>],
     ) -> Vec<SearchResult<ActiveDimension>> {
         let mut new_haloes = vec![];
         for search in data.iter() {

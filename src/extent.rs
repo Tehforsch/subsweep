@@ -60,11 +60,11 @@ pub fn get_extent_from_min_and_max_reduce<
     max: fn(P, P) -> P,
 ) -> Option<Extent<P>> {
     let v_0 = vs.next()?;
-    let mut min_v = v_0.clone();
+    let mut min_v = v_0;
     let mut max_v = v_0;
     for v in vs {
-        min_v = min(min_v, v.clone());
-        max_v = max(max_v, v.clone());
+        min_v = min(min_v, v);
+        max_v = max(max_v, v);
     }
     Some(Extent::from_min_max(min_v, max_v))
 }

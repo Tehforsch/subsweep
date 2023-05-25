@@ -324,27 +324,25 @@ impl GridConstructor {
                 ParticleType::Local(id)
             } else {
                 ParticleType::Remote(RemoteNeighbour {
-                    id: id,
+                    id,
                     rank: neighbour_rank,
                 })
             }
-        } else {
-            if self.allow_periodic {
-                if is_local {
-                    ParticleType::LocalPeriodic(PeriodicNeighbour {
-                        id: id,
-                        periodic_wrap_type,
-                    })
-                } else {
-                    ParticleType::RemotePeriodic(RemotePeriodicNeighbour {
-                        id,
-                        rank: neighbour_rank,
-                        periodic_wrap_type,
-                    })
-                }
+        } else if self.allow_periodic {
+            if is_local {
+                ParticleType::LocalPeriodic(PeriodicNeighbour {
+                    id,
+                    periodic_wrap_type,
+                })
             } else {
-                ParticleType::Boundary
+                ParticleType::RemotePeriodic(RemotePeriodicNeighbour {
+                    id,
+                    rank: neighbour_rank,
+                    periodic_wrap_type,
+                })
             }
+        } else {
+            ParticleType::Boundary
         }
     }
 

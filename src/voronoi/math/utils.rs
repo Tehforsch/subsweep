@@ -126,17 +126,11 @@ impl Sign {
     }
 
     pub fn is_positive(self) -> bool {
-        match self {
-            Sign::Positive => true,
-            _ => false,
-        }
+        matches!(self, Sign::Positive)
     }
 
     pub fn is_negative(self) -> bool {
-        match self {
-            Sign::Negative => true,
-            _ => false,
-        }
+        matches!(self, Sign::Negative)
     }
 
     pub fn panic_if_zero(&self, arg: &'static str) -> &Self {
@@ -154,7 +148,7 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
     f: fn(Matrix<D, D, f64>) -> f64,
     f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
 ) -> Sign {
-    let val = f(m.clone());
+    let val = f(m);
     Sign::try_from_val(&val).unwrap_or_else(|_| {
         let m = lift_matrix(m);
         Sign::of(f_arbitrary_precision(m))
@@ -164,24 +158,24 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
 pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
     determine_sign_with_arbitrary_precision_if_necessary(
         a,
-        |m| determinant3x3::<f64>(m.clone()),
-        |m| determinant3x3::<PrecisionFloat>(m),
+        determinant3x3::<f64>,
+        determinant3x3::<PrecisionFloat>,
     )
 }
 
 pub fn determinant4x4_sign(a: Matrix<4, 4, f64>) -> Sign {
     determine_sign_with_arbitrary_precision_if_necessary(
         a,
-        |m| determinant4x4::<f64>(m.clone()),
-        |m| determinant4x4::<PrecisionFloat>(m),
+        determinant4x4::<f64>,
+        determinant4x4::<PrecisionFloat>,
     )
 }
 
 pub fn determinant5x5_sign(a: Matrix<5, 5, f64>) -> Sign {
     determine_sign_with_arbitrary_precision_if_necessary(
         a,
-        |m| determinant5x5::<f64>(m.clone()),
-        |m| determinant5x5::<PrecisionFloat>(m),
+        determinant5x5::<f64>,
+        determinant5x5::<PrecisionFloat>,
     )
 }
 

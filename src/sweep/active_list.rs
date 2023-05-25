@@ -35,7 +35,7 @@ impl<T> ActiveList<T> {
         assert_eq!(map.len(), 0);
         let mut list = Self {
             items,
-            levels: levels,
+            levels,
             rank,
             valid: false,
             bins: vec![],
@@ -122,14 +122,12 @@ impl<T> ActiveList<T> {
 
     pub fn get(&self, id: ParticleId) -> &T {
         debug_assert!(id.rank == self.rank);
-        let item = &self.items[id.index as usize];
-        &item
+        &self.items[id.index as usize]
     }
 
     pub fn get_level(&self, id: ParticleId) -> TimestepLevel {
         debug_assert!(id.rank == self.rank);
-        let level = self.levels[id.index as usize];
-        level
+        self.levels[id.index as usize]
     }
 
     pub fn set_level(&mut self, id: ParticleId, level: TimestepLevel) {

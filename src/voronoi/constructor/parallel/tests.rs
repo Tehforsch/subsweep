@@ -24,7 +24,7 @@ fn parallel_voronoi_construction() {
     for num_ranks in 1..10 {
         println!("Running on {}", num_ranks);
         build_local_communication_sim_with_custom_logic(
-            |sim: &mut Simulation| build_sim(sim),
+            build_sim,
             |sim| {
                 sim.update();
             },

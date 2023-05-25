@@ -102,7 +102,7 @@ fn main() {
             InputDatasetDescriptor::<InternalEnergy> {
                 descriptor: DatasetDescriptor {
                     dataset_name: "PartType0/InternalEnergy".into(),
-                    unit_reader: unit_reader.clone(),
+                    unit_reader,
                 },
                 ..default()
             },

@@ -5,7 +5,6 @@ use super::grid::ParticleType;
 use super::timestep_level::TimestepLevel;
 use super::Sweep;
 use crate::chemistry::Chemistry;
-use crate::communication::communicator::Communicator;
 use crate::communication::exchange_communicator::ExchangeCommunicator;
 use crate::communication::DataByRank;
 use crate::communication::MpiWorld;
@@ -89,8 +88,7 @@ impl<C: Chemistry> Sweep<C> {
             return;
         }
         let num_initial_tasks = self.to_solve.len();
-        let w = MpiWorld::new_custom_tag(DEADLOCK_DETECTION_TAG);
-        let mut ex: Communicator<usize> = Communicator::from(w);
+        let mut ex = MpiWorld::new_custom_tag(DEADLOCK_DETECTION_TAG);
         let total: usize = ex.all_gather_sum(&num_initial_tasks);
         assert!(
             total > 0,

@@ -188,8 +188,7 @@ where
                     let tetra = &self.triangulation.tetras[undecided.tetra];
                     let p_index = tetra
                         .points()
-                        .filter(|p| self.triangulation.point_kinds[p] == PointKind::Inner)
-                        .next()
+                        .find(|p| self.triangulation.point_kinds[p] == PointKind::Inner)
                         .unwrap();
                     self.triangulation.points[p_index]
                 };
@@ -414,8 +413,8 @@ mod tests {
         let sub_constructor = Constructor::construct_from_iter(
             local_points.iter().cloned(),
             TestRadiusSearch {
-                points: remote_points.clone(),
-                extent: extent.clone(),
+                points: remote_points,
+                extent,
                 cache: HaloCache::default(),
             },
         );
@@ -423,7 +422,7 @@ mod tests {
         let sub_data = sub_constructor.data;
         let full_voronoi = full_data.construct_voronoi();
         let sub_voronoi = sub_data.construct_voronoi();
-        all_points_in_radius_imported(&sub_data, points.clone());
+        all_points_in_radius_imported(&sub_data, points);
         for (id, _) in local_points.iter() {
             let c1 = get_cell_for_local_particle(&full_voronoi, &full_data, *id);
             let c2 = get_cell_for_local_particle(&sub_voronoi, &sub_data, *id);

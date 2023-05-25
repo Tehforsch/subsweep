@@ -56,7 +56,7 @@ impl<N, L: LeafDataType> QuadTree<N, L> {
 }
 
 impl<N, L> QuadTree<N, L> {
-    pub fn iter<'a>(&'a self) -> TreeIter<'a, N, L, EntireTree> {
+    pub fn iter(&self) -> TreeIter<N, L, EntireTree> {
         TreeIter::new(self, EntireTree)
     }
 }
@@ -71,7 +71,7 @@ impl<'a, N, L> Clone for StackItem<'a, N, L> {
     fn clone(&self) -> Self {
         Self {
             tree: self.tree.clone(),
-            pos_in_parent: self.pos_in_parent.clone(),
+            pos_in_parent: self.pos_in_parent,
             should_be_visited: self.should_be_visited,
         }
     }
@@ -104,7 +104,7 @@ impl<'a, N, L, C: SearchCriterion<N, L>> TreeIter<'a, N, L, C> {
         StackItem {
             pos_in_parent,
             tree,
-            should_be_visited: should_be_visited,
+            should_be_visited,
         }
     }
 

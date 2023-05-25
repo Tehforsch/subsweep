@@ -7,6 +7,12 @@
 // Some of the Query<…> types appear rather complex to clippy, but are actually
 // perfectly readable.
 #![allow(clippy::type_complexity)]
+// This can sometimes make code less clear in my opinion.
+#![allow(clippy::collapsible_else_if)]
+// These are sometimes caused by automatically generated in the
+// MPI Equivalence derive.
+#![allow(clippy::unneeded_wildcard_pattern)]
+#![allow(clippy::new_without_default)]
 #![doc = include_str!("../README.md")]
 
 mod chemistry;

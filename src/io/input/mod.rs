@@ -257,7 +257,7 @@ fn read_dataset_and_conversion_factor_for_file<'a, T: ToDataset>(
 ) -> (ArrayBase<OwnedRepr<T>, Dim<[usize; 1]>>, f64) {
     let name = descriptor.dataset_name();
     let set = file
-        .dataset(&name)
+        .dataset(name)
         .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
     let data = match descriptor.shape {
         DatasetShape::OneDimensional => set

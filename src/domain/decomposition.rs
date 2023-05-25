@@ -63,7 +63,7 @@ pub struct Decomposition<K> {
 }
 
 impl<K: Key> Decomposition<K> {
-    pub fn new<'a, C: LoadCounter<K>>(counter: &'a mut C, num_ranks: usize) -> Self {
+    pub fn new<C: LoadCounter<K>>(counter: &mut C, num_ranks: usize) -> Self {
         let total_load = counter.total_load();
         let num_segments = num_ranks;
         let load_per_segment = total_load / (num_segments as f64);
@@ -73,7 +73,7 @@ impl<K: Key> Decomposition<K> {
             load_per_segment,
             _marker: PhantomData,
         };
-        let segments = dd.run();
+        let segments = dd.find_segments();
         let loads = dd.get_loads(&segments);
         let cuts = segments.iter().map(|seg| seg.end).collect();
         Self {
@@ -152,11 +152,6 @@ struct Decomposer<'a, K: Key, C: LoadCounter<K>> {
 }
 
 impl<'a, K: Key, C: LoadCounter<K>> Decomposer<'a, K, C> {
-    fn run(&mut self) -> Vec<Segment<K>> {
-        let segments = self.find_segments();
-        segments
-    }
-
     fn find_segments(&mut self) -> Vec<Segment<K>> {
         let mut segments = vec![];
         let mut start = K::MIN_VALUE;
@@ -177,8 +172,7 @@ impl<'a, K: Key, C: LoadCounter<K>> Decomposer<'a, K, C> {
             let load = self.counter.load_in_range(start, cut);
             self.get_search_result(load, depth)
         };
-        let cut = binary_search(start, K::MAX_VALUE, get_search_result_for_cut, 0);
-        cut
+        binary_search(start, K::MAX_VALUE, get_search_result_for_cut, 0)
     }
 
     fn get_search_result(&self, load: Work, depth: usize) -> Ordering {
