@@ -8,8 +8,8 @@ pub use dimension::NONE;
 
 #[rustfmt::skip]
 unit_system!(
-    Dimension,
     Quantity,
+    Dimension,
     [
         def Dimensionless = {},
         unit dimensionless = Dimensionless,
