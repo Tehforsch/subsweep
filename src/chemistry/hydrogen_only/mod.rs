@@ -1,9 +1,12 @@
+use std::ops::Div;
+
 use bevy::prelude::Resource;
 
 use super::Chemistry;
 use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::Density;
+use crate::units::Dimension;
 use crate::units::Dimensionless;
 use crate::units::Energy;
 use crate::units::EnergyPerTime;
@@ -13,12 +16,15 @@ use crate::units::HeatingTerm;
 use crate::units::Length;
 use crate::units::NumberDensity;
 use crate::units::PhotonRate;
+use crate::units::Quantity;
 use crate::units::Rate;
 use crate::units::Temperature;
 use crate::units::Time;
 use crate::units::Volume;
 use crate::units::PROTON_MASS;
 use crate::units::SPEED_OF_LIGHT;
+
+const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.1;
 
 #[derive(Resource)]
 pub struct HydrogenOnly {
@@ -53,7 +59,7 @@ impl Chemistry for HydrogenOnly {
     fn get_outgoing_rate(
         &self,
         cell: &Cell,
-        site: &mut Site<Self>,
+        site: &Site<Self>,
         incoming_rate: Self::Photons,
     ) -> PhotonRate {
         let neutral_hydrogen_number_density =
@@ -75,38 +81,37 @@ impl Chemistry for HydrogenOnly {
         volume: Volume,
         length: Length,
     ) -> Time {
-        let old_fraction = site.species.ionized_hydrogen_fraction;
         let mut solver = Solver {
             ionized_hydrogen_fraction: site.species.ionized_hydrogen_fraction,
             temperature: site.species.temperature,
-            timestep,
             density: site.density,
             volume,
             length,
             rate,
             scale_factor: self.scale_factor,
+            heating_rate: HeatingRate::zero(),
         };
-        let heating_rate = solver.timestep();
+        let timestep_used = solver.perform_timestep(timestep);
         site.species.temperature = solver.temperature;
         site.species.ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
-        site.species.heating_rate = heating_rate;
-        let relative_change =
-            (old_fraction / (old_fraction - site.species.ionized_hydrogen_fraction)).abs();
+        site.species.heating_rate = solver.heating_rate;
         // Timescale of change
-        relative_change * timestep
+        timestep_used
     }
 }
+
+struct TimestepCriterionViolated;
 
 #[derive(Debug)]
 pub(crate) struct Solver {
     pub ionized_hydrogen_fraction: Dimensionless,
     pub temperature: Temperature,
-    pub timestep: Time,
     pub density: Density,
     pub volume: Volume,
     pub length: Length,
     pub rate: PhotonRate,
     pub scale_factor: Dimensionless,
+    pub heating_rate: HeatingRate,
 }
 
 // All numbers taken from Rosdahl et al (2015)
@@ -131,7 +136,7 @@ impl Solver {
         )
     }
 
-    fn _collisional_ionization_rate(&self) -> Rate {
+    fn collisional_ionization_rate(&self) -> Rate {
         Rate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
     }
 
@@ -181,8 +186,9 @@ impl Solver {
         self.ionized_hydrogen_number_density()
     }
 
-    fn get_heating_rate(&self, absorbed_fraction: Dimensionless) -> EnergyRateDensity {
-        let photoheating = self.photoheating(absorbed_fraction) / self.volume / self.timestep;
+    fn get_heating_rate(&self, timestep: Time) -> EnergyRateDensity {
+        let absorbed_fraction = todo!();
+        let photoheating = self.photoheating(absorbed_fraction) / self.volume / timestep;
         let ne = self.electron_number_density();
         let nh_neutral = self.hydrogen_number_density();
         let nh_ionized = self.ionized_hydrogen_number_density();
@@ -197,36 +203,81 @@ impl Solver {
         photoheating - cooling
     }
 
-    fn update_temperature(&mut self, absorbed_fraction: Dimensionless) -> HeatingRate {
-        let rate = self.get_heating_rate(absorbed_fraction);
-        let internal_energy_change = rate * self.timestep;
+    fn update_temperature(&mut self, timestep: Time) -> Result<(), TimestepCriterionViolated> {
+        let rate = self.get_heating_rate(timestep);
+        let internal_energy_change = rate * timestep;
         let temperature_change = Temperature::from_internal_energy_density_hydrogen_only(
             internal_energy_change,
             self.ionized_hydrogen_fraction,
             self.density,
         );
-        self.temperature += temperature_change;
-        rate
+        check_timestep_criterion(self.temperature, temperature_change).map(|_| {
+            self.temperature += temperature_change;
+        })
     }
 
-    pub fn timestep(&mut self) -> HeatingRate {
-        let hydrogen_number_density = self.hydrogen_number_density();
-        let recombination_rate = self.case_b_recombination_rate()
-            * (hydrogen_number_density * self.ionized_hydrogen_fraction).powi::<2>();
-        let recombined_density = recombination_rate * self.timestep;
-        self.ionized_hydrogen_fraction -= recombined_density / hydrogen_number_density;
-        let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-        let absorbed_fraction =
-            1.0 - (-self.neutral_hydrogen_number_density() * sigma * self.length).exp();
-        let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.rate) * self.timestep;
-        let heating_rate = self.update_temperature(absorbed_fraction);
-        self.ionized_hydrogen_fraction +=
-            num_newly_ionized_hydrogen_atoms / (hydrogen_number_density * self.volume);
-        self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
-            Dimensionless::dimensionless(0.0),
-            Dimensionless::dimensionless(1.0),
-        );
-        heating_rate
+    fn update_ionized_fraction(&mut self, timestep: Time) -> Result<(), TimestepCriterionViolated> {
+        let change = todo!();
+        check_timestep_criterion(self.ionized_hydrogen_fraction, change).map(|_| {
+            self.ionized_hydrogen_fraction += change;
+        })
+    }
+
+    fn do_some_shit(&self) {
+        // let hydrogen_number_density = self.hydrogen_number_density();
+        // let recombination_rate = self.case_b_recombination_rate()
+        //     * (hydrogen_number_density * self.ionized_hydrogen_fraction).powi::<2>();
+        // let recombined_density = recombination_rate * self.timestep;
+        // self.ionized_hydrogen_fraction -= recombined_density / hydrogen_number_density;
+        // let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
+        // let absorbed_fraction =
+        //     1.0 - (-self.neutral_hydrogen_number_density() * sigma * self.length).exp();
+        // let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.rate) * self.timestep;
+        // let heating_rate = self.update_temperature(absorbed_fraction);
+        // self.ionized_hydrogen_fraction +=
+        //     num_newly_ionized_hydrogen_atoms / (hydrogen_number_density * self.volume);
+        // self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
+        //     Dimensionless::dimensionless(0.0),
+        //     Dimensionless::dimensionless(1.0),
+        // );
+    }
+
+    fn try_timestep_update(
+        &mut self,
+        timestep: Time,
+        num_steps: usize,
+    ) -> Result<(), TimestepCriterionViolated> {
+        for _ in 0..num_steps {
+            self.update_temperature(timestep)?;
+            self.update_ionized_fraction(timestep)?;
+        }
+        Ok(())
+    }
+
+    fn perform_timestep(&mut self, initial_timestep_guess: Time) -> Time {
+        let initial_state = (self.temperature, self.ionized_hydrogen_fraction);
+        let mut timestep = initial_timestep_guess;
+        let mut num_steps = 1;
+        while let Err(_) = self.try_timestep_update(timestep, num_steps) {
+            timestep /= 2.0;
+            num_steps *= 2;
+            (self.temperature, self.ionized_hydrogen_fraction) = initial_state;
+        }
+        timestep
+    }
+}
+
+fn check_timestep_criterion<const D: Dimension>(
+    value: Quantity<f64, D>,
+    change: Quantity<f64, D>,
+) -> Result<(), TimestepCriterionViolated>
+where
+    Quantity<f64, D>: Div<Quantity<f64, D>, Output = Dimensionless>,
+{
+    if *(value / change).abs() > MAX_ALLOWED_RELATIVE_CHANGE {
+        Err(TimestepCriterionViolated)
+    } else {
+        Ok(())
     }
 }
 
@@ -237,6 +288,7 @@ mod tests {
 
     use super::Solver;
     use crate::units::Dimensionless;
+    use crate::units::HeatingRate;
     use crate::units::Length;
     use crate::units::NumberDensity;
     use crate::units::PhotonFlux;
@@ -277,14 +329,14 @@ mod tests {
                 let mut solver = Solver {
                     ionized_hydrogen_fraction: initial_ionized_hydrogen_fraction,
                     temperature: Temperature::kelvins(1000.0),
-                    timestep,
                     density: number_density * PROTON_MASS,
                     volume,
                     length,
                     rate,
                     scale_factor: Dimensionless::dimensionless(1.0),
+                    heating_rate: HeatingRate::zero(),
                 };
-                solver.timestep();
+                solver.perform_timestep(timestep);
                 let final_ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
                 assert!(
                     ((initial_ionized_hydrogen_fraction - final_ionized_hydrogen_fraction)
@@ -302,7 +354,7 @@ mod tests {
         lines.push("t,xHI,T".into());
         for i in 0..(final_time / timestep).value() as usize {
             time += timestep;
-            solver.timestep();
+            solver.perform_timestep(timestep);
             if i.rem_euclid(output_cadence) == 0 {
                 lines.push(format!(
                     "{},{},{}",
@@ -338,12 +390,12 @@ mod tests {
                     let solver = Solver {
                         ionized_hydrogen_fraction,
                         temperature,
-                        timestep,
                         density,
                         volume,
                         length,
                         rate,
                         scale_factor: Dimensionless::dimensionless(1.0),
+                        heating_rate: HeatingRate::zero(),
                     };
 
                     let output = format!("out/{}_{}_{}", temp_exp, exp, init_xhi);

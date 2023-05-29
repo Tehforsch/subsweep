@@ -26,7 +26,7 @@ pub trait Chemistry: Sized + 'static {
     fn get_outgoing_rate(
         &self,
         cell: &Cell,
-        site: &mut Site<Self>,
+        site: &Site<Self>,
         incoming_rate: Self::Photons,
     ) -> Self::Photons;
 
