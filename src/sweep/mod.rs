@@ -482,6 +482,7 @@ fn init_sweep_system(
         HydrogenOnly {
             rate_treshold: sweep_parameters.significant_rate_treshold,
             scale_factor: cosmology.scale_factor(),
+            timestep_safety_factor: sweep_parameters.timestep_safety_factor,
         },
     ));
 }

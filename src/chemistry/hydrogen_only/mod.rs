@@ -1,14 +1,10 @@
-use std::ops::Div;
-
-use bevy::prelude::Resource;
+use diman::Quotient;
 
 use super::Chemistry;
 use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::Density;
-use crate::units::Dimension;
 use crate::units::Dimensionless;
-use crate::units::Energy;
 use crate::units::EnergyPerTime;
 use crate::units::EnergyRateDensity;
 use crate::units::HeatingRate;
@@ -16,20 +12,22 @@ use crate::units::HeatingTerm;
 use crate::units::Length;
 use crate::units::NumberDensity;
 use crate::units::PhotonRate;
-use crate::units::Quantity;
 use crate::units::Rate;
 use crate::units::Temperature;
 use crate::units::Time;
 use crate::units::Volume;
+use crate::units::VolumeRate;
 use crate::units::PROTON_MASS;
 use crate::units::SPEED_OF_LIGHT;
+use crate::units::SWEEP_HYDROGEN_ONLY_AVERAGE_PHOTON_ENERGY;
+use crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
 
-const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.1;
+const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 
-#[derive(Resource)]
 pub struct HydrogenOnly {
     pub rate_treshold: PhotonRate,
     pub scale_factor: Dimensionless,
+    pub timestep_safety_factor: Dimensionless,
 }
 
 #[derive(Debug)]
@@ -91,7 +89,7 @@ impl Chemistry for HydrogenOnly {
             scale_factor: self.scale_factor,
             heating_rate: HeatingRate::zero(),
         };
-        let timestep_used = solver.perform_timestep(timestep);
+        let timestep_used = solver.perform_timestep(timestep, self.timestep_safety_factor);
         site.species.temperature = solver.temperature;
         site.species.ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
         site.species.heating_rate = solver.heating_rate;
@@ -116,16 +114,38 @@ pub(crate) struct Solver {
 
 // All numbers taken from Rosdahl et al (2015)
 impl Solver {
+    fn hydrogen_number_density(&self) -> NumberDensity {
+        self.density / PROTON_MASS
+    }
+
+    fn ionized_hydrogen_number_density(&self) -> NumberDensity {
+        self.density / PROTON_MASS * self.ionized_hydrogen_fraction
+    }
+
+    fn electron_number_density(&self) -> NumberDensity {
+        // Assumes zero helium
+        self.ionized_hydrogen_number_density()
+    }
+
+    fn mu(&self) -> Dimensionless {
+        // Holds for hydrogen only
+        1.0 / (self.ionized_hydrogen_fraction + 1.0)
+    }
+
     fn collision_fit_function(&self) -> f64 {
         let temperature = self.temperature.in_kelvins();
         temperature.sqrt() / (1.0 + (temperature / 1e5).sqrt()) * (-157809.1 / temperature).exp()
     }
 
-    fn case_b_recombination_rate(&self) -> Rate {
+    fn case_b_recombination_rate(&self) -> VolumeRate {
         let lambda = Temperature::kelvins(315614.0) / self.temperature;
-        Rate::centimeters_cubed_per_s(
+        VolumeRate::centimeters_cubed_per_s(
             2.753e-14 * lambda.powf(1.5) / (1.0 + (lambda / 2.74).powf(0.407)).powf(2.242),
         )
+    }
+
+    fn case_b_recombination_rate_derivative(&self) -> Quotient<VolumeRate, Temperature> {
+        todo!()
     }
 
     fn case_b_recombination_cooling_rate(&self) -> HeatingTerm {
@@ -136,8 +156,12 @@ impl Solver {
         )
     }
 
-    fn collisional_ionization_rate(&self) -> Rate {
-        Rate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
+    fn collisional_ionization_rate(&self) -> VolumeRate {
+        VolumeRate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
+    }
+
+    fn collisional_ionization_rate_derivative(&self) -> Quotient<VolumeRate, Temperature> {
+        todo!()
     }
 
     fn collisional_ionization_cooling_rate(&self) -> HeatingTerm {
@@ -160,35 +184,27 @@ impl Solver {
         EnergyPerTime::ergs_per_s(1.017e-37 * x.powi(4) * (self.temperature.in_kelvins() - x))
     }
 
-    fn photoheating(&self, absorbed_fraction: Dimensionless) -> Energy {
-        let num_absorbed_photons: Dimensionless =
-            self.rate * self.length / SPEED_OF_LIGHT * absorbed_fraction;
-        let rydberg = Energy::electron_volts(13.65693);
-        let average_energy: Energy = Energy::electron_volts(0.4298);
-        let energy_per_photon = rydberg - average_energy;
-        energy_per_photon * num_absorbed_photons
+    fn photoheating_rate(&self) -> HeatingRate {
+        // TODO
+        // let photon_average_energy: Energy = Energy::electron_volts(33.1);
+        // let average_cross_section: CrossSection = todo!();
+        // Rydberg
+        // let average_energy = Energy::electron_volts(13.65693);
+        // let energy_weighted_cross_section: CrossSection = todo!();
+        // let heating_rate: HeatingRate = self.hydrogen_number_density()
+        //     * photon_density
+        //     * SPEED_OF_LIGHT
+        //     * (SWEEP_HYDROGEN_ONLY_AVERAGE_PHOTON_ENERGY * energy_weighted_cross_section
+        //         - average_energy * average_cross_section);
+        let photon_density: NumberDensity = self.rate * self.length / SPEED_OF_LIGHT / self.volume;
+        self.hydrogen_number_density()
+            * photon_density
+            * SPEED_OF_LIGHT
+            * SWEEP_HYDROGEN_ONLY_AVERAGE_PHOTON_ENERGY
+            * SWEEP_HYDROGEN_ONLY_CROSS_SECTION
     }
 
-    fn hydrogen_number_density(&self) -> NumberDensity {
-        self.density / PROTON_MASS
-    }
-
-    fn neutral_hydrogen_number_density(&self) -> NumberDensity {
-        self.density / PROTON_MASS * (1.0 - self.ionized_hydrogen_fraction)
-    }
-
-    fn ionized_hydrogen_number_density(&self) -> NumberDensity {
-        self.density / PROTON_MASS * self.ionized_hydrogen_fraction
-    }
-
-    fn electron_number_density(&self) -> NumberDensity {
-        // Assume zero ionized helium
-        self.ionized_hydrogen_number_density()
-    }
-
-    fn get_heating_rate(&self, timestep: Time) -> EnergyRateDensity {
-        let absorbed_fraction = todo!();
-        let photoheating = self.photoheating(absorbed_fraction) / self.volume / timestep;
+    fn cooling_rate(&self) -> EnergyRateDensity {
         let ne = self.electron_number_density();
         let nh_neutral = self.hydrogen_number_density();
         let nh_ionized = self.ionized_hydrogen_number_density();
@@ -199,82 +215,85 @@ impl Solver {
         let recombination = self.case_b_recombination_cooling_rate() * ne * nh_ionized;
         let bremsstrahlung = self.bremstrahlung_cooling_rate() * ne * nh_ionized;
         let compton: EnergyRateDensity = self.compton_cooling_rate() * ne;
-        let cooling: EnergyRateDensity = collisional + recombination + bremsstrahlung + compton;
-        photoheating - cooling
+        collisional + recombination + bremsstrahlung + compton
     }
 
-    fn update_temperature(&mut self, timestep: Time) -> Result<(), TimestepCriterionViolated> {
-        let rate = self.get_heating_rate(timestep);
+    fn update_temperature(&mut self, timestep: Time) -> Dimensionless {
+        let rate = self.photoheating_rate() - self.cooling_rate();
         let internal_energy_change = rate * timestep;
         let temperature_change = Temperature::from_internal_energy_density_hydrogen_only(
             internal_energy_change,
             self.ionized_hydrogen_fraction,
             self.density,
         );
-        check_timestep_criterion(self.temperature, temperature_change).map(|_| {
-            self.temperature += temperature_change;
-        })
+        let relative_change = temperature_change / self.temperature;
+        self.temperature += temperature_change;
+        relative_change
     }
 
-    fn update_ionized_fraction(&mut self, timestep: Time) -> Result<(), TimestepCriterionViolated> {
-        let change = todo!();
-        check_timestep_criterion(self.ionized_hydrogen_fraction, change).map(|_| {
-            self.ionized_hydrogen_fraction += change;
-        })
+    fn photoionization_rate(&self) -> Rate {
+        let photon_density: NumberDensity = self.rate * self.length / SPEED_OF_LIGHT / self.volume;
+        SWEEP_HYDROGEN_ONLY_CROSS_SECTION * SPEED_OF_LIGHT * photon_density
     }
 
-    fn do_some_shit(&self) {
-        // let hydrogen_number_density = self.hydrogen_number_density();
-        // let recombination_rate = self.case_b_recombination_rate()
-        //     * (hydrogen_number_density * self.ionized_hydrogen_fraction).powi::<2>();
-        // let recombined_density = recombination_rate * self.timestep;
-        // self.ionized_hydrogen_fraction -= recombined_density / hydrogen_number_density;
-        // let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-        // let absorbed_fraction =
-        //     1.0 - (-self.neutral_hydrogen_number_density() * sigma * self.length).exp();
-        // let num_newly_ionized_hydrogen_atoms = (absorbed_fraction * self.rate) * self.timestep;
-        // let heating_rate = self.update_temperature(absorbed_fraction);
-        // self.ionized_hydrogen_fraction +=
-        //     num_newly_ionized_hydrogen_atoms / (hydrogen_number_density * self.volume);
-        // self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
-        //     Dimensionless::dimensionless(0.0),
-        //     Dimensionless::dimensionless(1.0),
-        // );
+    fn update_ionized_fraction(&mut self, timestep: Time) -> Dimensionless {
+        // See A23 of Rosdahl et al
+        let ne = self.electron_number_density();
+        let nh = self.hydrogen_number_density();
+        let alpha = self.case_b_recombination_rate();
+        let dalpha = self.case_b_recombination_rate_derivative();
+        let beta = self.collisional_ionization_rate();
+        let dbeta = self.collisional_ionization_rate_derivative();
+        let c: Rate = beta * ne + self.photoionization_rate();
+        let mu = self.mu();
+        let d: Rate = alpha * ne;
+        let xhii = self.ionized_hydrogen_fraction;
+        // Derivative
+        let rhsc: Rate = ne * self.temperature * mu * HYDROGEN_MASS_FRACTION * dbeta;
+        let dcdx: Rate = nh * beta - rhsc;
+        let rhsd: Rate = ne * self.temperature * mu * HYDROGEN_MASS_FRACTION * dalpha;
+        let dddx: Rate = nh * alpha - rhsd;
+        let j = dcdx - (c + d) - xhii * (dcdx + dddx);
+        let change = timestep * (c - xhii * (c + d)) / (1.0 - j * timestep);
+        let relative_change = change / xhii;
+        self.ionized_hydrogen_fraction += change;
+        self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(0.0, 1.0);
+        relative_change
     }
 
     fn try_timestep_update(
         &mut self,
         timestep: Time,
-        num_steps: usize,
+        timestep_safety_factor: Dimensionless,
     ) -> Result<(), TimestepCriterionViolated> {
-        for _ in 0..num_steps {
-            self.update_temperature(timestep)?;
-            self.update_ionized_fraction(timestep)?;
-        }
+        check(self.update_temperature(timestep), timestep_safety_factor)?;
+        check(
+            self.update_ionized_fraction(timestep),
+            timestep_safety_factor,
+        )?;
         Ok(())
     }
 
-    fn perform_timestep(&mut self, initial_timestep_guess: Time) -> Time {
+    fn perform_timestep(&mut self, timestep: Time, timestep_safety_factor: Dimensionless) -> Time {
         let initial_state = (self.temperature, self.ionized_hydrogen_fraction);
-        let mut timestep = initial_timestep_guess;
-        let mut num_steps = 1;
-        while let Err(_) = self.try_timestep_update(timestep, num_steps) {
-            timestep /= 2.0;
-            num_steps *= 2;
+        if self
+            .try_timestep_update(timestep, timestep_safety_factor)
+            .is_err()
+        {
             (self.temperature, self.ionized_hydrogen_fraction) = initial_state;
+            self.perform_timestep(timestep / 2.0, timestep_safety_factor);
+            self.perform_timestep(timestep / 2.0, timestep_safety_factor)
+        } else {
+            timestep
         }
-        timestep
     }
 }
 
-fn check_timestep_criterion<const D: Dimension>(
-    value: Quantity<f64, D>,
-    change: Quantity<f64, D>,
-) -> Result<(), TimestepCriterionViolated>
-where
-    Quantity<f64, D>: Div<Quantity<f64, D>, Output = Dimensionless>,
-{
-    if *(value / change).abs() > MAX_ALLOWED_RELATIVE_CHANGE {
+fn check(
+    relative_change: Dimensionless,
+    max_allowed_change: Dimensionless,
+) -> Result<(), TimestepCriterionViolated> {
+    if relative_change.abs() > max_allowed_change {
         Err(TimestepCriterionViolated)
     } else {
         Ok(())
@@ -297,6 +316,8 @@ mod tests {
     use crate::units::Volume;
     use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
     use crate::units::PROTON_MASS;
+
+    const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.1;
 
     #[test]
     fn chemistry_solver_stays_in_equillibrium() {
@@ -336,7 +357,10 @@ mod tests {
                     scale_factor: Dimensionless::dimensionless(1.0),
                     heating_rate: HeatingRate::zero(),
                 };
-                solver.perform_timestep(timestep);
+                solver.perform_timestep(
+                    timestep,
+                    Dimensionless::dimensionless(MAX_ALLOWED_RELATIVE_CHANGE),
+                );
                 let final_ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
                 assert!(
                     ((initial_ionized_hydrogen_fraction - final_ionized_hydrogen_fraction)
@@ -354,7 +378,10 @@ mod tests {
         lines.push("t,xHI,T".into());
         for i in 0..(final_time / timestep).value() as usize {
             time += timestep;
-            solver.perform_timestep(timestep);
+            solver.perform_timestep(
+                timestep,
+                Dimensionless::dimensionless(MAX_ALLOWED_RELATIVE_CHANGE),
+            );
             if i.rem_euclid(output_cadence) == 0 {
                 lines.push(format!(
                     "{},{},{}",

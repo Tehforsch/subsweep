@@ -54,7 +54,7 @@ impl Temperature {
 
 impl EnergyPerMass {
     pub fn to_temperature(&self, molecular_weight: Dimensionless) -> Temperature {
-        *self / (BOLTZMANN_CONSTANT / PROTON_MASS) / (1.0 / (GAMMA - 1.0)) * molecular_weight
+        *self * molecular_weight * (GAMMA - 1.0) * PROTON_MASS / BOLTZMANN_CONSTANT
     }
 }
 
