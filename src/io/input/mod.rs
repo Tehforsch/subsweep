@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+use std::ops::Range;
 use std::path::PathBuf;
 
 use bevy::prelude::debug;
@@ -18,7 +19,11 @@ use bevy::prelude::ResMut;
 use bevy::prelude::Resource;
 use bevy::prelude::SystemLabel;
 use derive_custom::raxiom_parameters;
+use hdf5::Dataset;
 use hdf5::File;
+use hdf5::Result;
+use hdf5::Selection;
+use ndarray::s;
 use ndarray::ArrayBase;
 use ndarray::Dim;
 use ndarray::OwnedRepr;
@@ -238,47 +243,16 @@ fn read_dataset_system<T: ToDataset + Component>(
     }
 }
 
+type Chunk<T> = ArrayBase<OwnedRepr<T>, Dim<[usize; 1]>>;
+
 pub fn read_dataset<'a, T: ToDataset>(
     descriptor: &'a InputDatasetDescriptor<T>,
     files: &'a InputFiles,
 ) -> impl Iterator<Item = T> + 'a {
     info!("Reading dataset {}", descriptor.dataset_name());
-    let factor_read = T::dimension().base_conversion_factor();
-    files.iter().flat_map(move |file| {
-        let (set, factor_written) = read_dataset_and_conversion_factor_for_file(descriptor, file);
-        set.into_iter()
-            .map(move |item| item.convert_base_units(factor_written / factor_read))
-    })
-}
-
-fn read_dataset_and_conversion_factor_for_file<'a, T: ToDataset>(
-    descriptor: &'a InputDatasetDescriptor<T>,
-    file: &'a File,
-) -> (ArrayBase<OwnedRepr<T>, Dim<[usize; 1]>>, f64) {
-    let name = descriptor.dataset_name();
-    let set = file
-        .dataset(name)
-        .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
-    let data = match descriptor.shape {
-        DatasetShape::OneDimensional => set
-            .read_1d::<T>()
-            .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}")),
-        DatasetShape::TwoDimensional(constructor) => {
-            let d = set
-                .read_2d::<Float>()
-                .unwrap_or_else(|e| panic!("Failed to read dataset: {name}, {e:?}"));
-            d.outer_iter()
-                .map(|row| constructor(row.as_slice().unwrap()))
-                .collect()
-        }
-    };
-    let conversion_factor = descriptor.read_scale_factor(&set);
-    assert_eq!(
-        descriptor.read_dimension(&set),
-        T::dimension(),
-        "Mismatch in dimension while reading dataset {name}.",
-    );
-    (data, conversion_factor)
+    files
+        .iter()
+        .flat_map(move |file| read_dataset_for_file(descriptor, file).into_iter())
 }
 
 pub fn read_dataset_for_file<'a, T: ToDataset>(
@@ -286,8 +260,134 @@ pub fn read_dataset_for_file<'a, T: ToDataset>(
     file: &'a File,
 ) -> Vec<T> {
     let factor_read = T::dimension().base_conversion_factor();
-    let (set, factor_written) = read_dataset_and_conversion_factor_for_file(descriptor, file);
-    set.into_iter()
+    let (set, factor_written) = get_dataset_and_conversion_factor_for_file(descriptor, file);
+    let data = read_chunk(&set, descriptor, 0..set.shape()[0]);
+    convert_dataset_units(data, factor_read, factor_written)
+}
+
+/// Iterate over the items in the dataset without reading the
+/// entire dataset at once - instead, the dataset is read in chunks
+/// of size chunk_size.
+pub fn read_dataset_for_file_chunked<'a, T: ToDataset>(
+    descriptor: &'a InputDatasetDescriptor<T>,
+    file: &'a File,
+    chunk_size: usize,
+) -> impl Iterator<Item = T> {
+    let factor_read = T::dimension().base_conversion_factor();
+    let (set, factor_written) = get_dataset_and_conversion_factor_for_file(descriptor, &file);
+    let chunks = ChunkIter::new(set, descriptor, chunk_size);
+    chunks.into_iter().flat_map(move |chunk| {
+        convert_dataset_units(chunk, factor_read, factor_written).into_iter()
+    })
+}
+
+fn get_dataset_and_conversion_factor_for_file<'a, T: ToDataset>(
+    descriptor: &'a InputDatasetDescriptor<T>,
+    file: &'a File,
+) -> (Dataset, f64) {
+    let name = descriptor.dataset_name();
+    let set = file
+        .dataset(name)
+        .unwrap_or_else(|e| panic!("Failed to open dataset: {name}, {e:?}"));
+    let conversion_factor = descriptor.read_scale_factor(&set);
+    assert_eq!(
+        descriptor.read_dimension(&set),
+        T::dimension(),
+        "Mismatch in dimension while reading dataset {name}.",
+    );
+    (set, conversion_factor)
+}
+
+fn convert_dataset_units<T: ToDataset>(
+    data: Chunk<T>,
+    factor_read: f64,
+    factor_written: f64,
+) -> Vec<T> {
+    data.into_iter()
         .map(|item| item.convert_base_units(factor_written / factor_read))
         .collect()
+}
+
+struct ChunkIter<T> {
+    set: Dataset,
+    slices: Vec<Range<usize>>,
+    descriptor: InputDatasetDescriptor<T>,
+}
+
+fn get_chunk_sizes(dataset_size: usize, chunk_size: usize) -> Vec<Range<usize>> {
+    let num_chunks = (dataset_size / chunk_size)
+        + if dataset_size.rem_euclid(chunk_size) > 0 {
+            1
+        } else {
+            0
+        };
+    (0..num_chunks)
+        .map(|i| (i * chunk_size..((i + 1) * chunk_size).min(dataset_size)))
+        .collect()
+}
+
+impl<T: ToDataset> ChunkIter<T> {
+    fn new(set: Dataset, descriptor: &InputDatasetDescriptor<T>, chunk_size: usize) -> Self {
+        let shape = set.shape();
+        let chunks = get_chunk_sizes(shape[0], chunk_size);
+        Self {
+            set,
+            slices: chunks,
+            descriptor: descriptor.clone(),
+        }
+    }
+}
+
+impl<T: ToDataset> Iterator for ChunkIter<T> {
+    type Item = Chunk<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.slices.is_empty() {
+            None
+        } else {
+            let slice = self.slices.remove(0);
+            Some(read_chunk(&self.set, &self.descriptor, slice))
+        }
+    }
+}
+
+fn read_chunk<T: ToDataset>(
+    set: &Dataset,
+    descriptor: &InputDatasetDescriptor<T>,
+    slice: Range<usize>,
+) -> Chunk<T> {
+    read_chunk_fallible(set, descriptor, slice).unwrap_or_else(|e| {
+        let name = descriptor.dataset_name();
+        panic!("Failed to read dataset: {name}, {e:?}")
+    })
+}
+
+fn read_chunk_fallible<T: ToDataset>(
+    set: &Dataset,
+    descriptor: &InputDatasetDescriptor<T>,
+    slice: Range<usize>,
+) -> Result<Chunk<T>> {
+    Ok(match descriptor.shape {
+        DatasetShape::OneDimensional => set.read_slice_1d::<T, _>(slice)?,
+        DatasetShape::TwoDimensional(constructor) => set
+            .read_slice_2d::<Float, _>(Selection::try_new(s![slice, ..]).unwrap())?
+            .outer_iter()
+            .map(|row| constructor(row.as_slice().unwrap()))
+            .collect(),
+    })
+}
+
+#[cfg(test)]
+mod unit_tests {
+    #[test]
+    fn get_chunk_sizes() {
+        assert_eq!(
+            super::get_chunk_sizes(450, 100),
+            vec![0..100, 100..200, 200..300, 300..400, 400..450]
+        );
+        assert_eq!(
+            super::get_chunk_sizes(400, 100),
+            vec![0..100, 100..200, 200..300, 300..400]
+        );
+    }
 }
