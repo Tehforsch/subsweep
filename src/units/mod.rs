@@ -36,6 +36,7 @@ unit_system!(
         unit (ergs, "J") = 1e-7 * joules,
         unit (electron_volts, "eV") = 1.602176634e-19 * joules,
         def Temperature = { temperature: 1 },
+        def InverseTemperature = Dimensionless / Temperature,
         unit kelvins = Temperature,
         def Area = Length * Length,
         unit square_meters = Area,
