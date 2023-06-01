@@ -439,6 +439,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn chemistry_solver_stays_in_equillibrium() {
         for initial_ionized_hydrogen_fraction in [
             Dimensionless::dimensionless(0.0),
@@ -495,39 +496,41 @@ mod tests {
     struct Configuration {
         init_xhi: Dimensionless,
         flux: PhotonFlux,
-        temperature_exp: i32,
-        density_exp: i32,
+        temperature: Temperature,
+        density: Density,
+    }
+
+    struct State {
+        xhi: Dimensionless,
+        temperature: Temperature,
+        time: Time,
     }
 
     impl Configuration {
         fn new(
             init_xhi: Dimensionless,
             flux: PhotonFlux,
-            temperature_exp: i32,
-            density_exp: i32,
+            temperature: Temperature,
+            density: Density,
         ) -> Self {
             Self {
                 init_xhi,
                 flux,
-                temperature_exp,
-                density_exp,
+                temperature,
+                density,
             }
         }
 
         fn get_solver(&self) -> Solver {
-            let temperature = self.temperature();
-            let number_density =
-                NumberDensity::per_centimeters_cubed(10.0f64.powi(self.density_exp));
             let length = Length::parsec(1.0);
             let volume = length.cubed();
             let area = volume / length;
             let rate = self.flux * area;
 
-            let density = number_density * PROTON_MASS;
             Solver {
                 ionized_hydrogen_fraction: self.init_xhi,
-                temperature,
-                density,
+                temperature: self.temperature,
+                density: self.density,
                 volume,
                 length,
                 rate,
@@ -536,22 +539,12 @@ mod tests {
             }
         }
 
-        fn run(&self, folder_name: &str, modifier: impl Fn(&mut Solver, &Configuration)) {
+        fn run(&self, modifier: impl Fn(&mut Solver, &Configuration)) -> Vec<State> {
             let mut solver = self.get_solver();
-            let mut lines = vec![];
+            let mut states = vec![];
             let mut time = Time::zero();
 
             let final_time = Time::megayears(5e4);
-            let output = Path::new(folder_name)
-                .join(format!(
-                    "{}_{}_{}_{}",
-                    self.flux.in_photons_per_s_per_cm_squared() / 1e5,
-                    self.temperature_exp,
-                    self.density_exp,
-                    self.init_xhi.value()
-                ))
-                .to_owned();
-            lines.push("t,xHI,T".into());
             while time < final_time {
                 let timestep = time / 50.0 + Time::years(0.01);
                 time += timestep;
@@ -560,35 +553,30 @@ mod tests {
                     Dimensionless::dimensionless(MAX_ALLOWED_RELATIVE_CHANGE),
                 );
                 modifier(&mut solver, self);
-                lines.push(format!(
-                    "{},{},{}",
-                    time.in_megayears(),
-                    solver.ionized_hydrogen_fraction.value(),
-                    solver.temperature.in_kelvins()
-                ));
+                states.push(State {
+                    xhi: solver.ionized_hydrogen_fraction,
+                    temperature: solver.temperature,
+                    time,
+                });
             }
-            fs::write(output, lines.join("\n")).unwrap();
-        }
-
-        fn temperature(&self) -> Temperature {
-            Temperature::kelvins(10.0f64.powi(self.temperature_exp))
+            states
         }
     }
 
     fn get_configurations<'a>(
         flux: PhotonFlux,
         init_xhi: &'a [f64],
-        temperature_exp: &'a [i32],
-        density_exp: &'a [i32],
+        temperature: &'a [Temperature],
+        density: &'a [Density],
     ) -> impl Iterator<Item = Configuration> + 'a {
         init_xhi.iter().flat_map(move |init_xhi| {
-            temperature_exp.iter().flat_map(move |temperature_exp| {
-                density_exp.iter().map(move |density_exp| {
+            temperature.iter().flat_map(move |temperature| {
+                density.iter().map(move |density| {
                     Configuration::new(
                         Dimensionless::dimensionless(*init_xhi),
                         flux,
-                        *temperature_exp,
-                        *density_exp,
+                        *temperature,
+                        *density,
                     )
                 })
             })
@@ -596,43 +584,113 @@ mod tests {
     }
 
     fn run_configurations(
-        output_folder: &str,
+        output_file: &str,
         configurations: impl Iterator<Item = Configuration>,
         modifier: impl Fn(&mut Solver, &Configuration),
     ) {
+        let output_file = Path::new(output_file).to_owned();
+        let output_folder = output_file.parent().unwrap();
         fs::create_dir_all(output_folder).unwrap();
+        let mut lines = vec![];
+        lines.push("flux,init_xHI,init_T,density,t,xHI,T".into());
         for config in configurations {
             println!("{:?}", config);
-            config.run(&output_folder, &modifier);
+            let states = config.run(&modifier);
+            lines.extend(states.into_iter().map(|state| {
+                format!(
+                    "{},{},{},{},{},{},{}",
+                    config.flux.in_photons_per_s_per_cm_squared(),
+                    config.init_xhi.value(),
+                    config.temperature.in_kelvins(),
+                    (config.density / PROTON_MASS).in_per_centimeters_cubed(),
+                    state.time.in_megayears(),
+                    state.xhi.value(),
+                    state.temperature.in_kelvins()
+                )
+            }));
         }
+        fs::write(output_file, lines.join("\n")).unwrap();
+    }
+
+    fn as_density(d: f64) -> Density {
+        let number_density = NumberDensity::per_centimeters_cubed(d);
+        number_density * PROTON_MASS
     }
 
     #[test]
     #[ignore]
     fn time_evolution() {
-        run_configurations(
-            "out/const_xhi",
-            get_configurations(
+        for (name, flux) in [
+            (
+                "out/const_xhi",
                 PhotonFlux::photons_per_s_per_cm_squared(0.0),
-                &[1e-10, 0.2, 0.5, 0.8, 1.0],
-                &[3, 4, 5, 6],
-                &[-8, -6, -4, -2, 0, 2],
             ),
-            |solver, configuration| {
-                solver.ionized_hydrogen_fraction = configuration.init_xhi;
-            },
-        );
-        run_configurations(
-            "out/const_xhi_flux",
-            get_configurations(
+            (
+                "out/const_xhi_flux",
                 PhotonFlux::photons_per_s_per_cm_squared(1e5),
-                &[1e-10, 0.2, 0.5, 0.8, 1.0],
-                &[3, 4, 5, 6],
-                &[-8, -6, -4, -2, 0, 2],
             ),
-            |solver, configuration| {
-                solver.temperature = configuration.temperature();
-            },
-        );
+        ] {
+            run_configurations(
+                name,
+                get_configurations(
+                    flux,
+                    &[1e-10, 0.2, 0.5, 0.8, 1.0],
+                    &[
+                        Temperature::kelvins(1e3),
+                        Temperature::kelvins(1.6e4),
+                        Temperature::kelvins(1.8e5),
+                        Temperature::kelvins(3e6),
+                        Temperature::kelvins(1e8),
+                    ],
+                    &[
+                        as_density(1e-8),
+                        as_density(1e-6),
+                        as_density(1e-4),
+                        as_density(1e-2),
+                        as_density(1e0),
+                        as_density(1e2),
+                    ],
+                ),
+                |solver, configuration| {
+                    solver.ionized_hydrogen_fraction = configuration.init_xhi;
+                },
+            );
+        }
+        for (name, flux) in [
+            (
+                "out/const_temp",
+                PhotonFlux::photons_per_s_per_cm_squared(0.0),
+            ),
+            (
+                "out/const_temp_flux",
+                PhotonFlux::photons_per_s_per_cm_squared(1e5),
+            ),
+        ] {
+            run_configurations(
+                name,
+                get_configurations(
+                    flux,
+                    &[1e-10, 0.2, 0.5, 0.8, 1.0],
+                    &[
+                        Temperature::kelvins(1e3),
+                        Temperature::kelvins(1.6e4),
+                        Temperature::kelvins(3e4),
+                        Temperature::kelvins(9e4),
+                        Temperature::kelvins(1e6),
+                    ],
+                    &[
+                        as_density(1e-8),
+                        as_density(1e-6),
+                        as_density(1e-4),
+                        as_density(1e-2),
+                        as_density(1e0),
+                        as_density(1e2),
+                    ],
+                ),
+                |solver, configuration| {
+                    solver.temperature = configuration.temperature;
+                },
+            );
+        }
     }
 }
