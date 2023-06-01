@@ -361,6 +361,7 @@ where
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::path::Path;
 
     use diman::Quotient;
 
@@ -380,7 +381,62 @@ mod tests {
     use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
     use crate::units::PROTON_MASS;
 
-    const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.1;
+    const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.01;
+
+    fn test_numerical_derivative(
+        function: fn(&Solver) -> VolumeRate,
+        derivative: fn(&Solver) -> Quotient<VolumeRate, Temperature>,
+    ) {
+        let epsilon = 1e-4;
+        let delta = Temperature::kelvins(1e-6);
+        for temperature in [
+            Temperature::kelvins(1e1),
+            Temperature::kelvins(1e2),
+            Temperature::kelvins(1e3),
+            Temperature::kelvins(1e4),
+            Temperature::kelvins(1e5),
+            Temperature::kelvins(1e6),
+            Temperature::kelvins(1e7),
+        ] {
+            let mut solver = Solver {
+                temperature,
+                // none of these matter
+                ionized_hydrogen_fraction: Dimensionless::zero(),
+                density: Density::zero(),
+                volume: Volume::zero(),
+                length: Length::zero(),
+                rate: Rate::zero(),
+                heating_rate: HeatingRate::zero(),
+                scale_factor: Dimensionless::dimensionless(1.0),
+            };
+            let analytical = derivative(&solver);
+            let v1 = function(&solver);
+            solver.temperature += delta;
+            let v2 = function(&solver);
+            let numerical = (v2 - v1) / delta;
+            assert!(
+                (analytical - numerical).abs()
+                    / (analytical.abs() + numerical.abs() + Quantity::new_unchecked(f64::EPSILON))
+                    < epsilon
+            );
+        }
+    }
+
+    #[test]
+    fn case_b_recombination_rate_derivative() {
+        test_numerical_derivative(
+            Solver::case_b_recombination_rate,
+            Solver::case_b_recombination_rate_derivative,
+        )
+    }
+
+    #[test]
+    fn collisional_ionization_rate_derivative() {
+        test_numerical_derivative(
+            Solver::collisional_ionization_rate,
+            Solver::collisional_ionization_rate_derivative,
+        )
+    }
 
     #[test]
     fn chemistry_solver_stays_in_equillibrium() {
@@ -435,17 +491,75 @@ mod tests {
         }
     }
 
-    fn run(mut solver: Solver, final_time: Time, timestep: Time, out: &str, output_cadence: usize) {
-        let mut lines = vec![];
-        let mut time = Time::zero();
-        lines.push("t,xHI,T".into());
-        for i in 0..(final_time / timestep).value() as usize {
-            time += timestep;
-            solver.perform_timestep(
-                timestep,
-                Dimensionless::dimensionless(MAX_ALLOWED_RELATIVE_CHANGE),
-            );
-            if i.rem_euclid(output_cadence) == 0 {
+    #[derive(Debug)]
+    struct Configuration {
+        init_xhi: Dimensionless,
+        flux: PhotonFlux,
+        temperature_exp: i32,
+        density_exp: i32,
+    }
+
+    impl Configuration {
+        fn new(
+            init_xhi: Dimensionless,
+            flux: PhotonFlux,
+            temperature_exp: i32,
+            density_exp: i32,
+        ) -> Self {
+            Self {
+                init_xhi,
+                flux,
+                temperature_exp,
+                density_exp,
+            }
+        }
+
+        fn get_solver(&self) -> Solver {
+            let temperature = self.temperature();
+            let number_density =
+                NumberDensity::per_centimeters_cubed(10.0f64.powi(self.density_exp));
+            let length = Length::parsec(1.0);
+            let volume = length.cubed();
+            let area = volume / length;
+            let rate = self.flux * area;
+
+            let density = number_density * PROTON_MASS;
+            Solver {
+                ionized_hydrogen_fraction: self.init_xhi,
+                temperature,
+                density,
+                volume,
+                length,
+                rate,
+                scale_factor: Dimensionless::dimensionless(1.0),
+                heating_rate: HeatingRate::zero(),
+            }
+        }
+
+        fn run(&self, folder_name: &str, modifier: impl Fn(&mut Solver, &Configuration)) {
+            let mut solver = self.get_solver();
+            let mut lines = vec![];
+            let mut time = Time::zero();
+
+            let final_time = Time::megayears(5e4);
+            let output = Path::new(folder_name)
+                .join(format!(
+                    "{}_{}_{}_{}",
+                    self.flux.in_photons_per_s_per_cm_squared() / 1e5,
+                    self.temperature_exp,
+                    self.density_exp,
+                    self.init_xhi.value()
+                ))
+                .to_owned();
+            lines.push("t,xHI,T".into());
+            while time < final_time {
+                let timestep = time / 50.0 + Time::years(0.01);
+                time += timestep;
+                solver.perform_timestep(
+                    timestep,
+                    Dimensionless::dimensionless(MAX_ALLOWED_RELATIVE_CHANGE),
+                );
+                modifier(&mut solver, self);
                 lines.push(format!(
                     "{},{},{}",
                     time.in_megayears(),
@@ -453,100 +567,72 @@ mod tests {
                     solver.temperature.in_kelvins()
                 ));
             }
+            fs::write(output, lines.join("\n")).unwrap();
         }
-        fs::write(out, lines.join("\n")).unwrap();
-        dbg!(&solver);
-    }
 
-    #[test]
-    fn time_evolution() {
-        let timestep = Time::megayears(0.001);
-        let length = Length::parsec(1.0);
-        let volume = length.cubed();
-        let final_time = Time::megayears(5000.0);
-        // let flux = PhotonFlux::photons_per_s_per_cm_squared(1e5);
-        let flux = PhotonFlux::photons_per_s_per_cm_squared(0.0);
-        let area = volume / length;
-        let rate = flux * area;
-
-        for init_xhi in [0.0, 0.2, 0.5, 0.8, 1.0] {
-            let ionized_hydrogen_fraction = Dimensionless::dimensionless(init_xhi);
-            for temp_exp in [3, 4, 5, 6] {
-                let temperature = Temperature::kelvins(10.0f64.powi(temp_exp));
-                for exp in [-8, -6, -4, -2, 0, 2] {
-                    let number_density = NumberDensity::per_centimeters_cubed(10.0f64.powi(exp));
-                    let density = number_density * PROTON_MASS;
-
-                    let solver = Solver {
-                        ionized_hydrogen_fraction,
-                        temperature,
-                        density,
-                        volume,
-                        length,
-                        rate,
-                        scale_factor: Dimensionless::dimensionless(1.0),
-                        heating_rate: HeatingRate::zero(),
-                    };
-
-                    let output = format!("out/{}_{}_{}", temp_exp, exp, init_xhi);
-                    run(solver, final_time, timestep, &output, 1000);
-                }
-            }
+        fn temperature(&self) -> Temperature {
+            Temperature::kelvins(10.0f64.powi(self.temperature_exp))
         }
     }
 
-    #[test]
-    fn case_b_recombination_rate_derivative() {
-        test_numerical_derivative(
-            Solver::case_b_recombination_rate,
-            Solver::case_b_recombination_rate_derivative,
-        )
+    fn get_configurations<'a>(
+        flux: PhotonFlux,
+        init_xhi: &'a [f64],
+        temperature_exp: &'a [i32],
+        density_exp: &'a [i32],
+    ) -> impl Iterator<Item = Configuration> + 'a {
+        init_xhi.iter().flat_map(move |init_xhi| {
+            temperature_exp.iter().flat_map(move |temperature_exp| {
+                density_exp.iter().map(move |density_exp| {
+                    Configuration::new(
+                        Dimensionless::dimensionless(*init_xhi),
+                        flux,
+                        *temperature_exp,
+                        *density_exp,
+                    )
+                })
+            })
+        })
     }
 
-    #[test]
-    fn collisional_ionization_rate_derivative() {
-        test_numerical_derivative(
-            Solver::collisional_ionization_rate,
-            Solver::collisional_ionization_rate_derivative,
-        )
-    }
-
-    fn test_numerical_derivative(
-        function: fn(&Solver) -> VolumeRate,
-        derivative: fn(&Solver) -> Quotient<VolumeRate, Temperature>,
+    fn run_configurations(
+        output_folder: &str,
+        configurations: impl Iterator<Item = Configuration>,
+        modifier: impl Fn(&mut Solver, &Configuration),
     ) {
-        let epsilon = 1e-4;
-        let delta = Temperature::kelvins(1e-6);
-        for temperature in [
-            Temperature::kelvins(1e1),
-            Temperature::kelvins(1e2),
-            Temperature::kelvins(1e3),
-            Temperature::kelvins(1e4),
-            Temperature::kelvins(1e5),
-            Temperature::kelvins(1e6),
-            Temperature::kelvins(1e7),
-        ] {
-            let mut solver = Solver {
-                temperature,
-                // none of these matter
-                ionized_hydrogen_fraction: Dimensionless::zero(),
-                density: Density::zero(),
-                volume: Volume::zero(),
-                length: Length::zero(),
-                rate: Rate::zero(),
-                heating_rate: HeatingRate::zero(),
-                scale_factor: Dimensionless::dimensionless(1.0),
-            };
-            let analytical = derivative(&solver);
-            let v1 = function(&solver);
-            solver.temperature += delta;
-            let v2 = function(&solver);
-            let numerical = (v2 - v1) / delta;
-            assert!(
-                (analytical - numerical).abs()
-                    / (analytical.abs() + numerical.abs() + Quantity::new_unchecked(f64::EPSILON))
-                    < epsilon
-            );
+        fs::create_dir_all(output_folder).unwrap();
+        for config in configurations {
+            println!("{:?}", config);
+            config.run(&output_folder, &modifier);
         }
+    }
+
+    #[test]
+    #[ignore]
+    fn time_evolution() {
+        run_configurations(
+            "out/const_xhi",
+            get_configurations(
+                PhotonFlux::photons_per_s_per_cm_squared(0.0),
+                &[1e-10, 0.2, 0.5, 0.8, 1.0],
+                &[3, 4, 5, 6],
+                &[-8, -6, -4, -2, 0, 2],
+            ),
+            |solver, configuration| {
+                solver.ionized_hydrogen_fraction = configuration.init_xhi;
+            },
+        );
+        run_configurations(
+            "out/const_xhi_flux",
+            get_configurations(
+                PhotonFlux::photons_per_s_per_cm_squared(1e5),
+                &[1e-10, 0.2, 0.5, 0.8, 1.0],
+                &[3, 4, 5, 6],
+                &[-8, -6, -4, -2, 0, 2],
+            ),
+            |solver, configuration| {
+                solver.temperature = configuration.temperature();
+            },
+        );
     }
 }
