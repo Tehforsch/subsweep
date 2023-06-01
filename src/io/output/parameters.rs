@@ -88,12 +88,16 @@ fn default_used_parameters_filename() -> String {
     "parameters.yml".into()
 }
 
+pub fn is_desired_field<T: Named>(sim: &Simulation) -> bool {
+    sim.unwrap_resource::<OutputParameters>()
+        .fields
+        .iter()
+        .any(|field| field == T::name())
+}
+
 impl OutputParameters {
-    pub fn is_desired_field<T: Named>(sim: &Simulation) -> bool {
-        sim.unwrap_resource::<Self>()
-            .fields
-            .iter()
-            .any(|field| field == T::name())
+    pub fn is_desired_field<T: Named>(&self) -> bool {
+        self.fields.iter().any(|field| field == T::name())
     }
 
     pub fn snapshot_dir(&self) -> PathBuf {

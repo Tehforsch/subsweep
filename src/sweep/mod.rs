@@ -14,7 +14,6 @@ mod timestep_state;
 
 use bevy::prelude::*;
 use derive_more::Into;
-use diman::Quotient;
 use mpi::traits::Equivalence;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
@@ -45,8 +44,10 @@ use crate::components::Density;
 use crate::components::HeatingRate;
 use crate::components::IonizedHydrogenFraction;
 use crate::components::Source;
+use crate::components::Timestep;
 use crate::cosmology::Cosmology;
 use crate::hash_map::HashMap;
+use crate::io::output::parameters::is_desired_field;
 use crate::io::output::parameters::OutputParameters;
 use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
@@ -54,7 +55,6 @@ use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation_plugin::SimulationTime;
 use crate::units::Dimensionless;
-use crate::units::EnergyDensity;
 use crate::units::SourceRate;
 use crate::units::Temperature;
 use crate::units::Time;
@@ -98,8 +98,11 @@ impl RaxiomPlugin for SweepPlugin {
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
             .add_parameter_type::<SweepParameters>();
-        if output_heating_rate(sim.get_parameters::<OutputParameters>()) {
+        if is_desired_field::<HeatingRate>(sim) {
             sim.add_derived_component::<HeatingRate>();
+        }
+        if is_desired_field::<Timestep>(sim) {
+            sim.add_derived_component::<Timestep>();
         }
     }
 }
@@ -489,25 +492,30 @@ fn init_sweep_system(
 
 fn run_sweep_system(
     mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
-    mut sites_query: Particles<(
+    mut sites: Particles<(
         &ParticleId,
         &mut IonizedHydrogenFraction,
         &mut components::Temperature,
     )>,
-    mut heating_rate_query: Particles<(&ParticleId, &mut HeatingRate)>,
+    mut heating_rates: Particles<(&ParticleId, &mut HeatingRate)>,
+    mut timesteps: Particles<(&ParticleId, &mut Timestep)>,
     mut time: ResMut<SimulationTime>,
 ) {
     let solver = (*solver).as_mut().unwrap();
     let time_elapsed = solver.run_sweeps();
     **time += time_elapsed;
-    for (id, mut fraction, mut temperature) in sites_query.iter_mut() {
+    for (id, mut fraction, mut temperature) in sites.iter_mut() {
         let site = solver.sites.get(*id);
         **fraction = site.species.ionized_hydrogen_fraction;
         **temperature = site.species.temperature;
     }
-    for (id, mut heating_rate) in heating_rate_query.iter_mut() {
+    for (id, mut heating_rate) in heating_rates.iter_mut() {
         let site = solver.sites.get(*id);
         **heating_rate = site.species.heating_rate;
+    }
+    for (id, mut timestep) in timesteps.iter_mut() {
+        let site = solver.sites.get(*id);
+        **timestep = site.species.timestep;
     }
 }
 
@@ -530,20 +538,21 @@ pub fn initialize_sweep_components_system(
     }
 }
 
-fn output_heating_rate(parameters: &OutputParameters) -> bool {
-    parameters.fields.contains(&HeatingRate::name().into())
-}
-
 fn initialize_optional_components_system(
     mut commands: Commands,
     output_parameters: Res<OutputParameters>,
     local_particles: Query<Entity, With<LocalParticle>>,
 ) {
-    if output_heating_rate(&output_parameters) {
+    if output_parameters.is_desired_field::<HeatingRate>() {
         for entity in local_particles.iter() {
             commands
                 .entity(entity)
-                .insert(HeatingRate(Quotient::<EnergyDensity, Time>::zero()));
+                .insert(HeatingRate(units::HeatingRate::zero()));
+        }
+    }
+    if output_parameters.is_desired_field::<HeatingRate>() {
+        for entity in local_particles.iter() {
+            commands.entity(entity).insert(Timestep(Time::zero()));
         }
     }
 }

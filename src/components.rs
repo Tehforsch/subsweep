@@ -50,3 +50,8 @@ pub struct Rate(pub crate::units::PhotonRate);
 #[name = "heating_rate"]
 #[repr(transparent)]
 pub struct HeatingRate(pub Quotient<EnergyDensity, Time>);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "timestep"]
+#[repr(transparent)]
+pub struct Timestep(pub Time);

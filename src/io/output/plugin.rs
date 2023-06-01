@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use super::close_file_system;
 use super::make_output_dirs_system;
 use super::open_file_system;
+use super::parameters::is_desired_field;
 use super::parameters::OutputParameters;
 use super::timer::Timer;
 use super::write_used_parameters_system;
@@ -91,7 +92,7 @@ where
         sim.insert_non_send_resource::<OutputDatasetDescriptor<T>>(
             OutputDatasetDescriptor::<T>::new(self.descriptor.descriptor.clone()),
         );
-        if OutputParameters::is_desired_field::<T>(sim) {
+        if is_desired_field::<T>(sim) {
             sim.add_system_to_stage(
                 Stages::Output,
                 T::system()
