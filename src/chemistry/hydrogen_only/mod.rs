@@ -9,7 +9,6 @@ use crate::units::Density;
 use crate::units::Dimension;
 use crate::units::Dimensionless;
 use crate::units::EnergyPerTime;
-use crate::units::EnergyRateDensity;
 use crate::units::HeatingRate;
 use crate::units::HeatingTerm;
 use crate::units::InverseTemperature;
@@ -42,6 +41,7 @@ pub struct HydrogenOnlySpecies {
     pub ionized_hydrogen_fraction: Dimensionless,
     pub temperature: Temperature,
     pub heating_rate: HeatingRate,
+    pub timestep: Time,
 }
 
 impl HydrogenOnlySpecies {
@@ -53,6 +53,7 @@ impl HydrogenOnlySpecies {
             ionized_hydrogen_fraction,
             temperature,
             heating_rate: HeatingRate::zero(),
+            timestep: Time::zero(),
         }
     }
 }
@@ -100,6 +101,7 @@ impl Chemistry for HydrogenOnly {
         site.species.temperature = solver.temperature;
         site.species.ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
         site.species.heating_rate = solver.heating_rate;
+        site.species.timestep = timestep_used;
         // Timescale of change
         timestep_used
     }
@@ -232,7 +234,7 @@ impl Solver {
             * SWEEP_HYDROGEN_ONLY_CROSS_SECTION
     }
 
-    fn cooling_rate(&self) -> EnergyRateDensity {
+    fn cooling_rate(&self) -> HeatingRate {
         let ne = self.electron_number_density();
         let nh_neutral = self.hydrogen_number_density();
         let nh_ionized = self.ionized_hydrogen_number_density();
@@ -242,7 +244,7 @@ impl Solver {
             * nh_neutral;
         let recombination = self.case_b_recombination_cooling_rate() * ne * nh_ionized;
         let bremsstrahlung = self.bremstrahlung_cooling_rate() * ne * nh_ionized;
-        let compton: EnergyRateDensity = self.compton_cooling_rate() * ne;
+        let compton: HeatingRate = self.compton_cooling_rate() * ne;
         collisional + recombination + bremsstrahlung + compton
     }
 
@@ -358,15 +360,21 @@ where
 mod tests {
     use std::fs;
 
+    use diman::Quotient;
+
     use super::Solver;
+    use crate::units::Density;
     use crate::units::Dimensionless;
     use crate::units::HeatingRate;
     use crate::units::Length;
     use crate::units::NumberDensity;
     use crate::units::PhotonFlux;
+    use crate::units::Quantity;
+    use crate::units::Rate;
     use crate::units::Temperature;
     use crate::units::Time;
     use crate::units::Volume;
+    use crate::units::VolumeRate;
     use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
     use crate::units::PROTON_MASS;
 
@@ -482,6 +490,65 @@ mod tests {
                     run(solver, final_time, timestep, &output, 1000);
                 }
             }
+        }
+    }
+
+    #[test]
+    fn case_b_recombination_rate_derivative() {
+        test_numerical_derivative(
+            Solver::case_b_recombination_rate,
+            Solver::case_b_recombination_rate_derivative,
+        )
+    }
+
+    #[test]
+    fn collisional_ionization_rate_derivative() {
+        test_numerical_derivative(
+            Solver::collisional_ionization_rate,
+            Solver::collisional_ionization_rate_derivative,
+        )
+    }
+
+    fn test_numerical_derivative(
+        function: fn(&Solver) -> VolumeRate,
+        derivative: fn(&Solver) -> Quotient<VolumeRate, Temperature>,
+    ) {
+        let epsilon = 1e-10;
+        let delta = Temperature::kelvins(1e-10);
+        for temperature in [
+            Temperature::kelvins(1e1),
+            Temperature::kelvins(1e2),
+            Temperature::kelvins(1e3),
+            Temperature::kelvins(1e4),
+            Temperature::kelvins(1e5),
+        ] {
+            let mut solver = Solver {
+                temperature,
+                // none of these matter
+                ionized_hydrogen_fraction: Dimensionless::zero(),
+                density: Density::zero(),
+                volume: Volume::zero(),
+                length: Length::zero(),
+                rate: Rate::zero(),
+                heating_rate: HeatingRate::zero(),
+                scale_factor: Dimensionless::dimensionless(1.0),
+            };
+            let analytical = derivative(&solver);
+            let v1 = function(&solver);
+            solver.temperature += delta;
+            let v2 = function(&solver);
+            let numerical = (v2 - v1) / delta;
+            dbg!(
+                temperature,
+                analytical,
+                numerical,
+                (analytical - numerical).abs() / (analytical.abs() + numerical.abs())
+            );
+            assert!(
+                (analytical - numerical).abs()
+                    / (analytical.abs() + numerical.abs() + Quantity::new_unchecked(f64::EPSILON))
+                    < epsilon
+            );
         }
     }
 }
