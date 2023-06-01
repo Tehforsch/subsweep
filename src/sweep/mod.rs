@@ -59,7 +59,6 @@ use crate::cosmology::Cosmology;
 use crate::hash_map::HashMap;
 use crate::io::output::parameters::is_desired_field;
 use crate::io::output::parameters::OutputParameters;
-use crate::io::time_series::output_time_series_system;
 use crate::io::time_series::TimeSeriesPlugin;
 use crate::io::to_dataset::ToDataset;
 use crate::particle::HaloParticles;
@@ -108,15 +107,11 @@ impl RaxiomPlugin for SweepPlugin {
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
             .add_system_to_stage(
-                Stages::Output,
+                Stages::AfterSweep,
                 hydrogen_ionization_volume_average_system
-                    .before(output_time_series_system::<HydrogenIonizationVolumeAverage>),
+                    .before(hydrogen_ionization_mass_average_system),
             )
-            .add_system_to_stage(
-                Stages::Output,
-                hydrogen_ionization_mass_average_system
-                    .before(output_time_series_system::<HydrogenIonizationMassAverage>),
-            )
+            .add_system_to_stage(Stages::AfterSweep, hydrogen_ionization_mass_average_system)
             .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
             .add_system_to_stage(Stages::Sweep, run_sweep_system)

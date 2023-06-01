@@ -26,6 +26,7 @@ pub struct SimulationPlugin;
 pub enum Stages {
     Initial,
     Sweep,
+    AfterSweep,
     Output,
     Final,
 }

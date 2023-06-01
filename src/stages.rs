@@ -16,6 +16,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             CoreStage::Update.as_label(),
             Stages::Initial.as_label(),
             Stages::Sweep.as_label(),
+            Stages::AfterSweep.as_label(),
             Stages::Output.as_label(),
             Stages::Final.as_label(),
         ];
