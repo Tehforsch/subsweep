@@ -22,6 +22,9 @@ pub(crate) trait IntoOutputSystem {
 #[derive(SystemLabel)]
 struct OutputSystemLabel;
 
+#[derive(Resource, Default)]
+struct RegisteredFields(pub Vec<String>);
+
 #[derive(Named)]
 pub struct OutputPlugin<T> {
     descriptor: OutputDatasetDescriptor<T>,
@@ -56,8 +59,10 @@ where
     }
 
     fn build_once_on_main_rank(&self, sim: &mut Simulation) {
+        sim.insert_resource(RegisteredFields::default());
         sim.add_startup_system(make_output_dirs_system)
-            .add_startup_system(write_used_parameters_system.after(make_output_dirs_system));
+            .add_startup_system(write_used_parameters_system.after(make_output_dirs_system))
+            .add_startup_system(verify_output_fields_system);
     }
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
@@ -96,6 +101,24 @@ where
                     .label(OutputSystemLabel)
                     .ambiguous_with(OutputSystemLabel),
             );
+        }
+    }
+
+    fn build_on_main_rank(&self, sim: &mut Simulation) {
+        sim.get_resource_mut::<RegisteredFields>()
+            .unwrap()
+            .0
+            .push(T::name().into());
+    }
+}
+
+fn verify_output_fields_system(
+    parameters: Res<OutputParameters>,
+    registered: Res<RegisteredFields>,
+) {
+    for field in parameters.fields.iter() {
+        if !registered.0.contains(field) {
+            error!("Unknown field specified: {}", field);
         }
     }
 }

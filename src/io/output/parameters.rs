@@ -81,9 +81,7 @@ fn default_time_series_dir() -> PathBuf {
 }
 
 fn default_fields() -> Vec<String> {
-    ["position", "mass", "velocity"]
-        .map(|x| x.to_string())
-        .to_vec()
+    vec![]
 }
 
 fn default_used_parameters_filename() -> String {
