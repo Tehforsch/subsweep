@@ -495,6 +495,7 @@ fn run_sweep_system(
     )>,
     mut heating_rates: Particles<(&ParticleId, &mut HeatingRate)>,
     mut timesteps: Particles<(&ParticleId, &mut Timestep)>,
+    mut ionization_times: Particles<(&ParticleId, &mut IonizationTime)>,
     mut time: ResMut<SimulationTime>,
 ) {
     let solver = (*solver).as_mut().unwrap();
@@ -512,6 +513,14 @@ fn run_sweep_system(
     for (id, mut timestep) in timesteps.iter_mut() {
         let site = solver.sites.get(*id);
         **timestep = site.species.timestep;
+    }
+    for (id, mut ionization_time) in ionization_times.iter_mut() {
+        let site = solver.sites.get(*id);
+        if site.species.ionized_hydrogen_fraction > 0.5
+            && **ionization_time == *IonizationTime::default()
+        {
+            **ionization_time = **time;
+        }
     }
 }
 

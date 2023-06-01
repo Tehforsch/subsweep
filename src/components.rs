@@ -7,6 +7,7 @@ use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
 use crate::named::Named;
+use crate::prelude::Float;
 use crate::units::EnergyDensity;
 use crate::units::Time;
 use crate::units::VecLength;
@@ -56,7 +57,13 @@ pub struct HeatingRate(pub Quotient<EnergyDensity, Time>);
 #[repr(transparent)]
 pub struct Timestep(pub Time);
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "ionization_time"]
 #[repr(transparent)]
 pub struct IonizationTime(pub Time);
+
+impl Default for IonizationTime {
+    fn default() -> Self {
+        IonizationTime(Time::new_unchecked(Float::INFINITY))
+    }
+}
