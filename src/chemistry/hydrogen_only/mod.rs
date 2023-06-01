@@ -147,11 +147,12 @@ impl Solver {
     }
 
     fn collision_fit_function_derivative(&self) -> f64 {
-        let const1 = 1e5;
+        let const1 = 1.0 / 1e5;
         let const2 = 157809.1;
         let t = self.temperature.in_kelvins();
-        (-const2 / t).exp() * (t / const1).powi(2).sqrt()
-            / (2.0 * t.sqrt() * ((t / const1).sqrt() + 1.0).powi(2))
+        ((-const2 / t).exp()
+            * (const1 * const2 * t + 0.5 * (const1 * t).sqrt() * (2.0 * const2 + t)))
+            / (t.powi(3).sqrt() * (const1 * t).sqrt() * ((const1 * t).sqrt() + 1.0).powi(2))
     }
 
     fn case_b_recombination_rate(&self) -> VolumeRate {
@@ -162,19 +163,17 @@ impl Solver {
     }
 
     fn case_b_recombination_rate_derivative(&self) -> Quotient<VolumeRate, Temperature> {
-        let lambda = Temperature::kelvins(315614.0) / self.temperature;
+        let lambda = (Temperature::kelvins(315614.0) / self.temperature).value();
         let dlambda_dt: InverseTemperature =
             -Temperature::kelvins(315614.0) / self.temperature.squared();
-        let c1 = 2.242;
+        let c1 = 1.0 / 2.74;
         let c2 = 0.407;
-        let c3 = 2.74;
+        let c3 = 2.242;
+        let d = -lambda.sqrt()
+            * ((c1 * lambda).powf(c2) + 1.0).powf(-c3 - 1.0)
+            * (c2 * c3 * (c1 * lambda).powf(c2) - 1.5 * (c1 * lambda).powf(c2) - 1.5);
 
-        VolumeRate::centimeters_cubed_per_s(
-            2.753e-14
-                * lambda.powf(1.5)
-                * ((lambda / c3).powf(c2) + 1.0).powf(-c1)
-                * ((lambda / c3).powf(c2) + 1.0).ln(),
-        ) * dlambda_dt
+        VolumeRate::centimeters_cubed_per_s(2.753e-14 * d) * dlambda_dt
     }
 
     fn case_b_recombination_cooling_rate(&self) -> HeatingTerm {
@@ -516,14 +515,16 @@ mod tests {
         function: fn(&Solver) -> VolumeRate,
         derivative: fn(&Solver) -> Quotient<VolumeRate, Temperature>,
     ) {
-        let epsilon = 1e-10;
-        let delta = Temperature::kelvins(1e-10);
+        let epsilon = 1e-4;
+        let delta = Temperature::kelvins(1e-6);
         for temperature in [
             Temperature::kelvins(1e1),
             Temperature::kelvins(1e2),
             Temperature::kelvins(1e3),
             Temperature::kelvins(1e4),
             Temperature::kelvins(1e5),
+            Temperature::kelvins(1e6),
+            Temperature::kelvins(1e7),
         ] {
             let mut solver = Solver {
                 temperature,
@@ -541,12 +542,6 @@ mod tests {
             solver.temperature += delta;
             let v2 = function(&solver);
             let numerical = (v2 - v1) / delta;
-            dbg!(
-                temperature,
-                analytical,
-                numerical,
-                (analytical - numerical).abs() / (analytical.abs() + numerical.abs())
-            );
             assert!(
                 (analytical - numerical).abs()
                     / (analytical.abs() + numerical.abs() + Quantity::new_unchecked(f64::EPSILON))
