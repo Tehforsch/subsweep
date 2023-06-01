@@ -51,6 +51,7 @@ use crate::components::Timestep;
 use crate::cosmology::Cosmology;
 use crate::hash_map::HashMap;
 use crate::io::output::parameters::is_desired_field;
+use crate::io::output::parameters::OutputParameters;
 use crate::io::to_dataset::ToDataset;
 use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
@@ -58,9 +59,11 @@ use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation_plugin::SimulationTime;
 use crate::units::Dimensionless;
+use crate::units::Mass;
 use crate::units::SourceRate;
 use crate::units::Temperature;
 use crate::units::Time;
+use crate::units::Volume;
 
 pub type Rate<C> = <C as Chemistry>::Photons;
 pub type Species<C> = <C as Chemistry>::Species;
@@ -87,8 +90,7 @@ pub struct TimestepLevelData {
 
 impl RaxiomPlugin for SweepPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_startup_system_to_stage(StartupStages::ReadInput, initialize_directions_system)
-            .add_derived_component::<IonizedHydrogenFraction>()
+        sim.add_derived_component::<IonizedHydrogenFraction>()
             .add_derived_component::<Source>()
             .add_derived_component::<components::Rate>()
             .add_derived_component::<Density>()
@@ -123,7 +125,7 @@ struct Sweep<C: Chemistry> {
 
 impl<C: Chemistry> Sweep<C> {
     fn new(
-        directions: &Directions,
+        directions: Directions,
         cells: HashMap<ParticleId, Cell>,
         sites: HashMap<ParticleId, Site<C>>,
         halo_ids: Vec<ParticleId>,
@@ -428,7 +430,6 @@ impl<C: Chemistry> Sweep<C> {
 }
 
 fn init_sweep_system(
-    directions: Res<Directions>,
     cells_query: Particles<(&ParticleId, &Cell)>,
     sites_query: Particles<(
         Entity,
@@ -445,6 +446,7 @@ fn init_sweep_system(
     mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
     cosmology: Res<Cosmology>,
 ) {
+    let directions: Directions = (&sweep_parameters.directions).into();
     let cells: HashMap<_, _> = cells_query
         .iter()
         .map(|(id, cell)| (*id, cell.clone()))
@@ -469,7 +471,7 @@ fn init_sweep_system(
     #[cfg(test)]
     assert!(!cells.is_empty() && !sites.is_empty());
     *solver = Some(Sweep::new(
-        &directions,
+        directions,
         cells,
         sites,
         halo_ids,
@@ -524,25 +526,6 @@ fn run_sweep_system(
     }
 }
 
-fn initialize_directions_system(mut commands: Commands, parameters: Res<SweepParameters>) {
-    let directions: Directions = (&parameters.directions).into();
-    commands.insert_resource(directions);
-}
-
-pub fn initialize_sweep_components_system(
-    mut commands: Commands,
-    local_particles: Query<Entity, With<LocalParticle>>,
-) {
-    for entity in local_particles.iter() {
-        commands.entity(entity).insert((
-            Density(units::Density::zero()),
-            components::IonizedHydrogenFraction(Dimensionless::zero()),
-            components::Temperature(Temperature::kelvins(1000.0)),
-            Source(SourceRate::zero()),
-        ));
-    }
-}
-
 fn initialize_optional_component_system<C: Component + Named + Default>(
     mut commands: Commands,
     local_particles: Query<Entity, With<LocalParticle>>,
@@ -557,11 +540,30 @@ where
     C: Equivalence + ToDataset + H5Type + Clone + Component + Named + Default,
     <C as Equivalence>::Out: MatchesRaw,
 {
+    // Happens in tests and benches
+    if !sim.contains_resource::<OutputParameters>() {
+        return;
+    }
     if is_desired_field::<C>(sim) {
         sim.add_derived_component::<C>();
         sim.add_startup_system_to_stage(
             StartupStages::InsertDerivedComponents,
             initialize_optional_component_system::<C>,
         );
+    }
+}
+
+pub fn initialize_sweep_test_components_system(
+    mut commands: Commands,
+    local_particles: Query<Entity, With<LocalParticle>>,
+) {
+    for entity in local_particles.iter() {
+        commands.entity(entity).insert((
+            // It really doesnt matter as long as nothing crashes
+            Density(Mass::kilograms(1.0e-10) / Volume::cubic_centimeters(1.0)),
+            components::IonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
+            components::Temperature(Temperature::kelvins(1000.0)),
+            Source(SourceRate::zero()),
+        ));
     }
 }

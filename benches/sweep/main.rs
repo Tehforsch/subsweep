@@ -13,6 +13,7 @@ use rand::SeedableRng;
 use raxiom::communication::BaseCommunicationPlugin;
 use raxiom::components::Position;
 use raxiom::domain::DomainPlugin;
+use raxiom::parameters::Cosmology;
 use raxiom::parameters::SimulationBox;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::SweepParameters;
@@ -23,7 +24,7 @@ use raxiom::prelude::Simulation;
 use raxiom::prelude::StartupStages;
 use raxiom::simulation_plugin::SimulationPlugin;
 use raxiom::stages::SimulationStagesPlugin;
-use raxiom::sweep::initialize_sweep_components_system;
+use raxiom::sweep::initialize_sweep_test_components_system;
 use raxiom::sweep::DirectionsSpecification;
 use raxiom::sweep::SweepPlugin;
 use raxiom::units::Dimensionless;
@@ -52,10 +53,11 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             check_deadlock: false,
             periodic: false,
         })
+        .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_parameters_explicitly(SimulationParameters { final_time: None })
         .add_startup_system_to_stage(
             StartupStages::InsertComponentsAfterGrid,
-            initialize_sweep_components_system,
+            initialize_sweep_test_components_system,
         )
         .add_startup_system_to_stage(StartupStages::ReadInput, move |commands: Commands| {
             insert_particles_system(commands, num_particles)

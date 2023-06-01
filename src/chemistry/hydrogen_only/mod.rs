@@ -315,7 +315,10 @@ impl Solver {
     ) -> Time {
         let initial_state = (self.temperature, self.ionized_hydrogen_fraction);
         if depth > MAX_DEPTH {
-            panic!("Failed to find timestep in chemistry.");
+            panic!(
+                "Failed to find timestep in chemistry. Solver state: {:?}",
+                self
+            );
         }
         match self.try_timestep_update(timestep, timestep_safety_factor) {
             Err(TimestepCriterionViolated) => {

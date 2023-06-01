@@ -11,7 +11,7 @@ use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 use crate::stages::SimulationStagesPlugin;
-use crate::sweep::initialize_sweep_components_system;
+use crate::sweep::initialize_sweep_test_components_system;
 use crate::sweep::parameters::DirectionsSpecification;
 use crate::sweep::SweepPlugin;
 use crate::test_utils::build_local_communication_sim_with_custom_logic;
@@ -45,7 +45,7 @@ fn setup_sweep_sim(sim: &mut Simulation, setup: SweepSetup) -> &mut Simulation {
         .add_parameters_explicitly(SimulationParameters { final_time: None })
         .add_startup_system_to_stage(
             StartupStages::InsertComponentsAfterGrid,
-            initialize_sweep_components_system,
+            initialize_sweep_test_components_system,
         )
         .add_plugin(SweepPlugin)
 }
