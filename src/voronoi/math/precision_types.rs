@@ -26,7 +26,7 @@ impl PrecisionError {
     }
 }
 
-pub const ERROR_TRESHOLD: f64 = 1e-9;
+pub const ERROR_THRESHOLD: f64 = 1e-9;
 
 pub trait FloatError {
     fn is_too_close_to_zero(&self) -> bool;
@@ -34,7 +34,7 @@ pub trait FloatError {
 
 impl FloatError for f64 {
     fn is_too_close_to_zero(&self) -> bool {
-        self.abs() < ERROR_TRESHOLD
+        self.abs() < ERROR_THRESHOLD
     }
 }
 

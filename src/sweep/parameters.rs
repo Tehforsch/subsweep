@@ -18,10 +18,10 @@ pub struct SweepParameters {
     /// The maximum allowed timestep.
     pub max_timestep: Time,
     /// Whether to rotate the direction bins after every (full) sweep step.
-    #[serde(default="default_rotate_directions")]
+    #[serde(default = "default_rotate_directions")]
     pub rotate_directions: bool,
     #[serde(default)]
-    pub significant_rate_treshold: PhotonRate,
+    pub significant_rate_threshold: PhotonRate,
     #[serde(default = "default_timestep_factor")]
     pub timestep_safety_factor: Dimensionless,
     /// Whether to run a deadlock check before each sweep. Potentially

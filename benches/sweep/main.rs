@@ -48,7 +48,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             directions: dirs,
             rotate_directions: false,
             num_timestep_levels,
-            significant_rate_treshold: PhotonRate::zero(),
+            significant_rate_threshold: PhotonRate::zero(),
             timestep_safety_factor,
             max_timestep: Time::seconds(1e-3),
             check_deadlock: false,

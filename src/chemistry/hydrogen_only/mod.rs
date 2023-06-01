@@ -31,7 +31,7 @@ const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 const MAX_DEPTH: usize = 100;
 
 pub struct HydrogenOnly {
-    pub rate_treshold: PhotonRate,
+    pub rate_threshold: PhotonRate,
     pub scale_factor: Dimensionless,
     pub timestep_safety_factor: Dimensionless,
 }
@@ -71,7 +71,7 @@ impl Chemistry for HydrogenOnly {
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.species.ionized_hydrogen_fraction);
         let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
-        if incoming_rate < self.rate_treshold {
+        if incoming_rate < self.rate_threshold {
             PhotonRate::zero()
         } else {
             let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();

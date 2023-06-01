@@ -510,7 +510,7 @@ fn init_sweep_system(
         **world_size,
         **world_rank,
         HydrogenOnly {
-            rate_treshold: sweep_parameters.significant_rate_treshold,
+            rate_threshold: sweep_parameters.significant_rate_threshold,
             scale_factor: cosmology.scale_factor(),
             timestep_safety_factor: sweep_parameters.timestep_safety_factor,
         },

@@ -37,10 +37,10 @@ fn warn_if_halo_fraction_too_high(
     num_haloes: usize,
     num_relevant_haloes: usize,
 ) {
-    const HALO_FRACTION_WARNING_TRESHOLD: f64 = 0.05;
+    const HALO_FRACTION_WARNING_THRESHOLD: f64 = 0.05;
     let halo_fraction = num_haloes as f64 / num_local_particles as f64;
     let relevant_halo_fraction = num_relevant_haloes as f64 / num_local_particles as f64;
-    if halo_fraction > HALO_FRACTION_WARNING_TRESHOLD {
+    if halo_fraction > HALO_FRACTION_WARNING_THRESHOLD {
         warn!(
             "High halo fraction: {:.1}% ({:.1}% of those are relevant)",
             halo_fraction * 100.0,
