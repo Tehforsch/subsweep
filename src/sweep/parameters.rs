@@ -8,6 +8,8 @@ use crate::units::VecDimensionless;
 #[raxiom_parameters("sweep")]
 pub struct SweepParameters {
     pub directions: DirectionsSpecification,
+    /// Whether to rotate the direction bins after every (full) sweep step.
+    pub rotate_directions: bool,
     pub num_timestep_levels: usize,
     pub significant_rate_treshold: PhotonRate,
     pub timestep_safety_factor: Dimensionless,

@@ -35,6 +35,7 @@ fn setup_sweep_sim(sim: &mut Simulation, setup: SweepSetup) -> &mut Simulation {
         .add_parameters_explicitly(setup.box_.clone())
         .add_parameters_explicitly(SweepParameters {
             directions: DirectionsSpecification::Explicit(setup.dirs.clone()),
+            rotate_directions: false,
             num_timestep_levels: setup.num_timestep_levels,
             significant_rate_treshold: PhotonRate::zero(),
             timestep_safety_factor: setup.timestep_safety_factor,

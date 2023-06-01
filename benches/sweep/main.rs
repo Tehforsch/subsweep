@@ -46,6 +46,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         .add_parameters_explicitly(SimulationBox::cube_from_side_length(Length::meters(1e5)))
         .add_parameters_explicitly(SweepParameters {
             directions: dirs,
+            rotate_directions: false,
             num_timestep_levels,
             significant_rate_treshold: PhotonRate::zero(),
             timestep_safety_factor,

@@ -23,6 +23,8 @@ pub use parameters::SweepParameters;
 
 use self::active_list::ActiveList;
 use self::count_by_dir::CountByDir;
+use self::direction::init_directions_rng;
+use self::direction::rotate_directions_system;
 pub use self::direction::DirectionIndex;
 use self::direction::Directions;
 use self::grid::Cell;
@@ -97,7 +99,8 @@ pub struct TimestepLevelData {
 
 impl RaxiomPlugin for SweepPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_derived_component::<IonizedHydrogenFraction>()
+        let parameters = sim
+            .add_derived_component::<IonizedHydrogenFraction>()
             .add_derived_component::<Source>()
             .add_derived_component::<Density>()
             .add_derived_component::<components::Rate>()
@@ -117,7 +120,14 @@ impl RaxiomPlugin for SweepPlugin {
             .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
-            .add_parameter_type::<SweepParameters>();
+            .add_parameter_type_and_get_result::<SweepParameters>();
+        if parameters.rotate_directions {
+            init_directions_rng(sim);
+            sim.add_system_to_stage(
+                Stages::Sweep,
+                rotate_directions_system.after(run_sweep_system),
+            );
+        }
         init_optional_component::<HeatingRate>(sim);
         init_optional_component::<Timestep>(sim);
         init_optional_component::<IonizationTime>(sim);
@@ -449,6 +459,7 @@ impl<C: Chemistry> Sweep<C> {
 }
 
 fn init_sweep_system(
+    mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
     cells_query: Particles<(&ParticleId, &Cell)>,
     sites_query: Particles<(
         Entity,
@@ -462,7 +473,6 @@ fn init_sweep_system(
     sweep_parameters: Res<SweepParameters>,
     world_rank: Res<WorldRank>,
     world_size: Res<WorldSize>,
-    mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
     cosmology: Res<Cosmology>,
 ) {
     let directions: Directions = (&sweep_parameters.directions).into();
