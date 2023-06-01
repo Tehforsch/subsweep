@@ -30,13 +30,16 @@ impl<T> TimeSeries for T where T: ToDataset + std::fmt::Debug {}
 
 #[derive(Named)]
 pub struct TimeSeriesPlugin<T: TimeSeries> {
-    _marker: PhantomData<T>,
+    descriptor: OutputDatasetDescriptor<T>,
 }
 
-impl<T: TimeSeries> Default for TimeSeriesPlugin<T> {
+impl<T: Named + TimeSeries> Default for TimeSeriesPlugin<T> {
     fn default() -> Self {
         Self {
-            _marker: PhantomData::default(),
+            descriptor: OutputDatasetDescriptor {
+                _marker: PhantomData,
+                descriptor: DatasetDescriptor::default_for::<T>(),
+            },
         }
     }
 }
@@ -60,6 +63,9 @@ impl<T: TimeSeries> RaxiomPlugin for TimeSeriesPlugin<T> {
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.insert_non_send_resource::<OutputDatasetDescriptor<T>>(
+            OutputDatasetDescriptor::<T>::new(self.descriptor.descriptor.clone()),
+        );
         // Add this here too, so we can request this even on systems running on non-main ranks without the crash.
         sim.add_event::<T>();
     }
