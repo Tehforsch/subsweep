@@ -14,7 +14,9 @@ mod timestep_state;
 
 use bevy::prelude::*;
 use derive_more::Into;
+use hdf5::H5Type;
 use mpi::traits::Equivalence;
+use mpi::traits::MatchesRaw;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
@@ -42,13 +44,14 @@ use crate::communication::SizedCommunicator;
 use crate::components;
 use crate::components::Density;
 use crate::components::HeatingRate;
+use crate::components::IonizationTime;
 use crate::components::IonizedHydrogenFraction;
 use crate::components::Source;
 use crate::components::Timestep;
 use crate::cosmology::Cosmology;
 use crate::hash_map::HashMap;
 use crate::io::output::parameters::is_desired_field;
-use crate::io::output::parameters::OutputParameters;
+use crate::io::to_dataset::ToDataset;
 use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
 use crate::prelude::*;
@@ -85,10 +88,6 @@ pub struct TimestepLevelData {
 impl RaxiomPlugin for SweepPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_startup_system_to_stage(StartupStages::ReadInput, initialize_directions_system)
-            .add_startup_system_to_stage(
-                StartupStages::InsertDerivedComponents,
-                initialize_optional_components_system,
-            )
             .add_derived_component::<IonizedHydrogenFraction>()
             .add_derived_component::<Source>()
             .add_derived_component::<components::Rate>()
@@ -98,12 +97,9 @@ impl RaxiomPlugin for SweepPlugin {
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
             .add_parameter_type::<SweepParameters>();
-        if is_desired_field::<HeatingRate>(sim) {
-            sim.add_derived_component::<HeatingRate>();
-        }
-        if is_desired_field::<Timestep>(sim) {
-            sim.add_derived_component::<Timestep>();
-        }
+        init_optional_component::<HeatingRate>(sim);
+        init_optional_component::<Timestep>(sim);
+        init_optional_component::<IonizationTime>(sim);
     }
 }
 
@@ -538,21 +534,25 @@ pub fn initialize_sweep_components_system(
     }
 }
 
-fn initialize_optional_components_system(
+fn initialize_optional_component_system<C: Component + Named + Default>(
     mut commands: Commands,
-    output_parameters: Res<OutputParameters>,
     local_particles: Query<Entity, With<LocalParticle>>,
 ) {
-    if output_parameters.is_desired_field::<HeatingRate>() {
-        for entity in local_particles.iter() {
-            commands
-                .entity(entity)
-                .insert(HeatingRate(units::HeatingRate::zero()));
-        }
+    for entity in local_particles.iter() {
+        commands.entity(entity).insert(C::default());
     }
-    if output_parameters.is_desired_field::<HeatingRate>() {
-        for entity in local_particles.iter() {
-            commands.entity(entity).insert(Timestep(Time::zero()));
-        }
+}
+
+fn init_optional_component<C>(sim: &mut Simulation)
+where
+    C: Equivalence + ToDataset + H5Type + Clone + Component + Named + Default,
+    <C as Equivalence>::Out: MatchesRaw,
+{
+    if is_desired_field::<C>(sim) {
+        sim.add_derived_component::<C>();
+        sim.add_startup_system_to_stage(
+            StartupStages::InsertDerivedComponents,
+            initialize_optional_component_system::<C>,
+        );
     }
 }

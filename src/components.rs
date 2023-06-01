@@ -46,12 +46,17 @@ pub struct Source(pub crate::units::SourceRate);
 #[repr(transparent)]
 pub struct Rate(pub crate::units::PhotonRate);
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
 #[name = "heating_rate"]
 #[repr(transparent)]
 pub struct HeatingRate(pub Quotient<EnergyDensity, Time>);
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
 #[name = "timestep"]
 #[repr(transparent)]
 pub struct Timestep(pub Time);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
+#[name = "ionization_time"]
+#[repr(transparent)]
+pub struct IonizationTime(pub Time);
