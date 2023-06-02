@@ -456,7 +456,7 @@ mod tests {
                 Time::megayears(1000.0),
             ] {
                 println!(
-                    "Testing xHI = {initial_ionized_hydrogen_fraction:?}, Delta_t = {timestep:?}",
+                    "Testing xHII = {initial_ionized_hydrogen_fraction:?}, Delta_t = {timestep:?}",
                 );
                 // Make sure this cell is optically thick by making it gigantic and dense
                 let number_density = 1e5 / Volume::cubic_meters(1.0);
@@ -494,27 +494,32 @@ mod tests {
 
     #[derive(Debug)]
     struct Configuration {
-        init_xhi: Dimensionless,
+        init_xhii: Dimensionless,
         flux: PhotonFlux,
         temperature: Temperature,
         density: Density,
     }
 
     struct State {
-        xhi: Dimensionless,
+        xhii: Dimensionless,
         temperature: Temperature,
         time: Time,
+        recombination: HeatingRate,
+        bremsstrahlung: HeatingRate,
+        compton: HeatingRate,
+        collisional_excitation: HeatingRate,
+        collisional_ionization: HeatingRate,
     }
 
     impl Configuration {
         fn new(
-            init_xhi: Dimensionless,
+            init_xhii: Dimensionless,
             flux: PhotonFlux,
             temperature: Temperature,
             density: Density,
         ) -> Self {
             Self {
-                init_xhi,
+                init_xhii,
                 flux,
                 temperature,
                 density,
@@ -528,7 +533,7 @@ mod tests {
             let rate = self.flux * area;
 
             Solver {
-                ionized_hydrogen_fraction: self.init_xhi,
+                ionized_hydrogen_fraction: self.init_xhii,
                 temperature: self.temperature,
                 density: self.density,
                 volume,
@@ -553,10 +558,25 @@ mod tests {
                     Dimensionless::dimensionless(MAX_ALLOWED_RELATIVE_CHANGE),
                 );
                 modifier(&mut solver, self);
+                let ne = solver.electron_number_density();
+                let nh_neutral = solver.hydrogen_number_density();
+                let nh_ionized = solver.ionized_hydrogen_number_density();
+                let recombination = solver.case_b_recombination_cooling_rate() * ne * nh_ionized;
+                let bremsstrahlung = solver.bremstrahlung_cooling_rate() * ne * nh_ionized;
+                let compton: HeatingRate = solver.compton_cooling_rate() * ne;
+                let collisional_excitation =
+                    solver.collisional_excitation_cooling_rate() * ne * nh_neutral;
+                let collisional_ionization =
+                    solver.collisional_ionization_cooling_rate() * ne * nh_neutral;
                 states.push(State {
-                    xhi: solver.ionized_hydrogen_fraction,
+                    xhii: solver.ionized_hydrogen_fraction,
                     temperature: solver.temperature,
                     time,
+                    recombination,
+                    bremsstrahlung,
+                    compton,
+                    collisional_excitation,
+                    collisional_ionization,
                 });
             }
             states
@@ -565,15 +585,15 @@ mod tests {
 
     fn get_configurations<'a>(
         flux: PhotonFlux,
-        init_xhi: &'a [f64],
+        init_xhii: &'a [f64],
         temperature: &'a [Temperature],
         density: &'a [Density],
     ) -> impl Iterator<Item = Configuration> + 'a {
-        init_xhi.iter().flat_map(move |init_xhi| {
+        init_xhii.iter().flat_map(move |init_xhii| {
             temperature.iter().flat_map(move |temperature| {
                 density.iter().map(move |density| {
                     Configuration::new(
-                        Dimensionless::dimensionless(*init_xhi),
+                        Dimensionless::dimensionless(*init_xhii),
                         flux,
                         *temperature,
                         *density,
@@ -592,20 +612,31 @@ mod tests {
         let output_folder = output_file.parent().unwrap();
         fs::create_dir_all(output_folder).unwrap();
         let mut lines = vec![];
-        lines.push("flux,init_xHI,init_T,density,t,xHI,T".into());
+        lines.push(
+            "flux,init_xHII,init_T,density,t,xHII,T,recomb,brems,compton,coll_ion,coll_ex".into(),
+        );
         for config in configurations {
             println!("{:?}", config);
             let states = config.run(&modifier);
             lines.extend(states.into_iter().map(|state| {
                 format!(
-                    "{},{},{},{},{},{},{}",
+                    "{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e}",
                     config.flux.in_photons_per_s_per_cm_squared(),
-                    config.init_xhi.value(),
+                    config.init_xhii.value(),
                     config.temperature.in_kelvins(),
                     (config.density / PROTON_MASS).in_per_centimeters_cubed(),
                     state.time.in_megayears(),
-                    state.xhi.value(),
-                    state.temperature.in_kelvins()
+                    state.xhii.value(),
+                    state.temperature.in_kelvins(),
+                    state.recombination.in_ergs_per_centimeters_cubed_per_s(),
+                    state.bremsstrahlung.in_ergs_per_centimeters_cubed_per_s(),
+                    state.compton.in_ergs_per_centimeters_cubed_per_s(),
+                    state
+                        .collisional_ionization
+                        .in_ergs_per_centimeters_cubed_per_s(),
+                    state
+                        .collisional_excitation
+                        .in_ergs_per_centimeters_cubed_per_s(),
                 )
             }));
         }
@@ -619,14 +650,14 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn time_evolution() {
+    fn time_evolution_const_xhii() {
         for (name, flux) in [
             (
-                "out/const_xhi",
+                "out/const_xhii",
                 PhotonFlux::photons_per_s_per_cm_squared(0.0),
             ),
             (
-                "out/const_xhi_flux",
+                "out/const_xhii_flux",
                 PhotonFlux::photons_per_s_per_cm_squared(1e5),
             ),
         ] {
@@ -652,10 +683,14 @@ mod tests {
                     ],
                 ),
                 |solver, configuration| {
-                    solver.ionized_hydrogen_fraction = configuration.init_xhi;
+                    solver.ionized_hydrogen_fraction = configuration.init_xhii;
                 },
             );
         }
+    }
+    #[test]
+    #[ignore]
+    fn time_evolution_const_temp() {
         for (name, flux) in [
             (
                 "out/const_temp",
@@ -690,6 +725,45 @@ mod tests {
                 |solver, configuration| {
                     solver.temperature = configuration.temperature;
                 },
+            );
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn time_evolution() {
+        for (name, flux) in [
+            (
+                "out/evolution",
+                PhotonFlux::photons_per_s_per_cm_squared(0.0),
+            ),
+            (
+                "out/evolution_flux",
+                PhotonFlux::photons_per_s_per_cm_squared(1e5),
+            ),
+        ] {
+            run_configurations(
+                name,
+                get_configurations(
+                    flux,
+                    &[1e-10, 0.2, 0.5, 0.8, 1.0],
+                    &[
+                        Temperature::kelvins(1e3),
+                        Temperature::kelvins(1.6e4),
+                        Temperature::kelvins(3e4),
+                        Temperature::kelvins(9e4),
+                        Temperature::kelvins(1e6),
+                    ],
+                    &[
+                        as_density(1e-8),
+                        as_density(1e-6),
+                        as_density(1e-4),
+                        as_density(1e-2),
+                        as_density(1e0),
+                        as_density(1e2),
+                    ],
+                ),
+                |_, _| {},
             );
         }
     }

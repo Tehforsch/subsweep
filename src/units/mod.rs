@@ -61,11 +61,11 @@ unit_system!(
         def CrossSection = Area,
         unit (centimeters_squared, "cm^2") = centimeters * centimeters,
         def VolumeRate = Volume3D / Time,
-        unit (centimeters_cubed_per_s, "cm^3/s") = centimeters * centimeters * centimeters / seconds,
+        unit (centimeters_cubed_per_s, "cm^3/s") = cubic_centimeters / seconds,
         def HeatingTerm = Energy * Volume3D / Time,
         unit (ergs_centimeters_cubed_per_s, "cm^3/s") = ergs * centimeters_cubed_per_s,
         def HeatingRate = Energy / (Volume3D * Time),
-
+        unit ergs_per_centimeters_cubed_per_s = ergs / (cubic_centimeters * seconds),
         def NumberDensity = Dimensionless / Volume3D,
         unit per_centimeters_cubed = 1.0 / cubic_centimeters,
 
