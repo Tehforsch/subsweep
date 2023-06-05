@@ -5,9 +5,11 @@ use diman::Quotient;
 use super::Chemistry;
 use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
+use crate::units::CrossSection;
 use crate::units::Density;
 use crate::units::Dimension;
 use crate::units::Dimensionless;
+use crate::units::Energy;
 use crate::units::EnergyPerTime;
 use crate::units::HeatingRate;
 use crate::units::HeatingTerm;
@@ -23,12 +25,11 @@ use crate::units::Volume;
 use crate::units::VolumeRate;
 use crate::units::PROTON_MASS;
 use crate::units::SPEED_OF_LIGHT;
-use crate::units::SWEEP_HYDROGEN_ONLY_AVERAGE_PHOTON_ENERGY;
 use crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
 
 const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 
-const MAX_DEPTH: usize = 100;
+const MAX_DEPTH: usize = 10;
 
 pub struct HydrogenOnly {
     pub rate_threshold: PhotonRate,
@@ -129,7 +130,11 @@ impl Solver {
     }
 
     fn ionized_hydrogen_number_density(&self) -> NumberDensity {
-        self.density / PROTON_MASS * self.ionized_hydrogen_fraction
+        self.hydrogen_number_density() * self.ionized_hydrogen_fraction
+    }
+
+    fn neutral_hydrogen_number_density(&self) -> NumberDensity {
+        self.hydrogen_number_density() * (1.0 - self.ionized_hydrogen_fraction)
     }
 
     fn electron_number_density(&self) -> NumberDensity {
@@ -140,6 +145,10 @@ impl Solver {
     fn mu(&self) -> Dimensionless {
         // Holds for hydrogen only
         1.0 / (self.ionized_hydrogen_fraction + 1.0)
+    }
+
+    fn photon_density(&self) -> NumberDensity {
+        self.rate * self.length / SPEED_OF_LIGHT / self.volume
     }
 
     fn collision_fit_function(&self) -> f64 {
@@ -216,27 +225,24 @@ impl Solver {
 
     fn photoheating_rate(&self) -> HeatingRate {
         // TODO
-        // let photon_average_energy: Energy = Energy::electron_volts(33.1);
-        // let average_cross_section: CrossSection = todo!();
+        let photon_average_energy = Energy::electron_volts(100.6910475508583);
+        let number_weighted_average_cross_section =
+            CrossSection::centimeters_squared(1.6437820340825549e-18);
+        let energy_weighted_average_cross_section =
+            CrossSection::centimeters_squared(1.180171754359821e-18);
         // Rydberg
-        // let average_energy = Energy::electron_volts(13.65693);
-        // let energy_weighted_cross_section: CrossSection = todo!();
-        // let heating_rate: HeatingRate = self.hydrogen_number_density()
-        //     * photon_density
-        //     * SPEED_OF_LIGHT
-        //     * (SWEEP_HYDROGEN_ONLY_AVERAGE_PHOTON_ENERGY * energy_weighted_cross_section
-        //         - average_energy * average_cross_section);
-        let photon_density: NumberDensity = self.rate * self.length / SPEED_OF_LIGHT / self.volume;
-        self.hydrogen_number_density()
-            * photon_density
+        let average_energy = Energy::electron_volts(13.65693);
+
+        self.neutral_hydrogen_number_density()
+            * self.photon_density()
             * SPEED_OF_LIGHT
-            * SWEEP_HYDROGEN_ONLY_AVERAGE_PHOTON_ENERGY
-            * SWEEP_HYDROGEN_ONLY_CROSS_SECTION
+            * (photon_average_energy * energy_weighted_average_cross_section
+                - average_energy * number_weighted_average_cross_section)
     }
 
     fn cooling_rate(&self) -> HeatingRate {
         let ne = self.electron_number_density();
-        let nh_neutral = self.hydrogen_number_density();
+        let nh_neutral = self.neutral_hydrogen_number_density();
         let nh_ionized = self.ionized_hydrogen_number_density();
         let collisional = (self.collisional_excitation_cooling_rate()
             + self.collisional_ionization_cooling_rate())
@@ -260,14 +266,13 @@ impl Solver {
     }
 
     fn photoionization_rate(&self) -> Rate {
-        let photon_density: NumberDensity = self.rate * self.length / SPEED_OF_LIGHT / self.volume;
-        SWEEP_HYDROGEN_ONLY_CROSS_SECTION * SPEED_OF_LIGHT * photon_density
+        SWEEP_HYDROGEN_ONLY_CROSS_SECTION * SPEED_OF_LIGHT * self.photon_density()
     }
 
     fn ionized_fraction_change(&self, timestep: Time) -> Dimensionless {
         // See A23 of Rosdahl et al
-        let ne = self.electron_number_density();
         let nh = self.hydrogen_number_density();
+        let ne = self.electron_number_density();
         let alpha = self.case_b_recombination_rate();
         let dalpha = self.case_b_recombination_rate_derivative();
         let beta = self.collisional_ionization_rate();
@@ -304,6 +309,7 @@ impl Solver {
             timestep_safety_factor,
             timestep,
         )?;
+        self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(0.0, 1.0);
         Ok(ideal_temperature_timestep.min(ideal_ionized_fraction_timestep))
     }
 
@@ -396,7 +402,7 @@ mod tests {
     use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
     use crate::units::PROTON_MASS;
 
-    const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.1;
+    const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.01;
 
     fn test_numerical_derivative(
         function: fn(&Solver) -> VolumeRate,
@@ -514,6 +520,7 @@ mod tests {
         density: Density,
         modifier: fn(&mut Solver, &Configuration),
         final_time: Time,
+        output_times: Vec<Time>,
     }
 
     struct State {
@@ -525,6 +532,8 @@ mod tests {
         compton: HeatingRate,
         collisional_excitation: HeatingRate,
         collisional_ionization: HeatingRate,
+        ne: NumberDensity,
+        nh_neutral: NumberDensity,
     }
 
     impl Configuration {
@@ -536,6 +545,16 @@ mod tests {
             final_time: Time,
             modifier: fn(&mut Solver, &Configuration),
         ) -> Self {
+            let num_outputs = 1000;
+            let output_min_exp = -1.0;
+            let output_max_exp = final_time.in_megayears().log10() + 0.01;
+            let output_times: Vec<_> = (0..num_outputs)
+                .map(|i| {
+                    let exp = output_min_exp
+                        + ((output_max_exp - output_min_exp) / num_outputs as f64 * i as f64);
+                    Time::megayears(10.0f64.powf(exp))
+                })
+                .collect();
             Self {
                 init_xhii,
                 flux,
@@ -543,6 +562,7 @@ mod tests {
                 density,
                 modifier,
                 final_time,
+                output_times,
             }
         }
 
@@ -564,20 +584,22 @@ mod tests {
             }
         }
 
-        fn perform_timestep(&self, solver: &mut Solver, timestep: Time) {
+        fn perform_timestep(&self, solver: &mut Solver, timestep: Time, depth: usize) {
             let initial_state = (solver.temperature, solver.ionized_hydrogen_fraction);
             (self.modifier)(solver, self);
             if let Err(_) = solver.try_timestep_update(timestep, Dimensionless::dimensionless(0.1))
             {
                 (solver.temperature, solver.ionized_hydrogen_fraction) = initial_state;
-                self.perform_timestep(solver, timestep / 2.0);
-                self.perform_timestep(solver, timestep / 2.0);
+                (self.modifier)(solver, self);
+                self.perform_timestep(solver, timestep / 2.0, depth + 1);
+                self.perform_timestep(solver, timestep / 2.0, depth + 1);
             }
+            (self.modifier)(solver, self);
         }
 
         fn get_state(&self, time: Time, solver: &Solver) -> State {
             let ne = solver.electron_number_density();
-            let nh_neutral = solver.hydrogen_number_density();
+            let nh_neutral = solver.neutral_hydrogen_number_density();
             let nh_ionized = solver.ionized_hydrogen_number_density();
             let recombination = solver.case_b_recombination_cooling_rate() * ne * nh_ionized;
             let bremsstrahlung = solver.bremstrahlung_cooling_rate() * ne * nh_ionized;
@@ -595,6 +617,8 @@ mod tests {
                 compton,
                 collisional_excitation,
                 collisional_ionization,
+                ne,
+                nh_neutral,
             }
         }
 
@@ -603,11 +627,16 @@ mod tests {
             let mut states = vec![];
             let mut time = Time::zero();
 
+            let timestep = Time::years(10000.0);
+            let mut output_times = self.output_times.iter();
+            let mut next_output_time = output_times.next().unwrap();
             while time < self.final_time {
-                let timestep = time / 50.0 + Time::years(0.01);
-                self.perform_timestep(&mut solver, timestep);
+                self.perform_timestep(&mut solver, timestep, 0);
                 time += timestep;
-                states.push(self.get_state(time, &solver));
+                if time > *next_output_time {
+                    next_output_time = output_times.next().unwrap();
+                    states.push(self.get_state(time, &solver));
+                }
             }
             states
         }
@@ -643,7 +672,8 @@ mod tests {
         fs::create_dir_all(output_folder).unwrap();
         let mut lines = vec![];
         lines.push(
-            "flux,init_xHII,init_T,density,t,xHII,T,recomb,brems,compton,coll_ion,coll_ex".into(),
+            "flux,init_xHII,init_T,density,t,xHII,T,recomb,brems,compton,coll_ion,coll_ex,ne,nhxi"
+                .into(),
         );
         for config in configurations {
             println!(
@@ -653,7 +683,7 @@ mod tests {
             let states = config.run();
             lines.extend(states.into_iter().map(|state| {
                 format!(
-                    "{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e}",
+                    "{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e}",
                     config.flux.in_photons_per_s_per_cm_squared(),
                     config.init_xhii.value(),
                     config.temperature.in_kelvins(),
@@ -670,6 +700,8 @@ mod tests {
                     state
                         .collisional_excitation
                         .in_ergs_per_centimeters_cubed_per_s(),
+                    state.ne.in_per_centimeters_cubed(),
+                    state.nh_neutral.in_per_centimeters_cubed(),
                 )
             }));
         }
@@ -724,7 +756,7 @@ mod tests {
                         as_density(1e0),
                         as_density(1e2),
                     ],
-                    Time::megayears(5e4),
+                    Time::megayears(1e4),
                     reset_xhii,
                 ),
             );
@@ -763,7 +795,7 @@ mod tests {
                         as_density(1e0),
                         as_density(1e2),
                     ],
-                    Time::megayears(5e4),
+                    Time::megayears(1e4),
                     reset_temp,
                 ),
             );
@@ -772,7 +804,7 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn time_evolution() {
+    fn time_evolution_free() {
         for (name, flux) in [
             (
                 "out/evolution",
@@ -803,7 +835,7 @@ mod tests {
                         as_density(1e0),
                         as_density(1e2),
                     ],
-                    Time::megayears(5e4),
+                    Time::megayears(1e4),
                     do_nothing,
                 ),
             );
@@ -830,7 +862,7 @@ mod tests {
                 &[0.5],
                 &temperatures,
                 &[dens],
-                Time::megayears(100.0),
+                Time::megayears(5000.0),
                 reset_temp,
             ),
         );

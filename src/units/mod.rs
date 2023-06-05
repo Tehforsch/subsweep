@@ -74,7 +74,6 @@ unit_system!(
         constant SPEED_OF_LIGHT = 299792458.0 * meters_per_second,
         constant GAMMA = 5.0 / 3.0,
         constant SWEEP_HYDROGEN_ONLY_CROSS_SECTION = 5.339944e-18 * square_centimeters,
-        constant SWEEP_HYDROGEN_ONLY_AVERAGE_PHOTON_ENERGY = 1.210624e-12 * ergs,
         constant CASE_B_RECOMBINATION_RATE_HYDROGEN = 2.59e-19 * cubic_meters / seconds,
     ]
 );
