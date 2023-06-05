@@ -51,7 +51,7 @@ unit_system!(
         unit cubic_meters = Volume3D,
         unit cubic_centimeters = 1e-6 * cubic_meters,
         def Density = Mass / Volume3D,
-        unit grams_per_cubic_centimeters = grams / cubic_centimeters,
+        unit (grams_per_cubic_centimeters, "g/cm^3") = grams / cubic_centimeters,
         def Rate = Dimensionless / Time,
         def PhotonRate = Rate,
         def SourceRate = Rate,

@@ -108,6 +108,7 @@ impl Chemistry for HydrogenOnly {
 }
 
 struct TimestepCriterionViolated;
+struct TimestepConvergenceFailed;
 
 #[derive(Debug)]
 pub(crate) struct Solver {
@@ -311,21 +312,29 @@ impl Solver {
         timestep: Time,
         timestep_safety_factor: Dimensionless,
         depth: usize,
-    ) -> Time {
+        max_depth: usize,
+    ) -> Result<Time, TimestepConvergenceFailed> {
         let initial_state = (self.temperature, self.ionized_hydrogen_fraction);
-        if depth > MAX_DEPTH {
-            panic!(
-                "Failed to find timestep in chemistry. Solver state: {:?}",
-                self
-            );
+        if depth > max_depth {
+            return Err(TimestepConvergenceFailed);
         }
         match self.try_timestep_update(timestep, timestep_safety_factor) {
             Err(TimestepCriterionViolated) => {
                 (self.temperature, self.ionized_hydrogen_fraction) = initial_state;
-                self.perform_timestep_internal(timestep / 2.0, timestep_safety_factor, depth + 1);
-                self.perform_timestep_internal(timestep / 2.0, timestep_safety_factor, depth + 1)
+                self.perform_timestep_internal(
+                    timestep / 2.0,
+                    timestep_safety_factor,
+                    depth + 1,
+                    max_depth,
+                )?;
+                self.perform_timestep_internal(
+                    timestep / 2.0,
+                    timestep_safety_factor,
+                    depth + 1,
+                    max_depth,
+                )
             }
-            Ok(timestep_recommendation) => timestep_recommendation,
+            Ok(timestep_recommendation) => Ok(timestep_recommendation),
         }
     }
 
@@ -334,7 +343,13 @@ impl Solver {
         timestep: Time,
         timestep_safety_factor: Dimensionless,
     ) -> Time {
-        self.perform_timestep_internal(timestep, timestep_safety_factor, 0)
+        self.perform_timestep_internal(timestep, timestep_safety_factor, 0, MAX_DEPTH)
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Failed to find timestep in chemistry. Solver state: {:?}",
+                    self
+                )
+            })
     }
 }
 
@@ -381,7 +396,7 @@ mod tests {
     use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
     use crate::units::PROTON_MASS;
 
-    const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.01;
+    const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.1;
 
     fn test_numerical_derivative(
         function: fn(&Solver) -> VolumeRate,
@@ -492,12 +507,13 @@ mod tests {
         }
     }
 
-    #[derive(Debug)]
     struct Configuration {
         init_xhii: Dimensionless,
         flux: PhotonFlux,
         temperature: Temperature,
         density: Density,
+        modifier: fn(&mut Solver, &Configuration),
+        final_time: Time,
     }
 
     struct State {
@@ -517,12 +533,16 @@ mod tests {
             flux: PhotonFlux,
             temperature: Temperature,
             density: Density,
+            final_time: Time,
+            modifier: fn(&mut Solver, &Configuration),
         ) -> Self {
             Self {
                 init_xhii,
                 flux,
                 temperature,
                 density,
+                modifier,
+                final_time,
             }
         }
 
@@ -544,40 +564,50 @@ mod tests {
             }
         }
 
-        fn run(&self, modifier: impl Fn(&mut Solver, &Configuration)) -> Vec<State> {
+        fn perform_timestep(&self, solver: &mut Solver, timestep: Time) {
+            let initial_state = (solver.temperature, solver.ionized_hydrogen_fraction);
+            (self.modifier)(solver, self);
+            if let Err(_) = solver.try_timestep_update(timestep, Dimensionless::dimensionless(0.1))
+            {
+                (solver.temperature, solver.ionized_hydrogen_fraction) = initial_state;
+                self.perform_timestep(solver, timestep / 2.0);
+                self.perform_timestep(solver, timestep / 2.0);
+            }
+        }
+
+        fn get_state(&self, time: Time, solver: &Solver) -> State {
+            let ne = solver.electron_number_density();
+            let nh_neutral = solver.hydrogen_number_density();
+            let nh_ionized = solver.ionized_hydrogen_number_density();
+            let recombination = solver.case_b_recombination_cooling_rate() * ne * nh_ionized;
+            let bremsstrahlung = solver.bremstrahlung_cooling_rate() * ne * nh_ionized;
+            let compton: HeatingRate = solver.compton_cooling_rate() * ne;
+            let collisional_excitation =
+                solver.collisional_excitation_cooling_rate() * ne * nh_neutral;
+            let collisional_ionization =
+                solver.collisional_ionization_cooling_rate() * ne * nh_neutral;
+            State {
+                xhii: solver.ionized_hydrogen_fraction,
+                temperature: solver.temperature,
+                time,
+                recombination,
+                bremsstrahlung,
+                compton,
+                collisional_excitation,
+                collisional_ionization,
+            }
+        }
+
+        fn run(&self) -> Vec<State> {
             let mut solver = self.get_solver();
             let mut states = vec![];
             let mut time = Time::zero();
 
-            let final_time = Time::megayears(5e4);
-            while time < final_time {
+            while time < self.final_time {
                 let timestep = time / 50.0 + Time::years(0.01);
+                self.perform_timestep(&mut solver, timestep);
                 time += timestep;
-                solver.perform_timestep(
-                    timestep,
-                    Dimensionless::dimensionless(MAX_ALLOWED_RELATIVE_CHANGE),
-                );
-                modifier(&mut solver, self);
-                let ne = solver.electron_number_density();
-                let nh_neutral = solver.hydrogen_number_density();
-                let nh_ionized = solver.ionized_hydrogen_number_density();
-                let recombination = solver.case_b_recombination_cooling_rate() * ne * nh_ionized;
-                let bremsstrahlung = solver.bremstrahlung_cooling_rate() * ne * nh_ionized;
-                let compton: HeatingRate = solver.compton_cooling_rate() * ne;
-                let collisional_excitation =
-                    solver.collisional_excitation_cooling_rate() * ne * nh_neutral;
-                let collisional_ionization =
-                    solver.collisional_ionization_cooling_rate() * ne * nh_neutral;
-                states.push(State {
-                    xhii: solver.ionized_hydrogen_fraction,
-                    temperature: solver.temperature,
-                    time,
-                    recombination,
-                    bremsstrahlung,
-                    compton,
-                    collisional_excitation,
-                    collisional_ionization,
-                });
+                states.push(self.get_state(time, &solver));
             }
             states
         }
@@ -588,6 +618,8 @@ mod tests {
         init_xhii: &'a [f64],
         temperature: &'a [Temperature],
         density: &'a [Density],
+        final_time: Time,
+        modifier: fn(&mut Solver, &Configuration),
     ) -> impl Iterator<Item = Configuration> + 'a {
         init_xhii.iter().flat_map(move |init_xhii| {
             temperature.iter().flat_map(move |temperature| {
@@ -597,17 +629,15 @@ mod tests {
                         flux,
                         *temperature,
                         *density,
+                        final_time,
+                        modifier.clone(),
                     )
                 })
             })
         })
     }
 
-    fn run_configurations(
-        output_file: &str,
-        configurations: impl Iterator<Item = Configuration>,
-        modifier: impl Fn(&mut Solver, &Configuration),
-    ) {
+    fn run_configurations(output_file: &str, configurations: impl Iterator<Item = Configuration>) {
         let output_file = Path::new(output_file).to_owned();
         let output_folder = output_file.parent().unwrap();
         fs::create_dir_all(output_folder).unwrap();
@@ -616,8 +646,11 @@ mod tests {
             "flux,init_xHII,init_T,density,t,xHII,T,recomb,brems,compton,coll_ion,coll_ex".into(),
         );
         for config in configurations {
-            println!("{:?}", config);
-            let states = config.run(&modifier);
+            println!(
+                "{:?} {:?} {:?} {:?}",
+                config.flux, config.density, config.temperature, config.init_xhii
+            );
+            let states = config.run();
             lines.extend(states.into_iter().map(|state| {
                 format!(
                     "{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e},{:+e}",
@@ -647,6 +680,16 @@ mod tests {
         let number_density = NumberDensity::per_centimeters_cubed(d);
         number_density * PROTON_MASS
     }
+
+    fn reset_temp(solver: &mut Solver, config: &Configuration) {
+        solver.temperature = config.temperature;
+    }
+
+    fn reset_xhii(solver: &mut Solver, config: &Configuration) {
+        solver.ionized_hydrogen_fraction = config.init_xhii;
+    }
+
+    fn do_nothing(_: &mut Solver, _: &Configuration) {}
 
     #[test]
     #[ignore]
@@ -681,10 +724,9 @@ mod tests {
                         as_density(1e0),
                         as_density(1e2),
                     ],
+                    Time::megayears(5e4),
+                    reset_xhii,
                 ),
-                |solver, configuration| {
-                    solver.ionized_hydrogen_fraction = configuration.init_xhii;
-                },
             );
         }
     }
@@ -721,10 +763,9 @@ mod tests {
                         as_density(1e0),
                         as_density(1e2),
                     ],
+                    Time::megayears(5e4),
+                    reset_temp,
                 ),
-                |solver, configuration| {
-                    solver.temperature = configuration.temperature;
-                },
             );
         }
     }
@@ -762,9 +803,36 @@ mod tests {
                         as_density(1e0),
                         as_density(1e2),
                     ],
+                    Time::megayears(5e4),
+                    do_nothing,
                 ),
-                |_, _| {},
             );
         }
+    }
+
+    #[test]
+    #[ignore]
+    fn rates_over_time() {
+        let name = "out/rates";
+        let dens = as_density(1e-2);
+        let num_temps = 160;
+        let temperatures: Vec<_> = (0..num_temps)
+            .map(|i| {
+                let exp = 4.0 + (0.025 * i as f64);
+                Temperature::kelvins(10.0f64.powf(exp))
+            })
+            .collect();
+        let flux = PhotonFlux::zero();
+        run_configurations(
+            name,
+            get_configurations(
+                flux,
+                &[0.5],
+                &temperatures,
+                &[dens],
+                Time::megayears(100.0),
+                reset_temp,
+            ),
+        );
     }
 }
