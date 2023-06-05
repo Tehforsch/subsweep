@@ -23,6 +23,8 @@ use crate::units::Temperature;
 use crate::units::Time;
 use crate::units::Volume;
 use crate::units::VolumeRate;
+use crate::units::BOLTZMANN_CONSTANT;
+use crate::units::GAMMA;
 use crate::units::PROTON_MASS;
 use crate::units::SPEED_OF_LIGHT;
 use crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
@@ -194,6 +196,20 @@ impl Solver {
         )
     }
 
+    fn case_b_recombination_cooling_rate_derivative(&self) -> Quotient<HeatingTerm, Temperature> {
+        let c1 = 315614.0;
+        let c2 = 1.97;
+        let c3 = 0.376;
+        let c4 = 3.72;
+        let c5 = 2.25;
+        let t = self.temperature.in_kelvins();
+        let derivative = (1.0 + (c1 / (c5 * t)).powf(c3)).powf(-1.0 - c4)
+            * (1.0 - 1.0 * c2 + (1.0 - 1.0 * c2 + c3 * c4) * (c1 / (c5 * t)).powf(c3))
+            * (c1 / t).powf(c2);
+        HeatingTerm::ergs_centimeters_cubed_per_s(3.435e-30 * derivative)
+            / Temperature::kelvins(1.0)
+    }
+
     fn collisional_ionization_rate(&self) -> VolumeRate {
         VolumeRate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
     }
@@ -207,6 +223,12 @@ impl Solver {
         HeatingTerm::ergs_centimeters_cubed_per_s(1.27e-21 * self.collision_fit_function())
     }
 
+    fn collisional_ionization_cooling_rate_derivative(&self) -> Quotient<HeatingTerm, Temperature> {
+        HeatingTerm::ergs_centimeters_cubed_per_s(
+            1.27e-21 * self.collision_fit_function_derivative(),
+        ) / Temperature::kelvins(1.0)
+    }
+
     fn collisional_excitation_cooling_rate(&self) -> HeatingTerm {
         let temperature = self.temperature.in_kelvins();
         HeatingTerm::ergs_centimeters_cubed_per_s(
@@ -214,13 +236,35 @@ impl Solver {
         )
     }
 
-    fn bremstrahlung_cooling_rate(&self) -> HeatingTerm {
+    fn collisional_excitation_cooling_rate_derivative(&self) -> Quotient<HeatingTerm, Temperature> {
+        let t = self.temperature.in_kelvins();
+        let c1 = 7.5e-19;
+        let c2 = 118348.0;
+        let c3 = 1.0 / 1e5;
+        HeatingTerm::ergs_centimeters_cubed_per_s(
+            (c1 * (-c2 / t).exp() * (c2 * c3 * t - 0.5 * c3 * t.powi(2) + c2 * (c3 * t).sqrt()))
+                / (t.powi(2) * (c3 * t).sqrt() * (1.0 + (c3 * t).sqrt()).powi(2)),
+        ) / Temperature::kelvins(1.0)
+    }
+
+    fn bremsstrahlung_cooling_rate(&self) -> HeatingTerm {
         HeatingTerm::ergs_centimeters_cubed_per_s(1.42e-27 * self.temperature.in_kelvins().sqrt())
+    }
+
+    fn bremsstrahlung_cooling_rate_derivative(&self) -> Quotient<HeatingTerm, Temperature> {
+        HeatingTerm::ergs_centimeters_cubed_per_s(
+            1.42e-27 / (2.0 * self.temperature.in_kelvins().sqrt()),
+        ) / Temperature::kelvins(1.0)
     }
 
     fn compton_cooling_rate(&self) -> EnergyPerTime {
         let x = (2.727 / self.scale_factor).value();
         EnergyPerTime::ergs_per_s(1.017e-37 * x.powi(4) * (self.temperature.in_kelvins() - x))
+    }
+
+    fn compton_cooling_rate_derivative(&self) -> Quotient<EnergyPerTime, Temperature> {
+        let x = (2.727 / self.scale_factor).value();
+        EnergyPerTime::ergs_per_s(1.017e-37 * x.powi(4)) / Temperature::kelvins(1.0)
     }
 
     fn photoheating_rate(&self) -> HeatingRate {
@@ -249,20 +293,33 @@ impl Solver {
             * ne
             * nh_neutral;
         let recombination = self.case_b_recombination_cooling_rate() * ne * nh_ionized;
-        let bremsstrahlung = self.bremstrahlung_cooling_rate() * ne * nh_ionized;
+        let bremsstrahlung = self.bremsstrahlung_cooling_rate() * ne * nh_ionized;
         let compton: HeatingRate = self.compton_cooling_rate() * ne;
         collisional + recombination + bremsstrahlung + compton
     }
 
+    fn cooling_rate_derivative(&self) -> Quotient<HeatingRate, Temperature> {
+        let ne = self.electron_number_density();
+        let nh_neutral = self.neutral_hydrogen_number_density();
+        let nh_ionized = self.ionized_hydrogen_number_density();
+        let collisional = (self.collisional_excitation_cooling_rate_derivative()
+            + self.collisional_ionization_cooling_rate_derivative())
+            * ne
+            * nh_neutral;
+        let recombination = self.case_b_recombination_cooling_rate_derivative() * ne * nh_ionized;
+        let bremsstrahlung = self.bremsstrahlung_cooling_rate_derivative() * ne * nh_ionized;
+        let compton: Quotient<HeatingRate, Temperature> =
+            self.compton_cooling_rate_derivative() * ne;
+        collisional + recombination + bremsstrahlung + compton
+    }
+
     fn temperature_change(&mut self, timestep: Time) -> Temperature {
-        let rate = self.photoheating_rate() - self.cooling_rate();
-        self.heating_rate = rate;
-        let internal_energy_change = rate * timestep;
-        Temperature::from_internal_energy_density_hydrogen_only(
-            internal_energy_change,
-            self.ionized_hydrogen_fraction,
-            self.density,
-        )
+        let k = (GAMMA - 1.0) * PROTON_MASS / (self.density * BOLTZMANN_CONSTANT);
+        let lambda = self.photoheating_rate() - self.cooling_rate();
+        let dlambdadt = -self.cooling_rate_derivative();
+        self.heating_rate = lambda;
+        let mu = self.mu();
+        k * mu * lambda * timestep / (1.0 - k * mu * dlambdadt * timestep)
     }
 
     fn photoionization_rate(&self) -> Rate {
@@ -382,12 +439,14 @@ where
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::ops::Div;
+    use std::ops::Mul;
+    use std::ops::Sub;
     use std::path::Path;
-
-    use diman::Quotient;
 
     use super::Solver;
     use crate::units::Density;
+    use crate::units::Dimension;
     use crate::units::Dimensionless;
     use crate::units::HeatingRate;
     use crate::units::Length;
@@ -398,17 +457,23 @@ mod tests {
     use crate::units::Temperature;
     use crate::units::Time;
     use crate::units::Volume;
-    use crate::units::VolumeRate;
     use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
     use crate::units::PROTON_MASS;
 
     const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.01;
 
-    fn test_numerical_derivative(
-        function: fn(&Solver) -> VolumeRate,
-        derivative: fn(&Solver) -> Quotient<VolumeRate, Temperature>,
-    ) {
-        let epsilon = 1e-4;
+    fn test_numerical_derivative<const D1: Dimension, const D2: Dimension>(
+        function: fn(&Solver) -> Quantity<f64, D1>,
+        derivative: fn(&Solver) -> Quantity<f64, D2>,
+    ) where
+        Quantity<f64, D1>: Mul<Quantity<f64, D1>>,
+        Quantity<f64, D1>: Sub<Quantity<f64, D1>, Output = Quantity<f64, D1>>,
+        Quantity<f64, D1>: Div<Temperature, Output = Quantity<f64, D2>>,
+        Quantity<f64, D2>: Div<Quantity<f64, D2>, Output = Dimensionless>,
+    {
+        // We can't have very high standards for accuracy here because numerical precision is
+        // terrible
+        let epsilon = 1e-1;
         let delta = Temperature::kelvins(1e-6);
         for temperature in [
             Temperature::kelvins(1e1),
@@ -437,7 +502,7 @@ mod tests {
             let numerical = (v2 - v1) / delta;
             assert!(
                 (analytical - numerical).abs()
-                    / (analytical.abs() + numerical.abs() + Quantity::new_unchecked(f64::EPSILON))
+                    / (analytical.abs() + numerical.abs() + Quantity::new_unchecked(1e-50))
                     < epsilon
             );
         }
@@ -456,6 +521,46 @@ mod tests {
         test_numerical_derivative(
             Solver::collisional_ionization_rate,
             Solver::collisional_ionization_rate_derivative,
+        )
+    }
+
+    #[test]
+    fn collisional_ionization_cooling_rate_derivative() {
+        test_numerical_derivative(
+            Solver::collisional_ionization_cooling_rate,
+            Solver::collisional_ionization_cooling_rate_derivative,
+        )
+    }
+
+    #[test]
+    fn collisional_excitation_cooling_rate_derivative() {
+        test_numerical_derivative(
+            Solver::collisional_excitation_cooling_rate,
+            Solver::collisional_excitation_cooling_rate_derivative,
+        )
+    }
+
+    #[test]
+    fn case_b_recombination_cooling_rate_derivative() {
+        test_numerical_derivative(
+            Solver::case_b_recombination_cooling_rate,
+            Solver::case_b_recombination_cooling_rate_derivative,
+        )
+    }
+
+    #[test]
+    fn bremsstrahlung_cooling_rate_derivative() {
+        test_numerical_derivative(
+            Solver::bremsstrahlung_cooling_rate,
+            Solver::bremsstrahlung_cooling_rate_derivative,
+        )
+    }
+
+    #[test]
+    fn compton_cooling_rate_derivative() {
+        test_numerical_derivative(
+            Solver::compton_cooling_rate,
+            Solver::compton_cooling_rate_derivative,
         )
     }
 
@@ -602,7 +707,7 @@ mod tests {
             let nh_neutral = solver.neutral_hydrogen_number_density();
             let nh_ionized = solver.ionized_hydrogen_number_density();
             let recombination = solver.case_b_recombination_cooling_rate() * ne * nh_ionized;
-            let bremsstrahlung = solver.bremstrahlung_cooling_rate() * ne * nh_ionized;
+            let bremsstrahlung = solver.bremsstrahlung_cooling_rate() * ne * nh_ionized;
             let compton: HeatingRate = solver.compton_cooling_rate() * ne;
             let collisional_excitation =
                 solver.collisional_excitation_cooling_rate() * ne * nh_neutral;
