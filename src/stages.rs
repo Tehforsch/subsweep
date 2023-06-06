@@ -36,6 +36,7 @@ impl RaxiomPlugin for SimulationStagesPlugin {
             StartupStages::Exchange.as_label(),
             StartupStages::AssignParticleIds.as_label(),
             StartupStages::TreeConstruction.as_label(),
+            StartupStages::Remap.as_label(),
             StartupStages::InsertGrid.as_label(),
             StartupStages::InsertComponentsAfterGrid.as_label(),
             StartupStages::InitSweep.as_label(),

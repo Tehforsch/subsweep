@@ -40,6 +40,7 @@ pub enum StartupStages {
     Exchange,
     AssignParticleIds,
     TreeConstruction,
+    Remap,
     InsertGrid,
     InsertComponentsAfterGrid,
     InitSweep,

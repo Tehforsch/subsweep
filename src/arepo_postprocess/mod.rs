@@ -6,6 +6,7 @@ use raxiom::units::SourceRate;
 
 pub mod bpass;
 pub mod read_grid;
+pub mod remap;
 pub mod sources;
 pub mod unit_reader;
 
@@ -14,6 +15,7 @@ pub struct Parameters {
     pub initial_fraction_ionized_hydrogen: Dimensionless,
     pub sources: SourceType,
     pub grid: GridParameters,
+    pub remap_from: Option<PathBuf>,
 }
 
 #[derive(Default)]

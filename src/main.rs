@@ -4,6 +4,7 @@
 mod arepo_postprocess;
 
 use arepo_postprocess::read_grid::ReadSweepGridPlugin;
+use arepo_postprocess::remap::remap_abundances_and_energies_system;
 use arepo_postprocess::sources::add_single_source_system;
 use arepo_postprocess::sources::read_sources_system;
 use arepo_postprocess::sources::set_source_terms_system;
@@ -76,6 +77,7 @@ fn main() {
             StartupStages::InsertDerivedComponents,
             insert_missing_components_system,
         )
+        .add_startup_system_to_stage(StartupStages::Remap, remap_abundances_and_energies_system)
         .add_startup_system_to_stage(
             StartupStages::InsertGrid,
             remove_components_system::<InternalEnergy>,
