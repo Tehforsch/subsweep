@@ -48,11 +48,12 @@ unit_system!(
         unit ergs_per_s = ergs / seconds,
         def Volume2D = Length * Length,
         def Volume3D = Length * Length * Length,
-        unit cubic_meters = Volume3D,
-        unit cubic_centimeters = 1e-6 * cubic_meters,
+        unit (cubic_meters, "m^3") = Volume3D,
+        unit (cubic_centimeters, "cm^3") = 1e-6 * cubic_meters,
         def Density = Mass / Volume3D,
         unit (grams_per_cubic_centimeters, "g/cm^3") = grams / cubic_centimeters,
         def Rate = Dimensionless / Time,
+        unit (per_second, "s^-1") = 1.0 / seconds,
         def PhotonRate = Rate,
         def SourceRate = Rate,
         unit photons_per_second = 1.0 / seconds,
@@ -65,7 +66,7 @@ unit_system!(
         def HeatingTerm = Energy * Volume3D / Time,
         unit (ergs_centimeters_cubed_per_s, "cm^3/s") = ergs * centimeters_cubed_per_s,
         def HeatingRate = Energy / (Volume3D * Time),
-        unit ergs_per_centimeters_cubed_per_s = ergs / (cubic_centimeters * seconds),
+        unit (ergs_per_centimeters_cubed_per_s, "ergs cm^-3 s^-1") = ergs / (cubic_centimeters * seconds),
         def NumberDensity = Dimensionless / Volume3D,
         unit per_centimeters_cubed = 1.0 / cubic_centimeters,
 
@@ -73,8 +74,10 @@ unit_system!(
         constant PROTON_MASS = 1.67262192369e-27 * kilograms,
         constant SPEED_OF_LIGHT = 299792458.0 * meters_per_second,
         constant GAMMA = 5.0 / 3.0,
-        constant SWEEP_HYDROGEN_ONLY_CROSS_SECTION = 5.339944e-18 * square_centimeters,
-        constant CASE_B_RECOMBINATION_RATE_HYDROGEN = 2.59e-19 * cubic_meters / seconds,
+        constant NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION = 1.6437820340825549e-18 * centimeters_squared,
+        constant ENERGY_WEIGHTED_AVERAGE_CROSS_SECTION = 1.180171754359821e-18 * centimeters_squared,
+        constant PHOTON_AVERAGE_ENERGY = 100.6910475508583 * electron_volts,
+        constant RYDBERG_CONSTANT = 13.65693 * electron_volts,
     ]
 );
 

@@ -5,11 +5,9 @@ use diman::Quotient;
 use super::Chemistry;
 use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
-use crate::units::CrossSection;
 use crate::units::Density;
 use crate::units::Dimension;
 use crate::units::Dimensionless;
-use crate::units::Energy;
 use crate::units::EnergyPerTime;
 use crate::units::HeatingRate;
 use crate::units::HeatingTerm;
@@ -24,14 +22,17 @@ use crate::units::Time;
 use crate::units::Volume;
 use crate::units::VolumeRate;
 use crate::units::BOLTZMANN_CONSTANT;
+use crate::units::ENERGY_WEIGHTED_AVERAGE_CROSS_SECTION;
 use crate::units::GAMMA;
+use crate::units::NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
+use crate::units::PHOTON_AVERAGE_ENERGY;
 use crate::units::PROTON_MASS;
+use crate::units::RYDBERG_CONSTANT;
 use crate::units::SPEED_OF_LIGHT;
-use crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
 
 const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 
-const MAX_DEPTH: usize = 10;
+const MAX_DEPTH: usize = 100;
 
 pub struct HydrogenOnly {
     pub rate_threshold: PhotonRate,
@@ -73,7 +74,7 @@ impl Chemistry for HydrogenOnly {
     ) -> PhotonRate {
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.species.ionized_hydrogen_fraction);
-        let sigma = crate::units::SWEEP_HYDROGEN_ONLY_CROSS_SECTION;
+        let sigma = NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
         if incoming_rate < self.rate_threshold {
             PhotonRate::zero()
         } else {
@@ -268,20 +269,11 @@ impl Solver {
     }
 
     fn photoheating_rate(&self) -> HeatingRate {
-        // TODO
-        let photon_average_energy = Energy::electron_volts(100.6910475508583);
-        let number_weighted_average_cross_section =
-            CrossSection::centimeters_squared(1.6437820340825549e-18);
-        let energy_weighted_average_cross_section =
-            CrossSection::centimeters_squared(1.180171754359821e-18);
-        // Rydberg
-        let average_energy = Energy::electron_volts(13.65693);
-
         self.neutral_hydrogen_number_density()
             * self.photon_density()
             * SPEED_OF_LIGHT
-            * (photon_average_energy * energy_weighted_average_cross_section
-                - average_energy * number_weighted_average_cross_section)
+            * (PHOTON_AVERAGE_ENERGY * ENERGY_WEIGHTED_AVERAGE_CROSS_SECTION
+                - RYDBERG_CONSTANT * NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION)
     }
 
     fn cooling_rate(&self) -> HeatingRate {
@@ -323,7 +315,7 @@ impl Solver {
     }
 
     fn photoionization_rate(&self) -> Rate {
-        SWEEP_HYDROGEN_ONLY_CROSS_SECTION * SPEED_OF_LIGHT * self.photon_density()
+        NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION * SPEED_OF_LIGHT * self.photon_density()
     }
 
     fn ionized_fraction_change(&self, timestep: Time) -> Dimensionless {
@@ -457,7 +449,6 @@ mod tests {
     use crate::units::Temperature;
     use crate::units::Time;
     use crate::units::Volume;
-    use crate::units::CASE_B_RECOMBINATION_RATE_HYDROGEN;
     use crate::units::PROTON_MASS;
 
     const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.01;
@@ -562,60 +553,6 @@ mod tests {
             Solver::compton_cooling_rate,
             Solver::compton_cooling_rate_derivative,
         )
-    }
-
-    #[test]
-    #[ignore]
-    fn chemistry_solver_stays_in_equillibrium() {
-        for initial_ionized_hydrogen_fraction in [
-            Dimensionless::dimensionless(0.0),
-            Dimensionless::dimensionless(0.2),
-            Dimensionless::dimensionless(0.5),
-            Dimensionless::dimensionless(0.7),
-            Dimensionless::dimensionless(0.99),
-            Dimensionless::dimensionless(1.0),
-        ] {
-            for timestep in [
-                Time::megayears(1.0),
-                Time::megayears(10.0),
-                Time::megayears(100.0),
-                Time::megayears(1000.0),
-            ] {
-                println!(
-                    "Testing xHII = {initial_ionized_hydrogen_fraction:?}, Delta_t = {timestep:?}",
-                );
-                // Make sure this cell is optically thick by making it gigantic and dense
-                let number_density = 1e5 / Volume::cubic_meters(1.0);
-                let length = Length::kiloparsec(100.0);
-                let volume = length.powi::<3>();
-                // Set up rate such that recombination should be in equillibrium with ionization
-                let recombination_rate = CASE_B_RECOMBINATION_RATE_HYDROGEN
-                    * (number_density * initial_ionized_hydrogen_fraction).powi::<2>()
-                    * volume;
-                let rate = recombination_rate;
-                let mut solver = Solver {
-                    ionized_hydrogen_fraction: initial_ionized_hydrogen_fraction,
-                    temperature: Temperature::kelvins(1000.0),
-                    density: number_density * PROTON_MASS,
-                    volume,
-                    length,
-                    rate,
-                    scale_factor: Dimensionless::dimensionless(1.0),
-                    heating_rate: HeatingRate::zero(),
-                };
-                solver.perform_timestep(
-                    timestep,
-                    Dimensionless::dimensionless(MAX_ALLOWED_RELATIVE_CHANGE),
-                );
-                let final_ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
-                assert!(
-                    ((initial_ionized_hydrogen_fraction - final_ionized_hydrogen_fraction)
-                        / (initial_ionized_hydrogen_fraction + 1e-20))
-                        .value()
-                        < 1e-10,
-                );
-            }
-        }
     }
 
     struct Configuration {
