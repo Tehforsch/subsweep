@@ -1,12 +1,12 @@
+mod file_distribution;
 #[cfg(test)]
 mod tests;
 
 use std::ops::Range;
+use std::path::Path;
 use std::path::PathBuf;
 
 use bevy::prelude::debug;
-use bevy::prelude::info;
-use bevy::prelude::warn;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Deref;
@@ -28,10 +28,14 @@ use ndarray::ArrayBase;
 use ndarray::Dim;
 use ndarray::OwnedRepr;
 
+use self::file_distribution::get_rank_assignment_for_rank;
+use self::file_distribution::RankAssignment;
+use self::file_distribution::Region;
 use super::to_dataset::ToDataset;
 use super::InputDatasetDescriptor;
-use crate::communication::WorldRank;
-use crate::communication::WorldSize;
+use crate::communication::communicator::Communicator;
+use crate::communication::Rank;
+use crate::communication::SizedCommunicator;
 use crate::hash_map::HashMap;
 use crate::io::DatasetShape;
 use crate::prelude::Float;
@@ -49,9 +53,6 @@ pub enum ComponentInput<T> {
     Derived,
 }
 
-#[derive(Default, Deref, DerefMut, Resource)]
-pub struct InputFiles(Vec<File>);
-
 /// Parameters describing how the initial conditions
 /// should be read. Only required if should_read_initial_conditions
 /// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
@@ -60,9 +61,6 @@ pub struct InputFiles(Vec<File>);
 pub struct InputParameters {
     /// The files containing the initial conditions
     pub paths: Vec<PathBuf>,
-    /// Utility for debugging: "Shrink" the ICS by only using every
-    /// nth particle.
-    pub shrink_factor: Option<usize>,
 }
 
 #[derive(Default, Deref, DerefMut, Resource)]
@@ -103,15 +101,8 @@ impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
 
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<InputParameters>()
-            .insert_resource(InputFiles::default())
             .insert_resource(SpawnedEntities::default())
-            .add_startup_system(open_file_system)
-            .add_startup_system(
-                spawn_entities_system
-                    .after(open_file_system)
-                    .before(close_file_system),
-            )
-            .add_startup_system(close_file_system.after(spawn_entities_system));
+            .add_startup_system(spawn_entities_system);
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
@@ -131,9 +122,7 @@ impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
         if !input_plugin_for_type_been_added_previously {
             sim.add_startup_system(
                 read_dataset_system::<T>
-                    .after(open_file_system)
                     .after(spawn_entities_system)
-                    .before(close_file_system)
                     .label(ReadDatasetLabel)
                     .ambiguous_with(ReadDatasetLabel),
             );
@@ -141,144 +130,109 @@ impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
     }
 }
 
-pub fn open_file_system(
-    mut files: ResMut<InputFiles>,
-    parameters: Res<InputParameters>,
-    rank: Res<WorldRank>,
-    size: Res<WorldSize>,
-) {
-    let files_this_rank_should_open: Vec<_> = parameters
-        .paths
-        .iter()
-        .enumerate()
-        .filter(|(i, _)| i.rem_euclid(**size) == **rank as usize)
-        .map(|(_, file)| file)
-        .collect();
-    assert!(files.is_empty());
-    for path in files_this_rank_should_open.iter() {
-        info!(
-            "Reading initial conditions file: {}",
-            path.to_str().unwrap()
-        );
-        files.push(File::open(path).unwrap_or_else(|_| {
-            panic!(
-                "Failed to open initial conditions file: {}",
-                path.to_str().unwrap()
-            )
-        }));
-    }
+fn open_file(path: impl AsRef<Path>) -> File {
+    File::open(path.as_ref())
+        .unwrap_or_else(|_| panic!("Failed to open file: {}", path.as_ref().to_str().unwrap()))
 }
 
-pub fn close_file_system(mut files: ResMut<InputFiles>) {
-    files.0.clear();
+pub struct Reader {
+    rank: Rank,
+    num_ranks: usize,
+    files: Vec<File>,
 }
 
-fn warn_if_shrink_factor_is_enabled(parameters: &InputParameters) {
-    if let Some(shrink_factor) = parameters.shrink_factor {
-        if shrink_factor != 1 {
-            warn!(
-                "Shrinking ICS by using only every {}-th particle",
-                shrink_factor
-            );
+impl Reader {
+    /// Construct a reader with the contents of the files split evenly between the ranks.
+    pub fn split_between_ranks<'a, U: AsRef<Path>>(paths: impl Iterator<Item = U>) -> Self {
+        let t: Communicator<usize> = Communicator::new();
+        let rank = t.rank();
+        let num_ranks = t.size();
+        Self {
+            rank,
+            num_ranks,
+            files: paths.map(open_file).collect(),
         }
     }
-}
 
-fn spawn_entities_system(
-    mut commands: Commands,
-    mut spawned_entities: ResMut<SpawnedEntities>,
-    datasets: Res<RegisteredDatasets>,
-    files: Res<InputFiles>,
-    parameters: Res<InputParameters>,
-) {
-    if datasets.len() == 0 {
-        return;
+    /// Construct a reader for the contents of all files.
+    pub fn full<'a, U: AsRef<Path>>(paths: impl Iterator<Item = U>) -> Self {
+        let rank = 0;
+        let num_ranks = 1;
+        Self {
+            rank,
+            num_ranks,
+            files: paths.map(open_file).collect(),
+        }
     }
-    warn_if_shrink_factor_is_enabled(&parameters);
-    let (_, example_dataset) = &datasets.iter().next().unwrap();
-    let get_num_entities = |dataset_name: &str| {
-        files
+
+    pub fn get_num_entities(&self, dataset_name: &str) -> usize {
+        self.get_assignment(dataset_name)
+            .regions
             .iter()
-            .map(|f| f.dataset(dataset_name).unwrap().shape()[0])
-            .sum::<usize>()
-            / parameters.shrink_factor.unwrap_or(1)
-    };
-    let num_entities = get_num_entities(&example_dataset.name);
-    for (_, dataset) in datasets.iter() {
-        let num_entities_this_dataset = get_num_entities(&dataset.name);
-        if num_entities_this_dataset != num_entities {
-            panic!(
-                "Different lengths of datasets: {} ({num_entities}) and {} ({num_entities_this_dataset})", &example_dataset.name, &dataset.name
-            );
-        }
+            .map(|region| region.size())
+            .sum()
     }
-    debug!("Spawned {} new entities", num_entities);
-    assert_eq!(spawned_entities.len(), 0);
-    spawned_entities.0 = (0..num_entities)
-        .map(|_| commands.spawn((LocalParticle,)).id())
-        .collect();
-}
 
-fn read_dataset_system<T: ToDataset + Component>(
-    descriptor: NonSend<InputDatasetDescriptor<T>>,
-    mut commands: Commands,
-    files: Res<InputFiles>,
-    spawned_entities: Res<SpawnedEntities>,
-    parameters: Res<InputParameters>,
-) {
-    let should_insert = |i: usize| {
-        if let Some(shrink_factor) = parameters.shrink_factor {
-            i.rem_euclid(shrink_factor) == 0
-        } else {
-            true
-        }
-    };
-    for (item, entity) in read_dataset::<T>(&descriptor, &files)
-        .enumerate()
-        .filter(|(i, _)| should_insert(*i))
-        .map(|(_, t)| t)
-        .zip(spawned_entities.iter())
+    fn get_assignment(&self, dataset_name: &str) -> RankAssignment {
+        let num_entries = self
+            .files
+            .iter()
+            .map(|f| self.get_num_entries(dataset_name, &f))
+            .collect::<Vec<_>>();
+        get_rank_assignment_for_rank(&num_entries, self.num_ranks, self.rank)
+    }
+
+    fn get_num_entries(&self, dataset_name: &str, file: &File) -> usize {
+        file.dataset(dataset_name).unwrap().shape()[0]
+    }
+
+    pub fn read_dataset<'a, T: ToDataset + Named>(
+        &'a self,
+        descriptor: InputDatasetDescriptor<T>,
+    ) -> impl Iterator<Item = T> + 'a {
+        let assignment = self.get_assignment(descriptor.dataset_name());
+        assignment
+            .regions
+            .into_iter()
+            .flat_map(move |region| self.read_region(descriptor.clone(), &region))
+    }
+
+    pub fn read_dataset_chunked<'a, 'b, T>(
+        &'a self,
+        descriptor: InputDatasetDescriptor<T>,
+        chunk_size: usize,
+    ) -> impl Iterator<Item = T> + 'a
+    where
+        T: ToDataset + Named,
     {
-        commands.entity(*entity).insert(item);
+        let assignment = self.get_assignment(descriptor.dataset_name());
+        assignment.regions.into_iter().flat_map(move |region| {
+            self.read_region_chunked(descriptor.clone(), &region, chunk_size)
+        })
     }
-}
 
-type Chunk<T> = ArrayBase<OwnedRepr<T>, Dim<[usize; 1]>>;
+    fn read_region<'a, T: ToDataset>(
+        &'a self,
+        descriptor: InputDatasetDescriptor<T>,
+        region: &Region,
+    ) -> impl Iterator<Item = T> + 'a {
+        self.read_region_chunked(descriptor, region, region.size())
+    }
 
-pub fn read_dataset<'a, T: ToDataset>(
-    descriptor: &'a InputDatasetDescriptor<T>,
-    files: &'a InputFiles,
-) -> impl Iterator<Item = T> + 'a {
-    info!("Reading dataset {}", descriptor.dataset_name());
-    files
-        .iter()
-        .flat_map(move |file| read_dataset_for_file(descriptor, file).into_iter())
-}
-
-pub fn read_dataset_for_file<'a, T: ToDataset>(
-    descriptor: &'a InputDatasetDescriptor<T>,
-    file: &'a File,
-) -> Vec<T> {
-    let factor_read = T::dimension().base_conversion_factor();
-    let (set, factor_written) = get_dataset_and_conversion_factor_for_file(descriptor, file);
-    let data = read_chunk(&set, descriptor, 0..set.shape()[0]);
-    convert_dataset_units(data, factor_read, factor_written)
-}
-
-/// Iterate over the items in the dataset without reading the
-/// entire dataset at once - instead, the dataset is read in chunks
-/// of size chunk_size.
-pub fn read_dataset_for_file_chunked<'a, T: ToDataset>(
-    descriptor: &'a InputDatasetDescriptor<T>,
-    file: &'a File,
-    chunk_size: usize,
-) -> impl Iterator<Item = T> {
-    let factor_read = T::dimension().base_conversion_factor();
-    let (set, factor_written) = get_dataset_and_conversion_factor_for_file(descriptor, &file);
-    let chunks = ChunkIter::new(set, descriptor, chunk_size);
-    chunks.into_iter().flat_map(move |chunk| {
-        convert_dataset_units(chunk, factor_read, factor_written).into_iter()
-    })
+    fn read_region_chunked<'a, T: ToDataset>(
+        &'a self,
+        descriptor: InputDatasetDescriptor<T>,
+        region: &Region,
+        chunk_size: usize,
+    ) -> impl Iterator<Item = T> + 'a {
+        let factor_read = T::dimension().base_conversion_factor();
+        let (set, factor_written) =
+            get_dataset_and_conversion_factor_for_file(&descriptor, &self.files[region.file_index]);
+        let chunks = ChunkIter::new(set, &descriptor, chunk_size, region);
+        chunks.into_iter().flat_map(move |chunk| {
+            convert_dataset_units(chunk, factor_read, factor_written).into_iter()
+        })
+    }
 }
 
 fn get_dataset_and_conversion_factor_for_file<'a, T: ToDataset>(
@@ -308,13 +262,62 @@ fn convert_dataset_units<T: ToDataset>(
         .collect()
 }
 
+fn spawn_entities_system(
+    mut commands: Commands,
+    mut spawned_entities: ResMut<SpawnedEntities>,
+    datasets: Res<RegisteredDatasets>,
+    parameters: Res<InputParameters>,
+) {
+    let reader = Reader::split_between_ranks(parameters.paths.iter());
+    if datasets.len() == 0 {
+        return;
+    }
+    let (_, example_dataset) = &datasets.iter().next().unwrap();
+    let num_entities = reader.get_num_entities(&example_dataset.name);
+    for (_, dataset) in datasets.iter() {
+        let num_entities_this_dataset = reader.get_num_entities(&dataset.name);
+        if num_entities_this_dataset != num_entities {
+            panic!(
+                "Different lengths of datasets: {} ({num_entities}) and {} ({num_entities_this_dataset})", &example_dataset.name, &dataset.name
+            );
+        }
+    }
+    let mut comm: Communicator<usize> = Communicator::new();
+    let num_entities_total: usize = comm.all_gather_sum(&num_entities);
+    debug!("Spawned {} new entities", num_entities_total);
+    assert_eq!(spawned_entities.len(), 0);
+    spawned_entities.0 = (0..num_entities)
+        .map(|_| commands.spawn((LocalParticle,)).id())
+        .collect();
+}
+
+fn read_dataset_system<T: ToDataset + Component + Named>(
+    descriptor: NonSend<InputDatasetDescriptor<T>>,
+    mut commands: Commands,
+    spawned_entities: Res<SpawnedEntities>,
+    parameters: Res<InputParameters>,
+) {
+    let reader = Reader::split_between_ranks(parameters.paths.iter());
+    for (item, entity) in reader
+        .read_dataset::<T>(descriptor.clone())
+        .enumerate()
+        .map(|(_, t)| t)
+        .zip(spawned_entities.iter())
+    {
+        commands.entity(*entity).insert(item);
+    }
+}
+
+type Chunk<T> = ArrayBase<OwnedRepr<T>, Dim<[usize; 1]>>;
+
 struct ChunkIter<T> {
     set: Dataset,
     slices: Vec<Range<usize>>,
     descriptor: InputDatasetDescriptor<T>,
 }
 
-fn get_chunk_sizes(dataset_size: usize, chunk_size: usize) -> Vec<Range<usize>> {
+fn get_chunk_sizes(region: &Region, chunk_size: usize) -> Vec<Range<usize>> {
+    let dataset_size = region.size();
     let num_chunks = (dataset_size / chunk_size)
         + if dataset_size.rem_euclid(chunk_size) > 0 {
             1
@@ -322,14 +325,22 @@ fn get_chunk_sizes(dataset_size: usize, chunk_size: usize) -> Vec<Range<usize>> 
             0
         };
     (0..num_chunks)
-        .map(|i| (i * chunk_size..((i + 1) * chunk_size).min(dataset_size)))
+        .map(|i| {
+            let start = region.start + i * chunk_size;
+            let end = (region.start + (i + 1) * chunk_size).min(region.end);
+            start..end
+        })
         .collect()
 }
 
 impl<T: ToDataset> ChunkIter<T> {
-    fn new(set: Dataset, descriptor: &InputDatasetDescriptor<T>, chunk_size: usize) -> Self {
-        let shape = set.shape();
-        let chunks = get_chunk_sizes(shape[0], chunk_size);
+    fn new(
+        set: Dataset,
+        descriptor: &InputDatasetDescriptor<T>,
+        chunk_size: usize,
+        region: &Region,
+    ) -> Self {
+        let chunks = get_chunk_sizes(region, chunk_size);
         Self {
             set,
             slices: chunks,
@@ -379,15 +390,53 @@ fn read_chunk_fallible<T: ToDataset>(
 
 #[cfg(test)]
 mod unit_tests {
+    use crate::io::input::file_distribution::Region;
+
     #[test]
     fn get_chunk_sizes() {
         assert_eq!(
-            super::get_chunk_sizes(450, 100),
+            super::get_chunk_sizes(
+                &Region {
+                    file_index: 0,
+                    start: 0,
+                    end: 450
+                },
+                100
+            ),
             vec![0..100, 100..200, 200..300, 300..400, 400..450]
         );
         assert_eq!(
-            super::get_chunk_sizes(400, 100),
+            super::get_chunk_sizes(
+                &Region {
+                    file_index: 0,
+                    start: 0,
+                    end: 400
+                },
+                100
+            ),
             vec![0..100, 100..200, 200..300, 300..400]
+        );
+        assert_eq!(
+            super::get_chunk_sizes(
+                &Region {
+                    file_index: 0,
+                    start: 30,
+                    end: 420
+                },
+                100
+            ),
+            vec![30..130, 130..230, 230..330, 330..420]
+        );
+        assert_eq!(
+            super::get_chunk_sizes(
+                &Region {
+                    file_index: 0,
+                    start: 20,
+                    end: 420
+                },
+                100
+            ),
+            vec![20..120, 120..220, 220..320, 320..420]
         );
     }
 }

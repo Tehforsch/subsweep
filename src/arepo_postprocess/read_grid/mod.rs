@@ -21,8 +21,8 @@ use raxiom::components::Density;
 use raxiom::cosmology::Cosmology;
 use raxiom::dimension::ActiveWrapType;
 use raxiom::hash_map::HashMap;
-use raxiom::io::input::read_dataset_for_file_chunked;
 use raxiom::io::input::DatasetInputPlugin;
+use raxiom::io::input::Reader;
 use raxiom::io::to_dataset::ToDataset;
 use raxiom::io::unit_reader::IdReader;
 use raxiom::io::DatasetDescriptor;
@@ -198,30 +198,31 @@ fn read_normal(data: &[Float]) -> FaceNormal {
     )))
 }
 
-fn read_connection_data(file: &Path, cosmology: &Cosmology) -> impl Iterator<Item = Connection> {
+fn read_connection_data<'a>(
+    reader: &'a Reader,
+    cosmology: &Cosmology,
+) -> impl Iterator<Item = Connection> + 'a {
     let unit_reader = ArepoUnitReader::new(cosmology.clone());
-    let file = File::open(file)
-        .unwrap_or_else(|_| panic!("Failed to open grid file: {}", file.to_str().unwrap()));
     let descriptor =
         make_descriptor::<UniqueParticleId, _>(&IdReader, "Id1", DatasetShape::OneDimensional);
-    let ids1 = read_dataset_for_file_chunked(&descriptor, &file, CHUNK_SIZE);
+    let ids1 = reader.read_dataset_chunked(descriptor, CHUNK_SIZE);
     let descriptor =
         make_descriptor::<UniqueParticleId, _>(&IdReader, "Id2", DatasetShape::OneDimensional);
-    let ids2 = read_dataset_for_file_chunked(&descriptor, &file, CHUNK_SIZE);
-    let descriptor = &make_descriptor::<ConnectionTypeInt, _>(
+    let ids2 = reader.read_dataset_chunked(descriptor, CHUNK_SIZE);
+    let descriptor = make_descriptor::<ConnectionTypeInt, _>(
         &IdReader,
         "ConnectionType",
         DatasetShape::OneDimensional,
     );
-    let connection_types = read_dataset_for_file_chunked(&descriptor, &file, CHUNK_SIZE);
+    let connection_types = reader.read_dataset_chunked(descriptor, CHUNK_SIZE);
     let descriptor = make_descriptor::<Area, _>(&unit_reader, "Area", DatasetShape::OneDimensional);
-    let areas = read_dataset_for_file_chunked(&descriptor, &file, CHUNK_SIZE);
+    let areas = reader.read_dataset_chunked(descriptor, CHUNK_SIZE);
     let descriptor = make_descriptor::<FaceNormal, _>(
         &unit_reader,
         "Normal",
         DatasetShape::TwoDimensional(read_normal),
     );
-    let normals = read_dataset_for_file_chunked(&descriptor, &file, CHUNK_SIZE);
+    let normals = reader.read_dataset_chunked(descriptor, CHUNK_SIZE);
     ids1.into_iter()
         .zip(
             ids2.into_iter().zip(
@@ -400,7 +401,8 @@ fn read_grid_system(
             .collect(),
         sweep_parameters.periodic,
     );
-    let connections = read_connection_data(&grid_file, &cosmology);
+    let reader = Reader::full([grid_file].into_iter());
+    let connections = read_connection_data(&reader, &cosmology);
     constructor.add_connections(connections);
     for ((entity, _, _, _, _), cell) in p.iter().zip(constructor.cells) {
         commands.entity(entity).insert(cell);

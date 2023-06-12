@@ -15,6 +15,7 @@ pub struct Parameters {
     pub initial_fraction_ionized_hydrogen: Dimensionless,
     pub sources: SourceType,
     pub grid: GridParameters,
+    /// Folder containing the snapshots from which to remap abundances and energies.
     pub remap_from: Option<PathBuf>,
 }
 

@@ -22,8 +22,6 @@ use raxiom::components;
 use raxiom::components::Density;
 use raxiom::components::Position;
 use raxiom::cosmology::Cosmology;
-use raxiom::io::input::close_file_system;
-use raxiom::io::input::open_file_system;
 use raxiom::io::input::DatasetInputPlugin;
 use raxiom::io::DatasetDescriptor;
 use raxiom::io::DatasetShape;
@@ -51,11 +49,7 @@ fn main() {
     if rank.is_main() {
         match parameters.sources {
             SourceType::FromIcs => {
-                sim.add_startup_system(
-                    read_sources_system
-                        .after(open_file_system)
-                        .before(close_file_system),
-                );
+                sim.add_startup_system(read_sources_system);
             }
             SourceType::SingleSource(_) => {
                 sim.add_startup_system(add_single_source_system);

@@ -4,10 +4,7 @@ use bevy::prelude::Component;
 use bevy::prelude::Query;
 use bevy::prelude::World;
 
-use super::close_file_system;
-use super::open_file_system;
 use super::read_dataset_system;
-use super::InputFiles;
 use super::InputParameters;
 use super::SpawnedEntities;
 use crate::components::Mass;
@@ -56,7 +53,6 @@ fn panic_on_dimension_mismatch() {
 fn read_dataset_from_file<T: ToDataset + Component + Named>(world: &mut World, file: &Path) {
     let entity = world.spawn_empty().id();
     world.insert_resource(SpawnedEntities(vec![entity]));
-    world.insert_resource(InputFiles(vec![]));
     world.insert_resource(WorldRank(0));
     world.insert_resource(WorldSize(1));
     world.insert_resource(InputParameters {
@@ -67,7 +63,5 @@ fn read_dataset_from_file<T: ToDataset + Component + Named>(world: &mut World, f
         DatasetDescriptor::default_for::<T>(),
         DatasetShape::OneDimensional,
     ));
-    run_system_on_world(world, open_file_system);
     run_system_on_world(world, read_dataset_system::<T>);
-    run_system_on_world(world, close_file_system);
 }

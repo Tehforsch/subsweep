@@ -16,12 +16,13 @@ use raxiom::components::Position;
 use raxiom::cosmology::Cosmology;
 use raxiom::domain::DecompositionState;
 use raxiom::domain::IntoKey;
-use raxiom::io::input::read_dataset;
-use raxiom::io::input::InputFiles;
+use raxiom::io::input::Reader;
 use raxiom::io::DatasetShape;
+use raxiom::parameters::InputParameters;
 use raxiom::prelude::Particles;
 use raxiom::prelude::SimulationBox;
 use raxiom::prelude::WorldRank;
+use raxiom::prelude::WorldSize;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::Mass;
@@ -81,32 +82,32 @@ pub struct Sources {
     sources: Vec<Source>,
 }
 
-fn read_sources(files: &InputFiles, cosmology: &Cosmology) -> Vec<Source> {
+fn read_sources(reader: &Reader, cosmology: &Cosmology) -> Vec<Source> {
     let unit_reader = ArepoUnitReader::new(cosmology.clone());
-    let descriptor = &make_descriptor::<Position, _>(
+    let descriptor = make_descriptor::<Position, _>(
         &unit_reader,
         "PartType4/Coordinates",
         DatasetShape::TwoDimensional(read_vec),
     );
-    let position = read_dataset(descriptor, files);
-    let descriptor = &make_descriptor::<Metallicity, _>(
+    let position = reader.read_dataset(descriptor);
+    let descriptor = make_descriptor::<Metallicity, _>(
         &unit_reader,
         "PartType4/GFM_Metallicity",
         DatasetShape::OneDimensional,
     );
-    let metallicity = read_dataset(descriptor, files);
-    let descriptor = &make_descriptor::<StellarFormationTime, _>(
+    let metallicity = reader.read_dataset(descriptor);
+    let descriptor = make_descriptor::<StellarFormationTime, _>(
         &unit_reader,
         "PartType4/GFM_StellarFormationTime",
         DatasetShape::OneDimensional,
     );
-    let formation_time = read_dataset(descriptor, files);
-    let descriptor = &make_descriptor::<components::Mass, _>(
+    let formation_time = reader.read_dataset(descriptor);
+    let descriptor = make_descriptor::<components::Mass, _>(
         &unit_reader,
         "PartType4/Masses",
         DatasetShape::OneDimensional,
     );
-    let mass = read_dataset(descriptor, files);
+    let mass = reader.read_dataset(descriptor);
     position
         .zip(metallicity)
         .zip(formation_time)
@@ -119,10 +120,11 @@ fn read_sources(files: &InputFiles, cosmology: &Cosmology) -> Vec<Source> {
 
 pub fn read_sources_system(
     mut commands: Commands,
-    files: Res<InputFiles>,
+    parameters: Res<InputParameters>,
     cosmology: Res<Cosmology>,
 ) {
-    let sources = read_sources(&files, &cosmology);
+    let reader = Reader::split_between_ranks(parameters.paths.iter());
+    let sources = read_sources(&reader, &cosmology);
     commands.insert_resource(Sources { sources });
 }
 

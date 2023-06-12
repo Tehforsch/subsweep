@@ -451,6 +451,7 @@ mod tests {
     use crate::units::Volume;
     use crate::units::PROTON_MASS;
 
+    #[allow(unused)]
     const MAX_ALLOWED_RELATIVE_CHANGE: f64 = 0.01;
 
     fn test_numerical_derivative<const D1: Dimension, const D2: Dimension>(
