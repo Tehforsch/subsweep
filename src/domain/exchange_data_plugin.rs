@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use bevy::ecs::system::AsSystemLabel;
+use bevy::prelude::debug;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Deref;
@@ -124,6 +125,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         query: Particles<&T>,
         mut buffer: ResMut<ExchangeBuffers<T>>,
     ) {
+        debug!("Filling exchange buffers");
         for (rank, entities) in entity_exchange.iter() {
             // This allocates a new buffer every time. An alternative would be
             // to keep this at maximum size, trading performance for memory overhead
@@ -142,6 +144,7 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
         mut buffers: ResMut<ExchangeBuffers<T>>,
         spawned_entities: Res<SpawnedEntities>,
     ) {
+        debug!("Exchanging buffers");
         let mut communicator = ExchangeCommunicator::<T>::new();
         let buffers = buffers.take();
         let mut incoming = communicator.exchange_all(buffers);

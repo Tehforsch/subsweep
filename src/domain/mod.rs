@@ -134,6 +134,7 @@ fn domain_decomposition_system(
     particles: Particles<&Position>,
     world_size: Res<WorldSize>,
 ) {
+    debug!("Starting domain decomposition");
     let local_counter =
         KeyCounter::from_points_and_extent(particles.iter().map(|x| **x).collect(), &*box_);
     let mut counter = ParallelCounter {
@@ -152,6 +153,7 @@ fn set_outgoing_entities_system(
     box_: Res<SimulationBox>,
     particles: Particles<(Entity, &Position)>,
 ) {
+    debug!("Determining target ranks.");
     for (entity, pos) in particles.iter() {
         let key = pos.into_key(&*box_);
         let rank = decomposition.get_owning_rank(key);
