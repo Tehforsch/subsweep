@@ -37,6 +37,7 @@ once_cell = "1.17.1"
 derive_custom = { path = "crates/derive_custom" }
 derive_traits = { path = "crates/derive_traits" }
 rand = "0.8.5"
+kiddo = "2.1.1"
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"] }

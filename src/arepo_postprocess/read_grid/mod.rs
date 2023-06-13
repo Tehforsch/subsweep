@@ -1,7 +1,5 @@
 mod id_cache;
 
-use std::path::Path;
-
 use bevy::prelude::info;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
@@ -11,7 +9,6 @@ use derive_custom::Named;
 use derive_more::Deref;
 use derive_more::DerefMut;
 use derive_more::From;
-use hdf5::File;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 use raxiom::communication::communicator::Communicator;

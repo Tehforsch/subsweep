@@ -206,6 +206,18 @@ where
             .min_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal))
     }
 
+    // Temporary replacement for a proper AllReduce call
+    pub fn all_gather_max<T>(&mut self, send: &S) -> Option<T>
+    where
+        T: PartialOrd<T> + From<S>,
+    {
+        self.verify_tag();
+        unchecked_all_gather(self.world, send)
+            .into_iter()
+            .map(|s| T::from(s))
+            .max_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal))
+    }
+
     pub fn all_gather(&mut self, send: &S) -> Vec<S> {
         self.verify_tag();
         unchecked_all_gather(self.world, send)

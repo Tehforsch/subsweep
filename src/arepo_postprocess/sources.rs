@@ -22,7 +22,6 @@ use raxiom::parameters::InputParameters;
 use raxiom::prelude::Particles;
 use raxiom::prelude::SimulationBox;
 use raxiom::prelude::WorldRank;
-use raxiom::prelude::WorldSize;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::Mass;
