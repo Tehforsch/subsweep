@@ -73,13 +73,17 @@ fn is_cosmological(dimension: &Dimension) -> bool {
 
 impl ArepoUnitReader {
     fn read_raw_dimension(&self, set: &Dataset) -> Dimension {
-        let read_attr =
-            |ident, error_message| set.attr(ident).expect(error_message).read_scalar().unwrap();
-        let length: i32 = read_attr(LENGTH_IDENTIFIER, "No length scale factor in dataset");
-        let mass: i32 = read_attr(MASS_IDENTIFIER, "No mass scale factor in dataset");
-        let velocity: i32 = read_attr(VELOCITY_IDENTIFIER, "No time scale factor in dataset");
-        let a: i32 = read_attr(A_IDENTIFIER, "No a scale factor in dataset");
-        let h: i32 = read_attr(H_IDENTIFIER, "No h scale factor in dataset");
+        let read_attr = |ident, name| {
+            set.attr(ident)
+                .unwrap_or_else(|_| panic!("No {} in dataset: '{}'", name, set.name()))
+                .read_scalar()
+                .unwrap()
+        };
+        let length: i32 = read_attr(LENGTH_IDENTIFIER, "length scale factor");
+        let mass: i32 = read_attr(MASS_IDENTIFIER, "mass scale factor");
+        let velocity: i32 = read_attr(VELOCITY_IDENTIFIER, "velocity scale factor");
+        let a: i32 = read_attr(A_IDENTIFIER, "a scale factor");
+        let h: i32 = read_attr(H_IDENTIFIER, "h scale factor");
         let length = length + velocity;
         let time = -velocity;
 
