@@ -6,7 +6,6 @@ use bevy::ecs::schedule::StateData;
 use bevy::ecs::schedule::SystemDescriptor;
 use bevy::ecs::schedule::SystemLabelId;
 use bevy::ecs::system::Resource;
-use bevy::prelude::debug;
 use bevy::prelude::warn;
 use bevy::prelude::App;
 use bevy::prelude::Component;

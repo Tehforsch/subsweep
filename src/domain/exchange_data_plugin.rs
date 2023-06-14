@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use bevy::ecs::system::AsSystemLabel;
-use bevy::prelude::debug;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Deref;

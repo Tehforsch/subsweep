@@ -6,6 +6,7 @@ use std::ops::Range;
 use std::path::Path;
 use std::path::PathBuf;
 
+use bevy::prelude::info;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Deref;

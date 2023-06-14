@@ -107,12 +107,12 @@ pub fn remap_abundances_and_energies_system(
         &mut IonizedHydrogenFraction,
     )>,
 ) {
-    info!("Remapping abundances and temperatures.");
     const CHUNK_SIZE: usize = 50000;
     let files = match &parameters.remap_from {
         Some(file) => get_files(file),
         None => return,
     };
+    info!("Remapping abundances and temperatures.");
 
     let (position, ionized_hydrogen_fraction, temperature) = read_remap_data(files);
     let requests: Vec<_> = particles
