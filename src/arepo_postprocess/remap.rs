@@ -177,19 +177,27 @@ fn exchange_request_chunk(
     let mut comm = ExchangeCommunicator::<Identified<SearchReply>>::new();
     let incoming = comm.exchange_all(outgoing);
     let mut distance_map = HashMap::default();
+    let mut value_map = HashMap::default();
     let infinity = Length::new_unchecked(f64::INFINITY);
     for (_, replies) in incoming {
         for reply in replies {
             let entity = reply.entity();
             let old_distance = distance_map.get(&entity).unwrap_or(&infinity);
             if reply.data.distance < *old_distance {
-                let (_, _, mut temp, mut ion_frac) = particles.get_mut(entity).unwrap();
-                *temp = reply.data.data.temperature;
-                *ion_frac = reply.data.data.ionized_hydrogen_fraction;
+                value_map.insert(entity, reply.data.data);
                 distance_map.insert(entity, reply.data.distance);
             }
         }
     }
+    for (entity, data) in value_map.into_iter() {
+        let (_, _, mut temp, mut ion_frac) = particles.get_mut(entity).unwrap();
+        remap_from(&mut temp, &mut ion_frac, data);
+    }
+}
+
+fn remap_from(temp: &mut Temperature, ion_frac: &mut IonizedHydrogenFraction, data: RemapData) {
+    **temp = (*temp).max(*data.temperature);
+    **ion_frac = (*ion_frac).max(*data.ionized_hydrogen_fraction);
 }
 
 fn pos_to_tree_coord(pos: &VecLength) -> [f64; 3] {
