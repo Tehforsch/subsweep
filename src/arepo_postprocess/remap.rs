@@ -22,7 +22,6 @@ use raxiom::io::DatasetShape;
 use raxiom::io::DefaultUnitReader;
 use raxiom::prelude::Float;
 use raxiom::prelude::Particles;
-use raxiom::units::Length;
 use raxiom::units::VecLength;
 
 use super::unit_reader::make_descriptor;
@@ -37,7 +36,7 @@ struct SearchRequest {
 
 #[derive(Equivalence, Clone, Debug)]
 struct SearchReply {
-    distance: Length,
+    squared_distance: f64,
     data: RemapData,
 }
 
@@ -139,6 +138,23 @@ pub fn remap_abundances_and_energies_system(
     debug!("Finished remapping.");
 }
 
+fn get_reply(
+    request: &SearchRequest,
+    tree: &Tree,
+    temperature: &[Temperature],
+    ionized_hydrogen_fraction: &[IonizedHydrogenFraction],
+) -> SearchReply {
+    let tree_coord = pos_to_tree_coord(&request.pos);
+    let (squared_distance, index) = tree.nearest_one(&tree_coord, &squared_euclidean);
+    SearchReply {
+        squared_distance,
+        data: RemapData {
+            temperature: temperature[index].clone(),
+            ionized_hydrogen_fraction: ionized_hydrogen_fraction[index].clone(),
+        },
+    }
+}
+
 fn exchange_request_chunk(
     particles: &mut Particles<(
         Entity,
@@ -152,46 +168,43 @@ fn exchange_request_chunk(
     chunk: &[Identified<SearchRequest>],
 ) {
     let mut comm = ExchangeCommunicator::<Identified<SearchRequest>>::new();
+    let mut closest_map: HashMap<_, _> = chunk
+        .iter()
+        .map(|request| {
+            (
+                request.entity(),
+                get_reply(&request.data, tree, temperature, ionized_hydrogen_fraction),
+            )
+        })
+        .collect();
     let outgoing =
-        DataByRank::same_for_all_ranks_in_communicator(chunk.iter().cloned().collect(), &comm);
+        DataByRank::same_for_other_ranks_in_communicator(chunk.iter().cloned().collect(), &comm);
     let incoming = comm.exchange_all(outgoing);
     let mut outgoing: DataByRank<Vec<Identified<SearchReply>>> =
         DataByRank::from_communicator(&comm);
     for (rank, requests) in incoming {
         for request in requests {
-            let tree_coord = pos_to_tree_coord(&request.data.pos);
-            let (distance, index) = tree.nearest_one(&tree_coord, &squared_euclidean);
             let reply = Identified::new(
                 request.entity(),
-                SearchReply {
-                    distance: Length::new_unchecked(distance),
-                    data: RemapData {
-                        temperature: temperature[index].clone(),
-                        ionized_hydrogen_fraction: ionized_hydrogen_fraction[index].clone(),
-                    },
-                },
+                get_reply(&request.data, tree, temperature, ionized_hydrogen_fraction),
             );
             outgoing[rank].push(reply);
         }
     }
     let mut comm = ExchangeCommunicator::<Identified<SearchReply>>::new();
     let incoming = comm.exchange_all(outgoing);
-    let mut distance_map = HashMap::default();
-    let mut value_map = HashMap::default();
-    let infinity = Length::new_unchecked(f64::INFINITY);
     for (_, replies) in incoming {
         for reply in replies {
             let entity = reply.entity();
-            let old_distance = distance_map.get(&entity).unwrap_or(&infinity);
-            if reply.data.distance < *old_distance {
-                value_map.insert(entity, reply.data.data);
-                distance_map.insert(entity, reply.data.distance);
+            let previously_closest = &closest_map[&entity];
+            if previously_closest.squared_distance > reply.data.squared_distance {
+                closest_map.insert(entity, reply.data);
             }
         }
     }
-    for (entity, data) in value_map.into_iter() {
+    for (entity, closest) in closest_map.into_iter() {
         let (_, _, mut temp, mut ion_frac) = particles.get_mut(entity).unwrap();
-        remap_from(&mut temp, &mut ion_frac, data);
+        remap_from(&mut temp, &mut ion_frac, closest.data);
     }
 }
 
