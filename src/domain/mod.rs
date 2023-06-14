@@ -134,9 +134,11 @@ fn domain_decomposition_system(
     particles: Particles<&Position>,
     world_size: Res<WorldSize>,
 ) {
-    debug!("Starting domain decomposition");
+    info!("Starting domain decomposition");
+    debug!("Computing keys");
     let local_counter =
         KeyCounter::from_points_and_extent(particles.iter().map(|x| **x).collect(), &*box_);
+    debug!("Determining cutoffs");
     let mut counter = ParallelCounter {
         comm: MpiWorld::new(),
         local_counter,
