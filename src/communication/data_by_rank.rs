@@ -83,8 +83,15 @@ where
 }
 
 impl<T: Clone> DataByRank<T> {
-    pub fn same_for_all_ranks_in_communicator(t: T, communicator: &impl SizedCommunicator) -> Self {
+    pub fn same_for_other_ranks_in_communicator(
+        t: T,
+        communicator: &impl SizedCommunicator,
+    ) -> Self {
         Self::from_closure_size_and_rank(|| t.clone(), communicator.size(), communicator.rank())
+    }
+
+    pub fn same_for_all_ranks_in_communicator(t: T, communicator: &impl SizedCommunicator) -> Self {
+        Self::from_closure_size_and_rank(|| t.clone(), communicator.size(), -1)
     }
 }
 

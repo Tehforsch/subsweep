@@ -106,7 +106,8 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         &mut self,
         data: Vec<SearchData<ActiveDimension>>,
     ) -> OutgoingRequests<ActiveDimension> {
-        let mut outgoing = DataByRank::same_for_all_ranks_in_communicator(vec![], &self.data_comm);
+        let mut outgoing =
+            DataByRank::same_for_other_ranks_in_communicator(vec![], &self.data_comm);
         for rank in self.data_comm.other_ranks() {
             for search in data.iter() {
                 let extent = Extent::<Point<ActiveDimension>>::cube_around_sphere(
@@ -129,7 +130,7 @@ impl<'a> ParallelSearch<'a, ActiveDimension> {
         incoming: IncomingRequests<ActiveDimension>,
     ) -> OutgoingResults<ActiveDimension> {
         let mut new_haloes =
-            DataByRank::same_for_all_ranks_in_communicator(vec![], &self.result_comm);
+            DataByRank::same_for_other_ranks_in_communicator(vec![], &self.result_comm);
 
         for (rank, data) in incoming.iter() {
             for search in data {
