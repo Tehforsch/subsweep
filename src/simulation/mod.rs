@@ -84,10 +84,8 @@ impl Simulation {
             plugin.build_always_once(self);
         }
         if !plugin.should_build(self) {
-            debug!("Skip plugin: {}", T::name());
             return self;
         }
-        debug!(" Add plugin: {}", T::name());
         if !plugin.allow_adding_twice() && already_added {
             panic!("Added twice: {}", T::name())
         }

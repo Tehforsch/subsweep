@@ -1,5 +1,6 @@
 mod id_cache;
 
+use bevy::prelude::debug;
 use bevy::prelude::info;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
@@ -319,8 +320,11 @@ impl Constructor {
 
     fn add_connections(&mut self, connections: impl Iterator<Item = Connection>) {
         let relevant_connections: Vec<_> = self.filter_relevant_connections(connections).collect();
+        debug!("Prepare lookup requests");
         self.add_lookup_requests(&relevant_connections);
+        debug!("Perform lookup");
         self.id_cache.perform_lookup();
+        debug!("Spawn haloes");
         self.haloes
             .extend(self.id_cache.iter().filter(|id| id.rank != self.rank));
         for connection in relevant_connections {
@@ -355,6 +359,7 @@ impl Constructor {
         &'a self,
         connections: impl Iterator<Item = Connection> + 'a,
     ) -> impl Iterator<Item = Connection> + 'a {
+        debug!("Filter relevant connections");
         connections.filter(|connection| {
             let is_local1 = self.id_cache.is_local(connection.id1);
             let is_local2 = self.id_cache.is_local(connection.id2);

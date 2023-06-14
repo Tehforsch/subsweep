@@ -6,7 +6,6 @@ use std::ops::Range;
 use std::path::Path;
 use std::path::PathBuf;
 
-use bevy::prelude::debug;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
 use bevy::prelude::Deref;
@@ -284,7 +283,7 @@ fn spawn_entities_system(
     }
     let mut comm: Communicator<usize> = Communicator::new();
     let num_entities_total: usize = comm.all_gather_sum(&num_entities);
-    debug!("Spawned {} new entities", num_entities_total);
+    info!("Spawned {} particles", num_entities_total);
     assert_eq!(spawned_entities.len(), 0);
     spawned_entities.0 = (0..num_entities)
         .map(|_| commands.spawn((LocalParticle,)).id())
@@ -298,6 +297,7 @@ fn read_dataset_system<T: ToDataset + Component + Named>(
     parameters: Res<InputParameters>,
 ) {
     let reader = Reader::split_between_ranks(parameters.paths.iter());
+    info!("Reading dataset '{}'", descriptor.dataset_name());
     for (item, entity) in reader
         .read_dataset::<T>(descriptor.clone())
         .enumerate()
