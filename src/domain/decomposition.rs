@@ -279,8 +279,7 @@ impl<K: Key + 'static> ParallelCounter<K> {
 impl<K: Key> LoadCounter<K> for ParallelCounter<K> {
     fn load_in_range(&mut self, start: K, end: K) -> Work {
         let local_work = self.local_counter.load_in_range(start, end);
-        let all_work = self.comm.all_gather(&local_work);
-        all_work.into_iter().sum()
+        self.comm.all_reduce_sum(&local_work)
     }
 
     fn min_key(&mut self) -> K {

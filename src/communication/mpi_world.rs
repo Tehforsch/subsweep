@@ -12,6 +12,7 @@ use std::sync::Mutex;
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use lazy_static::lazy_static;
+use mpi::collective::SystemOperation;
 use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;
 use mpi::request::Request;
@@ -221,6 +222,14 @@ where
     pub fn all_gather(&mut self, send: &S) -> Vec<S> {
         self.verify_tag();
         unchecked_all_gather(self.world, send)
+    }
+
+    pub fn all_reduce_sum(&mut self, send: &u64) -> u64 {
+        let mut sum = 0u64;
+        let res = self
+            .world
+            .all_reduce_into(send, &mut sum, SystemOperation::sum());
+        sum
     }
 
     pub fn all_gather_vec(&mut self, send: &[S]) -> DataByRank<Vec<S>> {
