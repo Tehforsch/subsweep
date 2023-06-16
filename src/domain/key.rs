@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use mpi::traits::Equivalence;
+
 use crate::dimension::Dimension;
 use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
@@ -13,37 +15,39 @@ use crate::units::MVec3;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
 
-pub trait Key: PartialOrd + Ord + Copy + Clone + Debug {
+pub trait Key: PartialOrd + Ord + Copy + Clone + Debug + Equivalence {
     type Dimension: Dimension;
 
-    const MIN_VALUE: Self;
-    const MAX_VALUE: Self;
     const MAX_DEPTH: usize;
 
     fn middle(start: Self, end: Self) -> Self;
+    fn next(self) -> Self;
 }
 
 impl Key for PeanoKey2d {
     type Dimension = TwoD;
-    const MIN_VALUE: PeanoKey2d = PeanoKey2d(0);
-    const MAX_VALUE: PeanoKey2d = PeanoKey2d(u64::MAX);
-
     const MAX_DEPTH: usize = NUM_BITS_PER_DIMENSION_2D as usize;
 
     fn middle(start: Self, end: Self) -> Self {
         Self(start.0 / 2 + end.0 / 2)
     }
+
+    fn next(self) -> Self {
+        Self(self.0.checked_add(1).unwrap_or(self.0))
+    }
 }
 
 impl Key for PeanoKey3d {
     type Dimension = ThreeD;
-    const MIN_VALUE: PeanoKey3d = PeanoKey3d(0);
-    const MAX_VALUE: PeanoKey3d = PeanoKey3d(u128::MAX);
 
     const MAX_DEPTH: usize = NUM_BITS_PER_DIMENSION_3D as usize;
 
     fn middle(start: Self, end: Self) -> Self {
         Self(start.0 / 2 + end.0 / 2)
+    }
+
+    fn next(self) -> Self {
+        Self(self.0.checked_add(1).unwrap_or(self.0))
     }
 }
 

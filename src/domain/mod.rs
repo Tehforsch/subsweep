@@ -6,7 +6,6 @@ mod exchange_data_plugin;
 pub mod extent;
 mod key;
 mod quadtree;
-mod work;
 
 pub use key::IntoKey;
 pub use quadtree::LeafData;
@@ -37,6 +36,8 @@ pub type DomainKey = crate::peano_hilbert::PeanoKey2d;
 #[cfg(feature = "3d")]
 pub type DomainKey = crate::peano_hilbert::PeanoKey3d;
 pub type DecompositionState = decomposition::Decomposition<DomainKey>;
+
+pub type Work = u64;
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct IdEntityMap(BiMap<ParticleId, Entity>);
@@ -139,10 +140,7 @@ fn domain_decomposition_system(
     let local_counter =
         KeyCounter::from_points_and_extent(particles.iter().map(|x| **x).collect(), &*box_);
     debug!("Determining cutoffs");
-    let mut counter = ParallelCounter {
-        comm: MpiWorld::new(),
-        local_counter,
-    };
+    let mut counter = ParallelCounter::new(local_counter);
     let decomp = DecompositionState::new(&mut counter, **world_size);
     decomp.log_imbalance();
     commands.insert_resource(decomp);

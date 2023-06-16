@@ -7,10 +7,11 @@ use bevy::prelude::warn;
 use bevy::prelude::Resource;
 
 use super::key::Key;
-use super::work::Work;
 use super::DomainKey;
 use super::IntoKey;
+use super::Work;
 use crate::communication::communicator::Communicator;
+use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::extent::Extent;
 use crate::parameters::SimulationBox;
@@ -34,8 +35,13 @@ impl<K: Debug> Debug for Segment<K> {
 pub trait LoadCounter<K: Key> {
     fn load_in_range(&mut self, start: K, end: K) -> Work;
 
+    fn min_key(&mut self) -> K;
+    fn max_key(&mut self) -> K;
+
     fn total_load(&mut self) -> Work {
-        self.load_in_range(K::MIN_VALUE, K::MAX_VALUE)
+        let min_key = self.min_key();
+        let max_key = self.max_key();
+        self.load_in_range(min_key, max_key.next())
     }
 }
 
@@ -66,7 +72,7 @@ impl<K: Key> Decomposition<K> {
     pub fn new<C: LoadCounter<K>>(counter: &mut C, num_ranks: usize) -> Self {
         let total_load = counter.total_load();
         let num_segments = num_ranks;
-        let load_per_segment = total_load / (num_segments as f64);
+        let load_per_segment = total_load / (num_segments as u64);
         let mut dd = Decomposer {
             counter,
             num_segments,
@@ -94,7 +100,7 @@ impl<K: Key> Decomposition<K> {
     pub fn get_imbalance(&self) -> f64 {
         let min_load = self.min_load();
         let max_load = self.max_load();
-        ((max_load - min_load) / max_load).0
+        (max_load - min_load) as f64 / max_load as f64
     }
 
     fn min_load(&self) -> Work {
@@ -112,8 +118,8 @@ impl<K: Key> Decomposition<K> {
                 warn!(
                     "Load imbalance: {:.1}%, max load: {:.0}, min load: {:.0}",
                     (load_imbalance * 100.0),
-                    self.max_load().0,
-                    self.min_load().0
+                    self.max_load(),
+                    self.min_load()
                 );
             } else {
                 debug!("Load imbalance: {:.1}%", (load_imbalance * 100.0));
@@ -154,7 +160,7 @@ struct Decomposer<'a, K: Key, C: LoadCounter<K>> {
 impl<'a, K: Key, C: LoadCounter<K>> Decomposer<'a, K, C> {
     fn find_segments(&mut self) -> Vec<Segment<K>> {
         let mut segments = vec![];
-        let mut start = K::MIN_VALUE;
+        let mut start = self.counter.min_key();
         for _ in 0..self.num_segments - 1 {
             let end = self.find_cut_for_next_segment(start);
             segments.push(Segment { start, end });
@@ -162,17 +168,18 @@ impl<'a, K: Key, C: LoadCounter<K>> Decomposer<'a, K, C> {
         }
         segments.push(Segment {
             start,
-            end: K::MAX_VALUE,
+            end: self.counter.max_key().next(),
         });
         segments
     }
 
     fn find_cut_for_next_segment(&mut self, start: K) -> K {
+        let max_key = self.counter.max_key();
         let get_search_result_for_cut = |cut, depth| {
             let load = self.counter.load_in_range(start, cut);
             self.get_search_result(load, depth)
         };
-        binary_search(start, K::MAX_VALUE, get_search_result_for_cut, 0)
+        binary_search(start, max_key, get_search_result_for_cut, 0)
     }
 
     fn get_search_result(&self, load: Work, depth: usize) -> Ordering {
@@ -236,13 +243,37 @@ impl<K: Key> LoadCounter<K> for KeyCounter<K> {
             .binary_search(&end)
             .map(|x| x + 1)
             .unwrap_or_else(|e| e);
-        Work(end as f64 - start as f64)
+        end as u64 - start as u64
+    }
+
+    fn min_key(&mut self) -> K {
+        self.keys.iter().min().unwrap().clone()
+    }
+
+    fn max_key(&mut self) -> K {
+        self.keys.iter().max().unwrap().clone()
     }
 }
 
 pub struct ParallelCounter<K> {
     pub local_counter: KeyCounter<K>,
     pub comm: Communicator<Work>,
+    min_key: K,
+    max_key: K,
+}
+
+impl<K: Key + 'static> ParallelCounter<K> {
+    pub(crate) fn new(mut local_counter: KeyCounter<K>) -> Self {
+        let mut key_comm: Communicator<K> = MpiWorld::new_custom_tag(9001);
+        let min_key = key_comm.all_gather_min(&local_counter.min_key()).unwrap();
+        let max_key = key_comm.all_gather_max(&local_counter.max_key()).unwrap();
+        Self {
+            comm: MpiWorld::new_custom_tag(9000),
+            local_counter,
+            min_key,
+            max_key,
+        }
+    }
 }
 
 impl<K: Key> LoadCounter<K> for ParallelCounter<K> {
@@ -251,10 +282,20 @@ impl<K: Key> LoadCounter<K> for ParallelCounter<K> {
         let all_work = self.comm.all_gather(&local_work);
         all_work.into_iter().sum()
     }
+
+    fn min_key(&mut self) -> K {
+        self.min_key
+    }
+
+    fn max_key(&mut self) -> K {
+        self.max_key
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use mpi::traits::Equivalence;
+
     use super::Decomposition;
     use super::Key;
     use super::KeyCounter;
@@ -275,18 +316,20 @@ mod tests {
         type WrapType = ();
     }
 
-    #[derive(PartialOrd, Ord, Copy, Clone, PartialEq, Eq, Debug)]
+    #[derive(PartialOrd, Ord, Copy, Clone, PartialEq, Eq, Debug, Equivalence)]
     pub struct Key1d(pub u64);
 
     impl Key for Key1d {
-        const MIN_VALUE: Key1d = Key1d(0u64);
-        const MAX_VALUE: Key1d = Key1d(u64::MAX);
         const MAX_DEPTH: usize = 64;
 
         type Dimension = OneD;
 
         fn middle(start: Self, end: Self) -> Self {
             Self(end.0 / 2 + start.0 / 2)
+        }
+
+        fn next(self) -> Self {
+            Self(self.0.checked_add(1).unwrap_or(self.0))
         }
     }
 

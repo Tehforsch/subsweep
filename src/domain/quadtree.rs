@@ -1,4 +1,4 @@
-use super::work::Work;
+use super::Work;
 use crate::prelude::ParticleId;
 use crate::quadtree::LeafDataType;
 use crate::quadtree::NodeDataType;
@@ -26,6 +26,6 @@ impl LeafDataType for LeafData {
 
 impl NodeDataType<LeafData> for NodeData {
     fn update_with(&mut self, _leaf: &LeafData) {
-        self.work += Work(1.0);
+        self.work += 1;
     }
 }
