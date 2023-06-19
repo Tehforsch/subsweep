@@ -184,10 +184,12 @@ impl Reader {
     }
 
     fn get_num_entries(&self, dataset_name: &str, file: &File) -> usize {
-        file.dataset(dataset_name).map(|dset| dset.shape()[0]).unwrap_or_else(|_| {
-            warn!("Empty dataset `{}` in file `{}`", dataset_name, file.name());
-            0
-        })
+        file.dataset(dataset_name)
+            .map(|dset| dset.shape()[0])
+            .unwrap_or_else(|_| {
+                warn!("Empty dataset `{}` in file `{}`", dataset_name, file.name());
+                0
+            })
     }
 
     pub fn read_dataset<'a, T: ToDataset + Named>(

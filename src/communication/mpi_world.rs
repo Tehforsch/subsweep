@@ -226,8 +226,7 @@ where
 
     pub fn all_reduce_sum(&mut self, send: &u64) -> u64 {
         let mut sum = 0u64;
-        self
-            .world
+        self.world
             .all_reduce_into(send, &mut sum, SystemOperation::sum());
         sum
     }
