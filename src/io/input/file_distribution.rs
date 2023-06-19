@@ -19,6 +19,7 @@ impl Region {
     }
 }
 
+#[derive(Debug)]
 pub struct RankAssignment {
     pub regions: Vec<Region>,
 }
@@ -84,6 +85,10 @@ pub fn get_rank_assignment(
         };
         let (regions, end) = get_regions_from(num_entries_per_file, start, num_entries);
         start = end;
+        let regions = regions
+            .into_iter()
+            .filter(|region| region.size() > 0)
+            .collect();
         assignments.push(RankAssignment { regions });
     }
     assignments
@@ -161,5 +166,15 @@ mod tests {
         assert_eq!(assignment[3].regions[0].file_index, 2);
         assert_eq!(assignment[3].regions[0].start, 150);
         assert_eq!(assignment[3].regions[0].end, 301);
+        let assignment = get_rank_assignment(&[100, 0, 100], 2);
+        assert_eq!(assignment.len(), 2);
+        assert_eq!(assignment[0].regions.len(), 1);
+        assert_eq!(assignment[0].regions[0].file_index, 0);
+        assert_eq!(assignment[0].regions[0].start, 0);
+        assert_eq!(assignment[0].regions[0].end, 100);
+        assert_eq!(assignment[1].regions.len(), 1);
+        assert_eq!(assignment[1].regions[0].file_index, 2);
+        assert_eq!(assignment[1].regions[0].start, 0);
+        assert_eq!(assignment[1].regions[0].end, 100);
     }
 }
