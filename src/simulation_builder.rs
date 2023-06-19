@@ -90,9 +90,7 @@ impl SimulationBuilder {
         if let Some(num_worker_threads) = opts.num_worker_threads {
             self.num_worker_threads(Some(num_worker_threads));
         }
-        if let Some(ref path) = opts.parameter_file_path {
-            self.parameter_file_path(path);
-        }
+        self.parameter_file_path(&opts.parameter_file_path);
         self.verbosity(opts.verbosity);
         self.parameter_overrides = opts.parameter_overrides.clone();
         self

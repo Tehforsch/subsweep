@@ -47,9 +47,8 @@ impl FromStr for Override {
 #[derive(Parser, Debug, Clone)]
 #[clap(author, version, about, long_about = None)]
 pub struct CommandLineOptions {
+    pub parameter_file_path: PathBuf,
     pub parameter_overrides: Vec<Override>,
-    #[clap(long)]
-    pub parameter_file_path: Option<PathBuf>,
     #[clap(short, parse(from_occurrences))]
     pub verbosity: usize,
     #[clap(long)]
