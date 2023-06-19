@@ -1,4 +1,5 @@
 use bevy::prelude::warn;
+use bevy::prelude::debug;
 use mpi::traits::Equivalence;
 
 use super::grid::ParticleType;
@@ -119,6 +120,7 @@ impl<C: Chemistry> Sweep<C> {
                 );
             }
         }
+        debug!("Checked dependencies, no deadlock found.");
     }
 }
 
