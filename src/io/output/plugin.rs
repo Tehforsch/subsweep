@@ -5,6 +5,7 @@ use super::close_file_system;
 use super::make_output_dirs_system;
 use super::open_file_system;
 use super::parameters::is_desired_field;
+use super::parameters::Fields;
 use super::parameters::OutputParameters;
 use super::timer::Timer;
 use super::write_used_parameters_system;
@@ -117,9 +118,11 @@ fn verify_output_fields_system(
     parameters: Res<OutputParameters>,
     registered: Res<RegisteredFields>,
 ) {
-    for field in parameters.fields.iter() {
-        if !registered.0.contains(field) {
-            error!("Unknown field specified: {}", field);
+    if let Fields::Some(ref fields) = parameters.fields {
+        for field in fields.iter() {
+            if !registered.0.contains(field) {
+                error!("Unknown field specified: {}", field);
+            }
         }
     }
 }

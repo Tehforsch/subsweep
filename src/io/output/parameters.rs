@@ -22,6 +22,13 @@ pub enum HandleExistingOutput {
     Delete,
 }
 
+#[raxiom_parameters]
+#[serde(untagged)]
+pub enum Fields {
+    All,
+    Some(Vec<String>),
+}
+
 /// Parameters for the output of the simulation.
 /// Only required if write_output
 /// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
@@ -46,11 +53,12 @@ pub struct OutputParameters {
     /// to which the time series are written
     #[serde(default = "default_time_series_dir")]
     pub time_series_dir: PathBuf,
-    /// Names of all the fields that should be written to snapshots.
-    /// Can be names of both attributes and datasets. Example value:
+    /// Either 'all' or the names of all the fields that should be written to snapshots.
+    /// Can be names of both attributes and datasets. Example values:
     /// ["position", "velocity", "time"]
+    /// "all"
     #[serde(default = "default_fields")]
-    pub fields: Vec<String>,
+    pub fields: Fields,
     /// The number of digits that the snapshot numbers should be
     /// zero-padded to.
     #[serde(default = "default_snapshot_padding")]
@@ -80,8 +88,8 @@ fn default_time_series_dir() -> PathBuf {
     "time_series".into()
 }
 
-fn default_fields() -> Vec<String> {
-    vec![]
+fn default_fields() -> Fields {
+    Fields::All
 }
 
 fn default_used_parameters_filename() -> String {
@@ -90,14 +98,15 @@ fn default_used_parameters_filename() -> String {
 
 pub fn is_desired_field<T: Named>(sim: &Simulation) -> bool {
     sim.unwrap_resource::<OutputParameters>()
-        .fields
-        .iter()
-        .any(|field| field == T::name())
+        .is_desired_field::<T>()
 }
 
 impl OutputParameters {
     pub fn is_desired_field<T: Named>(&self) -> bool {
-        self.fields.iter().any(|field| field == T::name())
+        match &self.fields {
+            Fields::All => true,
+            Fields::Some(fields) => fields.iter().any(|field| field == T::name()),
+        }
     }
 
     pub fn snapshot_dir(&self) -> PathBuf {
