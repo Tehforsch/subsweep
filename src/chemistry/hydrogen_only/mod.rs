@@ -32,7 +32,7 @@ use crate::units::SPEED_OF_LIGHT;
 
 const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 
-const MAX_DEPTH: usize = 100;
+const MAX_DEPTH: usize = 10;
 
 pub struct HydrogenOnly {
     pub rate_threshold: PhotonRate,

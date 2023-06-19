@@ -21,6 +21,7 @@ use mpi::traits::MatchesRaw;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
+use crate::mpidbg;
 use self::active_list::ActiveList;
 use self::count_by_dir::CountByDir;
 use self::direction::init_directions_rng;
@@ -226,8 +227,10 @@ impl<C: Chemistry> Sweep<C> {
         self.to_solve = self.get_initial_tasks();
         if self.check_deadlock {
             self.check_deadlock();
+            debug!("done checking for deadlocks");
         }
         self.solve();
+        debug!("Sweep done, update chemistry.");
         self.update_chemistry();
         for site in self.sites.iter() {
             debug_assert_eq!(site.num_missing_upwind.total(), 0);
@@ -235,7 +238,12 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn solve(&mut self) {
+        let mut num_it: usize = 0;
         while self.to_solve_count.total() > 0 || self.remaining_to_send_count() > 0 {
+            num_it += 1;
+            if num_it.rem_euclid(100000) == 0 {
+                mpidbg!(self.to_solve_count.total(), self.remaining_to_send_count());
+            }
             if self.to_solve.is_empty() {
                 self.receive_all_messages();
             }

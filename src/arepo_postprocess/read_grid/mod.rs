@@ -1,6 +1,7 @@
 mod id_cache;
 
 use bevy::prelude::debug;
+use bevy::prelude::error;
 use bevy::prelude::info;
 use bevy::prelude::Commands;
 use bevy::prelude::Component;
@@ -286,10 +287,15 @@ impl Constructor {
         &mut self.cells[self.unique_particle_id_to_index[&id]]
     }
 
-    fn get_particle_type(&mut self, id: UniqueParticleId, is_periodic: bool) -> ParticleType {
-        let id = self.id_cache.lookup(id).unwrap();
+    fn get_particle_type(&mut self, id: UniqueParticleId, is_periodic: bool) -> Result<ParticleType, ()> {
+        let lookup_id = self.id_cache.lookup(id);
+        if lookup_id.is_none() {
+            error!("id {:?} not found in ics", id);
+            return Err(())
+        }
+        let id = lookup_id.unwrap();
         let is_local = id.rank == self.rank;
-        match (is_local, is_periodic) {
+        Ok(match (is_local, is_periodic) {
             (true, false) => ParticleType::Local(id),
             (true, true) => {
                 if self.allow_periodic {
@@ -315,7 +321,7 @@ impl Constructor {
                     ParticleType::Boundary
                 }
             }
-        }
+        })
     }
 
     fn add_connections(&mut self, connections: impl Iterator<Item = Connection>) {
@@ -340,7 +346,15 @@ impl Constructor {
                 normal: -*connection.normal,
             };
             let ptype1 = self.get_particle_type(connection.id1, connection.type_.periodic1);
+            let ptype1 = match ptype1 {
+                Ok(ptype) => ptype,
+                Err(_) => continue,
+            };
             let ptype2 = self.get_particle_type(connection.id2, connection.type_.periodic2);
+            let ptype2 = match ptype2 {
+                Ok(ptype) => ptype,
+                Err(_) => continue,
+            };
             if ptype1.is_local() {
                 self.add_neighbour(connection.id1, face2, ptype2);
             }

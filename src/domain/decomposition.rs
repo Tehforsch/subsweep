@@ -161,7 +161,8 @@ impl<'a, K: Key, C: LoadCounter<K>> Decomposer<'a, K, C> {
     fn find_segments(&mut self) -> Vec<Segment<K>> {
         let mut segments = vec![];
         let mut start = self.counter.min_key();
-        for _ in 0..self.num_segments - 1 {
+        for i in 0..self.num_segments - 1 {
+            debug!("cutoff {}", i);
             let end = self.find_cut_for_next_segment(start);
             segments.push(Segment { start, end });
             start = end;
