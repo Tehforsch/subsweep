@@ -43,6 +43,7 @@ use self::timestep_state::TimestepState;
 use crate::chemistry::hydrogen_only::HydrogenOnly;
 use crate::chemistry::hydrogen_only::HydrogenOnlySpecies;
 use crate::chemistry::Chemistry;
+use crate::chemistry::Photons;
 use crate::communication::DataByRank;
 use crate::communication::ExchangeCommunicator;
 use crate::communication::MpiWorld;
@@ -384,6 +385,12 @@ impl<C: Chemistry> Sweep<C> {
             .sites
             .get_mut_and_active_state(neighbour, self.current_level);
         site.incoming_total_rate[*dir] += incoming_rate_correction;
+        // Negative rates can happen due to round off errors. It might
+        // be fine, but I could also see this causing numerical
+        // instability problems, so I'd rather prevent it.
+        if site.incoming_total_rate[*dir] < C::Photons::zero() {
+            site.incoming_total_rate[*dir] = C::Photons::zero();
+        }
         if is_active {
             let num_remaining = site.num_missing_upwind.reduce(dir);
             if num_remaining == 0 {

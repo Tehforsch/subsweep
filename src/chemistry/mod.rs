@@ -48,6 +48,7 @@ pub trait Photons:
     + Mul<Float, Output = Self>
     + Mul<Dimensionless, Output = Self>
     + Div<Float, Output = Self>
+    + PartialOrd<Self>
     + Debug
     + Clone
     + Equivalence
