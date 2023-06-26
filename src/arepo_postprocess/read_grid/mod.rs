@@ -124,7 +124,6 @@ impl ToDataset for ConnectionTypeInt {
 struct ConnectionType {
     periodic1: bool,
     periodic2: bool,
-    valid: bool,
 }
 
 fn periodic_and_boundary_flags_from_bits(bits: i32) -> (bool, bool) {
@@ -133,14 +132,24 @@ fn periodic_and_boundary_flags_from_bits(bits: i32) -> (bool, bool) {
     (periodic, boundary)
 }
 
-impl From<ConnectionTypeInt> for ConnectionType {
-    fn from(value: ConnectionTypeInt) -> Self {
-        let (periodic1, boundary1) = periodic_and_boundary_flags_from_bits(*value & (1 + 2));
-        let (periodic2, boundary2) = periodic_and_boundary_flags_from_bits((*value & (4 + 8)) >> 2);
-        ConnectionType {
-            periodic1,
-            periodic2,
-            valid: !(boundary1 || boundary2 || (periodic1 && periodic2)),
+impl TryFrom<ConnectionTypeInt> for ConnectionType {
+    type Error = ();
+    fn try_from(value: ConnectionTypeInt) -> Result<Self, ()> {
+        if *value == -1 {
+            Err(())
+        } else {
+            let (periodic1, boundary1) = periodic_and_boundary_flags_from_bits(*value & (1 + 2));
+            let (periodic2, boundary2) =
+                periodic_and_boundary_flags_from_bits((*value & (4 + 8)) >> 2);
+            let valid = !(boundary1 || boundary2 || (periodic1 && periodic2));
+            if !valid {
+                Err(())
+            } else {
+                Ok(ConnectionType {
+                    periodic1,
+                    periodic2,
+                })
+            }
         }
     }
 }
@@ -229,15 +238,21 @@ fn read_connection_data<'a>(
                     .zip(areas.into_iter().zip(normals.into_iter())),
             ),
         )
-        .map(
-            |(id1, (id2, (connection_type, (area, normal))))| Connection {
+        .filter_map(|(id1, (id2, (connection_type, (area, normal))))| {
+            let type_ = connection_type.try_into().ok()?;
+            Some(Connection {
                 id1,
                 id2,
-                type_: connection_type.into(),
+                type_,
                 area,
                 normal,
-            },
-        )
+            })
+        })
+}
+
+fn global_num_connections(num_connections: u64) -> u64 {
+    let mut comm: Communicator<u64> = Communicator::new_custom_tag(98122);
+    comm.all_gather_sum::<u64>(&num_connections)
 }
 
 struct Constructor {
@@ -247,6 +262,7 @@ struct Constructor {
     allow_periodic: bool,
     id_cache: IdCache,
     rank: Rank,
+    num_connections: u64,
 }
 
 impl Constructor {
@@ -279,6 +295,7 @@ impl Constructor {
             allow_periodic,
             id_cache: IdCache::new(map, rank),
             rank,
+            num_connections: 0,
         }
     }
 
@@ -328,9 +345,6 @@ impl Constructor {
         self.haloes
             .extend(self.id_cache.iter().filter(|id| id.rank != self.rank));
         for connection in relevant_connections {
-            if !connection.type_.valid {
-                continue;
-            }
             let face1 = Face {
                 area: *connection.area,
                 normal: *connection.normal,
@@ -348,11 +362,21 @@ impl Constructor {
                 self.add_neighbour(connection.id2, face1, ptype1);
             }
         }
+        let num_connections = global_num_connections(self.num_connections);
+        debug!("Added {} connections.", num_connections);
     }
 
     fn add_neighbour(&mut self, id: UniqueParticleId, face: Face, neighbour: ParticleType) {
         let cell = self.get_cell_by_id(id);
+        for n in cell.neighbours.iter() {
+            if n.1 != ParticleType::Boundary && n.1 == neighbour {
+                dbg!(id);
+                dbg!(n.1, neighbour, face, &n.0);
+                panic!()
+            }
+        }
         cell.neighbours.push((face, neighbour));
+        self.num_connections += 1;
     }
 
     fn filter_relevant_connections<'a>(
