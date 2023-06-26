@@ -368,13 +368,6 @@ impl Constructor {
 
     fn add_neighbour(&mut self, id: UniqueParticleId, face: Face, neighbour: ParticleType) {
         let cell = self.get_cell_by_id(id);
-        for n in cell.neighbours.iter() {
-            if n.1 != ParticleType::Boundary && n.1 == neighbour {
-                dbg!(id);
-                dbg!(n.1, neighbour, face, &n.0);
-                panic!()
-            }
-        }
         cell.neighbours.push((face, neighbour));
         self.num_connections += 1;
     }
