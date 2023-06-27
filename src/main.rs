@@ -48,7 +48,7 @@ fn main() {
     let rank = sim.get_resource::<WorldRank>().unwrap();
     if rank.is_main() {
         match parameters.sources {
-            SourceType::FromIcs => {
+            SourceType::FromIcs(_) => {
                 sim.add_startup_system(read_sources_system);
             }
             SourceType::SingleSource(_) => {

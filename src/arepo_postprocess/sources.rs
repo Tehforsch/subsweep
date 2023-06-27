@@ -62,11 +62,12 @@ impl Source {
         metallicity: Dimensionless,
         mass: Mass,
         formation_time: Dimensionless,
+        escape_fraction: Dimensionless,
     ) -> Source {
         let age = formation_time_to_age(formation_time);
         Self {
             position,
-            rate: bpass_lookup(age, metallicity, mass),
+            rate: bpass_lookup(age, metallicity, mass) * escape_fraction,
         }
     }
 }
@@ -81,7 +82,11 @@ pub struct Sources {
     sources: Vec<Source>,
 }
 
-fn read_sources(reader: &Reader, cosmology: &Cosmology) -> Vec<Source> {
+fn read_sources(
+    reader: &Reader,
+    cosmology: &Cosmology,
+    escape_fraction: Dimensionless,
+) -> Vec<Source> {
     let unit_reader = ArepoUnitReader::new(cosmology.clone());
     let descriptor = make_descriptor::<Position, _>(
         &unit_reader,
@@ -112,7 +117,13 @@ fn read_sources(reader: &Reader, cosmology: &Cosmology) -> Vec<Source> {
         .zip(formation_time)
         .zip(mass)
         .map(|(((position, metallicity), formation_time), mass)| {
-            Source::new(*position, *metallicity, *mass, *formation_time)
+            Source::new(
+                *position,
+                *metallicity,
+                *mass,
+                *formation_time,
+                escape_fraction,
+            )
         })
         .collect()
 }
@@ -120,10 +131,12 @@ fn read_sources(reader: &Reader, cosmology: &Cosmology) -> Vec<Source> {
 pub fn read_sources_system(
     mut commands: Commands,
     parameters: Res<InputParameters>,
+    run_parameters: Res<Parameters>,
     cosmology: Res<Cosmology>,
 ) {
     let reader = Reader::split_between_ranks(parameters.paths.iter());
-    let sources = read_sources(&reader, &cosmology);
+    let from_ics = run_parameters.sources.unwrap_from_ics();
+    let sources = read_sources(&reader, &cosmology, from_ics.escape_fraction);
     commands.insert_resource(Sources { sources });
 }
 

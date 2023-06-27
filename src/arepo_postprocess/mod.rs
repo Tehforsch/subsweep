@@ -27,10 +27,23 @@ pub enum GridParameters {
     Read(PathBuf),
 }
 
-#[derive(Default)]
 #[raxiom_parameters]
 pub enum SourceType {
-    #[default]
-    FromIcs,
+    FromIcs(FromIcs),
     SingleSource(SourceRate),
+}
+
+impl SourceType {
+    pub fn unwrap_from_ics(&self) -> FromIcs {
+        if let Self::FromIcs(from_ics) = self {
+            from_ics.clone()
+        } else {
+            panic!()
+        }
+    }
+}
+
+#[raxiom_parameters]
+pub struct FromIcs {
+    escape_fraction: Dimensionless,
 }
