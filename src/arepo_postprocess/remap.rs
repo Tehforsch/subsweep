@@ -77,8 +77,6 @@ fn read_remap_data(
 ) {
     let reader = Reader::split_between_ranks(files.into_iter());
     let unit_reader = DefaultUnitReader;
-    // TODO
-    let scale_factor = 1.0;
     let descriptor =
         make_descriptor::<Position, _>(&unit_reader, "position", DatasetShape::OneDimensional);
     let position = reader.read_dataset(descriptor).collect();
