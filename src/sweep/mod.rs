@@ -223,12 +223,14 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn single_sweep(&mut self) {
+        debug!("Level {:>2}: Sweeping.", self.current_level.0);
         self.init_counts();
         self.to_solve = self.get_initial_tasks();
         if self.check_deadlock {
             self.check_deadlock();
         }
         self.solve();
+        debug!("Level {:>2}: Updating chemistry.", self.current_level.0);
         self.update_chemistry();
         for site in self.sites.iter() {
             debug_assert_eq!(site.num_missing_upwind.total(), 0);
