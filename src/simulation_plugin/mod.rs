@@ -17,6 +17,7 @@ use crate::prelude::Particles;
 use crate::prelude::WorldSize;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation_box::SimulationBoxPlugin;
 use crate::units;
 
 #[derive(Named)]
@@ -55,8 +56,8 @@ pub struct StopSimulationEvent;
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_parameter_type::<SimulationParameters>()
-            .add_parameter_type::<SimulationBox>()
             .add_required_component::<Position>()
+            .add_plugin(SimulationBoxPlugin)
             .add_plugin(ParticlePlugin)
             .add_plugin(OutputPlugin::<Attribute<SimulationTime>>::default())
             .add_event::<StopSimulationEvent>()

@@ -1,20 +1,58 @@
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use derive_custom::raxiom_parameters;
+use derive_custom::Named;
 use derive_more::From;
 use derive_more::Into;
 
 use crate::domain::Extent;
+use crate::parameters::Cosmology;
 use crate::prelude::Float;
+use crate::prelude::RaxiomPlugin;
+use crate::prelude::Simulation;
+use crate::units::ComovingLength;
 use crate::units::Length;
 use crate::units::VecLength;
+
+#[derive(From, Into, Deref, DerefMut, Debug)]
+#[raxiom_parameters]
+pub struct SimulationBox(Extent);
 
 /// The box size of the simulation. Periodic boundary conditions apply
 /// beyond this box, meaning that the positions of particles outside
 /// of this box are wrapped back into it.
+#[derive(Debug)]
 #[raxiom_parameters("box_size")]
-#[derive(From, Into, Deref, DerefMut, Debug)]
-pub struct SimulationBox(Extent);
+#[serde(untagged)]
+pub enum SimulationBoxParameters {
+    /// Comoving length
+    Comoving(ComovingLength),
+    Normal(Length),
+}
+
+#[derive(Named)]
+pub struct SimulationBoxPlugin;
+
+impl RaxiomPlugin for SimulationBoxPlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.add_parameter_type::<SimulationBoxParameters>();
+        sim.add_parameter_type::<Cosmology>();
+        let box_ = sim.get_parameters::<SimulationBoxParameters>();
+        let cosmology = sim.get_parameters::<Cosmology>();
+        let box_ = get_simulation_box(box_, cosmology);
+        sim.add_parameters_explicitly(box_);
+    }
+}
+
+fn get_simulation_box(box_: &SimulationBoxParameters, cosmology: &Cosmology) -> SimulationBox {
+    let length = match box_ {
+        SimulationBoxParameters::Comoving(comoving_length) => {
+            comoving_length.make_non_cosmological(cosmology)
+        }
+        SimulationBoxParameters::Normal(length) => *length,
+    };
+    SimulationBox(Extent::cube_from_side_length(length))
+}
 
 fn periodic_wrap_component(v: Float, min: Float, max: Float) -> Float {
     min + (v - min).rem_euclid(max - min)

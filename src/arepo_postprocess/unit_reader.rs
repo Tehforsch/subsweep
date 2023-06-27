@@ -51,12 +51,9 @@ impl ArepoUnitReader {
         Self { cosmology }
     }
 
-    fn get_cosmological_scale_factor(&self, dimension: &Dimension) -> f64 {
+    fn get_cosmological_factor(&self, dimension: &Dimension) -> f64 {
         self.check_cosmology_available();
-        match self.cosmology {
-            Cosmology::Cosmological { a, h } => a.powi(dimension.a) * h.powi(dimension.h),
-            Cosmology::NonCosmological => unreachable!(),
-        }
+        self.cosmology.get_factor(dimension)
     }
 
     fn check_cosmology_available(&self) {
@@ -102,7 +99,7 @@ impl UnitReader for ArepoUnitReader {
     fn read_scale_factor(&self, set: &Dataset) -> f64 {
         let dimension = self.read_raw_dimension(set);
         let cosmology_scale_factor = if is_cosmological(&dimension) {
-            self.get_cosmological_scale_factor(&dimension)
+            self.get_cosmological_factor(&dimension)
         } else {
             1.0
         };
@@ -125,11 +122,7 @@ impl UnitReader for ArepoUnitReader {
             dimension
         } else {
             self.check_cosmology_available();
-            Dimension {
-                a: 0,
-                h: 0,
-                ..dimension
-            }
+            dimension.non_cosmological()
         }
     }
 }

@@ -9,6 +9,7 @@ use super::Temperature;
 use super::BOLTZMANN_CONSTANT;
 use super::GAMMA;
 use super::PROTON_MASS;
+use crate::parameters::Cosmology;
 use crate::prelude::Float;
 
 impl<const D: Dimension> Quantity<Float, D> {
@@ -67,5 +68,18 @@ impl EnergyDensity {
         let molecular_weight = 1.0 / (ionized_hydrogen_fraction + 1.0);
         let internal_energy = temperature.to_internal_energy(molecular_weight);
         internal_energy * density
+    }
+}
+
+impl<const D: Dimension, S> Quantity<S, D>
+where
+    Quantity<S, { Dimension::non_cosmological(D) }>:,
+    S: std::ops::Mul<f64, Output = S>,
+{
+    pub fn make_non_cosmological(
+        self,
+        cosmology: &Cosmology,
+    ) -> Quantity<S, { Dimension::non_cosmological(D) }> {
+        Quantity::new_unchecked(self.0 * cosmology.get_factor(&D))
     }
 }

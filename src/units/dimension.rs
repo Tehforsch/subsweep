@@ -44,4 +44,15 @@ impl Dimension {
             * (MASS_TO_SI).powi(*mass)
             * (TEMPERATURE_TO_SI).powi(*temperature)
     }
+
+    pub const fn non_cosmological(self) -> Self {
+        Self {
+            length: self.length,
+            time: self.time,
+            mass: self.mass,
+            temperature: self.temperature,
+            h: 0,
+            a: 0,
+        }
+    }
 }
