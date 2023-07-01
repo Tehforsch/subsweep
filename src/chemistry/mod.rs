@@ -38,6 +38,8 @@ pub trait Chemistry: Sized + 'static {
         volume: Volume,
         length: Length,
     ) -> Time;
+
+    fn ionized(site: &Site<Self>) -> bool;
 }
 
 pub trait Photons:

@@ -135,21 +135,16 @@ fn periodic_and_boundary_flags_from_bits(bits: i32) -> (bool, bool) {
 impl TryFrom<ConnectionTypeInt> for ConnectionType {
     type Error = ();
     fn try_from(value: ConnectionTypeInt) -> Result<Self, ()> {
-        if *value == -1 {
+        let (periodic1, boundary1) = periodic_and_boundary_flags_from_bits(*value & (1 + 2));
+        let (periodic2, boundary2) = periodic_and_boundary_flags_from_bits((*value & (4 + 8)) >> 2);
+        let valid = !(boundary1 || boundary2 || (periodic1 && periodic2));
+        if !valid {
             Err(())
         } else {
-            let (periodic1, boundary1) = periodic_and_boundary_flags_from_bits(*value & (1 + 2));
-            let (periodic2, boundary2) =
-                periodic_and_boundary_flags_from_bits((*value & (4 + 8)) >> 2);
-            let valid = !(boundary1 || boundary2 || (periodic1 && periodic2));
-            if !valid {
-                Err(())
-            } else {
-                Ok(ConnectionType {
-                    periodic1,
-                    periodic2,
-                })
-            }
+            Ok(ConnectionType {
+                periodic1,
+                periodic2,
+            })
         }
     }
 }

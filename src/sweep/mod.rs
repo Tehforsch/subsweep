@@ -418,6 +418,8 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn update_chemistry(&mut self) {
+        let mut num_cells: usize = 0;
+        let mut num_cells_neighbours: usize = 0;
         for (id, cell) in self.cells.enumerate_active(self.current_level) {
             let (level, site) = self.sites.get_mut_with_level(id);
             let timestep = self.timestep_state.timestep_at_level(level);
@@ -426,7 +428,27 @@ impl<C: Chemistry> Sweep<C> {
             site.change_timescale =
                 self.chemistry
                     .update_abundances(site, rate, timestep, cell.volume, cell.size);
+            if C::ionized(&site) {
+                num_cells += 1;
+                num_cells_neighbours += cell
+                    .neighbours
+                    .iter()
+                    .map(|n| match n.1 {
+                        ParticleType::Local(_) => 1,
+                        ParticleType::Remote(_) => 1,
+                        ParticleType::Boundary => 0,
+                        ParticleType::LocalPeriodic(_) => 0,
+                        ParticleType::RemotePeriodic(_) => 0,
+                    })
+                    .sum::<usize>();
+            }
         }
+        println!(
+            "{} {} {}",
+            self.communicator.rank(),
+            num_cells,
+            num_cells_neighbours
+        );
     }
 
     fn update_timestep_levels(&mut self) {

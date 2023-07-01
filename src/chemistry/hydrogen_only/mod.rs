@@ -109,6 +109,10 @@ impl Chemistry for HydrogenOnly {
         // Timescale of change
         timestep_used
     }
+
+    fn ionized(site: &Site<Self>) -> bool {
+        site.species.ionized_hydrogen_fraction > 0.5
+    }
 }
 
 struct TimestepCriterionViolated;
