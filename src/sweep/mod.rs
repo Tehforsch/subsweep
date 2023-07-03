@@ -531,6 +531,7 @@ fn run_sweep_system(
     mut heating_rates: Particles<(&ParticleId, &mut HeatingRate)>,
     mut timesteps: Particles<(&ParticleId, &mut Timestep)>,
     mut ionization_times: Particles<(&ParticleId, &mut IonizationTime)>,
+    mut rates: Particles<(&ParticleId, &mut components::Rate)>,
     mut time: ResMut<SimulationTime>,
 ) {
     let solver = (*solver).as_mut().unwrap();
@@ -548,6 +549,10 @@ fn run_sweep_system(
     for (id, mut timestep) in timesteps.iter_mut() {
         let site = solver.sites.get(*id);
         **timestep = site.species.timestep;
+    }
+    for (id, mut rate) in rates.iter_mut() {
+        let site = solver.sites.get(*id);
+        **rate = site.incoming_total_rate.iter().copied().sum();
     }
     for (id, mut ionization_time) in ionization_times.iter_mut() {
         let site = solver.sites.get(*id);
