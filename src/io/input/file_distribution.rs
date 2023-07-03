@@ -136,7 +136,6 @@ mod tests {
         assert_eq!(assignment[0].regions[0].file_index, 0);
         assert_eq!(assignment[0].regions[0].start, 0);
         assert_eq!(assignment[0].regions[0].end, 100);
-        dbg!(&assignment[1].regions);
         assert_eq!(assignment[1].regions.len(), 1);
         assert_eq!(assignment[1].regions[0].file_index, 1);
         assert_eq!(assignment[1].regions[0].start, 0);

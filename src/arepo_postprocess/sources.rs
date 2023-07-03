@@ -165,7 +165,7 @@ pub fn set_source_terms_system(
 ) {
     let mut source_comm = MpiWorld::<Source>::new();
     let all_sources = source_comm.all_gather_varcount(&sources.sources);
-    for s in all_sources {
+    for s in all_sources.iter() {
         let key = s.position.into_key(&*box_);
         let rank = decomposition.get_owning_rank(key);
         if rank == **world_rank {
@@ -180,6 +180,6 @@ pub fn set_source_terms_system(
             **source_term += s.rate;
         }
     }
-    let total: SourceRate = sources.sources.iter().map(|source| source.rate).sum();
+    let total: SourceRate = all_sources.iter().map(|source| source.rate).sum();
     debug!("Total luminosity: {:+.2e}", total.in_photons_per_second());
 }

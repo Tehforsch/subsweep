@@ -46,17 +46,17 @@ fn main() {
         .add_parameter_type_and_get_result::<Parameters>()
         .clone();
     let rank = sim.get_resource::<WorldRank>().unwrap();
-    if rank.is_main() {
-        match parameters.sources {
-            SourceType::FromIcs(_) => {
-                sim.add_startup_system(read_sources_system);
-            }
-            SourceType::SingleSource(_) => {
+    match parameters.sources {
+        SourceType::FromIcs(_) => {
+            sim.add_startup_system(read_sources_system);
+        }
+        SourceType::SingleSource(_) => {
+            if rank.is_main() {
                 sim.add_startup_system(add_single_source_system);
+            } else {
+                sim.insert_resource(Sources::default());
             }
         }
-    } else {
-        sim.insert_resource(Sources::default());
     }
     match parameters.grid {
         GridParameters::Construct => sim.add_plugin(ParallelVoronoiGridConstruction),
