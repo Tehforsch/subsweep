@@ -12,7 +12,7 @@ pub mod unit_reader;
 
 #[raxiom_parameters("postprocess")]
 pub struct Parameters {
-    pub initial_fraction_ionized_hydrogen: Dimensionless,
+    pub initial_fraction_ionized_hydrogen: Option<Dimensionless>,
     pub sources: SourceType,
     pub grid: GridParameters,
     /// Folder containing the snapshots from which to remap abundances and energies.

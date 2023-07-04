@@ -104,7 +104,7 @@ impl UnitReader for ArepoUnitReader {
             1.0
         };
         let cgs_to_si = 0.01f64.powi(dimension.length) * 0.001f64.powi(dimension.mass);
-        let cgs: f64 = set
+        let mut cgs: f64 = set
             .attr(SCALE_FACTOR_IDENTIFIER)
             .expect("No scale factor in dataset")
             .read_scalar()
@@ -112,6 +112,7 @@ impl UnitReader for ArepoUnitReader {
         if cgs == 0.0 {
             assert_eq!(dimension, NONE);
             debug!("Unit scale factor is 0 in dimensionless dataset. Assuming 1.");
+            cgs = 1.0;
         }
         cosmology_scale_factor * cgs_to_si * cgs
     }
