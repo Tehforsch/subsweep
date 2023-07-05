@@ -423,9 +423,15 @@ impl<C: Chemistry> Sweep<C> {
             let timestep = self.timestep_state.timestep_at_level(level);
             let source = site.source_per_direction_bin(&self.directions);
             let rate = site.total_incoming_rate() + source;
-            site.change_timescale =
+            let relative_change = rate
+                .relative_change_to(&site.previous_incoming_total_rate)
+                .abs();
+            site.previous_incoming_total_rate = rate.clone();
+            let rate_timescale = timestep / relative_change;
+            let chemistry_timescale =
                 self.chemistry
                     .update_abundances(site, rate, timestep, cell.volume, cell.size);
+            site.change_timescale = rate_timescale.min(chemistry_timescale);
         }
     }
 

@@ -54,10 +54,17 @@ pub trait Photons:
     + Equivalence
 {
     fn zero() -> Self;
+    fn relative_change_to(&self, other: &Self) -> Dimensionless;
 }
 
 impl Photons for PhotonRate {
     fn zero() -> Self {
         PhotonRate::zero()
+    }
+
+    fn relative_change_to(&self, other: &Self) -> Dimensionless {
+        ((*self - *other).abs() / *self)
+            .abs()
+            .min(1.0 / f64::EPSILON)
     }
 }

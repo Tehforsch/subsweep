@@ -12,6 +12,7 @@ pub struct Site<C: Chemistry> {
     pub num_missing_upwind: CountByDir,
     pub incoming_total_rate: Vec<C::Photons>,
     pub outgoing_total_rate: Vec<C::Photons>,
+    pub previous_incoming_total_rate: C::Photons,
     pub species: Species<C>,
     pub density: Density,
     pub change_timescale: Time,
@@ -32,6 +33,7 @@ impl<C: Chemistry> Site<C> {
             num_missing_upwind: CountByDir::empty(),
             incoming_total_rate: directions.enumerate().map(|_| C::Photons::zero()).collect(),
             outgoing_total_rate: directions.enumerate().map(|_| C::Photons::zero()).collect(),
+            previous_incoming_total_rate: C::Photons::zero(),
             change_timescale: Time::zero(),
         }
     }

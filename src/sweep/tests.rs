@@ -39,6 +39,7 @@ fn setup_sweep_sim(sim: &mut Simulation, setup: SweepSetup) -> &mut Simulation {
             num_timestep_levels: setup.num_timestep_levels,
             significant_rate_threshold: PhotonRate::zero(),
             timestep_safety_factor: setup.timestep_safety_factor,
+            chemistry_timestep_safety_factor: setup.timestep_safety_factor,
             check_deadlock: false,
             periodic: false,
             max_timestep: Time::seconds(1e-3),
