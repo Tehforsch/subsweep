@@ -19,7 +19,7 @@ impl<const D: Dimension> Quantity<Float, D> {
 }
 
 impl<const D: Dimension, S> Quantity<S, D> {
-    pub fn dimension(&self) -> Dimension {
+    pub fn dimension() -> Dimension {
         D
     }
 }

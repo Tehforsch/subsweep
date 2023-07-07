@@ -16,12 +16,19 @@ use raxiom::communication::Identified;
 use raxiom::components::IonizedHydrogenFraction;
 use raxiom::components::Position;
 use raxiom::components::Temperature;
+use raxiom::cosmology::LittleH;
+use raxiom::cosmology::ScaleFactor;
 use raxiom::hash_map::HashMap;
+use raxiom::io::input::attribute::read_attribute;
 use raxiom::io::input::Reader;
 use raxiom::io::DatasetShape;
 use raxiom::io::DefaultUnitReader;
+use raxiom::parameters::Cosmology;
 use raxiom::prelude::Float;
 use raxiom::prelude::Particles;
+use raxiom::units::Dimension;
+use raxiom::units::Dimensionless;
+use raxiom::units::Length;
 use raxiom::units::VecLength;
 
 use super::unit_reader::make_descriptor;
@@ -74,8 +81,9 @@ fn read_remap_data(
     Vec<Position>,
     Vec<IonizedHydrogenFraction>,
     Vec<Temperature>,
+    Cosmology,
 ) {
-    let reader = Reader::split_between_ranks(files.into_iter());
+    let reader = Reader::split_between_ranks(files.iter());
     let unit_reader = DefaultUnitReader;
     let descriptor =
         make_descriptor::<Position, _>(&unit_reader, "position", DatasetShape::OneDimensional);
@@ -92,11 +100,18 @@ fn read_remap_data(
         DatasetShape::OneDimensional,
     );
     let temperature = reader.read_dataset(descriptor).collect();
-    (position, ionized_hydrogen_fraction, temperature)
+    let scale_factor = read_attribute::<ScaleFactor>(&files[0]);
+    let little_h = read_attribute::<LittleH>(&files[0]);
+    let cosmology = Cosmology::Cosmological {
+        a: *scale_factor.0,
+        h: *little_h.0,
+    };
+    (position, ionized_hydrogen_fraction, temperature, cosmology)
 }
 
 pub fn remap_abundances_and_energies_system(
     parameters: Res<Parameters>,
+    cosmology: Res<Cosmology>,
     mut particles: Particles<(
         Entity,
         &Position,
@@ -111,7 +126,9 @@ pub fn remap_abundances_and_energies_system(
     };
     info!("Remapping abundances and temperatures.");
 
-    let (position, ionized_hydrogen_fraction, temperature) = read_remap_data(files);
+    let (position, ionized_hydrogen_fraction, temperature, remap_cosmology) =
+        read_remap_data(files);
+    let factor = get_scale_factor_difference(Length::dimension(), &cosmology, &remap_cosmology);
     let requests: Vec<_> = particles
         .iter()
         .map(|(entity, pos, _, _)| Identified::new(entity, SearchRequest { pos: pos.clone() }))
@@ -120,7 +137,7 @@ pub fn remap_abundances_and_energies_system(
     let mut chunk_iter = requests.chunks(CHUNK_SIZE);
     let tree: Tree = (&position
         .iter()
-        .map(|pos| pos_to_tree_coord(pos))
+        .map(|pos| pos_to_tree_coord(&(**pos * factor)))
         .collect::<Vec<_>>())
         .into();
     for _ in 0..num_chunks {
@@ -134,6 +151,31 @@ pub fn remap_abundances_and_energies_system(
         );
     }
     debug!("Finished remapping.");
+}
+
+fn get_scale_factor_difference(
+    dimension: Dimension,
+    cosmology: &Cosmology,
+    remap_cosmology: &Cosmology,
+) -> Dimensionless {
+    match cosmology {
+        Cosmology::Cosmological { .. } => {
+            if let Cosmology::Cosmological { .. } = remap_cosmology {
+                (*(cosmology.scale_factor() / remap_cosmology.scale_factor()))
+                    .powi(dimension.length)
+                    .into()
+            } else {
+                panic!()
+            }
+        }
+        Cosmology::NonCosmological => {
+            if let Cosmology::Cosmological { .. } = remap_cosmology {
+                panic!()
+            } else {
+                1.0.into()
+            }
+        }
+    }
 }
 
 fn get_reply(

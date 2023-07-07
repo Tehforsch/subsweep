@@ -1,3 +1,4 @@
+pub mod attribute;
 mod file_distribution;
 #[cfg(test)]
 mod tests;

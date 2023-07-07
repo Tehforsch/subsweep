@@ -44,13 +44,19 @@ fn write_attribute<T: ToAttribute>(res: Res<T>, file: ResMut<OutputFile>) {
 
 // The poor man's procedural macro
 #[macro_export]
-macro_rules! impl_to_attribute {
+macro_rules! impl_attribute {
     ($name: ident, $output: ty) => {
         impl ToAttribute for $name {
             type Output = $output;
 
             fn to_value(&self) -> Self::Output {
                 self.0
+            }
+        }
+
+        impl crate::io::input::attribute::FromAttribute for $name {
+            fn from_value(val: <Self as ToAttribute>::Output) -> Self {
+                Self(val)
             }
         }
     };

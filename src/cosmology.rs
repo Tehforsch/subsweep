@@ -5,13 +5,13 @@ use derive_custom::raxiom_parameters;
 use derive_custom::Named;
 use hdf5::H5Type;
 
-use crate::impl_to_attribute;
+use crate::impl_attribute;
 use crate::io::output::ToAttribute;
 use crate::units::Dimension;
 use crate::units::Dimensionless;
 
 #[raxiom_parameters("cosmology")]
-#[derive(Copy, Named)]
+#[derive(Copy, Named, Debug)]
 #[serde(untagged)]
 pub enum Cosmology {
     Cosmological { a: f64, h: f64 },
@@ -56,5 +56,5 @@ pub struct ScaleFactor(pub Dimensionless);
 #[name = "little_h"]
 pub struct LittleH(pub Dimensionless);
 
-impl_to_attribute!(ScaleFactor, Dimensionless);
-impl_to_attribute!(LittleH, Dimensionless);
+impl_attribute!(ScaleFactor, Dimensionless);
+impl_attribute!(LittleH, Dimensionless);
