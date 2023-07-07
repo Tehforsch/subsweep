@@ -41,3 +41,17 @@ fn write_attribute<T: ToAttribute>(res: Res<T>, file: ResMut<OutputFile>) {
         .unwrap();
     attr.write_scalar(&res.to_value()).unwrap();
 }
+
+// The poor man's procedural macro
+#[macro_export]
+macro_rules! impl_to_attribute {
+    ($name: ident, $output: ty) => {
+        impl ToAttribute for $name {
+            type Output = $output;
+
+            fn to_value(&self) -> Self::Output {
+                self.0
+            }
+        }
+    };
+}

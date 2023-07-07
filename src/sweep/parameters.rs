@@ -24,6 +24,8 @@ pub struct SweepParameters {
     pub significant_rate_threshold: PhotonRate,
     #[serde(default = "default_timestep_factor")]
     pub timestep_safety_factor: Dimensionless,
+    #[serde(default = "default_timestep_factor")]
+    pub chemistry_timestep_safety_factor: Dimensionless,
     /// Whether to run a deadlock check before each sweep. Potentially
     /// heavy impact on performance, should only be used during
     /// debugging.
