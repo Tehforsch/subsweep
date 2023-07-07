@@ -134,7 +134,7 @@ pub fn read_sources_system(
     run_parameters: Res<Parameters>,
     cosmology: Res<Cosmology>,
 ) {
-    let reader = Reader::split_between_ranks(parameters.paths.iter());
+    let reader = Reader::split_between_ranks(parameters.all_input_files());
     let from_ics = run_parameters.sources.unwrap_from_ics();
     let sources = read_sources(&reader, &cosmology, from_ics.escape_fraction);
     commands.insert_resource(Sources { sources });

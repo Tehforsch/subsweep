@@ -1,5 +1,3 @@
-use std::fs;
-use std::path::Path;
 use std::path::PathBuf;
 
 use bevy::prelude::debug;
@@ -20,6 +18,7 @@ use raxiom::cosmology::LittleH;
 use raxiom::cosmology::ScaleFactor;
 use raxiom::hash_map::HashMap;
 use raxiom::io::input::attribute::read_attribute;
+use raxiom::io::input::get_file_or_all_hdf5_files_in_path_if_dir;
 use raxiom::io::input::Reader;
 use raxiom::io::DatasetShape;
 use raxiom::io::DefaultUnitReader;
@@ -51,28 +50,6 @@ struct SearchReply {
 struct RemapData {
     temperature: Temperature,
     ionized_hydrogen_fraction: IonizedHydrogenFraction,
-}
-
-fn get_files(path: &Path) -> Vec<PathBuf> {
-    if path.is_file() {
-        vec![path.to_owned()]
-    } else {
-        fs::read_dir(path)
-            .unwrap_or_else(|e| {
-                panic!("Error: {e} while trying to read remap path {path:?} as directory")
-            })
-            .flat_map(|entry| {
-                let entry = entry.unwrap();
-                let path = entry.path();
-                let ext = path.extension()?.to_str()?;
-                if path.is_file() && ext == "hdf5" {
-                    Some(entry.path())
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
 }
 
 fn read_remap_data(
@@ -121,7 +98,7 @@ pub fn remap_abundances_and_energies_system(
 ) {
     const CHUNK_SIZE: usize = 50000;
     let files = match &parameters.remap_from {
-        Some(file) => get_files(file),
+        Some(file) => get_file_or_all_hdf5_files_in_path_if_dir(file),
         None => return,
     };
     info!("Remapping abundances and temperatures.");

@@ -3,6 +3,7 @@ mod file_distribution;
 #[cfg(test)]
 mod tests;
 
+use std::fs;
 use std::ops::Range;
 use std::path::Path;
 use std::path::PathBuf;
@@ -62,7 +63,37 @@ pub enum ComponentInput<T> {
 #[raxiom_parameters("input")]
 pub struct InputParameters {
     /// The files containing the initial conditions
-    pub paths: Vec<PathBuf>,
+    paths: Vec<PathBuf>,
+}
+
+pub fn get_file_or_all_hdf5_files_in_path_if_dir(path: &Path) -> Vec<PathBuf> {
+    if path.is_file() {
+        vec![path.to_owned()]
+    } else {
+        fs::read_dir(path)
+            .unwrap_or_else(|e| {
+                panic!("Error: {e} while trying to read remap path {path:?} as directory")
+            })
+            .flat_map(|entry| {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                let ext = path.extension()?.to_str()?;
+                if path.is_file() && ext == "hdf5" {
+                    Some(entry.path())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+}
+
+impl InputParameters {
+    pub fn all_input_files(&self) -> impl Iterator<Item = PathBuf> + '_ {
+        self.paths
+            .iter()
+            .flat_map(|path| get_file_or_all_hdf5_files_in_path_if_dir(path).into_iter())
+    }
 }
 
 #[derive(Default, Deref, DerefMut, Resource)]
@@ -275,7 +306,7 @@ fn spawn_entities_system(
     datasets: Res<RegisteredDatasets>,
     parameters: Res<InputParameters>,
 ) {
-    let reader = Reader::split_between_ranks(parameters.paths.iter());
+    let reader = Reader::split_between_ranks(parameters.all_input_files());
     if datasets.len() == 0 {
         return;
     }
@@ -304,7 +335,7 @@ fn read_dataset_system<T: ToDataset + Component + Named>(
     spawned_entities: Res<SpawnedEntities>,
     parameters: Res<InputParameters>,
 ) {
-    let reader = Reader::split_between_ranks(parameters.paths.iter());
+    let reader = Reader::split_between_ranks(parameters.all_input_files());
     info!("Reading dataset '{}'", descriptor.dataset_name());
     for (item, entity) in reader
         .read_dataset::<T>(descriptor.clone())
