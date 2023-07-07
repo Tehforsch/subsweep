@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::path::PathBuf;
 
 use bevy::prelude::debug;
@@ -86,6 +87,34 @@ fn read_remap_data(
     (position, ionized_hydrogen_fraction, temperature, cosmology)
 }
 
+fn get_files_of_last_snapshot(path: &Path) -> Vec<PathBuf> {
+    let last_snapshot = get_highest_number_snapshot_dir(path);
+    get_file_or_all_hdf5_files_in_path_if_dir(&last_snapshot)
+}
+
+fn get_highest_number_snapshot_dir(path: &Path) -> PathBuf {
+    path.read_dir()
+        .unwrap()
+        .flat_map(|entry| {
+            let entry = entry.unwrap();
+            if entry.path().is_dir() {
+                Some(entry.path())
+            } else {
+                None
+            }
+        })
+        .max_by_key(|snap_folder| {
+            snap_folder
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .parse::<usize>()
+                .unwrap_or_else(|_| panic!("Unexpected folder in snapshot dir: {snap_folder:?}"))
+        })
+        .expect("No snapshot folder exists. Failed to remap")
+}
+
 pub fn remap_abundances_and_energies_system(
     parameters: Res<Parameters>,
     cosmology: Res<Cosmology>,
@@ -98,10 +127,13 @@ pub fn remap_abundances_and_energies_system(
 ) {
     const CHUNK_SIZE: usize = 50000;
     let files = match &parameters.remap_from {
-        Some(file) => get_file_or_all_hdf5_files_in_path_if_dir(file),
+        Some(path) => get_files_of_last_snapshot(path),
         None => return,
     };
     info!("Remapping abundances and temperatures.");
+    for file in files.iter() {
+        debug!("Remapping from file: {file:?}");
+    }
 
     let (position, ionized_hydrogen_fraction, temperature, remap_cosmology) =
         read_remap_data(files);

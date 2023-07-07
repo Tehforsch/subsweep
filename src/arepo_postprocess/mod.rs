@@ -15,7 +15,8 @@ pub struct Parameters {
     pub initial_fraction_ionized_hydrogen: Option<Dimensionless>,
     pub sources: SourceType,
     pub grid: GridParameters,
-    /// Folder containing the snapshots from which to remap abundances and energies.
+    /// Folder containing the raxiom snapshots from which to remap abundances and energies.
+    /// The remapping will be done using the latest (highest-numbered) subfolder in the folder.
     pub remap_from: Option<PathBuf>,
 }
 
