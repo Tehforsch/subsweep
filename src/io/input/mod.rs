@@ -219,7 +219,11 @@ impl Reader {
         file.dataset(dataset_name)
             .map(|dset| dset.shape()[0])
             .unwrap_or_else(|_| {
-                warn!("Empty dataset `{}` in file `{}`", dataset_name, file.name());
+                warn!(
+                    "Empty dataset `{}` in file `{}`",
+                    dataset_name,
+                    file.filename()
+                );
                 0
             })
     }
