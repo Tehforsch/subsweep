@@ -8,7 +8,7 @@ use super::Chemistry;
 use super::Rate;
 use crate::particle::ParticleId;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Task {
     pub id: ParticleId,
     pub dir: DirectionIndex,
@@ -27,17 +27,9 @@ impl PartialOrd for Task {
     }
 }
 
-impl Eq for Task {}
-
 impl Ord for Task {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.partial_cmp(other).unwrap()
-    }
-}
-
-impl PartialEq for Task {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && self.dir == other.dir
     }
 }
 
