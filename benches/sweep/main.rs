@@ -14,7 +14,6 @@ use raxiom::communication::BaseCommunicationPlugin;
 use raxiom::components::Position;
 use raxiom::domain::DomainPlugin;
 use raxiom::parameters::Cosmology;
-use raxiom::parameters::SimulationBox;
 use raxiom::parameters::SimulationBoxParameters;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::SweepParameters;
@@ -35,9 +34,11 @@ use raxiom::units::Time;
 use raxiom::units::VecLength;
 use raxiom::voronoi::Point3d;
 
+pub const NUM_DIRS: usize = 84;
+
 fn setup_sweep_sim(num_particles: usize) -> Simulation {
     let mut sim = Simulation::default();
-    let dirs = DirectionsSpecification::Num(84);
+    let dirs = DirectionsSpecification::Num(NUM_DIRS);
     let num_timestep_levels = 3;
     let timestep_safety_factor = Dimensionless::dimensionless(0.1);
     sim.write_output(false)
@@ -74,7 +75,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
 }
 
 fn run_sim(mut sim: Simulation) {
-    for _ in 0..5 {
+    for _ in 0..10 {
         sim.update();
     }
 }
@@ -85,8 +86,8 @@ pub fn sweep_benchmark(c: &mut Criterion) {
         .noise_threshold(0.05)
         .measurement_time(Duration::from_secs(20))
         .sample_size(10);
-    for num_particles in [1000, 10000] {
-        group.throughput(Throughput::Elements(num_particles as u64));
+    for num_particles in [500, 2000] {
+        group.throughput(Throughput::Elements(num_particles as u64 * NUM_DIRS as u64));
         group.bench_function(BenchmarkId::from_parameter(num_particles), |b| {
             b.iter_batched(
                 || setup_sweep_sim(num_particles),
