@@ -374,14 +374,15 @@ impl<C: Chemistry> Sweep<C> {
             let this = self as *mut Sweep<C>;
             &mut *this as &mut Sweep<C>
         };
+        let dir = &self.directions[task.dir];
         let cell = &self.cells.get(task.id);
         let total_effective_area: FaceArea = cell
-            .iter_downwind_faces(&self.directions[task.dir])
-            .map(|face| face.area * face.normal.dot(*self.directions[task.dir]))
+            .iter_downwind_faces(dir)
+            .map(|face| face.area * face.normal.dot(**dir))
             .sum();
         for (face, neighbour) in cell.neighbours.iter() {
-            if face.points_downwind(&self.directions[task.dir]) {
-                let effective_area = face.area * face.normal.dot(*self.directions[task.dir]);
+            if face.points_downwind(dir) {
+                let effective_area = face.area * face.normal.dot(**dir);
                 let rate_correction_this_cell =
                     outgoing_rate_correction.clone() * (effective_area / total_effective_area);
                 match neighbour {
