@@ -107,12 +107,6 @@ impl RaxiomPlugin for SweepPlugin {
             .add_derived_component::<components::Temperature>()
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
-            .add_system_to_stage(
-                Stages::AfterSweep,
-                hydrogen_ionization_volume_average_system
-                    .before(hydrogen_ionization_mass_average_system),
-            )
-            .add_system_to_stage(Stages::AfterSweep, hydrogen_ionization_mass_average_system)
             .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
@@ -123,6 +117,14 @@ impl RaxiomPlugin for SweepPlugin {
                 Stages::Sweep,
                 rotate_directions_system.after(run_sweep_system),
             );
+        }
+        if sim.write_output {
+            sim.add_system_to_stage(
+                Stages::AfterSweep,
+                hydrogen_ionization_volume_average_system
+                    .before(hydrogen_ionization_mass_average_system),
+            )
+            .add_system_to_stage(Stages::AfterSweep, hydrogen_ionization_mass_average_system);
         }
         init_optional_component::<HeatingRate>(sim);
         init_optional_component::<Timestep>(sim);

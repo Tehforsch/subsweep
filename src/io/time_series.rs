@@ -45,6 +45,10 @@ impl<T: Named + TimeSeries> Default for TimeSeriesPlugin<T> {
 }
 
 impl<T: TimeSeries> RaxiomPlugin for TimeSeriesPlugin<T> {
+    fn should_build(&self, sim: &Simulation) -> bool {
+        sim.write_output
+    }
+
     fn allow_adding_twice(&self) -> bool {
         true
     }
