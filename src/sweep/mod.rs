@@ -352,27 +352,46 @@ impl<C: Chemistry> Sweep<C> {
         let outgoing_rate_correction =
             outgoing_rate.clone() - site.outgoing_total_rate[task.dir.0].clone();
         site.outgoing_total_rate[task.dir.0] = outgoing_rate;
-        let cell = &self.cells.get(task.id);
         self.to_solve_count.reduce(task.dir);
-        // This is very inefficient, let's see if this ever becomes a bottleneck
-        let neighbours = cell.neighbours.clone();
+        // I'd like to apologize. The reason for this unsafe garbage
+        // is that the borrow checker cannot see that both
+        // handle_local_neighbour and handle_remote_neighbour in the
+        // code below are "safe" to call, since they do not access
+        // self.cells. Now, I initially cloned all the neighbours of
+        // the cell here, which was fine while writing the code, but
+        // reduces performance by ~10% which is ridiculous for
+        // production runs.  The first safe-but-ugly alternative is to
+        // inline both handle_*_neighbour methods which I find very
+        // ugly, since this is already quite a long method and
+        // handle_local_neighbour is actually called from somewhere
+        // else, so there is some duplication.  The other alternative
+        // to unsafe code is to take the methods out of Sweep<C> and
+        // call them with all the necessary fields.  The latter is
+        // also very ugly, inflates the code by quite a bit and also
+        // sucks for the other call site of handle_local_neighbour.
+        // Therefore I choose to reborrow self:
+        let this = unsafe {
+            let this = self as *mut Sweep<C>;
+            &mut *this as &mut Sweep<C>
+        };
+        let cell = &self.cells.get(task.id);
         let total_effective_area: FaceArea = cell
             .iter_downwind_faces(&self.directions[task.dir])
             .map(|face| face.area * face.normal.dot(*self.directions[task.dir]))
             .sum();
-        for (face, neighbour) in neighbours.iter() {
+        for (face, neighbour) in cell.neighbours.iter() {
             if face.points_downwind(&self.directions[task.dir]) {
                 let effective_area = face.area * face.normal.dot(*self.directions[task.dir]);
                 let rate_correction_this_cell =
                     outgoing_rate_correction.clone() * (effective_area / total_effective_area);
                 match neighbour {
-                    ParticleType::Local(neighbour_id) => self.handle_local_neighbour(
+                    ParticleType::Local(neighbour_id) => this.handle_local_neighbour(
                         rate_correction_this_cell,
                         task.dir,
                         *neighbour_id,
                     ),
                     ParticleType::Remote(remote) => {
-                        self.handle_remote_neighbour(&task, rate_correction_this_cell, remote)
+                        this.handle_remote_neighbour(&task, rate_correction_this_cell, remote)
                     }
                     ParticleType::Boundary => {}
                     ParticleType::LocalPeriodic(_) => {}
