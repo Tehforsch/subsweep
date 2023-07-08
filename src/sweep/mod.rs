@@ -148,6 +148,7 @@ struct Sweep<C: Chemistry> {
     communicator: SweepCommunicator<C>,
     check_deadlock: bool,
     chemistry: C,
+    rank: Rank,
 }
 
 impl<C: Chemistry> Sweep<C> {
@@ -167,6 +168,7 @@ impl<C: Chemistry> Sweep<C> {
         let communicator = SweepCommunicator::<C>::new();
         let timestep_state = TimestepState::new(max_timestep, parameters.num_timestep_levels);
         let halo_levels = halo_ids.into_iter().map(|id| (id, initial_level)).collect();
+        let rank = communicator.rank();
         Sweep {
             cells: Cells::new(cells, parameters.num_timestep_levels, initial_level),
             sites: Sites::<C>::new(sites, parameters.num_timestep_levels, initial_level),
@@ -182,6 +184,7 @@ impl<C: Chemistry> Sweep<C> {
             communicator,
             check_deadlock: parameters.check_deadlock,
             chemistry,
+            rank,
         }
     }
 
@@ -324,7 +327,7 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn get_level(&self, id: ParticleId) -> TimestepLevel {
-        if id.rank == self.communicator.rank() {
+        if id.rank == self.rank {
             self.cells.get_level(id)
         } else {
             self.halo_levels[&id]
