@@ -313,8 +313,7 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn get_initial_tasks(&self) -> PriorityQueue<Task> {
-        let tasks = self
-            .directions
+        self.directions
             .enumerate()
             .flat_map(|(dir_index, _)| {
                 self.sites
@@ -322,8 +321,7 @@ impl<C: Chemistry> Sweep<C> {
                     .filter(move |(_, site)| site.num_missing_upwind[dir_index] == 0)
                     .map(move |(id, _)| Task { id, dir: dir_index })
             })
-            .collect();
-        tasks
+            .collect()
     }
 
     fn get_level(&self, id: ParticleId) -> TimestepLevel {

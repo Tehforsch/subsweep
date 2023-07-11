@@ -41,6 +41,9 @@ pub struct SimulationBoxPlugin;
 
 impl RaxiomPlugin for SimulationBoxPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
+        if sim.contains_resource::<SimulationBox>() {
+            return;
+        }
         sim.add_parameter_type::<SimulationBoxParameters>();
         sim.add_parameter_type::<Cosmology>();
         let box_ = sim.get_parameters::<SimulationBoxParameters>();

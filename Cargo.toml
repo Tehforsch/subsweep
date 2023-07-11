@@ -64,6 +64,10 @@ required-features = ["mpi_test", "3d"]
 name = "voronoi"
 required-features = ["3d"]
 
+[[example]]
+name = "sweep_1d"
+required-features = ["3d"]
+
 [[bench]]
 name = "voronoi2d"
 harness = false

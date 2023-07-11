@@ -244,6 +244,10 @@ impl GridConstructor {
             rank,
             allow_periodic: periodic,
         };
+        info!(
+            "Constructing cartesian grid with {:?} cells.",
+            constructor.num_cells()
+        );
         for (i, integer_pos) in constructor
             .get_all_integer_positions()
             .into_iter()
@@ -360,7 +364,8 @@ impl GridConstructor {
     }
 
     fn spawn_local_cells(&mut self, mut commands: Commands) {
-        let drained_cells: Vec<_> = self.cells.drain().collect();
+        let mut drained_cells: Vec<_> = self.cells.drain().collect();
+        drained_cells.sort_by_key(|(integer_pos, _)| integer_pos.x);
         for (integer_pos, cell) in drained_cells {
             let particle_id = self.ids[&integer_pos];
             let pos = self.to_pos(integer_pos);
