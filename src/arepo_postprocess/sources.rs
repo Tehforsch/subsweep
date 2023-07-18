@@ -58,13 +58,14 @@ pub struct Source {
 
 impl Source {
     fn new(
+        cosmology: &Cosmology,
         position: VecLength,
         metallicity: Dimensionless,
         mass: Mass,
-        formation_time: Dimensionless,
+        formation_scale_factor: Dimensionless,
         escape_fraction: Dimensionless,
     ) -> Source {
-        let age = formation_time_to_age(formation_time);
+        let age = formation_scale_factor_to_age(cosmology, formation_scale_factor);
         Self {
             position,
             rate: bpass_lookup(age, metallicity, mass) * escape_fraction,
@@ -72,9 +73,11 @@ impl Source {
     }
 }
 
-fn formation_time_to_age(_formation_time: Dimensionless) -> Time {
-    // Not implemented yet
-    Time::megayears(100.0)
+fn formation_scale_factor_to_age(
+    cosmology: &Cosmology,
+    formation_scale_factor: Dimensionless,
+) -> Time {
+    cosmology.time_difference_between_scalefactors(formation_scale_factor, cosmology.scale_factor())
 }
 
 #[derive(Resource, Default)]
@@ -105,7 +108,7 @@ fn read_sources(
         "PartType4/GFM_StellarFormationTime",
         DatasetShape::OneDimensional,
     );
-    let formation_time = reader.read_dataset(descriptor);
+    let formation_scale_factor = reader.read_dataset(descriptor);
     let descriptor = make_descriptor::<components::Mass, _>(
         &unit_reader,
         "PartType4/Masses",
@@ -114,19 +117,22 @@ fn read_sources(
     let mass = reader.read_dataset(descriptor);
     position
         .zip(metallicity)
-        .zip(formation_time)
+        .zip(formation_scale_factor)
         .zip(mass)
         // Everything else is WIND. Love the data structures in Arepo
-        .filter(|(((_, _), formation_time), _)| formation_time.is_positive())
-        .map(|(((position, metallicity), formation_time), mass)| {
-            Source::new(
-                *position,
-                *metallicity,
-                *mass,
-                *formation_time,
-                escape_fraction,
-            )
-        })
+        .filter(|(((_, _), formation_scale_factor), _)| formation_scale_factor.is_positive())
+        .map(
+            |(((position, metallicity), formation_scale_factor), mass)| {
+                Source::new(
+                    cosmology,
+                    *position,
+                    *metallicity,
+                    *mass,
+                    *formation_scale_factor,
+                    escape_fraction,
+                )
+            },
+        )
         .collect()
 }
 

@@ -36,6 +36,7 @@ unit_system!(
         unit (years, "yr") = 3.15576e7 * seconds,
         unit (kiloyears, "kyr") = 1000.0 * years,
         unit (megayears, "Myr") = 1e6 * years,
+        unit (gigayears, "Gyr") = 1e9 * years,
         def Mass = { mass: 1 },
         unit (kilograms, "kg") = Mass,
         unit (grams, "g") = 1e-3 * kilograms,

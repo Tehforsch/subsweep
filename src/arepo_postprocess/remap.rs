@@ -83,6 +83,7 @@ fn read_remap_data(
     let cosmology = Cosmology::Cosmological {
         a: *scale_factor.0,
         h: *little_h.0,
+        params: None,
     };
     (position, ionized_hydrogen_fraction, temperature, cosmology)
 }
