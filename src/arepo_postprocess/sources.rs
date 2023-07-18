@@ -116,6 +116,8 @@ fn read_sources(
         .zip(metallicity)
         .zip(formation_time)
         .zip(mass)
+        // Everything else is WIND. Love the data structures in Arepo
+        .filter(|(((_, _), formation_time), _)| formation_time.is_positive())
         .map(|(((position, metallicity), formation_time), mass)| {
             Source::new(
                 *position,
