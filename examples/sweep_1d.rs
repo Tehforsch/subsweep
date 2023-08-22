@@ -1,9 +1,15 @@
-use bevy::prelude::Commands;
-use bevy::prelude::Res;
+use bevy::prelude::*;
+use ordered_float::OrderedFloat;
+use raxiom::components;
+use raxiom::components::Density;
+use raxiom::components::Position;
+use raxiom::components::Source;
 use raxiom::parameters::Cosmology;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::SweepParameters;
 use raxiom::prelude::Extent;
+use raxiom::prelude::LocalParticle;
+use raxiom::prelude::Particles;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationBox;
 use raxiom::prelude::SimulationBuilder;
@@ -12,16 +18,20 @@ use raxiom::prelude::WorldRank;
 use raxiom::prelude::WorldSize;
 use raxiom::sweep::grid::init_cartesian_grid_system;
 use raxiom::sweep::grid::NumCellsSpec;
-use raxiom::sweep::initialize_sweep_test_components_system;
 use raxiom::sweep::DirectionsSpecification;
 use raxiom::sweep::SweepPlugin;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
+use raxiom::units::Mass;
 use raxiom::units::PhotonRate;
+use raxiom::units::SourceRate;
+use raxiom::units::Temperature;
 use raxiom::units::Time;
 use raxiom::units::VecLength;
+use raxiom::units::Volume;
 
 const BOX_SIZE_MEGAPARSEC: f64 = 1.0;
+const PHOTONS_PER_SECOND: f64 = 1e49;
 
 fn main() {
     let mut sim = setup_sweep_sim(1000);
@@ -36,6 +46,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         .write_output(true)
         .read_initial_conditions(false)
         .require_parameter_file(false)
+        .verbosity(2)
         .build_with_sim(&mut sim_);
     let dirs = DirectionsSpecification::Num(1);
     let num_timestep_levels = 1;
@@ -55,12 +66,13 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         })
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_parameters_explicitly(SimulationParameters {
-            final_time: Some(Time::megayears(10.0)),
+            final_time: Some(Time::megayears(100.0)),
         })
         .add_startup_system_to_stage(
             StartupStages::InsertComponentsAfterGrid,
-            initialize_sweep_test_components_system,
+            initialize_sweep_components_system,
         )
+        .add_startup_system_to_stage(StartupStages::InsertComponentsAfterGrid, add_source_system)
         .add_plugin(SweepPlugin);
     sim_
 }
@@ -94,4 +106,33 @@ fn add_grid(sim: &mut Simulation, num_particles: usize) {
         )
     };
     sim.add_startup_system(grid_setup);
+}
+
+fn add_source_system(mut commands: Commands, particles: Particles<(Entity, &Position)>) {
+    let most_left = particles
+        .iter()
+        .min_by_key(|(_, pos)| OrderedFloat(pos.x().value_unchecked()))
+        .unwrap();
+
+    for (entity, _) in particles.iter() {
+        let source = if entity != most_left.0 {
+            SourceRate::zero()
+        } else {
+            SourceRate::photons_per_second(PHOTONS_PER_SECOND)
+        };
+        commands.entity(entity).insert(Source(source));
+    }
+}
+
+pub fn initialize_sweep_components_system(
+    mut commands: Commands,
+    local_particles: Query<Entity, With<LocalParticle>>,
+) {
+    for entity in local_particles.iter() {
+        commands.entity(entity).insert((
+            Density(Mass::kilograms(1.0e-29) / Volume::cubic_centimeters(1.0)),
+            components::IonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
+            components::Temperature(Temperature::kelvins(1000.0)),
+        ));
+    }
 }
