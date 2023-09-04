@@ -78,8 +78,9 @@ impl Chemistry for HydrogenOnly {
         if incoming_rate < self.rate_threshold {
             PhotonRate::zero()
         } else {
-            let absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-            incoming_rate * absorbed_fraction
+            let non_absorbed_fraction =
+                (-neutral_hydrogen_number_density * sigma * cell.size).exp();
+            incoming_rate * non_absorbed_fraction
         }
     }
 
