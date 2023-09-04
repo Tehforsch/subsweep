@@ -99,7 +99,7 @@ in general and Bevys amazing modularity in particular.
 
 Here is how this might look in practice:
 
-```rust no_run
+```rust ignore
 use raxiom::prelude::*;
 use raxiom::components::*;
 use bevy::prelude::*;

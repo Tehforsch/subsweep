@@ -50,7 +50,7 @@ impl DirectionsSpecification {
 }
 
 fn default_rotate_directions() -> bool {
-    true
+    false
 }
 
 fn default_timestep_factor() -> Dimensionless {
