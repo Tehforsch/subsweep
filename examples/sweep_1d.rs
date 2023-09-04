@@ -1,15 +1,14 @@
+use std::path::Path;
+
 use bevy::prelude::*;
+use derive_custom::raxiom_parameters;
 use ordered_float::OrderedFloat;
 use raxiom::components;
 use raxiom::components::Density;
 use raxiom::components::Position;
 use raxiom::components::Source;
 use raxiom::parameters::Cosmology;
-use raxiom::parameters::Fields;
-use raxiom::parameters::HandleExistingOutput;
-use raxiom::parameters::OutputParameters;
 use raxiom::parameters::SimulationParameters;
-use raxiom::parameters::SweepParameters;
 use raxiom::prelude::Extent;
 use raxiom::prelude::LocalParticle;
 use raxiom::prelude::Particles;
@@ -21,7 +20,6 @@ use raxiom::prelude::WorldRank;
 use raxiom::prelude::WorldSize;
 use raxiom::sweep::grid::init_cartesian_grid_system;
 use raxiom::sweep::grid::NumCellsSpec;
-use raxiom::sweep::DirectionsSpecification;
 use raxiom::sweep::SweepPlugin;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
@@ -35,50 +33,31 @@ use raxiom::units::VecLength;
 use raxiom::units::Volume;
 
 const BOX_SIZE_MEGAPARSEC: f64 = 1.0;
-const FLUX_PHOTONS_PER_S_PER_CM_2: f64 = 1e4;
+
+#[raxiom_parameters("1d")]
+struct Params {
+    num_particles: usize,
+    photon_flux: PhotonFlux,
+}
 
 fn main() {
-    let mut sim = setup_sweep_sim(10000);
+    let mut sim = setup_sweep_sim();
     sim.run();
 }
 
-fn setup_sweep_sim(num_particles: usize) -> Simulation {
-    let mut sim_ = Simulation::default();
-    add_box_size(&mut sim_, num_particles);
+fn setup_sweep_sim() -> Simulation {
     let mut sim = SimulationBuilder::new();
     let mut sim = sim
         .write_output(true)
         .read_initial_conditions(false)
-        .require_parameter_file(false)
+        .require_parameter_file(true)
         .verbosity(2)
-        .build_with_sim(&mut sim_);
-    let dirs = DirectionsSpecification::Num(1);
-    let num_timestep_levels = 3;
-    let timestep_safety_factor = Dimensionless::dimensionless(0.1);
-    add_grid(&mut sim, num_particles);
+        .parameter_file_path(&Path::new("params.yml").to_owned())
+        .build();
+    let params = sim.add_parameter_type_and_get_result::<Params>().clone();
+    add_box_size(&mut sim, params.num_particles);
+    add_grid(&mut sim, params.num_particles);
     sim.write_output(true)
-        .add_parameters_explicitly(SweepParameters {
-            directions: dirs,
-            rotate_directions: false,
-            num_timestep_levels,
-            significant_rate_threshold: PhotonRate::zero(),
-            timestep_safety_factor,
-            chemistry_timestep_safety_factor: timestep_safety_factor,
-            max_timestep: Time::megayears(1.0e-1),
-            check_deadlock: false,
-            periodic: false,
-        })
-        .add_parameters_explicitly(OutputParameters {
-            time_between_snapshots: Time::megayears(1.0),
-            time_first_snapshot: None,
-            output_dir: "output".into(),
-            snapshots_dir: "snapshots".into(),
-            time_series_dir: "time_series".into(),
-            fields: Fields::All,
-            snapshot_padding: 4,
-            used_parameters_filename: "parameters.yml".into(),
-            handle_existing_output: HandleExistingOutput::Delete,
-        })
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_parameters_explicitly(SimulationParameters {
             final_time: Some(Time::megayears(1000.0)),
@@ -89,7 +68,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         )
         .add_startup_system_to_stage(StartupStages::InsertComponentsAfterGrid, add_source_system)
         .add_plugin(SweepPlugin);
-    sim_
+    sim
 }
 
 fn add_box_size(sim: &mut Simulation, num_particles: usize) {
@@ -123,7 +102,11 @@ fn add_grid(sim: &mut Simulation, num_particles: usize) {
     sim.add_startup_system(grid_setup);
 }
 
-fn add_source_system(mut commands: Commands, particles: Particles<(Entity, &Position)>) {
+fn add_source_system(
+    mut commands: Commands,
+    particles: Particles<(Entity, &Position)>,
+    params: Res<Params>,
+) {
     let most_left = particles
         .iter()
         .min_by_key(|(_, pos)| OrderedFloat(pos.x().value_unchecked()))
@@ -135,9 +118,7 @@ fn add_source_system(mut commands: Commands, particles: Particles<(Entity, &Posi
         } else {
             let num_particles = particles.iter().count();
             let cell_size = Length::megaparsec(BOX_SIZE_MEGAPARSEC) / num_particles as f64;
-            let photons_per_second =
-                PhotonFlux::photons_per_s_per_cm_squared(FLUX_PHOTONS_PER_S_PER_CM_2)
-                    * cell_size.squared();
+            let photons_per_second = params.photon_flux * cell_size.squared();
             photons_per_second
         };
         commands.entity(entity).insert(Source(source));
