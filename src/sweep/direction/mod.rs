@@ -160,6 +160,7 @@ pub(super) fn rotate_directions_system(
     for dir in solver.directions.directions.iter_mut() {
         multiply_by_matrix(&mut dir.0 .0, &matrix)
     }
+    panic!("Rotations currently mess up results in substepping runs.");
 }
 
 pub(super) fn init_directions_rng(sim: &mut Simulation) {
