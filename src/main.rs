@@ -154,7 +154,7 @@ fn insert_missing_components_system(
             **density,
         );
         commands.entity(entity).insert((
-            components::Rate(PhotonRate::zero()),
+            components::PhotonRate(PhotonRate::zero()),
             components::Source(SourceRate::zero()),
             components::Temperature(temperature),
         ));

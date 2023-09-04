@@ -5,6 +5,9 @@ use raxiom::components::Density;
 use raxiom::components::Position;
 use raxiom::components::Source;
 use raxiom::parameters::Cosmology;
+use raxiom::parameters::Fields;
+use raxiom::parameters::HandleExistingOutput;
+use raxiom::parameters::OutputParameters;
 use raxiom::parameters::SimulationParameters;
 use raxiom::parameters::SweepParameters;
 use raxiom::prelude::Extent;
@@ -23,6 +26,7 @@ use raxiom::sweep::SweepPlugin;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
 use raxiom::units::Mass;
+use raxiom::units::PhotonFlux;
 use raxiom::units::PhotonRate;
 use raxiom::units::SourceRate;
 use raxiom::units::Temperature;
@@ -31,10 +35,10 @@ use raxiom::units::VecLength;
 use raxiom::units::Volume;
 
 const BOX_SIZE_MEGAPARSEC: f64 = 1.0;
-const PHOTONS_PER_SECOND: f64 = 1e49;
+const FLUX_PHOTONS_PER_S_PER_CM_2: f64 = 1e4;
 
 fn main() {
-    let mut sim = setup_sweep_sim(1000);
+    let mut sim = setup_sweep_sim(10000);
     sim.run();
 }
 
@@ -49,7 +53,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
         .verbosity(2)
         .build_with_sim(&mut sim_);
     let dirs = DirectionsSpecification::Num(1);
-    let num_timestep_levels = 1;
+    let num_timestep_levels = 3;
     let timestep_safety_factor = Dimensionless::dimensionless(0.1);
     add_grid(&mut sim, num_particles);
     sim.write_output(true)
@@ -60,13 +64,24 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             significant_rate_threshold: PhotonRate::zero(),
             timestep_safety_factor,
             chemistry_timestep_safety_factor: timestep_safety_factor,
-            max_timestep: Time::megayears(1e-1),
+            max_timestep: Time::megayears(1.0e-1),
             check_deadlock: false,
             periodic: false,
         })
+        .add_parameters_explicitly(OutputParameters {
+            time_between_snapshots: Time::megayears(1.0),
+            time_first_snapshot: None,
+            output_dir: "output".into(),
+            snapshots_dir: "snapshots".into(),
+            time_series_dir: "time_series".into(),
+            fields: Fields::All,
+            snapshot_padding: 4,
+            used_parameters_filename: "parameters.yml".into(),
+            handle_existing_output: HandleExistingOutput::Delete,
+        })
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_parameters_explicitly(SimulationParameters {
-            final_time: Some(Time::megayears(100.0)),
+            final_time: Some(Time::megayears(1000.0)),
         })
         .add_startup_system_to_stage(
             StartupStages::InsertComponentsAfterGrid,
@@ -118,7 +133,12 @@ fn add_source_system(mut commands: Commands, particles: Particles<(Entity, &Posi
         let source = if entity != most_left.0 {
             SourceRate::zero()
         } else {
-            SourceRate::photons_per_second(PHOTONS_PER_SECOND)
+            let num_particles = particles.iter().count();
+            let cell_size = Length::megaparsec(BOX_SIZE_MEGAPARSEC) / num_particles as f64;
+            let photons_per_second =
+                PhotonFlux::photons_per_s_per_cm_squared(FLUX_PHOTONS_PER_S_PER_CM_2)
+                    * cell_size.squared();
+            photons_per_second
         };
         commands.entity(entity).insert(Source(source));
     }
@@ -130,9 +150,10 @@ pub fn initialize_sweep_components_system(
 ) {
     for entity in local_particles.iter() {
         commands.entity(entity).insert((
-            Density(Mass::kilograms(1.0e-29) / Volume::cubic_centimeters(1.0)),
+            Density(Mass::grams(1.0e-27) / Volume::cubic_centimeters(1.0)),
             components::IonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
             components::Temperature(Temperature::kelvins(1000.0)),
+            components::PhotonRate(PhotonRate::zero()),
         ));
     }
 }

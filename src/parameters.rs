@@ -1,5 +1,6 @@
 pub use crate::cosmology::Cosmology;
 pub use crate::io::input::InputParameters;
+pub use crate::io::output::parameters::Fields;
 pub use crate::io::output::parameters::HandleExistingOutput;
 pub use crate::io::output::parameters::OutputParameters;
 pub use crate::prelude::SimulationBox;

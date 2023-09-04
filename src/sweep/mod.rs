@@ -54,6 +54,7 @@ use crate::components::Density;
 use crate::components::HeatingRate;
 use crate::components::IonizationTime;
 use crate::components::IonizedHydrogenFraction;
+use crate::components::PhotonRate;
 use crate::components::Source;
 use crate::components::Timestep;
 use crate::cosmology::Cosmology;
@@ -103,7 +104,7 @@ impl RaxiomPlugin for SweepPlugin {
             .add_derived_component::<IonizedHydrogenFraction>()
             .add_derived_component::<Source>()
             .add_derived_component::<Density>()
-            .add_derived_component::<components::Rate>()
+            .add_derived_component::<components::PhotonRate>()
             .add_derived_component::<components::Temperature>()
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
@@ -560,7 +561,7 @@ fn run_sweep_system(
     mut heating_rates: Particles<(&ParticleId, &mut HeatingRate)>,
     mut timesteps: Particles<(&ParticleId, &mut Timestep)>,
     mut ionization_times: Particles<(&ParticleId, &mut IonizationTime)>,
-    mut rates: Particles<(&ParticleId, &mut components::Rate)>,
+    mut rates: Particles<(&ParticleId, &mut components::PhotonRate)>,
     mut time: ResMut<SimulationTime>,
 ) {
     let solver = (*solver).as_mut().unwrap();
@@ -631,6 +632,7 @@ pub fn initialize_sweep_test_components_system(
             components::IonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
             components::Temperature(Temperature::kelvins(1000.0)),
             Source(SourceRate::zero()),
+            PhotonRate(units::PhotonRate::zero()),
         ));
     }
 }
