@@ -22,13 +22,13 @@ use raxiom::sweep::grid::NumCellsSpec;
 use raxiom::sweep::SweepPlugin;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
-use raxiom::units::Mass;
+use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
 use raxiom::units::PhotonRate;
 use raxiom::units::SourceRate;
 use raxiom::units::Temperature;
 use raxiom::units::VecLength;
-use raxiom::units::Volume;
+use raxiom::units::PROTON_MASS;
 
 const BOX_SIZE_MEGAPARSEC: f64 = 1.0;
 
@@ -36,6 +36,7 @@ const BOX_SIZE_MEGAPARSEC: f64 = 1.0;
 struct Params {
     num_particles: usize,
     photon_flux: PhotonFlux,
+    number_density: NumberDensity,
 }
 
 impl Params {
@@ -127,13 +128,15 @@ fn add_source_system(
     }
 }
 
-pub fn initialize_sweep_components_system(
+fn initialize_sweep_components_system(
     mut commands: Commands,
     local_particles: Query<Entity, With<LocalParticle>>,
+    params: Res<Params>,
 ) {
     for entity in local_particles.iter() {
+        let mass_density = params.number_density * PROTON_MASS;
         commands.entity(entity).insert((
-            Density(Mass::grams(1.0e-27) / Volume::cubic_centimeters(1.0)),
+            Density(mass_density),
             components::IonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
             components::Temperature(Temperature::kelvins(1000.0)),
             components::PhotonRate(PhotonRate::zero()),

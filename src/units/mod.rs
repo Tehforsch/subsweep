@@ -12,7 +12,7 @@ unit_system!(
     Dimension,
     [
         def Dimensionless = {},
-        unit dimensionless = Dimensionless,
+        unit (dimensionless, "") = Dimensionless,
         unit (percent, "%") = 0.01 * Dimensionless,
         def Length = { length: 1 },
         unit (meters, "m") = Length,
