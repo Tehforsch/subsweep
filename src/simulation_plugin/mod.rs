@@ -1,6 +1,8 @@
 mod parameters;
 mod time;
 
+use std::time::Instant;
+
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
@@ -53,9 +55,13 @@ pub(super) struct ShouldExit(bool);
 
 pub struct StopSimulationEvent;
 
+#[derive(Resource)]
+struct RuntimeTracker(Instant);
+
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.add_parameter_type::<SimulationParameters>()
+        sim.insert_resource::<RuntimeTracker>(RuntimeTracker(Instant::now()))
+            .add_parameter_type::<SimulationParameters>()
             .add_required_component::<Position>()
             .add_plugin(SimulationBoxPlugin)
             .add_plugin(ParticlePlugin)
@@ -102,8 +108,16 @@ fn show_time_system(time: Res<SimulationTime>) {
     info!("Time: {:?}", **time);
 }
 
-fn exit_system(mut evs: EventWriter<AppExit>, mut stop_sim: EventReader<StopSimulationEvent>) {
+fn exit_system(
+    mut evs: EventWriter<AppExit>,
+    mut stop_sim: EventReader<StopSimulationEvent>,
+    run_time_tracker: Res<RuntimeTracker>,
+) {
     if stop_sim.iter().count() > 0 {
+        let time_in_secs = Instant::now()
+            .duration_since(run_time_tracker.0)
+            .as_secs_f64();
+        info!("Run finished after {:.03} seconds.", time_in_secs);
         evs.send(AppExit);
     }
 }
