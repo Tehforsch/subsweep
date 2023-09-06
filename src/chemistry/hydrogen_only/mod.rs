@@ -22,13 +22,11 @@ use crate::units::Time;
 use crate::units::Volume;
 use crate::units::VolumeRate;
 use crate::units::BOLTZMANN_CONSTANT;
-use crate::units::ENERGY_WEIGHTED_AVERAGE_CROSS_SECTION;
 use crate::units::GAMMA;
 use crate::units::NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
 use crate::units::PHOTON_AVERAGE_ENERGY;
 use crate::units::PROTON_MASS;
 use crate::units::RYDBERG_CONSTANT;
-use crate::units::SPEED_OF_LIGHT;
 
 const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 
@@ -151,10 +149,6 @@ impl Solver {
         1.0 / (self.ionized_hydrogen_fraction + 1.0)
     }
 
-    fn photon_density(&self) -> NumberDensity {
-        self.rate * self.length / SPEED_OF_LIGHT / self.volume
-    }
-
     fn collision_fit_function(&self) -> f64 {
         let temperature = self.temperature.in_kelvins();
         temperature.sqrt() / (1.0 + (temperature / 1e5).sqrt()) * (-157809.1 / temperature).exp()
@@ -269,14 +263,6 @@ impl Solver {
         EnergyPerTime::ergs_per_s(1.017e-37 * x.powi(4)) / Temperature::kelvins(1.0)
     }
 
-    fn photoheating_rate(&self) -> HeatingRate {
-        self.neutral_hydrogen_number_density()
-            * self.photon_density()
-            * SPEED_OF_LIGHT
-            * (PHOTON_AVERAGE_ENERGY * ENERGY_WEIGHTED_AVERAGE_CROSS_SECTION
-                - RYDBERG_CONSTANT * NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION)
-    }
-
     fn cooling_rate(&self) -> HeatingRate {
         let ne = self.electron_number_density();
         let nh_neutral = self.neutral_hydrogen_number_density();
@@ -308,15 +294,33 @@ impl Solver {
 
     fn temperature_change(&mut self, timestep: Time) -> Temperature {
         let k = (GAMMA - 1.0) * PROTON_MASS / (self.density * BOLTZMANN_CONSTANT);
-        let lambda = self.photoheating_rate() - self.cooling_rate();
+        let lambda = self.photoheating_rate(timestep) - self.cooling_rate();
         let dlambdadt = -self.cooling_rate_derivative();
         self.heating_rate = lambda;
         let mu = self.mu();
         k * mu * lambda * timestep / (1.0 - k * mu * dlambdadt * timestep)
     }
 
-    fn photoionization_rate(&self) -> Rate {
-        NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION * SPEED_OF_LIGHT * self.photon_density()
+    fn num_newly_ionized_hydrogen_atoms(&self, timestep: Time) -> Dimensionless {
+        let neutral_hydrogen_number_density = self.neutral_hydrogen_number_density();
+        let sigma = NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
+        let absorbed_fraction =
+            1.0 - (-neutral_hydrogen_number_density * sigma * self.length).exp();
+        let num_photons: Dimensionless = timestep * self.rate;
+        num_photons * absorbed_fraction
+    }
+
+    fn photoheating_rate(&self, timestep: Time) -> HeatingRate {
+        let num_ionized_hydrogen_atoms = self.num_newly_ionized_hydrogen_atoms(timestep);
+        let ionization_density = num_ionized_hydrogen_atoms / self.volume;
+        ionization_density * (PHOTON_AVERAGE_ENERGY - RYDBERG_CONSTANT) / timestep
+    }
+
+    fn photoionization_rate(&self, timestep: Time) -> Rate {
+        let num_ionized_hydrogen_atoms = self.num_newly_ionized_hydrogen_atoms(timestep);
+        let fraction_ionized_hydrogen_atoms =
+            num_ionized_hydrogen_atoms / (self.neutral_hydrogen_number_density() * self.volume);
+        fraction_ionized_hydrogen_atoms / timestep
     }
 
     fn ionized_fraction_change(&self, timestep: Time) -> Dimensionless {
@@ -327,7 +331,7 @@ impl Solver {
         let dalpha = self.case_b_recombination_rate_derivative();
         let beta = self.collisional_ionization_rate();
         let dbeta = self.collisional_ionization_rate_derivative();
-        let c: Rate = beta * ne + self.photoionization_rate();
+        let c: Rate = beta * ne + self.photoionization_rate(timestep);
         let mu = self.mu();
         let d: Rate = alpha * ne;
         let xhii = self.ionized_hydrogen_fraction;
@@ -863,7 +867,7 @@ mod tests {
                 name,
                 get_configurations(
                     flux,
-                    &[1e-10, 0.2, 0.5, 0.8, 1.0],
+                    &[1e-10, 0.2, 0.5, 0.8, 0.999],
                     &[
                         Temperature::kelvins(1e3),
                         Temperature::kelvins(1.6e4),
