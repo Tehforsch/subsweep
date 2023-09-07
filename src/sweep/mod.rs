@@ -30,8 +30,8 @@ use self::direction::Directions;
 use self::grid::Cell;
 use self::grid::FaceArea;
 use self::grid::ParticleType;
-use self::grid::PeriodicNeighbour;
 use self::grid::RemoteNeighbour;
+use self::grid::RemotePeriodicNeighbour;
 use self::site::Site;
 pub use self::task::RateData;
 use self::task::Task;
@@ -144,8 +144,10 @@ struct Sweep<C: Chemistry> {
     halo_levels: HashMap<ParticleId, TimestepLevel>,
     to_solve: PriorityQueue<Task>,
     to_send: DataByRank<Queue<RateData<C>>>,
+    to_send_periodic: DataByRank<Queue<RateData<C>>>,
     to_solve_count: CountByDir,
     to_receive_count: DataByRank<usize>,
+    to_receive_periodic_count: DataByRank<usize>,
     timestep_state: TimestepState,
     timestep_safety_factor: Dimensionless,
     significant_rate_threshold: units::PhotonRate,
@@ -181,9 +183,11 @@ impl<C: Chemistry> Sweep<C> {
             halo_levels,
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
+            to_send_periodic: DataByRank::from_size_and_rank(world_size, world_rank),
             directions: directions.clone(),
             to_solve_count: CountByDir::empty(),
             to_receive_count: DataByRank::empty(),
+            to_receive_periodic_count: DataByRank::empty(),
             timestep_safety_factor,
             timestep_state,
             current_level: TimestepLevel(0),
@@ -260,6 +264,7 @@ impl<C: Chemistry> Sweep<C> {
             }
             self.send_all_messages();
         }
+        self.exchange_all_periodic_messages();
     }
 
     fn remaining_to_send_count(&self) -> usize {
@@ -284,8 +289,43 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
+    fn receive_periodic_messages_from_rank(&mut self, rank: Rank) {
+        let received = self.communicator.try_recv(rank);
+        if let Some(received) = received {
+            self.to_receive_periodic_count[rank] -= received.len();
+            for d in received.into_iter() {
+                self.handle_local_periodic_neighbour(d.rate, d.dir, d.id);
+            }
+        }
+    }
+
+    fn receive_all_periodic_messages(&mut self) {
+        for rank in self.communicator.other_ranks() {
+            if self.to_receive_periodic_count[rank] > 0 {
+                self.receive_periodic_messages_from_rank(rank);
+            }
+        }
+    }
+
     fn send_all_messages(&mut self) {
         self.communicator.try_send_all(&mut self.to_send);
+    }
+
+    fn exchange_all_periodic_messages(&mut self) {
+        loop {
+            let something_to_send = self
+                .to_send_periodic
+                .iter()
+                .any(|(_, queue)| queue.len() > 0);
+            if something_to_send {
+                self.communicator.try_send_all(&mut self.to_send_periodic);
+            }
+            let something_to_receive = self.to_receive_periodic_count.iter().any(|(_, x)| *x > 0);
+            self.receive_all_periodic_messages();
+            if !something_to_send && !something_to_receive {
+                break;
+            }
+        }
     }
 
     pub fn init_counts(&mut self) {
@@ -294,6 +334,12 @@ impl<C: Chemistry> Sweep<C> {
             self.cells.enumerate_active(self.current_level).count(),
         );
         self.to_receive_count = self
+            .communicator
+            .other_ranks()
+            .into_iter()
+            .map(|rank| (rank, 0))
+            .collect();
+        self.to_receive_periodic_count = self
             .communicator
             .other_ranks()
             .into_iter()
@@ -310,9 +356,19 @@ impl<C: Chemistry> Sweep<C> {
                     if !is_active {
                         continue;
                     }
-                    num_missing_upwind[dir_index] += 1;
-                    if let ParticleType::Remote(neighbour) = neighbour {
-                        self.to_receive_count[neighbour.rank] += 1;
+                    match neighbour {
+                        ParticleType::Local(_) => {
+                            num_missing_upwind[dir_index] += 1;
+                        }
+                        ParticleType::Remote(neighbour) => {
+                            num_missing_upwind[dir_index] += 1;
+                            self.to_receive_count[neighbour.rank] += 1;
+                        }
+                        ParticleType::Boundary => unreachable!(),
+                        ParticleType::LocalPeriodic(_) => {}
+                        ParticleType::RemotePeriodic(neighbour) => {
+                            self.to_receive_periodic_count[neighbour.rank] += 1;
+                        }
                     }
                 }
             }
@@ -404,14 +460,16 @@ impl<C: Chemistry> Sweep<C> {
                         this.handle_remote_neighbour(&task, rate_correction_this_cell, remote)
                     }
                     ParticleType::Boundary => {}
-                    ParticleType::LocalPeriodic(remote) => this.handle_local_periodic_neighbour(
+                    ParticleType::LocalPeriodic(neighbour) => this.handle_local_periodic_neighbour(
                         rate_correction_this_cell,
                         task.dir,
+                        neighbour.id,
+                    ),
+                    ParticleType::RemotePeriodic(remote) => this.handle_remote_periodic_neighbour(
+                        &task,
+                        rate_correction_this_cell,
                         remote,
                     ),
-                    ParticleType::RemotePeriodic(_) => {
-                        todo!()
-                    }
                 }
             }
         }
@@ -439,9 +497,9 @@ impl<C: Chemistry> Sweep<C> {
         &mut self,
         incoming_rate_correction: Rate<C>,
         dir: DirectionIndex,
-        neighbour: &PeriodicNeighbour,
+        neighbour: ParticleId,
     ) {
-        let site = self.sites.get_mut(neighbour.id);
+        let site = self.sites.get_mut(neighbour);
         site.periodic_source[*dir] += incoming_rate_correction.clone();
     }
 
@@ -458,6 +516,22 @@ impl<C: Chemistry> Sweep<C> {
                 id: remote.id,
             };
             self.to_send[remote.rank].push(rate_data);
+        }
+    }
+
+    fn handle_remote_periodic_neighbour(
+        &mut self,
+        task: &Task,
+        rate_correction: Rate<C>,
+        neighbour: &RemotePeriodicNeighbour,
+    ) {
+        if self.is_active(neighbour.id) {
+            let rate_data = RateData {
+                dir: task.dir,
+                rate: rate_correction,
+                id: neighbour.id,
+            };
+            self.to_send_periodic[neighbour.rank].push(rate_data);
         }
     }
 
