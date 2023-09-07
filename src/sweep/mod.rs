@@ -420,9 +420,7 @@ impl<C: Chemistry> Sweep<C> {
         // Negative rates can happen due to round off errors. It might
         // be fine, but I could also see this causing numerical
         // instability problems, so I'd rather prevent it.
-        if site.incoming_total_rate[*dir] < C::Photons::zero() {
-            site.incoming_total_rate[*dir] = C::Photons::zero();
-        }
+        site.incoming_total_rate[*dir].make_positive();
         if is_active {
             let num_remaining = site.num_missing_upwind.reduce(dir);
             if num_remaining == 0 {

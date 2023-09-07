@@ -58,6 +58,11 @@ pub trait Photons:
     fn zero() -> Self;
     fn relative_change_to(&self, other: &Self) -> Dimensionless;
     fn below_threshold(&self, threshold: PhotonRate) -> bool;
+    fn make_positive(&mut self) {
+        if *self < Self::zero() {
+            *self = Self::zero();
+        }
+    }
 }
 
 impl Photons for PhotonRate {
