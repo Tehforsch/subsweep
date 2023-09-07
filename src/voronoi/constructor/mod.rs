@@ -118,13 +118,28 @@ where
     }
 }
 
+fn map_ptype(ptype: ParticleType, periodic: bool) -> ParticleType {
+    if !periodic {
+        match ptype {
+            ParticleType::LocalPeriodic(_) => ParticleType::Boundary,
+            ParticleType::RemotePeriodic(_) => ParticleType::Boundary,
+            x => x,
+        }
+    } else {
+        ptype
+    }
+}
+
 impl Constructor<ActiveDimension> {
-    pub fn sweep_grid(&self) -> Vec<(ParticleType, grid::Cell)> {
+    pub fn sweep_grid(&self, periodic: bool) -> Vec<(ParticleType, grid::Cell)> {
         let voronoi_cells = self.iter_voronoi_cells();
         info!("Constructing sweep grid.");
         voronoi_cells
             .map(|voronoi_cell| {
-                let particle_type = self.data.get_particle_type(voronoi_cell.delaunay_point);
+                let particle_type = map_ptype(
+                    self.data.get_particle_type(voronoi_cell.delaunay_point),
+                    periodic,
+                );
                 (
                     particle_type,
                     grid::Cell {
@@ -137,7 +152,7 @@ impl Constructor<ActiveDimension> {
                                         area: FaceArea::new_unchecked(face.area),
                                         normal: VecDimensionless::new_unchecked(face.normal),
                                     },
-                                    face.connection,
+                                    map_ptype(face.connection, periodic),
                                 )
                             })
                             .collect(),

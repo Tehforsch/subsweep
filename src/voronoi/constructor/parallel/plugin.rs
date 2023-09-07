@@ -14,6 +14,7 @@ use crate::domain::DecompositionState;
 use crate::domain::IdEntityMap;
 use crate::domain::QuadTree;
 use crate::parameters::SimulationBox;
+use crate::parameters::SweepParameters;
 use crate::particle::HaloParticle;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
@@ -61,6 +62,7 @@ pub fn construct_grid_system(
     decomposition: Res<DecompositionState>,
     box_: Res<SimulationBox>,
     map: Res<IdEntityMap>,
+    sweep_parameters: Res<SweepParameters>,
 ) {
     let num_points_local = particles.iter().count();
     let search = ParallelSearch::new(
@@ -91,7 +93,7 @@ pub fn construct_grid_system(
                 commands.spawn((HaloParticle { rank: rank }, Position(pos), id));
             }
         };
-    for (cell_index, cell) in cons.sweep_grid() {
+    for (cell_index, cell) in cons.sweep_grid(sweep_parameters.periodic) {
         match cell_index {
             ParticleType::Local(id) => {
                 num_local_particles += 1;
