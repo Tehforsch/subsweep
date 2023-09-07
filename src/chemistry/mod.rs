@@ -55,6 +55,7 @@ pub trait Photons:
 {
     fn zero() -> Self;
     fn relative_change_to(&self, other: &Self) -> Dimensionless;
+    fn below_threshold(&self, threshold: PhotonRate) -> bool;
 }
 
 impl Photons for PhotonRate {
@@ -66,5 +67,9 @@ impl Photons for PhotonRate {
         ((*self - *other).abs() / *self)
             .abs()
             .min(1.0 / f64::EPSILON)
+    }
+
+    fn below_threshold(&self, threshold: PhotonRate) -> bool {
+        self.abs() < threshold.abs()
     }
 }

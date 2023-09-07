@@ -145,6 +145,7 @@ struct Sweep<C: Chemistry> {
     to_receive_count: DataByRank<usize>,
     timestep_state: TimestepState,
     timestep_safety_factor: Dimensionless,
+    significant_rate_threshold: units::PhotonRate,
     current_level: TimestepLevel,
     communicator: SweepCommunicator<C>,
     check_deadlock: bool,
@@ -186,6 +187,7 @@ impl<C: Chemistry> Sweep<C> {
             check_deadlock: parameters.check_deadlock,
             chemistry,
             rank,
+            significant_rate_threshold: parameters.significant_rate_threshold,
         }
     }
 
@@ -447,9 +449,12 @@ impl<C: Chemistry> Sweep<C> {
             let timestep = self.timestep_state.timestep_at_level(level);
             let source = site.source_per_direction_bin(&self.directions);
             let rate = site.total_incoming_rate() + source;
-            let relative_change = rate
-                .relative_change_to(&site.previous_incoming_total_rate)
-                .abs();
+            let relative_change = if rate.below_threshold(self.significant_rate_threshold) {
+                0.0.into()
+            } else {
+                rate.relative_change_to(&site.previous_incoming_total_rate)
+                    .abs()
+            };
             site.previous_incoming_total_rate = rate.clone();
             let rate_timescale = timestep / relative_change;
             let chemistry_timescale =
