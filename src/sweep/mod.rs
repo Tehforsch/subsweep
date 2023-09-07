@@ -30,6 +30,7 @@ use self::direction::Directions;
 use self::grid::Cell;
 use self::grid::FaceArea;
 use self::grid::ParticleType;
+use self::grid::PeriodicNeighbour;
 use self::grid::RemoteNeighbour;
 use self::site::Site;
 pub use self::task::RateData;
@@ -346,8 +347,11 @@ impl<C: Chemistry> Sweep<C> {
     fn get_outgoing_rate(&mut self, task: &Task) -> Rate<C> {
         let cell = &self.cells.get(task.id);
         let site = self.sites.get_mut(task.id);
-        let source = site.source_per_direction_bin(&self.directions);
-        let incoming_rate = site.incoming_total_rate[task.dir.0].clone() + source;
+        // Negative rates can happen due to round off errors. It might
+        // be fine, but I could also see this causing numerical
+        // instability problems, so I'd rather prevent it.
+        site.incoming_total_rate[task.dir.0].make_positive();
+        let incoming_rate = site.get_rate(self.directions.len(), task.dir);
         self.chemistry.get_outgoing_rate(cell, site, incoming_rate)
     }
 
@@ -400,8 +404,14 @@ impl<C: Chemistry> Sweep<C> {
                         this.handle_remote_neighbour(&task, rate_correction_this_cell, remote)
                     }
                     ParticleType::Boundary => {}
-                    ParticleType::LocalPeriodic(_) => {}
-                    ParticleType::RemotePeriodic(_) => {}
+                    ParticleType::LocalPeriodic(remote) => this.handle_local_periodic_neighbour(
+                        rate_correction_this_cell,
+                        task.dir,
+                        remote,
+                    ),
+                    ParticleType::RemotePeriodic(_) => {
+                        todo!()
+                    }
                 }
             }
         }
@@ -417,16 +427,22 @@ impl<C: Chemistry> Sweep<C> {
             .sites
             .get_mut_and_active_state(neighbour, self.current_level);
         site.incoming_total_rate[*dir] += incoming_rate_correction;
-        // Negative rates can happen due to round off errors. It might
-        // be fine, but I could also see this causing numerical
-        // instability problems, so I'd rather prevent it.
-        site.incoming_total_rate[*dir].make_positive();
         if is_active {
             let num_remaining = site.num_missing_upwind.reduce(dir);
             if num_remaining == 0 {
                 self.to_solve.push(Task { dir, id: neighbour })
             }
         }
+    }
+
+    fn handle_local_periodic_neighbour(
+        &mut self,
+        incoming_rate_correction: Rate<C>,
+        dir: DirectionIndex,
+        neighbour: &PeriodicNeighbour,
+    ) {
+        let site = self.sites.get_mut(neighbour.id);
+        site.periodic_source[*dir] += incoming_rate_correction.clone();
     }
 
     fn handle_remote_neighbour(
@@ -449,8 +465,11 @@ impl<C: Chemistry> Sweep<C> {
         for (id, cell) in self.cells.enumerate_active(self.current_level) {
             let (level, site) = self.sites.get_mut_with_level(id);
             let timestep = self.timestep_state.timestep_at_level(level);
-            let source = site.source_per_direction_bin(&self.directions);
-            let rate = site.total_incoming_rate() + source;
+            let rate: Rate<C> = self
+                .directions
+                .enumerate()
+                .map(|(dir, _)| site.get_rate(self.directions.len(), dir))
+                .sum();
             let relative_change = if rate.below_threshold(self.significant_rate_threshold) {
                 0.0.into()
             } else {

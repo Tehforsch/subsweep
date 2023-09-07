@@ -33,6 +33,7 @@ const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 
 const MAX_DEPTH: usize = 100;
 
+#[derive(Debug)]
 pub struct HydrogenOnly {
     pub rate_threshold: PhotonRate,
     pub scale_factor: Dimensionless,
