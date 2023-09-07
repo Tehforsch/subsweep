@@ -291,12 +291,11 @@ impl GridConstructor {
                 .iter_neighbours()
                 .map(|neighbour| {
                     let neighbour_pos = self.to_pos(neighbour);
-                    let neighbour_rank = self.get_rank(neighbour);
                     let face = Face {
                         area: self.face_area(),
                         normal: (neighbour_pos - pos).normalize(),
                     };
-                    let neighbour = self.get_neighbour(neighbour, rank, neighbour_rank);
+                    let neighbour = self.get_neighbour(neighbour, rank);
                     (face, neighbour)
                 })
                 .collect();
@@ -309,21 +308,15 @@ impl GridConstructor {
         }
     }
 
-    fn get_neighbour(
-        &mut self,
-        neighbour: IntegerPosition,
-        rank: i32,
-        neighbour_rank: i32,
-    ) -> ParticleType {
-        let is_local = rank == neighbour_rank;
-        let is_periodic = neighbour.contained(&self.num_cells());
+    fn get_neighbour(&mut self, neighbour: IntegerPosition, rank: i32) -> ParticleType {
+        let is_periodic = !neighbour.contained(&self.num_cells());
         let (periodic_wrap_type, wrapped) = self.wrap(neighbour);
-        let id = if is_periodic {
-            self.ids[&neighbour]
-        } else {
-            self.ids[&wrapped]
-        };
-        if is_periodic {
+        let pos = if is_periodic { &wrapped } else { &neighbour };
+        let id = self.ids[pos];
+        let neighbour_rank = self.get_rank(*pos);
+        assert!(id.rank == neighbour_rank);
+        let is_local = rank == neighbour_rank;
+        if !is_periodic {
             if is_local {
                 ParticleType::Local(id)
             } else {

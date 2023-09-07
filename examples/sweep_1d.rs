@@ -19,6 +19,7 @@ use raxiom::prelude::WorldRank;
 use raxiom::prelude::WorldSize;
 use raxiom::sweep::grid::init_cartesian_grid_system;
 use raxiom::sweep::grid::NumCellsSpec;
+use raxiom::sweep::SweepParameters;
 use raxiom::sweep::SweepPlugin;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
@@ -60,8 +61,11 @@ fn setup_sweep_sim() -> Simulation {
         .parameter_file_path(&Path::new("params.yml").to_owned())
         .build();
     let params = sim.add_parameter_type_and_get_result::<Params>().clone();
+    let sweep_params = sim
+        .add_parameter_type_and_get_result::<SweepParameters>()
+        .clone();
     add_box_size(&mut sim, &params);
-    add_grid(&mut sim, &params);
+    add_grid(&mut sim, &params, &sweep_params);
     sim.write_output(true)
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_startup_system_to_stage(
@@ -90,20 +94,23 @@ fn add_box_size(sim: &mut Simulation, params: &Params) {
     sim.insert_resource(box_size);
 }
 
-fn add_grid(sim: &mut Simulation, params: &Params) {
+fn add_grid(sim: &mut Simulation, params: &Params, sweep_params: &SweepParameters) {
     let cell_size = params.cell_size();
-    let grid_setup = move |commands: Commands,
-                           box_size: Res<SimulationBox>,
-                           world_size: Res<WorldSize>,
-                           world_rank: Res<WorldRank>| {
-        init_cartesian_grid_system(
-            commands,
-            box_size,
-            NumCellsSpec::CellSize(cell_size),
-            world_size,
-            world_rank,
-            false,
-        )
+    let grid_setup = {
+        let sweep_params = sweep_params.clone();
+        move |commands: Commands,
+              box_size: Res<SimulationBox>,
+              world_size: Res<WorldSize>,
+              world_rank: Res<WorldRank>| {
+            init_cartesian_grid_system(
+                commands,
+                box_size,
+                NumCellsSpec::CellSize(cell_size),
+                world_size,
+                world_rank,
+                sweep_params.periodic,
+            )
+        }
     };
     sim.add_startup_system(grid_setup);
 }
