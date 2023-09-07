@@ -224,6 +224,7 @@ struct GridConstructor {
     rank_function: Box<dyn Fn(VecLength) -> Rank>,
     rank: Rank,
     allow_periodic: bool,
+    indices: HashMap<Rank, u32>,
 }
 
 impl GridConstructor {
@@ -243,22 +244,24 @@ impl GridConstructor {
             rank_function,
             rank,
             allow_periodic: periodic,
+            indices: HashMap::default(),
         };
         info!(
             "Constructing cartesian grid with {:?} cells.",
             constructor.num_cells()
         );
-        for (i, integer_pos) in constructor
+        for (_, integer_pos) in constructor
             .get_all_integer_positions()
             .into_iter()
             .enumerate()
         {
             let pos = constructor.to_pos(integer_pos);
             let rank = (constructor.rank_function)(pos);
+            let index = constructor.next_index(rank as Rank);
             constructor.ids.insert(
                 integer_pos,
                 ParticleId {
-                    index: i as u32,
+                    index,
                     rank: rank as Rank,
                 },
             );
@@ -379,6 +382,12 @@ impl GridConstructor {
 
     fn wrap(&self, neighbour: IntegerPosition) -> (PeriodicWrapType3d, IntegerPosition) {
         neighbour.wrapped(&self.num_cells())
+    }
+
+    fn next_index(&mut self, rank: i32) -> u32 {
+        let val = *self.indices.get(&rank).unwrap_or(&0);
+        self.indices.insert(rank, val + 1);
+        val
     }
 }
 
