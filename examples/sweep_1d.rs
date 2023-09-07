@@ -2,21 +2,20 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use derive_custom::raxiom_parameters;
-use ordered_float::OrderedFloat;
 use raxiom::components;
 use raxiom::components::Density;
-use raxiom::components::Position;
-use raxiom::components::Source;
 use raxiom::parameters::Cosmology;
 use raxiom::prelude::Extent;
 use raxiom::prelude::LocalParticle;
-use raxiom::prelude::Particles;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::SimulationBox;
 use raxiom::prelude::SimulationBuilder;
 use raxiom::prelude::StartupStages;
 use raxiom::prelude::WorldRank;
 use raxiom::prelude::WorldSize;
+use raxiom::source_systems::set_source_terms_system;
+use raxiom::source_systems::Source;
+use raxiom::source_systems::Sources;
 use raxiom::sweep::grid::init_cartesian_grid_system;
 use raxiom::sweep::grid::NumCellsSpec;
 use raxiom::sweep::SweepParameters;
@@ -26,7 +25,6 @@ use raxiom::units::Length;
 use raxiom::units::NumberDensity;
 use raxiom::units::PhotonFlux;
 use raxiom::units::PhotonRate;
-use raxiom::units::SourceRate;
 use raxiom::units::Temperature;
 use raxiom::units::VecLength;
 use raxiom::units::PROTON_MASS;
@@ -67,15 +65,33 @@ fn setup_sweep_sim() -> Simulation {
         .clone();
     add_box_size(&mut sim, &params);
     add_grid(&mut sim, &params, &sweep_params);
+    add_source(&mut sim, &params);
     sim.write_output(true)
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_startup_system_to_stage(
-            StartupStages::InsertComponentsAfterGrid,
+            StartupStages::InsertDerivedComponents,
             initialize_sweep_components_system,
         )
-        .add_startup_system_to_stage(StartupStages::InsertComponentsAfterGrid, add_source_system)
+        .add_startup_system_to_stage(
+            StartupStages::InsertComponentsAfterGrid,
+            set_source_terms_system,
+        )
         .add_plugin(SweepPlugin);
     sim
+}
+
+fn add_source(sim: &mut Simulation, params: &Params) {
+    let area = params.cell_size().squared();
+    if sim.on_main_rank() {
+        sim.insert_resource(Sources {
+            sources: vec![Source {
+                position: VecLength::new(params.source_pos, Length::zero(), Length::zero()),
+                rate: params.photon_flux * area,
+            }],
+        });
+    } else {
+        sim.insert_resource(Sources { sources: vec![] });
+    }
 }
 
 fn add_box_size(sim: &mut Simulation, params: &Params) {
@@ -116,28 +132,6 @@ fn add_grid(sim: &mut Simulation, params: &Params, sweep_params: &SweepParameter
     sim.add_startup_system(grid_setup);
 }
 
-fn add_source_system(
-    mut commands: Commands,
-    particles: Particles<(Entity, &Position)>,
-    params: Res<Params>,
-) {
-    let closest_to_source = particles
-        .iter()
-        .min_by_key(|(_, pos)| {
-            OrderedFloat(((pos.x() - params.source_pos).abs()).value_unchecked())
-        })
-        .unwrap();
-
-    for (entity, _) in particles.iter() {
-        let source = if entity != closest_to_source.0 {
-            SourceRate::zero()
-        } else {
-            params.photon_flux * params.cell_size().squared()
-        };
-        commands.entity(entity).insert(Source(source));
-    }
-}
-
 fn initialize_sweep_components_system(
     mut commands: Commands,
     local_particles: Query<Entity, With<LocalParticle>>,
@@ -150,6 +144,7 @@ fn initialize_sweep_components_system(
             components::IonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
             components::Temperature(Temperature::kelvins(1000.0)),
             components::PhotonRate(PhotonRate::zero()),
+            components::Source(PhotonRate::zero()),
         ));
     }
 }
