@@ -25,21 +25,15 @@ pub enum ParticleType {
 impl ParticleType {
     pub fn is_boundary(&self) -> bool {
         match self {
-            Self::Local(_) => false,
-            Self::Remote(_) => false,
             Self::Boundary => true,
-            Self::LocalPeriodic(_) => false,
-            Self::RemotePeriodic(_) => false,
+            _ => false,
         }
     }
 
     pub fn is_local(&self) -> bool {
         match self {
             Self::Local(_) => true,
-            Self::Boundary => false,
-            Self::Remote(_) => false,
-            Self::LocalPeriodic(_) => false,
-            Self::RemotePeriodic(_) => false,
+            _ => false,
         }
     }
 

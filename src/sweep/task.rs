@@ -19,6 +19,7 @@ pub struct RateData<C: Chemistry> {
     pub id: ParticleId,
     pub dir: DirectionIndex,
     pub rate: Rate<C>,
+    pub periodic: bool,
 }
 
 impl PartialOrd for Task {
@@ -38,16 +39,18 @@ unsafe impl<C: Chemistry> Equivalence for RateData<C> {
 
     fn equivalent_datatype() -> Self::Out {
         UserDatatype::structured(
-            &[1, 1, 1],
+            &[1, 1, 1, 1],
             &[
                 offset_of!(RateData<C>, id) as Address,
                 offset_of!(RateData<C>, dir) as Address,
                 offset_of!(RateData<C>, rate) as Address,
+                offset_of!(RateData<C>, periodic) as Address,
             ],
             &[
                 UserDatatype::contiguous(1, &ParticleId::equivalent_datatype()),
                 UserDatatype::contiguous(1, &DirectionIndex::equivalent_datatype()),
                 UserDatatype::contiguous(1, &Rate::<C>::equivalent_datatype()),
+                UserDatatype::contiguous(1, &bool::equivalent_datatype()),
             ],
         )
     }
