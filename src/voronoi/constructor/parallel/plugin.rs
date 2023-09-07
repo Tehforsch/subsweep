@@ -7,6 +7,7 @@ use derive_custom::Named;
 
 use super::super::Constructor;
 use super::ParallelSearch;
+use crate::communication::Rank;
 use crate::components::Position;
 use crate::dimension::ActiveDimension;
 use crate::domain::DecompositionState;
@@ -19,9 +20,11 @@ use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::StartupStages;
 use crate::simulation::RaxiomPlugin;
+use crate::sweep::grid::Cell;
 use crate::sweep::grid::ParticleType;
 use crate::units::VecLength;
 use crate::voronoi::constructor::halo_cache::HaloCache;
+use crate::voronoi::CellIndex;
 
 #[derive(Named)]
 pub struct ParallelVoronoiGridConstruction;
@@ -74,6 +77,20 @@ pub fn construct_grid_system(
     let mut num_haloes = 0;
     let mut num_relevant_haloes = 0;
     let mut num_local_particles = 0;
+    let mut add_halo =
+        |commands: &mut Commands, cell_index: CellIndex, cell: Cell, rank: Rank, id: ParticleId| {
+            num_haloes += 1;
+            let has_local_neighbours = cell.neighbours.iter().any(|(_, type_)| type_.is_local());
+            // If this cell does not have local neighbours, it was imported by "accident"
+            // during the delaunay construction and then turned out not to be relevant.
+            // We don't need to spawn a halo particle in this case.
+            if has_local_neighbours {
+                num_relevant_haloes += 1;
+                let pos = cons.get_position_for_cell(cell_index);
+                let pos = VecLength::new_unchecked(pos);
+                commands.spawn((HaloParticle { rank: rank }, Position(pos), id));
+            }
+        };
     for (cell_index, cell) in cons.sweep_grid() {
         match cell_index {
             ParticleType::Local(id) => {
@@ -82,22 +99,13 @@ pub fn construct_grid_system(
                 commands.entity(*entity).insert(cell);
             }
             ParticleType::Remote(remote) => {
-                num_haloes += 1;
-                let has_local_neighbours =
-                    cell.neighbours.iter().any(|(_, type_)| type_.is_local());
-                // If this cell does not have local neighbours, it was imported by "accident"
-                // during the delaunay construction and then turned out not to be relevant.
-                // We don't need to spawn a halo particle in this case.
-                if has_local_neighbours {
-                    num_relevant_haloes += 1;
-                    let pos = cons.get_position_for_cell(cell_index);
-                    let pos = VecLength::new_unchecked(pos);
-                    commands.spawn((HaloParticle { rank: remote.rank }, Position(pos), remote.id));
-                }
+                add_halo(&mut commands, cell_index, cell, remote.rank, remote.id);
             }
             ParticleType::Boundary => {}
             ParticleType::LocalPeriodic(_) => {}
-            ParticleType::RemotePeriodic(_) => {}
+            ParticleType::RemotePeriodic(remote) => {
+                add_halo(&mut commands, cell_index, cell, remote.rank, remote.id);
+            }
         }
     }
     warn_if_halo_fraction_too_high(num_local_particles, num_haloes, num_relevant_haloes);

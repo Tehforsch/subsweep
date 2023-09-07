@@ -125,11 +125,6 @@ impl Constructor<ActiveDimension> {
         voronoi_cells
             .map(|voronoi_cell| {
                 let particle_type = self.data.get_particle_type(voronoi_cell.delaunay_point);
-                let particle_type = match particle_type {
-                    ParticleType::LocalPeriodic(_) => ParticleType::Boundary,
-                    ParticleType::RemotePeriodic(_) => ParticleType::Boundary,
-                    x => x,
-                };
                 (
                     particle_type,
                     grid::Cell {
