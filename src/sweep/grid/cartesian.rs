@@ -311,14 +311,14 @@ impl GridConstructor {
         }
     }
 
-    fn get_neighbour(&mut self, neighbour: IntegerPosition, rank: i32) -> ParticleType {
+    fn get_neighbour(&mut self, neighbour: IntegerPosition, particle_rank: i32) -> ParticleType {
         let is_periodic = !neighbour.contained(&self.num_cells());
         let (periodic_wrap_type, wrapped) = self.wrap(neighbour);
         let pos = if is_periodic { &wrapped } else { &neighbour };
         let id = self.ids[pos];
         let neighbour_rank = self.get_rank(*pos);
         assert!(id.rank == neighbour_rank);
-        let is_local = rank == neighbour_rank;
+        let is_local = particle_rank == neighbour_rank;
         if !is_periodic {
             if is_local {
                 ParticleType::Local(id)
@@ -370,6 +370,8 @@ impl GridConstructor {
                 commands.spawn((LocalParticle, Position(pos), cell, particle_id));
             } else if cell.neighbours.iter().any(|(_, neighbour)| {
                 if let ParticleType::Remote(neighbour) = neighbour {
+                    neighbour.rank == self.rank
+                } else if let ParticleType::RemotePeriodic(neighbour) = neighbour {
                     neighbour.rank == self.rank
                 } else {
                     false

@@ -28,8 +28,8 @@ impl ParticleType {
             Self::Local(_) => false,
             Self::Remote(_) => false,
             Self::Boundary => true,
-            Self::LocalPeriodic(_) => true,
-            Self::RemotePeriodic(_) => true,
+            Self::LocalPeriodic(_) => false,
+            Self::RemotePeriodic(_) => false,
         }
     }
 
