@@ -3,6 +3,7 @@ use std::ops::Div;
 use diman::Quotient;
 
 use super::Chemistry;
+use super::Timescale;
 use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::Density;
@@ -89,7 +90,7 @@ impl Chemistry for HydrogenOnly {
         timestep: Time,
         volume: Volume,
         length: Length,
-    ) -> Time {
+    ) -> Timescale {
         let mut solver = Solver {
             ionized_hydrogen_fraction: site.species.ionized_hydrogen_fraction,
             temperature: site.species.temperature,
@@ -104,7 +105,7 @@ impl Chemistry for HydrogenOnly {
         site.species.temperature = solver.temperature;
         site.species.ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
         site.species.heating_rate = solver.heating_rate;
-        site.species.timestep = timestep_used;
+        site.species.timestep = timestep_used.time;
         // Timescale of change
         timestep_used
     }
@@ -348,21 +349,21 @@ impl Solver {
         &mut self,
         timestep: Time,
         timestep_safety_factor: Dimensionless,
-    ) -> Result<Time, TimestepCriterionViolated> {
+    ) -> Result<Timescale, TimestepCriterionViolated> {
         let temperature_change = self.temperature_change(timestep);
-        let ideal_temperature_timestep = update(
+        let ideal_temperature_timestep = Timescale::temperature(update(
             &mut self.temperature,
             temperature_change,
             timestep_safety_factor,
             timestep,
-        )?;
+        )?);
         let ionized_fraction_change = self.ionized_fraction_change(timestep);
-        let ideal_ionized_fraction_timestep = update(
+        let ideal_ionized_fraction_timestep = Timescale::ionization_fraction(update(
             &mut self.ionized_hydrogen_fraction,
             ionized_fraction_change,
             timestep_safety_factor,
             timestep,
-        )?;
+        )?);
         self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(0.0, 1.0);
         Ok(ideal_temperature_timestep.min(ideal_ionized_fraction_timestep))
     }
@@ -373,7 +374,7 @@ impl Solver {
         timestep_safety_factor: Dimensionless,
         depth: usize,
         max_depth: usize,
-    ) -> Result<Time, TimestepConvergenceFailed> {
+    ) -> Result<Timescale, TimestepConvergenceFailed> {
         let initial_state = (self.temperature, self.ionized_hydrogen_fraction);
         if depth > max_depth {
             return Err(TimestepConvergenceFailed);
@@ -402,7 +403,7 @@ impl Solver {
         &mut self,
         timestep: Time,
         timestep_safety_factor: Dimensionless,
-    ) -> Time {
+    ) -> Timescale {
         self.perform_timestep_internal(timestep, timestep_safety_factor, 0, MAX_DEPTH)
             .unwrap_or_else(|_| {
                 panic!(

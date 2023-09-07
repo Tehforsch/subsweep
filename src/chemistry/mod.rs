@@ -1,4 +1,5 @@
 pub mod hydrogen_only;
+pub mod timescale;
 
 use std::fmt::Debug;
 use std::iter::Sum;
@@ -10,6 +11,7 @@ use std::ops::Sub;
 
 use mpi::traits::Equivalence;
 
+use self::timescale::Timescale;
 use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::helpers::Float;
@@ -37,7 +39,7 @@ pub trait Chemistry: Sized + 'static {
         timestep: Time,
         volume: Volume,
         length: Length,
-    ) -> Time;
+    ) -> Timescale;
 }
 
 pub trait Photons:

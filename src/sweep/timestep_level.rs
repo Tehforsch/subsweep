@@ -46,6 +46,10 @@ impl TimestepLevel {
     pub fn as_factor(&self) -> f64 {
         (0.5 as Float).powi(self.0 as i32)
     }
+
+    pub fn is_highest_timestep(&self) -> bool {
+        self.0 == 0
+    }
 }
 
 #[cfg(test)]

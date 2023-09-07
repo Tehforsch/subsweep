@@ -42,6 +42,8 @@ use self::timestep_level::TimestepLevel;
 use self::timestep_state::TimestepState;
 use crate::chemistry::hydrogen_only::HydrogenOnly;
 use crate::chemistry::hydrogen_only::HydrogenOnlySpecies;
+use crate::chemistry::timescale::Timescale;
+use crate::chemistry::timescale::TimescaleCounter;
 use crate::chemistry::Chemistry;
 use crate::chemistry::Photons;
 use crate::communication::DataByRank;
@@ -151,6 +153,7 @@ struct Sweep<C: Chemistry> {
     check_deadlock: bool,
     chemistry: C,
     rank: Rank,
+    timescale_counter: TimescaleCounter,
 }
 
 impl<C: Chemistry> Sweep<C> {
@@ -188,6 +191,7 @@ impl<C: Chemistry> Sweep<C> {
             chemistry,
             rank,
             significant_rate_threshold: parameters.significant_rate_threshold,
+            timescale_counter: TimescaleCounter::new(parameters.max_timestep),
         }
     }
 
@@ -456,12 +460,16 @@ impl<C: Chemistry> Sweep<C> {
                     .abs()
             };
             site.previous_incoming_total_rate = rate.clone();
-            let rate_timescale = timestep / relative_change;
+            let rate_timescale = Timescale::photon_rate(timestep / relative_change);
             let chemistry_timescale =
                 self.chemistry
                     .update_abundances(site, rate, timestep, cell.volume, cell.size);
-            site.change_timescale = rate_timescale.min(chemistry_timescale);
+            let change_timescale = rate_timescale.min(chemistry_timescale);
+            site.change_timescale = change_timescale.time;
+            self.timescale_counter.count(change_timescale);
         }
+        self.timescale_counter
+            .show_timestep_limiting_processes(self.current_level);
     }
 
     fn update_timestep_levels(&mut self) {
