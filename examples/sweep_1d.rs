@@ -38,6 +38,7 @@ struct Params {
     num_particles: usize,
     photon_flux: PhotonFlux,
     number_density: NumberDensity,
+    source_pos: Length,
 }
 
 impl Params {
@@ -120,13 +121,15 @@ fn add_source_system(
     particles: Particles<(Entity, &Position)>,
     params: Res<Params>,
 ) {
-    let most_left = particles
+    let closest_to_source = particles
         .iter()
-        .min_by_key(|(_, pos)| OrderedFloat(pos.x().value_unchecked()))
+        .min_by_key(|(_, pos)| {
+            OrderedFloat(((pos.x() - params.source_pos).abs()).value_unchecked())
+        })
         .unwrap();
 
     for (entity, _) in particles.iter() {
-        let source = if entity != most_left.0 {
+        let source = if entity != closest_to_source.0 {
             SourceRate::zero()
         } else {
             params.photon_flux * params.cell_size().squared()
