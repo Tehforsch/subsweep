@@ -229,6 +229,7 @@ impl<C: Chemistry> Sweep<C> {
                 self.single_sweep();
             }
         }
+        self.timescale_counter.show_timestep_limiting_processes();
         let time_elapsed = self.timestep_state.current_max_timestep();
         self.timestep_state.advance_allowed_levels();
         self.update_timestep_levels();
@@ -527,8 +528,6 @@ impl<C: Chemistry> Sweep<C> {
             site.change_timescale = change_timescale.time;
             self.timescale_counter.count(change_timescale);
         }
-        self.timescale_counter
-            .show_timestep_limiting_processes(self.current_level);
     }
 
     fn update_timestep_levels(&mut self) {

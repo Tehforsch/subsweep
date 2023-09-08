@@ -1,7 +1,6 @@
 use bevy::prelude::debug;
 
 use crate::hash_map::HashMap;
-use crate::sweep::timestep_level::TimestepLevel;
 use crate::units::Time;
 
 #[derive(Clone, Copy)]
@@ -81,17 +80,6 @@ impl TimescaleCounter {
         }
     }
 
-    pub fn reset(&mut self) {
-        *self = Self::new(self.max_timestep);
-    }
-
-    pub fn show_timestep_limiting_processes(&mut self, current_level: TimestepLevel) {
-        if current_level.is_highest_timestep() {
-            self.show_statistics();
-        }
-        self.reset();
-    }
-
     pub fn count(&mut self, change_timescale: Timescale) {
         if change_timescale.time < self.max_timestep {
             *self
@@ -101,7 +89,14 @@ impl TimescaleCounter {
         }
     }
 
+    pub fn show_timestep_limiting_processes(&mut self) {
+        self.show_statistics();
+        self.reset();
+    }
+
     fn show_statistics(&self) {
+        // The displayed counts are off because particles in lower levels are counted more often, but
+        // it doesn't really matter, since the exact numbers are not that important.
         let total: usize = self.limiting_processes.values().sum();
         if total == 0 {
             return;
@@ -115,5 +110,9 @@ impl TimescaleCounter {
                 percentage, process
             )
         }
+    }
+
+    pub fn reset(&mut self) {
+        *self = Self::new(self.max_timestep);
     }
 }
