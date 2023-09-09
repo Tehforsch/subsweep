@@ -66,6 +66,9 @@ fn setup_sweep_sim() -> Simulation {
     add_box_size(&mut sim, &params);
     add_grid(&mut sim, &params, &sweep_params);
     add_source(&mut sim, &params);
+    if **sim.get_resource::<WorldSize>().unwrap() > 1 {
+        panic!("1d test not supported on multiple cores - to fix this, initialize the sweep cells after domain decomposition")
+    }
     sim.write_output(true)
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_startup_system_to_stage(
