@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use hdf5::Dataset;
 use hdf5::File;
 use hdf5::H5Type;
-use hdf5::SimpleExtents;
 
 use super::output::plugin::IntoOutputSystem;
 use super::output::OutputFile;
@@ -70,16 +69,6 @@ fn write_dataset_system<T: Component + ToDataset>(
 ) {
     let data: Vec<T> = query.iter().cloned().collect();
     write_dataset(data, file.f.as_ref().unwrap(), &descriptor);
-}
-
-pub fn create_empty_dataset<T: ToDataset>(file: &File, descriptor: &DatasetDescriptor) {
-    let dataset = file
-        .new_dataset::<T>()
-        .shape(SimpleExtents::resizable([0]))
-        .create(descriptor.dataset_name())
-        .expect("Failed to write dataset");
-
-    add_dimension_attrs::<T>(&dataset);
 }
 
 pub fn write_dataset<T: ToDataset>(data: Vec<T>, file: &File, descriptor: &DatasetDescriptor) {

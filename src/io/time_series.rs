@@ -9,9 +9,10 @@ use bevy::prelude::NonSend;
 use bevy::prelude::Res;
 use hdf5::Dataset;
 use hdf5::File;
+use hdf5::SimpleExtents;
 
 use super::output::make_output_dirs_system;
-use super::to_dataset::create_empty_dataset;
+use super::to_dataset::add_dimension_attrs;
 use super::to_dataset::ToDataset;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
@@ -83,6 +84,17 @@ fn make_time_series_dir(time_series_dir: &Path) {
 fn setup_time_series_output_system(parameters: Res<OutputParameters>) {
     let time_series_dir = parameters.time_series_dir();
     make_time_series_dir(&time_series_dir);
+}
+
+fn create_empty_dataset<T: ToDataset>(file: &File, descriptor: &DatasetDescriptor) {
+    let dataset = file
+        .new_dataset::<T>()
+        .shape(SimpleExtents::resizable([0]))
+        .chunk_min_kb(1)
+        .create(descriptor.dataset_name())
+        .expect("Failed to write dataset");
+
+    add_dimension_attrs::<T>(&dataset);
 }
 
 fn initialize_output_files_system<T: TimeSeries>(
