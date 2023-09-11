@@ -33,6 +33,10 @@ const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 
 const MAX_DEPTH: usize = 100;
 
+/// The ionized hydrogen fraction is always kept between this value and (1 - this value)
+/// to ensure numerical stability.
+const IONIZED_HYDROGEN_FRACTION_EPSILON: f64 = 1e-10;
+
 #[derive(Debug)]
 pub struct HydrogenOnly {
     pub rate_threshold: PhotonRate,
@@ -346,6 +350,13 @@ impl Solver {
         timestep * (c - xhii * (c + d)) / (1.0 - j * timestep)
     }
 
+    fn clamp_ionized_hydrogen_fraction(&mut self) {
+        self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
+            IONIZED_HYDROGEN_FRACTION_EPSILON,
+            1.0 - IONIZED_HYDROGEN_FRACTION_EPSILON,
+        );
+    }
+
     fn try_timestep_update(
         &mut self,
         timestep: Time,
@@ -365,7 +376,7 @@ impl Solver {
             timestep_safety_factor,
             timestep,
         )?);
-        self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(0.0, 1.0);
+        self.clamp_ionized_hydrogen_fraction();
         Ok(ideal_temperature_timestep.min(ideal_ionized_fraction_timestep))
     }
 
@@ -376,6 +387,7 @@ impl Solver {
         depth: usize,
         max_depth: usize,
     ) -> Result<Timescale, TimestepConvergenceFailed> {
+        self.clamp_ionized_hydrogen_fraction();
         let initial_state = (self.temperature, self.ionized_hydrogen_fraction);
         if depth > max_depth {
             return Err(TimestepConvergenceFailed);
@@ -451,6 +463,7 @@ mod tests {
     use crate::units::Length;
     use crate::units::NumberDensity;
     use crate::units::PhotonFlux;
+    use crate::units::PhotonRate;
     use crate::units::Quantity;
     use crate::units::Rate;
     use crate::units::Temperature;
@@ -916,5 +929,43 @@ mod tests {
                 reset_temp,
             ),
         );
+    }
+
+    #[test]
+    fn fully_ionized_solver() {
+        let mut s = Solver {
+            ionized_hydrogen_fraction: 1.0.into(),
+            temperature: Temperature::kelvins(1791871.5383082589),
+            density: Density::grams_per_cubic_centimeters(
+                0.000000000000000000000000015411844211187435,
+            ),
+            volume: Volume::cubic_meters(
+                8873284571355481000000000000000000000000000000000000000000000.0,
+            ),
+            length: Length::kiloparsec(6.709257125565072),
+            rate: PhotonRate::photons_per_second(466103097665666700000000000000000000000000000.0),
+            scale_factor: 8.35028211377591.into(),
+            heating_rate: HeatingRate::zero(),
+        };
+        s.perform_timestep(Time::megayears(1.0), 0.1.into());
+    }
+
+    #[test]
+    fn fully_neutral_solver() {
+        let mut s = Solver {
+            ionized_hydrogen_fraction: 0.0.into(),
+            temperature: Temperature::kelvins(1791871.5383082589),
+            density: Density::grams_per_cubic_centimeters(
+                0.000000000000000000000000015411844211187435,
+            ),
+            volume: Volume::cubic_meters(
+                8873284571355481000000000000000000000000000000000000000000000.0,
+            ),
+            length: Length::kiloparsec(6.709257125565072),
+            rate: PhotonRate::photons_per_second(466103097665666700000000000000000000000000000.0),
+            scale_factor: 8.35028211377591.into(),
+            heating_rate: HeatingRate::zero(),
+        };
+        s.perform_timestep(Time::megayears(1.0), 0.1.into());
     }
 }
