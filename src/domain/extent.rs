@@ -5,11 +5,13 @@ use crate::domain::key::IntoKey;
 use crate::extent::Extent as VExtent;
 use crate::peano_hilbert::PeanoKey2d;
 use crate::peano_hilbert::PeanoKey3d;
+use crate::units::Area;
 use crate::units::Length;
 use crate::units::MVec2;
 use crate::units::MVec3;
 use crate::units::Vec2Length;
 use crate::units::Vec3Length;
+use crate::units::VecLength;
 use crate::units::Volume2D;
 use crate::units::Volume3D;
 
@@ -327,11 +329,25 @@ impl Extent3d {
         let s = self.side_lengths();
         s.x() * s.y() * s.z()
     }
+
+    pub fn squared_distance_to_pos(&self, pos: &VecLength) -> Area {
+        let dx = Length::zero()
+            .max(self.min.x() - pos.x())
+            .max(pos.x() - self.max.x());
+        let dy = Length::zero()
+            .max(self.min.y() - pos.y())
+            .max(pos.y() - self.max.y());
+        let dz = Length::zero()
+            .max(self.min.z() - pos.z())
+            .max(pos.z() - self.max.z());
+        dx.powi::<2>() + dy.powi::<2>() + dz.powi::<2>()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::domain::extent::Extent3d;
+    use crate::test_utils::assert_is_close;
 
     fn assert_is_close_2d(a: Vec2Length, b: MVec2) {
         assert!((a.in_meters() - b).length() < f64::EPSILON)
@@ -434,6 +450,40 @@ mod tests {
 
         assert_is_close_3d(quadrants[7].min, MVec3::new(0.0, 0.0, 0.0));
         assert_is_close_3d(quadrants[7].max, MVec3::new(1.0, 2.0, 3.0));
+    }
+
+    #[test]
+    fn squared_distance_to_point() {
+        let root_extent = Extent3d::from_min_max(
+            Vec3Length::meters(-1.0, -2.0, -3.0),
+            Vec3Length::meters(1.0, 2.0, 3.0),
+        );
+        let distance_close = |x, y, z, dist| {
+            let squared_distance =
+                root_extent.squared_distance_to_pos(&Vec3Length::meters(x, y, z));
+            let distance = squared_distance.sqrt();
+            assert_is_close(distance, Length::meters(dist));
+        };
+        distance_close(-1.0, -2.0, -3.0, 0.0);
+        distance_close(1.0, 2.0, 3.0, 0.0);
+        distance_close(0.0, 0.0, 0.0, 0.0);
+
+        distance_close(2.0, 0.0, 0.0, 1.0);
+        distance_close(3.0, 0.0, 0.0, 2.0);
+        distance_close(0.0, 3.0, 0.0, 1.0);
+        distance_close(0.0, 4.0, 0.0, 2.0);
+        distance_close(0.0, 0.0, 4.0, 1.0);
+        distance_close(0.0, 0.0, 5.0, 2.0);
+
+        distance_close(-2.0, 0.0, 0.0, 1.0);
+        distance_close(-3.0, 0.0, 0.0, 2.0);
+        distance_close(0.0, -3.0, 0.0, 1.0);
+        distance_close(0.0, -4.0, 0.0, 2.0);
+        distance_close(0.0, 0.0, -4.0, 1.0);
+        distance_close(0.0, 0.0, -5.0, 2.0);
+
+        distance_close(-2.0, -3.0, 0.0, 2.0f64.sqrt());
+        distance_close(-2.0, -4.0, 0.0, 5.0f64.sqrt());
     }
 
     #[test]

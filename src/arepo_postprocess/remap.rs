@@ -13,6 +13,7 @@ use raxiom::communication::CommunicatedOption;
 use raxiom::communication::DataByRank;
 use raxiom::communication::ExchangeCommunicator;
 use raxiom::communication::Identified;
+use raxiom::communication::SizedCommunicator;
 use raxiom::components::IonizedHydrogenFraction;
 use raxiom::components::Position;
 use raxiom::components::Temperature;
@@ -168,7 +169,7 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
             .iter()
             .map(|request| (request.entity(), self.get_reply(&request.data)))
             .collect();
-        let outgoing = self.get_outgoing_requests(chunk);
+        let outgoing = self.get_outgoing_requests(&closest_map, chunk);
         let incoming = self.comm1.exchange_all(outgoing);
         let mut outgoing: DataByRank<Vec<Identified<SearchReply>>> =
             DataByRank::from_communicator(&self.comm2);
@@ -196,12 +197,38 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
 
     fn get_outgoing_requests(
         &self,
+        local_map: &HashMap<Entity, SearchReply>,
         chunk: &[Identified<SearchRequest>],
     ) -> DataByRank<Vec<Identified<SearchRequest>>> {
-        DataByRank::same_for_other_ranks_in_communicator(
-            chunk.iter().cloned().collect(),
-            &self.comm1,
-        )
+        let mut outgoing: DataByRank<Vec<Identified<SearchRequest>>> =
+            DataByRank::from_communicator(&self.comm1);
+        for rank in self.comm1.other_ranks() {
+            let extent = &self.extents[rank];
+            for request in chunk.iter() {
+                let local_squared_distance =
+                    local_map.get(&request.entity()).unwrap().squared_distance;
+                if self.particle_might_be_closer_to_extent(
+                    extent,
+                    &request.data,
+                    local_squared_distance,
+                ) {
+                    outgoing.get_mut(&rank).unwrap().push(request.clone());
+                }
+            }
+        }
+        outgoing
+    }
+
+    fn particle_might_be_closer_to_extent(
+        &self,
+        extent: &Extent,
+        request: &SearchRequest,
+        squared_distance: f64,
+    ) -> bool {
+        let squared_distance_extent = extent
+            .squared_distance_to_pos(&request.pos.0)
+            .value_unchecked();
+        squared_distance_extent < squared_distance
     }
 
     fn get_reply(&self, request: &SearchRequest) -> SearchReply {
