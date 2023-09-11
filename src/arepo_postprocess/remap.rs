@@ -36,6 +36,8 @@ use super::Parameters;
 
 type Tree = KdTree<Float, 3>;
 
+const CHUNK_SIZE: usize = 50000;
+
 #[derive(Equivalence, Clone, Debug)]
 struct SearchRequest {
     pos: Position,
@@ -88,6 +90,117 @@ fn read_remap_data(
     (position, ionized_hydrogen_fraction, temperature, cosmology)
 }
 
+struct Remapper<'a, 'w, 's> {
+    ionized_hydrogen_fraction: Vec<IonizedHydrogenFraction>,
+    temperature: Vec<Temperature>,
+    tree: Tree,
+    particles: &'a mut Particles<
+        'w,
+        's,
+        (
+            Entity,
+            &'static Position,
+            &'static mut Temperature,
+            &'static mut IonizedHydrogenFraction,
+        ),
+    >,
+}
+
+impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
+    fn new(
+        files: Vec<PathBuf>,
+        cosmology: &Cosmology,
+        particles: &'a mut Particles<
+            'w,
+            's,
+            (
+                Entity,
+                &'static Position,
+                &'static mut Temperature,
+                &'static mut IonizedHydrogenFraction,
+            ),
+        >,
+    ) -> Self {
+        let (position, ionized_hydrogen_fraction, temperature, remap_cosmology) =
+            read_remap_data(files);
+        let factor = get_scale_factor_difference(Length::dimension(), cosmology, &remap_cosmology);
+        let tree: Tree = (&position
+            .iter()
+            .map(|pos| pos_to_tree_coord(&(**pos * factor)))
+            .collect::<Vec<_>>())
+            .into();
+        Remapper::<'a, 'w, 's> {
+            ionized_hydrogen_fraction,
+            temperature,
+            tree,
+            particles,
+        }
+    }
+
+    fn remap(&mut self) {
+        let requests: Vec<_> = self
+            .particles
+            .iter()
+            .map(|(entity, pos, _, _)| Identified::new(entity, SearchRequest { pos: pos.clone() }))
+            .collect();
+        let num_chunks = global_num_chunks(requests.len(), CHUNK_SIZE);
+        let mut chunk_iter = requests.chunks(CHUNK_SIZE);
+        for _ in 0..num_chunks {
+            let chunk = chunk_iter.next().unwrap_or(&[]);
+            self.exchange_request_chunk(chunk);
+        }
+        debug!("Finished remapping.");
+    }
+
+    fn exchange_request_chunk(&mut self, chunk: &[Identified<SearchRequest>]) {
+        let mut comm = ExchangeCommunicator::<Identified<SearchRequest>>::new();
+        let mut closest_map: HashMap<_, _> = chunk
+            .iter()
+            .map(|request| (request.entity(), self.get_reply(&request.data)))
+            .collect();
+        let outgoing = DataByRank::same_for_other_ranks_in_communicator(
+            chunk.iter().cloned().collect(),
+            &comm,
+        );
+        let incoming = comm.exchange_all(outgoing);
+        let mut outgoing: DataByRank<Vec<Identified<SearchReply>>> =
+            DataByRank::from_communicator(&comm);
+        for (rank, requests) in incoming {
+            for request in requests {
+                let reply = Identified::new(request.entity(), self.get_reply(&request.data));
+                outgoing[rank].push(reply);
+            }
+        }
+        let mut comm = ExchangeCommunicator::<Identified<SearchReply>>::new();
+        let incoming = comm.exchange_all(outgoing);
+        for (_, replies) in incoming {
+            for reply in replies {
+                let entity = reply.entity();
+                let previously_closest = &closest_map[&entity];
+                if previously_closest.squared_distance > reply.data.squared_distance {
+                    closest_map.insert(entity, reply.data);
+                }
+            }
+        }
+        for (entity, closest) in closest_map.into_iter() {
+            let (_, _, mut temp, mut ion_frac) = self.particles.get_mut(entity).unwrap();
+            remap_from(&mut temp, &mut ion_frac, closest.data);
+        }
+    }
+
+    fn get_reply(&self, request: &SearchRequest) -> SearchReply {
+        let tree_coord = pos_to_tree_coord(&request.pos);
+        let (squared_distance, index) = self.tree.nearest_one(&tree_coord, &squared_euclidean);
+        SearchReply {
+            squared_distance,
+            data: RemapData {
+                temperature: self.temperature[index].clone(),
+                ionized_hydrogen_fraction: self.ionized_hydrogen_fraction[index].clone(),
+            },
+        }
+    }
+}
+
 fn get_files_of_last_snapshot(path: &Path) -> Vec<PathBuf> {
     let last_snapshot = get_highest_number_snapshot_dir(path);
     get_file_or_all_hdf5_files_in_path_if_dir(&last_snapshot)
@@ -121,12 +234,11 @@ pub fn remap_abundances_and_energies_system(
     cosmology: Res<Cosmology>,
     mut particles: Particles<(
         Entity,
-        &Position,
-        &mut Temperature,
-        &mut IonizedHydrogenFraction,
+        &'static Position,
+        &'static mut Temperature,
+        &'static mut IonizedHydrogenFraction,
     )>,
 ) {
-    const CHUNK_SIZE: usize = 50000;
     let files = match &parameters.remap_from {
         Some(path) => get_files_of_last_snapshot(path),
         None => return,
@@ -135,32 +247,8 @@ pub fn remap_abundances_and_energies_system(
     for file in files.iter() {
         debug!("Remapping from file: {file:?}");
     }
-
-    let (position, ionized_hydrogen_fraction, temperature, remap_cosmology) =
-        read_remap_data(files);
-    let factor = get_scale_factor_difference(Length::dimension(), &cosmology, &remap_cosmology);
-    let requests: Vec<_> = particles
-        .iter()
-        .map(|(entity, pos, _, _)| Identified::new(entity, SearchRequest { pos: pos.clone() }))
-        .collect();
-    let num_chunks = global_num_chunks(requests.len(), CHUNK_SIZE);
-    let mut chunk_iter = requests.chunks(CHUNK_SIZE);
-    let tree: Tree = (&position
-        .iter()
-        .map(|pos| pos_to_tree_coord(&(**pos * factor)))
-        .collect::<Vec<_>>())
-        .into();
-    for _ in 0..num_chunks {
-        let chunk = chunk_iter.next().unwrap_or(&[]);
-        exchange_request_chunk(
-            &mut particles,
-            &ionized_hydrogen_fraction,
-            &temperature,
-            &tree,
-            chunk,
-        );
-    }
-    debug!("Finished remapping.");
+    let mut remapper = Remapper::new(files, &cosmology, &mut particles);
+    remapper.remap();
 }
 
 fn get_scale_factor_difference(
@@ -185,76 +273,6 @@ fn get_scale_factor_difference(
                 1.0.into()
             }
         }
-    }
-}
-
-fn get_reply(
-    request: &SearchRequest,
-    tree: &Tree,
-    temperature: &[Temperature],
-    ionized_hydrogen_fraction: &[IonizedHydrogenFraction],
-) -> SearchReply {
-    let tree_coord = pos_to_tree_coord(&request.pos);
-    let (squared_distance, index) = tree.nearest_one(&tree_coord, &squared_euclidean);
-    SearchReply {
-        squared_distance,
-        data: RemapData {
-            temperature: temperature[index].clone(),
-            ionized_hydrogen_fraction: ionized_hydrogen_fraction[index].clone(),
-        },
-    }
-}
-
-fn exchange_request_chunk(
-    particles: &mut Particles<(
-        Entity,
-        &Position,
-        &mut Temperature,
-        &mut IonizedHydrogenFraction,
-    )>,
-    ionized_hydrogen_fraction: &[IonizedHydrogenFraction],
-    temperature: &[Temperature],
-    tree: &Tree,
-    chunk: &[Identified<SearchRequest>],
-) {
-    let mut comm = ExchangeCommunicator::<Identified<SearchRequest>>::new();
-    let mut closest_map: HashMap<_, _> = chunk
-        .iter()
-        .map(|request| {
-            (
-                request.entity(),
-                get_reply(&request.data, tree, temperature, ionized_hydrogen_fraction),
-            )
-        })
-        .collect();
-    let outgoing =
-        DataByRank::same_for_other_ranks_in_communicator(chunk.iter().cloned().collect(), &comm);
-    let incoming = comm.exchange_all(outgoing);
-    let mut outgoing: DataByRank<Vec<Identified<SearchReply>>> =
-        DataByRank::from_communicator(&comm);
-    for (rank, requests) in incoming {
-        for request in requests {
-            let reply = Identified::new(
-                request.entity(),
-                get_reply(&request.data, tree, temperature, ionized_hydrogen_fraction),
-            );
-            outgoing[rank].push(reply);
-        }
-    }
-    let mut comm = ExchangeCommunicator::<Identified<SearchReply>>::new();
-    let incoming = comm.exchange_all(outgoing);
-    for (_, replies) in incoming {
-        for reply in replies {
-            let entity = reply.entity();
-            let previously_closest = &closest_map[&entity];
-            if previously_closest.squared_distance > reply.data.squared_distance {
-                closest_map.insert(entity, reply.data);
-            }
-        }
-    }
-    for (entity, closest) in closest_map.into_iter() {
-        let (_, _, mut temp, mut ion_frac) = particles.get_mut(entity).unwrap();
-        remap_from(&mut temp, &mut ion_frac, closest.data);
     }
 }
 
