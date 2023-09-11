@@ -9,6 +9,7 @@ use kiddo::distance::squared_euclidean;
 use kiddo::KdTree;
 use mpi::traits::Equivalence;
 use raxiom::communication::communicator::Communicator;
+use raxiom::communication::CommunicatedOption;
 use raxiom::communication::DataByRank;
 use raxiom::communication::ExchangeCommunicator;
 use raxiom::communication::Identified;
@@ -24,6 +25,7 @@ use raxiom::io::input::Reader;
 use raxiom::io::DatasetShape;
 use raxiom::io::DefaultUnitReader;
 use raxiom::parameters::Cosmology;
+use raxiom::prelude::Extent;
 use raxiom::prelude::Float;
 use raxiom::prelude::Particles;
 use raxiom::units::Dimension;
@@ -94,6 +96,7 @@ struct Remapper<'a, 'w, 's> {
     ionized_hydrogen_fraction: Vec<IonizedHydrogenFraction>,
     temperature: Vec<Temperature>,
     tree: Tree,
+    extents: DataByRank<Extent>,
     particles: &'a mut Particles<
         'w,
         's,
@@ -104,6 +107,8 @@ struct Remapper<'a, 'w, 's> {
             &'static mut IonizedHydrogenFraction,
         ),
     >,
+    comm1: ExchangeCommunicator<Identified<SearchRequest>>,
+    comm2: ExchangeCommunicator<Identified<SearchReply>>,
 }
 
 impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
@@ -129,11 +134,17 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
             .map(|pos| pos_to_tree_coord(&(**pos * factor)))
             .collect::<Vec<_>>())
             .into();
+        let extents = exchange_extents(&position);
+        let comm1 = ExchangeCommunicator::<Identified<SearchRequest>>::new();
+        let comm2 = ExchangeCommunicator::<Identified<SearchReply>>::new();
         Remapper::<'a, 'w, 's> {
             ionized_hydrogen_fraction,
             temperature,
             tree,
             particles,
+            extents,
+            comm1,
+            comm2,
         }
     }
 
@@ -153,26 +164,21 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
     }
 
     fn exchange_request_chunk(&mut self, chunk: &[Identified<SearchRequest>]) {
-        let mut comm = ExchangeCommunicator::<Identified<SearchRequest>>::new();
         let mut closest_map: HashMap<_, _> = chunk
             .iter()
             .map(|request| (request.entity(), self.get_reply(&request.data)))
             .collect();
-        let outgoing = DataByRank::same_for_other_ranks_in_communicator(
-            chunk.iter().cloned().collect(),
-            &comm,
-        );
-        let incoming = comm.exchange_all(outgoing);
+        let outgoing = self.get_outgoing_requests(chunk);
+        let incoming = self.comm1.exchange_all(outgoing);
         let mut outgoing: DataByRank<Vec<Identified<SearchReply>>> =
-            DataByRank::from_communicator(&comm);
+            DataByRank::from_communicator(&self.comm2);
         for (rank, requests) in incoming {
             for request in requests {
                 let reply = Identified::new(request.entity(), self.get_reply(&request.data));
                 outgoing[rank].push(reply);
             }
         }
-        let mut comm = ExchangeCommunicator::<Identified<SearchReply>>::new();
-        let incoming = comm.exchange_all(outgoing);
+        let incoming = self.comm2.exchange_all(outgoing);
         for (_, replies) in incoming {
             for reply in replies {
                 let entity = reply.entity();
@@ -188,6 +194,16 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
         }
     }
 
+    fn get_outgoing_requests(
+        &self,
+        chunk: &[Identified<SearchRequest>],
+    ) -> DataByRank<Vec<Identified<SearchRequest>>> {
+        DataByRank::same_for_other_ranks_in_communicator(
+            chunk.iter().cloned().collect(),
+            &self.comm1,
+        )
+    }
+
     fn get_reply(&self, request: &SearchRequest) -> SearchReply {
         let tree_coord = pos_to_tree_coord(&request.pos);
         let (squared_distance, index) = self.tree.nearest_one(&tree_coord, &squared_euclidean);
@@ -199,6 +215,17 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
             },
         }
     }
+}
+
+fn exchange_extents(position: &[Position]) -> DataByRank<Extent> {
+    let mut extent_communicator = Communicator::<CommunicatedOption<Extent>>::new();
+    let extent = Extent::from_positions(position.iter().map(|x| &x.0));
+    let all_extents = extent_communicator.all_gather(&extent.into());
+    all_extents
+        .into_iter()
+        .enumerate()
+        .filter_map(|(i, x)| Option::<_>::from(x).map(|x| (i as i32, x)))
+        .collect()
 }
 
 fn get_files_of_last_snapshot(path: &Path) -> Vec<PathBuf> {
