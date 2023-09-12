@@ -1,9 +1,9 @@
-if [[ $# != 1 ]]; then
-    echo "Provide maximum number of cores available."
+if [[ $# != 2 ]]; then
+    echo "Provide maximum number of cores available and the cargo target folder"
     exit 1
 fi
 cargo build --example mpi_performance --release
-cargo_target_path=$(cargo metadata --format-version 1 | jq -r .target_directory)
+cargo_target_path="$2"
 binary="$cargo_target_path/release/examples/mpi_performance"
 num_cores_final=$1
 num_cores=1

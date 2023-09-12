@@ -46,7 +46,7 @@ pub fn main() {
     let rank = MpiWorld::<usize>::new().rank() as usize;
     let size = MpiWorld::<usize>::new().size() as usize;
     run_timing("all_reduce_sum", || all_reduce_sum(size, rank), 1000000);
-    for num_elements in [1000, 10000, 100000, 1000000, 10000000] {
+    for num_elements in [1000, 10000, 100000, 1000000] {
         let num_iterations = 10000000 / num_elements;
         run_timing(
             &format!("exchange_all {:<8}", num_elements),
