@@ -263,7 +263,7 @@ pub struct ParallelCounter<K> {
 }
 
 impl<K: Key + 'static> ParallelCounter<K> {
-    pub(crate) fn new(mut local_counter: KeyCounter<K>) -> Self {
+    pub fn new(mut local_counter: KeyCounter<K>) -> Self {
         let mut key_comm: Communicator<K> = MpiWorld::new_custom_tag(9001);
         let min_key = key_comm.all_gather_min(&local_counter.min_key()).unwrap();
         let max_key = key_comm.all_gather_max(&local_counter.max_key()).unwrap();

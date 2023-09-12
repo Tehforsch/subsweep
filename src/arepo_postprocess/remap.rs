@@ -1,3 +1,4 @@
+use std::iter::once;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -5,8 +6,8 @@ use bevy::prelude::debug;
 use bevy::prelude::info;
 use bevy::prelude::Entity;
 use bevy::prelude::Res;
-use kiddo::distance::squared_euclidean;
 use kiddo::KdTree;
+use kiddo::distance::squared_euclidean;
 use mpi::traits::Equivalence;
 use raxiom::communication::communicator::Communicator;
 use raxiom::communication::CommunicatedOption;
@@ -19,16 +20,20 @@ use raxiom::components::Position;
 use raxiom::components::Temperature;
 use raxiom::cosmology::LittleH;
 use raxiom::cosmology::ScaleFactor;
+use raxiom::domain::DecompositionState;
+use raxiom::domain::IntoKey;
 use raxiom::hash_map::HashMap;
 use raxiom::io::input::attribute::read_attribute;
 use raxiom::io::input::get_file_or_all_hdf5_files_in_path_if_dir;
 use raxiom::io::input::Reader;
 use raxiom::io::DatasetShape;
 use raxiom::io::DefaultUnitReader;
+use raxiom::mpidbg;
 use raxiom::parameters::Cosmology;
 use raxiom::prelude::Extent;
 use raxiom::prelude::Float;
 use raxiom::prelude::Particles;
+use raxiom::prelude::SimulationBox;
 use raxiom::units::Dimension;
 use raxiom::units::Dimensionless;
 use raxiom::units::Length;
@@ -39,7 +44,7 @@ use super::Parameters;
 
 type Tree = KdTree<Float, 3>;
 
-const CHUNK_SIZE: usize = 50000;
+const CHUNK_SIZE: usize = 1000000;
 
 #[derive(Equivalence, Clone, Debug)]
 struct SearchRequest {
@@ -54,6 +59,13 @@ struct SearchReply {
 
 #[derive(Equivalence, Clone, Debug)]
 struct RemapData {
+    temperature: Temperature,
+    ionized_hydrogen_fraction: IonizedHydrogenFraction,
+}
+
+#[derive(Equivalence, Clone, Debug)]
+struct FullRemapData {
+    position: Position,
     temperature: Temperature,
     ionized_hydrogen_fraction: IonizedHydrogenFraction,
 }
@@ -126,18 +138,31 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
                 &'static mut IonizedHydrogenFraction,
             ),
         >,
+        box_: &SimulationBox,
+        decomposition: &DecompositionState,
     ) -> Self {
         let (position, ionized_hydrogen_fraction, temperature, remap_cosmology) =
             read_remap_data(files);
         let factor = get_scale_factor_difference(Length::dimension(), cosmology, &remap_cosmology);
+        let position: Vec<_> = position
+            .into_iter()
+            .map(move |pos| Position(*pos * factor))
+            .collect();
+        let comm1 = ExchangeCommunicator::<Identified<SearchRequest>>::new();
+        let comm2 = ExchangeCommunicator::<Identified<SearchReply>>::new();
+        let (position, temperature, ionized_hydrogen_fraction) = exchange(
+            position,
+            temperature,
+            ionized_hydrogen_fraction,
+            box_,
+            decomposition,
+        );
         let tree: Tree = (&position
             .iter()
-            .map(|pos| pos_to_tree_coord(&(**pos * factor)))
+            .map(|pos| pos_to_tree_coord(&(**pos)))
             .collect::<Vec<_>>())
             .into();
         let extents = exchange_extents(&position);
-        let comm1 = ExchangeCommunicator::<Identified<SearchRequest>>::new();
-        let comm2 = ExchangeCommunicator::<Identified<SearchReply>>::new();
         Remapper::<'a, 'w, 's> {
             ionized_hydrogen_fraction,
             temperature,
@@ -200,26 +225,38 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
         local_map: &HashMap<Entity, SearchReply>,
         chunk: &[Identified<SearchRequest>],
     ) -> DataByRank<Vec<Identified<SearchRequest>>> {
+        let mean_length = Length::new_unchecked(
+            local_map
+                .iter()
+                .map(|(_, reply)| reply.squared_distance.sqrt())
+                .sum::<f64>()
+                / local_map.len() as f64,
+        );
+        dbg!(&mean_length.in_kiloparsec());
         let mut outgoing: DataByRank<Vec<Identified<SearchRequest>>> =
             DataByRank::from_communicator(&self.comm1);
+        let total = self.comm1.other_ranks().iter().count() * local_map.len();
+        let mut count = 0;
         for rank in self.comm1.other_ranks() {
             let extent = &self.extents[rank];
             for request in chunk.iter() {
                 let local_squared_distance =
                     local_map.get(&request.entity()).unwrap().squared_distance;
-                if self.particle_might_be_closer_to_extent(
+                if self.closer_particle_could_exist_on_other_rank(
                     extent,
                     &request.data,
                     local_squared_distance,
                 ) {
+                    count += 1;
                     outgoing.get_mut(&rank).unwrap().push(request.clone());
                 }
             }
         }
+        mpidbg!(count as f64 / total as f64);
         outgoing
     }
 
-    fn particle_might_be_closer_to_extent(
+    fn closer_particle_could_exist_on_other_rank(
         &self,
         extent: &Extent,
         request: &SearchRequest,
@@ -242,6 +279,50 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
             },
         }
     }
+}
+
+fn exchange(
+    position: Vec<Position>,
+    temperature: Vec<Temperature>,
+    ionized_hydrogen_fraction: Vec<IonizedHydrogenFraction>,
+    box_: &SimulationBox,
+    decomposition: &DecompositionState,
+) -> (
+    Vec<Position>,
+    Vec<Temperature>,
+    Vec<IonizedHydrogenFraction>,
+) {
+    let mut comm = ExchangeCommunicator::<FullRemapData>::new();
+    let mut outgoing_data: DataByRank<Vec<FullRemapData>> =
+        DataByRank::same_for_all_ranks_in_communicator(vec![], &comm);
+    for (pos, (temp, ion_frac)) in position.into_iter().zip(
+        temperature
+            .into_iter()
+            .zip(ionized_hydrogen_fraction.into_iter()),
+    ) {
+        let key = pos.into_key(&*box_);
+        let rank = if !box_.contains(&pos) {
+            comm.rank()
+        } else {
+            decomposition.get_owning_rank(key)
+        };
+        outgoing_data.get_mut(&rank).unwrap().push(FullRemapData {
+            position: pos,
+            temperature: temp,
+            ionized_hydrogen_fraction: ion_frac,
+        });
+    }
+    let remaining = outgoing_data.remove(&comm.rank()).unwrap();
+    let incoming = comm.exchange_all(outgoing_data);
+    let (mut position, mut temperature, mut ionized_hydrogen_fraction) = (vec![], vec![], vec![]);
+    for (_, data) in incoming.into_iter().chain(once((comm.rank(), remaining))) {
+        for data in data {
+            position.push(data.position);
+            ionized_hydrogen_fraction.push(data.ionized_hydrogen_fraction);
+            temperature.push(data.temperature);
+        }
+    }
+    (position, temperature, ionized_hydrogen_fraction)
 }
 
 fn exchange_extents(position: &[Position]) -> DataByRank<Extent> {
@@ -286,6 +367,8 @@ fn get_highest_number_snapshot_dir(path: &Path) -> PathBuf {
 pub fn remap_abundances_and_energies_system(
     parameters: Res<Parameters>,
     cosmology: Res<Cosmology>,
+    box_: Res<SimulationBox>,
+    decomposition: Res<DecompositionState>,
     mut particles: Particles<(
         Entity,
         &'static Position,
@@ -301,7 +384,7 @@ pub fn remap_abundances_and_energies_system(
     for file in files.iter() {
         debug!("Remapping from file: {file:?}");
     }
-    let mut remapper = Remapper::new(files, &cosmology, &mut particles);
+    let mut remapper = Remapper::new(files, &cosmology, &mut particles, &box_, &decomposition);
     remapper.remap();
 }
 
