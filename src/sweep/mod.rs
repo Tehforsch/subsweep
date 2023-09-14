@@ -13,6 +13,9 @@ mod time_series;
 pub mod timestep_level;
 mod timestep_state;
 
+use std::thread;
+use std::time::Duration;
+
 use bevy::prelude::*;
 use derive_more::Into;
 use hdf5::H5Type;
@@ -253,7 +256,7 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn solve(&mut self, timers: &mut Timers) {
-        let _ = timers.time("sweep");
+        let _timer = timers.time("sweep");
         while self.to_solve_count.total() > 0
             || self.remaining_to_send_count() > 0
             || self
@@ -507,7 +510,7 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn update_chemistry(&mut self, timers: &mut Timers) {
-        let _ = timers.time("chemistry");
+        let _timer = timers.time("chemistry");
         for (id, cell) in self.cells.enumerate_active(self.current_level) {
             let (level, site) = self.sites.get_mut_with_level(id);
             let timestep = self.timestep_state.timestep_at_level(level);
@@ -534,7 +537,7 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn update_timestep_levels(&mut self, timers: &mut Timers) {
-        let _ = timers.time("update levels");
+        let _timer = timers.time("update levels");
         for (id, level, site) in self.sites.enumerate_with_levels_mut() {
             let desired_timestep = self.timestep_safety_factor * site.change_timescale;
             let desired_level = self

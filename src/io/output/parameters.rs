@@ -70,6 +70,8 @@ pub struct OutputParameters {
     /// What to do when the output folder already exists.
     #[serde(default)]
     pub handle_existing_output: HandleExistingOutput,
+    #[serde(default = "default_performance_data_filename")]
+    pub performance_data_filename: String,
 }
 
 fn default_snapshot_padding() -> usize {
@@ -94,6 +96,10 @@ fn default_fields() -> Fields {
 
 fn default_used_parameters_filename() -> String {
     "parameters.yml".into()
+}
+
+fn default_performance_data_filename() -> String {
+    "performance.yml".into()
 }
 
 pub fn is_desired_field<T: Named>(sim: &Simulation) -> bool {

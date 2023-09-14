@@ -13,6 +13,7 @@ use crate::io::output::OutputPlugin;
 use crate::named::Named;
 use crate::parameters::SimulationBox;
 use crate::particle::ParticlePlugin;
+use crate::performance_data::write_performance_data_system;
 use crate::performance_data::Timers;
 use crate::prelude::Particles;
 use crate::prelude::WorldSize;
@@ -31,6 +32,12 @@ pub enum Stages {
     AfterSweep,
     Output,
     Final,
+    InitialTimer,
+    SweepTimer,
+    AfterSweepTimer,
+    OutputTimer,
+    FinalTimer,
+    UpdateTimer,
 }
 
 #[derive(StageLabel)]
@@ -47,6 +54,20 @@ pub enum StartupStages {
     InsertComponentsAfterGrid,
     InitSweep,
     Final,
+    ReadInputTimer,
+
+    StartupTimer,
+    InsertDerivedComponentsTimer,
+    DecompositionTimer,
+    SetOutgoingEntitiesTimer,
+    ExchangeTimer,
+    AssignParticleIdsTimer,
+    TreeConstructionTimer,
+    RemapTimer,
+    InsertGridTimer,
+    InsertComponentsAfterGridTimer,
+    InitSweepTimer,
+    FinalTimer,
 }
 
 #[derive(Equivalence, Clone)]
@@ -71,6 +92,7 @@ impl RaxiomPlugin for SimulationPlugin {
                 check_particles_in_simulation_box_system,
             )
             .add_startup_system_to_stage(StartupStages::ReadInput, show_num_cores_system)
+            .add_system_to_stage(Stages::Output, write_performance_data_system)
             .add_system_to_stage(Stages::Initial, show_time_system)
             .add_system_to_stage(Stages::Final, exit_system)
             .add_system_to_stage(Stages::Initial, stop_simulation_system);
@@ -115,7 +137,6 @@ fn exit_system(
         timers.stop("total");
         let time_in_secs = timers.total("total").in_seconds();
         info!("Run finished after {:.03} seconds.", time_in_secs);
-        dbg!(&*timers);
         evs.send(AppExit);
     }
 }
