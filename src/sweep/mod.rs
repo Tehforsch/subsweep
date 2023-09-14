@@ -13,9 +13,6 @@ mod time_series;
 pub mod timestep_level;
 mod timestep_state;
 
-use std::thread;
-use std::time::Duration;
-
 use bevy::prelude::*;
 use derive_more::Into;
 use hdf5::H5Type;
@@ -241,13 +238,15 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     fn single_sweep(&mut self, timers: &mut Timers) {
+        timers.start(self.current_level);
         trace!("Level {:>2}: Sweeping.", self.current_level.0);
         self.init_counts();
         self.to_solve = self.get_initial_tasks();
         if self.check_deadlock {
             self.check_deadlock();
         }
-        self.solve(timers);
+        self.solve();
+        timers.stop(self.current_level);
         trace!("Level {:>2}: Updating chemistry.", self.current_level.0);
         self.update_chemistry(timers);
         for site in self.sites.iter() {
@@ -255,8 +254,7 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    fn solve(&mut self, timers: &mut Timers) {
-        let _timer = timers.time("sweep");
+    fn solve(&mut self) {
         while self.to_solve_count.total() > 0
             || self.remaining_to_send_count() > 0
             || self

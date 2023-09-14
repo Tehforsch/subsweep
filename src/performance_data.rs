@@ -4,6 +4,7 @@ use std::time::Instant;
 use bevy::prelude::NonSendMut;
 use bevy::prelude::Res;
 use bevy::prelude::Resource;
+use linked_hash_map::LinkedHashMap;
 use serde::Serialize;
 use serde_yaml::Value;
 
@@ -47,22 +48,30 @@ impl Result {
 
     fn into_value(&self) -> Value {
         match self {
-            Result::RunTimes(run_times) => serde_yaml::to_value(&compute_statistics(run_times)),
+            Result::RunTimes(run_times) => serde_yaml::to_value(&Statistics::new(run_times)),
             Result::Number(num) => serde_yaml::to_value(&num),
         }
         .unwrap()
     }
 }
 
-fn compute_statistics(run_times: &[Time]) -> HashMap<String, Time> {
-    let total = run_times.iter().copied().sum::<Time>();
-    [
-        ("average", total / (run_times.len() as f64)),
-        ("total", total),
-    ]
-    .into_iter()
-    .map(|(x, val)| (x.to_owned(), val))
-    .collect()
+#[derive(Serialize)]
+struct Statistics {
+    average: Time,
+    total: Time,
+    num_calls: usize,
+}
+
+impl Statistics {
+    fn new(run_times: &[Time]) -> Self {
+        let total = run_times.iter().copied().sum::<Time>();
+        let num_calls = run_times.len();
+        Self {
+            total,
+            average: total / num_calls as f64,
+            num_calls,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -88,11 +97,11 @@ pub struct Timers {
 }
 
 impl Timers {
-    pub fn start(&mut self, name: &str) {
+    pub fn start<N: Into<String>>(&mut self, name: N) {
         self.timers.insert(name.into(), Timer::default());
     }
 
-    pub fn stop(&mut self, name: &str) {
+    pub fn stop<N: Into<String>>(&mut self, name: N) {
         let name = name.into();
         let timer = self
             .timers
@@ -104,47 +113,52 @@ impl Timers {
             .add_timing(timer.elapsed_time());
     }
 
-    pub fn total(&self, name: &str) -> Time {
+    pub fn total<N: Clone + Into<String>>(&self, name: N) -> Time {
         self.results
-            .get(name)
+            .get(&name.clone().into())
             .unwrap_or_else(|| {
                 panic!(
                     "Tried to obtain performance result for non-existent category: {}",
-                    name
+                    &name.into()
                 )
             })
             .total()
     }
 
-    pub fn record_number(&mut self, name: &str, val: impl TryInto<i32>) {
+    pub fn record_number<N: Into<String>>(&mut self, name: N, val: impl TryInto<i32>) {
         match val.try_into() {
             Ok(val) => self.results.insert(name.into(), Result::Number(val)),
             Err(_) => panic!(),
         };
     }
 
-    pub(crate) fn time<'a, 'b>(&'a mut self, name: &'b str) -> TimerGuard<'a, 'b> {
-        self.start(name);
+    pub(crate) fn time<'a, N: Into<String> + Clone>(&'a mut self, name: N) -> TimerGuard<'a, N> {
+        self.start(name.clone());
         TimerGuard { data: self, name }
     }
 
-    pub fn into_output(&self) -> HashMap<Category, Value> {
-        self.results
-            .iter()
-            .map(|(name, result)| (name.into(), result.into_value()))
+    pub fn into_output(&self) -> LinkedHashMap<Category, Value> {
+        let mut names: Vec<_> = self.results.iter().map(|(name, _)| name.clone()).collect();
+        names.sort();
+        names
+            .into_iter()
+            .map(move |name| {
+                let result = self.results[&name].into_value();
+                (name, result)
+            })
             .collect()
     }
 }
 
 #[must_use = "A timer guard needs to be used."]
-pub struct TimerGuard<'a, 'b> {
+pub struct TimerGuard<'a, N: Into<String> + Clone> {
     data: &'a mut Timers,
-    name: &'b str,
+    name: N,
 }
 
-impl<'a, 'b> Drop for TimerGuard<'a, 'b> {
+impl<'a, N: Into<String> + Clone> Drop for TimerGuard<'a, N> {
     fn drop(&mut self) {
-        self.data.stop(self.name)
+        self.data.stop(self.name.clone())
     }
 }
 

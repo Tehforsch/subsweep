@@ -52,6 +52,12 @@ impl TimestepLevel {
     }
 }
 
+impl From<TimestepLevel> for String {
+    fn from(value: TimestepLevel) -> Self {
+        format!("sweep_level_{}", value.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::TimestepLevel;
