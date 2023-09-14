@@ -22,7 +22,7 @@ use crate::units::VecLength;
 
 #[derive(From, Into, Deref, DerefMut, Debug)]
 #[raxiom_parameters]
-pub struct SimulationBox(Extent);
+pub struct SimulationBox(pub Extent);
 
 /// The box size of the simulation. Periodic boundary conditions apply
 /// beyond this box, meaning that the positions of particles outside

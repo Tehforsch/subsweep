@@ -30,6 +30,7 @@ use crate::prelude::WorldSize;
 use crate::quadtree::QuadTreeConfig;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::units::VecLength;
 
 #[cfg(feature = "2d")]
 pub type DomainKey = crate::peano_hilbert::PeanoKey2d;
@@ -129,6 +130,18 @@ fn update_id_entity_map_system(query: Query<(&ParticleId, Entity)>, mut map: Res
     map.0 = query.iter().map(|(id, entity)| (*id, entity)).collect();
 }
 
+pub fn get_decomposition_from_points_and_box(
+    points: Vec<VecLength>,
+    box_: &SimulationBox,
+    world_size: usize,
+) -> DecompositionState {
+    debug!("Computing keys");
+    let local_counter = KeyCounter::from_points_and_extent(points, &**box_);
+    debug!("Determining cutoffs");
+    let mut counter = ParallelCounter::new(local_counter);
+    DecompositionState::new(&mut counter, world_size)
+}
+
 fn domain_decomposition_system(
     mut commands: Commands,
     box_: Res<SimulationBox>,
@@ -136,12 +149,11 @@ fn domain_decomposition_system(
     world_size: Res<WorldSize>,
 ) {
     info!("Starting domain decomposition");
-    debug!("Computing keys");
-    let local_counter =
-        KeyCounter::from_points_and_extent(particles.iter().map(|x| **x).collect(), &*box_);
-    debug!("Determining cutoffs");
-    let mut counter = ParallelCounter::new(local_counter);
-    let decomp = DecompositionState::new(&mut counter, **world_size);
+    let decomp = get_decomposition_from_points_and_box(
+        particles.iter().map(|x| **x).collect(),
+        &*box_,
+        **world_size,
+    );
     decomp.log_imbalance();
     commands.insert_resource(decomp);
 }

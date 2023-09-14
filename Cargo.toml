@@ -71,6 +71,9 @@ required-features = ["3d"]
 [[example]]
 name = "mpi_performance"
 
+[[example]]
+name = "domain_decomp"
+
 [[bench]]
 name = "voronoi2d"
 harness = false
