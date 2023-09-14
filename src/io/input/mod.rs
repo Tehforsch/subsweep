@@ -41,6 +41,7 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::hash_map::HashMap;
 use crate::io::DatasetShape;
+use crate::performance_data::Timers;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::prelude::Named;
@@ -309,6 +310,7 @@ fn spawn_entities_system(
     mut spawned_entities: ResMut<SpawnedEntities>,
     datasets: Res<RegisteredDatasets>,
     parameters: Res<InputParameters>,
+    mut performance_data: ResMut<Timers>,
 ) {
     let reader = Reader::split_between_ranks(parameters.all_input_files());
     if datasets.len() == 0 {
@@ -327,6 +329,7 @@ fn spawn_entities_system(
     let mut comm: Communicator<usize> = Communicator::new();
     let num_entities_total: usize = comm.all_gather_sum(&num_entities);
     info!("Spawned {} particles", num_entities_total);
+    performance_data.record_number("num_particles", num_entities_total);
     assert_eq!(spawned_entities.len(), 0);
     spawned_entities.0 = (0..num_entities)
         .map(|_| commands.spawn((LocalParticle,)).id())

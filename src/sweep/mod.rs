@@ -68,6 +68,7 @@ use crate::io::time_series::TimeSeriesPlugin;
 use crate::io::to_dataset::ToDataset;
 use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
+use crate::performance_data::Timers;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation_plugin::SimulationTime;
@@ -220,38 +221,39 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    pub fn run_sweeps(&mut self) -> Time {
+    pub fn run_sweeps(&mut self, timers: &mut Timers) -> Time {
         let counts = self.get_cell_counts_per_level();
         self.print_cell_counts(&counts);
         for level in self.timestep_state.iter_levels_in_sweep_order() {
             if counts[level.0] > 0 {
                 self.current_level = level;
-                self.single_sweep();
+                self.single_sweep(timers);
             }
         }
         self.timescale_counter.show_timestep_limiting_processes();
         let time_elapsed = self.timestep_state.current_max_timestep();
         self.timestep_state.advance_allowed_levels();
-        self.update_timestep_levels();
+        self.update_timestep_levels(timers);
         time_elapsed
     }
 
-    fn single_sweep(&mut self) {
+    fn single_sweep(&mut self, timers: &mut Timers) {
         trace!("Level {:>2}: Sweeping.", self.current_level.0);
         self.init_counts();
         self.to_solve = self.get_initial_tasks();
         if self.check_deadlock {
             self.check_deadlock();
         }
-        self.solve();
+        self.solve(timers);
         trace!("Level {:>2}: Updating chemistry.", self.current_level.0);
-        self.update_chemistry();
+        self.update_chemistry(timers);
         for site in self.sites.iter() {
             debug_assert_eq!(site.num_missing_upwind.total(), 0);
         }
     }
 
-    fn solve(&mut self) {
+    fn solve(&mut self, timers: &mut Timers) {
+        let _ = timers.time("sweep");
         while self.to_solve_count.total() > 0
             || self.remaining_to_send_count() > 0
             || self
@@ -504,7 +506,8 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    fn update_chemistry(&mut self) {
+    fn update_chemistry(&mut self, timers: &mut Timers) {
+        let _ = timers.time("chemistry");
         for (id, cell) in self.cells.enumerate_active(self.current_level) {
             let (level, site) = self.sites.get_mut_with_level(id);
             let timestep = self.timestep_state.timestep_at_level(level);
@@ -530,7 +533,8 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    fn update_timestep_levels(&mut self) {
+    fn update_timestep_levels(&mut self, timers: &mut Timers) {
+        let _ = timers.time("update levels");
         for (id, level, site) in self.sites.enumerate_with_levels_mut() {
             let desired_timestep = self.timestep_safety_factor * site.change_timescale;
             let desired_level = self
@@ -636,9 +640,10 @@ fn run_sweep_system(
     mut ionization_times: Particles<(&ParticleId, &mut IonizationTime)>,
     mut rates: Particles<(&ParticleId, &mut components::PhotonRate)>,
     mut time: ResMut<SimulationTime>,
+    mut timers: NonSendMut<Timers>,
 ) {
     let solver = (*solver).as_mut().unwrap();
-    let time_elapsed = solver.run_sweeps();
+    let time_elapsed = solver.run_sweeps(&mut timers);
     **time += time_elapsed;
     for (id, mut fraction, mut temperature) in sites.iter_mut() {
         let site = solver.sites.get(*id);

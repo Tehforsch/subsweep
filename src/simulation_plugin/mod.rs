@@ -1,8 +1,6 @@
 mod parameters;
 mod time;
 
-use std::time::Instant;
-
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use mpi::traits::Equivalence;
@@ -15,6 +13,7 @@ use crate::io::output::OutputPlugin;
 use crate::named::Named;
 use crate::parameters::SimulationBox;
 use crate::particle::ParticlePlugin;
+use crate::performance_data::Timers;
 use crate::prelude::Particles;
 use crate::prelude::WorldSize;
 use crate::simulation::RaxiomPlugin;
@@ -55,12 +54,11 @@ pub(super) struct ShouldExit(bool);
 
 pub struct StopSimulationEvent;
 
-#[derive(Resource)]
-struct RuntimeTracker(Instant);
-
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        sim.insert_resource::<RuntimeTracker>(RuntimeTracker(Instant::now()))
+        let mut perf = Timers::default();
+        perf.start("total");
+        sim.insert_non_send_resource(perf)
             .add_parameter_type::<SimulationParameters>()
             .add_required_component::<Position>()
             .add_plugin(SimulationBoxPlugin)
@@ -111,18 +109,19 @@ fn show_time_system(time: Res<SimulationTime>) {
 fn exit_system(
     mut evs: EventWriter<AppExit>,
     mut stop_sim: EventReader<StopSimulationEvent>,
-    run_time_tracker: Res<RuntimeTracker>,
+    mut timers: NonSendMut<Timers>,
 ) {
     if stop_sim.iter().count() > 0 {
-        let time_in_secs = Instant::now()
-            .duration_since(run_time_tracker.0)
-            .as_secs_f64();
+        timers.stop("total");
+        let time_in_secs = timers.total("total").in_seconds();
         info!("Run finished after {:.03} seconds.", time_in_secs);
+        dbg!(&*timers);
         evs.send(AppExit);
     }
 }
 
-fn show_num_cores_system(world_size: Res<WorldSize>) {
+fn show_num_cores_system(world_size: Res<WorldSize>, mut performance_data: ResMut<Timers>) {
+    performance_data.record_number("num_ranks", **world_size);
     info!("Running on {} MPI ranks", **world_size);
 }
 

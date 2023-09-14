@@ -35,6 +35,7 @@ unit_system!(
         unit (seconds, "s") = 1.0 * Time,
         unit (milliseconds, "ms") = 1e-3 * seconds,
         unit (microseconds, "µs") = 1e-6 * seconds,
+        unit (nanoseconds, "ns") = 1e-9 * seconds,
         unit (years, "yr") = 3.15576e7 * seconds,
         unit (kiloyears, "kyr") = 1000.0 * years,
         unit (megayears, "Myr") = 1e6 * years,
