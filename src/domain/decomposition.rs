@@ -218,14 +218,14 @@ impl<K: Key> KeyCounter<K> {
         use crate::extent::get_extent;
 
         let extent = get_extent(points.iter().copied()).unwrap();
-        Self::from_points_and_extent(points, &extent)
+        Self::from_points_and_extent(points.into_iter(), &extent)
     }
 
     pub fn from_points_and_extent<P: IntoKey<Key = K> + Copy>(
-        points: Vec<P>,
+        points: impl Iterator<Item = P>,
         extent: &Extent<P>,
     ) -> Self {
-        let keys = points.iter().map(|p| p.into_key(extent)).collect();
+        let keys = points.map(|p| p.into_key(extent)).collect();
         Self::new(keys)
     }
 

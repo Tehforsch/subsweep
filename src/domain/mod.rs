@@ -131,7 +131,7 @@ fn update_id_entity_map_system(query: Query<(&ParticleId, Entity)>, mut map: Res
 }
 
 pub fn get_decomposition_from_points_and_box(
-    points: Vec<VecLength>,
+    points: impl Iterator<Item = VecLength>,
     box_: &SimulationBox,
     world_size: usize,
 ) -> DecompositionState {
@@ -149,11 +149,8 @@ fn domain_decomposition_system(
     world_size: Res<WorldSize>,
 ) {
     info!("Starting domain decomposition");
-    let decomp = get_decomposition_from_points_and_box(
-        particles.iter().map(|x| **x).collect(),
-        &*box_,
-        **world_size,
-    );
+    let decomp =
+        get_decomposition_from_points_and_box(particles.iter().map(|x| **x), &*box_, **world_size);
     decomp.log_imbalance();
     commands.insert_resource(decomp);
 }

@@ -27,7 +27,7 @@ fn setup_points_3d(num_particles: usize) -> Vec<VecLength> {
 fn run_res(res: usize, world_size: usize) -> DecompositionState {
     let points = setup_points_3d(res * res * res / world_size);
     let box_ = SimulationBox(Extent::from_positions(points.iter()).unwrap());
-    get_decomposition_from_points_and_box(points, &box_, world_size)
+    get_decomposition_from_points_and_box(points.into_iter(), &box_, world_size)
 }
 
 fn main() {
