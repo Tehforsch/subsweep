@@ -17,7 +17,6 @@ use super::simulation_plugin::SimulationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::parameter_plugin::parameter_file_contents::Override;
 use crate::simulation::Simulation;
-use crate::stages::SimulationStagesPlugin;
 
 pub struct SimulationBuilder {
     pub num_worker_threads: Option<usize>,
@@ -147,8 +146,7 @@ impl SimulationBuilder {
         if sim.on_main_rank() && self.log {
             sim.add_bevy_plugin(self.log_plugin());
         }
-        sim.add_plugin(SimulationStagesPlugin)
-            .add_plugin(SimulationPlugin)
+        sim.add_plugin(SimulationPlugin)
             .add_plugin(DomainPlugin)
             .insert_resource(ReportExecutionOrderAmbiguities);
         self.add_default_bevy_plugins(sim);

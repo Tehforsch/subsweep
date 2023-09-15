@@ -32,16 +32,11 @@ pub enum Stages {
     AfterSweep,
     Output,
     Final,
-    InitialTimer,
-    SweepTimer,
-    AfterSweepTimer,
-    OutputTimer,
-    FinalTimer,
-    UpdateTimer,
 }
 
 #[derive(StageLabel)]
 pub enum StartupStages {
+    Initial,
     ReadInput,
     InsertDerivedComponents,
     Decomposition,
@@ -54,20 +49,6 @@ pub enum StartupStages {
     InsertComponentsAfterGrid,
     InitSweep,
     Final,
-    ReadInputTimer,
-
-    StartupTimer,
-    InsertDerivedComponentsTimer,
-    DecompositionTimer,
-    SetOutgoingEntitiesTimer,
-    ExchangeTimer,
-    AssignParticleIdsTimer,
-    TreeConstructionTimer,
-    RemapTimer,
-    InsertGridTimer,
-    InsertComponentsAfterGridTimer,
-    InitSweepTimer,
-    FinalTimer,
 }
 
 #[derive(Equivalence, Clone)]

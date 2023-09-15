@@ -36,8 +36,8 @@ use crate::io::InputDatasetDescriptor;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
+use crate::prelude::StartupStages;
 
-#[derive(Default)]
 pub struct Simulation {
     pub app: App,
     labels: HashSet<&'static str>,
@@ -45,6 +45,21 @@ pub struct Simulation {
     ordering_labels: HashMap<&'static str, Vec<SystemLabelId>>,
     pub read_initial_conditions: bool,
     pub write_output: bool,
+}
+
+impl Default for Simulation {
+    fn default() -> Self {
+        let mut app = App::default();
+        app.schedule = crate::stages::create_schedule();
+        Self {
+            app,
+            labels: HashSet::default(),
+            parameter_sections: HashSet::default(),
+            ordering_labels: HashMap::default(),
+            read_initial_conditions: false,
+            write_output: false,
+        }
+    }
 }
 
 impl Simulation {
@@ -259,7 +274,8 @@ impl Simulation {
         &mut self,
         system: impl IntoSystemDescriptor<Params>,
     ) -> &mut Self {
-        self.app.add_startup_system(system);
+        self.app
+            .add_startup_system_to_stage(StartupStages::Initial, system);
         self
     }
 
