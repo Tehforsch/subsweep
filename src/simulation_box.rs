@@ -1,7 +1,7 @@
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
 use derive_custom::raxiom_parameters;
 use derive_custom::Named;
+use derive_more::Deref;
+use derive_more::DerefMut;
 use derive_more::From;
 use derive_more::Into;
 

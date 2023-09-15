@@ -1,6 +1,6 @@
-use bevy::prelude::debug;
-use bevy::prelude::Res;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Res;
+use bevy_ecs::prelude::Resource;
+use log::debug;
 use mpi::traits::Equivalence;
 use ordered_float::OrderedFloat;
 

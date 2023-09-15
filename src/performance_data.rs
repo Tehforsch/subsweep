@@ -1,9 +1,9 @@
 use std::fs;
 use std::time::Instant;
 
-use bevy::prelude::NonSendMut;
-use bevy::prelude::Res;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::NonSendMut;
+use bevy_ecs::prelude::Res;
+use bevy_ecs::prelude::Resource;
 use linked_hash_map::LinkedHashMap;
 use serde::Serialize;
 use serde_yaml::Value;

@@ -12,7 +12,9 @@ use arepo_postprocess::unit_reader::ArepoUnitReader;
 use arepo_postprocess::GridParameters;
 use arepo_postprocess::Parameters;
 use arepo_postprocess::SourceType;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use derive_more::Deref;
+use derive_more::DerefMut;
 use derive_more::From;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
@@ -71,7 +73,7 @@ fn main() {
                     dataset_name: "PartType0/ElectronAbundance".into(),
                     unit_reader: unit_reader.clone(),
                 },
-                ..default()
+                ..Default::default()
             },
         ));
     }
@@ -117,7 +119,7 @@ fn main() {
                     dataset_name: "PartType0/Density".into(),
                     unit_reader: unit_reader.clone(),
                 },
-                ..default()
+                ..Default::default()
             },
         ))
         .add_plugin(DatasetInputPlugin::<InternalEnergy>::from_descriptor(
@@ -126,7 +128,7 @@ fn main() {
                     dataset_name: "PartType0/InternalEnergy".into(),
                     unit_reader: unit_reader,
                 },
-                ..default()
+                ..Default::default()
             },
         ))
         .add_plugin(SweepPlugin)

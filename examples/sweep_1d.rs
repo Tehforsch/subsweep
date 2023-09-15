@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use derive_custom::raxiom_parameters;
 use raxiom::components;
 use raxiom::components::Density;

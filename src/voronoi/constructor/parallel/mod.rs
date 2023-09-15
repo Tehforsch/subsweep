@@ -3,9 +3,9 @@ pub mod plugin;
 #[cfg(test)]
 mod tests;
 
-use bevy::prelude::debug;
 use derive_more::Add;
 use derive_more::Sum;
+use log::debug;
 use mpi::traits::Equivalence;
 pub use plugin::ParallelVoronoiGridConstruction;
 

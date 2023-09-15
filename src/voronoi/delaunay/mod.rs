@@ -6,7 +6,7 @@ mod point_location;
 
 use std::hash::Hash;
 
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Resource;
 use derive_more::From;
 use derive_more::Into;
 use generational_arena::Index;

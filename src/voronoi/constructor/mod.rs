@@ -3,8 +3,8 @@ mod halo_iteration;
 mod local;
 pub(super) mod parallel;
 
-use bevy::prelude::debug;
-use bevy::prelude::info;
+use log::debug;
+use log::info;
 pub use parallel::ParallelVoronoiGridConstruction;
 
 use self::halo_iteration::HaloIteration;

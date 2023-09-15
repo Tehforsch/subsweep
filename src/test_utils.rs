@@ -1,8 +1,8 @@
 use std::path::Path;
 use std::path::PathBuf;
 
-use bevy::ecs::schedule::IntoSystemDescriptor;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_ecs::schedule::IntoSystemDescriptor;
 
 use crate::prelude::Float;
 use crate::prelude::ParticleId;

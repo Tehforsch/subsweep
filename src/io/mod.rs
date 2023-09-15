@@ -6,7 +6,7 @@ pub mod unit_reader;
 
 use std::marker::PhantomData;
 
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Resource;
 use hdf5::Dataset;
 pub use unit_reader::DefaultUnitReader;
 pub use unit_reader::UnitReader;

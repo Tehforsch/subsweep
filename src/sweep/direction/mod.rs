@@ -3,11 +3,11 @@ mod healpix;
 
 use std::f64::consts::PI;
 
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
-use bevy::prelude::NonSendMut;
-use bevy::prelude::ResMut;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::NonSendMut;
+use bevy_ecs::prelude::ResMut;
+use bevy_ecs::prelude::Resource;
+use derive_more::Deref;
+use derive_more::DerefMut;
 use mpi::traits::Equivalence;
 use rand::rngs::StdRng;
 use rand::Rng;

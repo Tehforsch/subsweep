@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use bimap::BiMap;
 
 pub mod decomposition;
@@ -7,7 +7,12 @@ pub mod extent;
 mod key;
 mod quadtree;
 
+use derive_more::Deref;
+use derive_more::DerefMut;
 pub use key::IntoKey;
+use log::debug;
+use log::error;
+use log::info;
 pub use quadtree::LeafData;
 
 use self::decomposition::KeyCounter;

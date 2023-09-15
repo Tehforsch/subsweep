@@ -1,5 +1,6 @@
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 use derive_custom::raxiom_parameters;
+use log::info;
 
 use super::cell::Face;
 use super::cell::FaceArea;

@@ -1,6 +1,6 @@
-use bevy::prelude::Commands;
-use bevy::prelude::Res;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Commands;
+use bevy_ecs::prelude::Res;
+use bevy_ecs::prelude::Resource;
 use derive_custom::raxiom_parameters;
 use derive_custom::Named;
 use hdf5::H5Type;

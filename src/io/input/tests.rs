@@ -1,8 +1,8 @@
 use std::path::Path;
 
-use bevy::prelude::Component;
-use bevy::prelude::Query;
-use bevy::prelude::World;
+use bevy_ecs::prelude::Component;
+use bevy_ecs::prelude::Query;
+use bevy_ecs::prelude::World;
 
 use super::read_dataset_system;
 use super::InputParameters;

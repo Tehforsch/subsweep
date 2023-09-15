@@ -54,11 +54,11 @@ where
     }
 }
 
-use bevy::prelude::Entity;
+use bevy_ecs::prelude::Entity;
 
 #[cfg(test)]
 mod tests {
-    use bevy::prelude::Entity;
+    use bevy_ecs::prelude::Entity;
     use mpi::traits::Communicator;
     use mpi::traits::Equivalence;
     use mpi::traits::MatchesRaw;

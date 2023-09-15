@@ -1,6 +1,6 @@
-use bevy::prelude::Commands;
-use bevy::prelude::Component;
-use bevy::prelude::Res;
+use bevy_ecs::prelude::Commands;
+use bevy_ecs::prelude::Component;
+use bevy_ecs::prelude::Res;
 use derive_custom::Named;
 use derive_more::Deref;
 use derive_more::DerefMut;

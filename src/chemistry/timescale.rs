@@ -1,4 +1,4 @@
-use bevy::prelude::debug;
+use log::debug;
 
 use crate::hash_map::HashMap;
 use crate::units::Time;

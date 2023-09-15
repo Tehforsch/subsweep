@@ -1,15 +1,15 @@
 use std::marker::PhantomData;
 
-use bevy::ecs::system::AsSystemLabel;
-use bevy::prelude::Commands;
-use bevy::prelude::Component;
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
-use bevy::prelude::Entity;
-use bevy::prelude::IntoSystemDescriptor;
-use bevy::prelude::Res;
-use bevy::prelude::ResMut;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Commands;
+use bevy_ecs::prelude::Component;
+use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::IntoSystemDescriptor;
+use bevy_ecs::prelude::Res;
+use bevy_ecs::prelude::ResMut;
+use bevy_ecs::prelude::Resource;
+use bevy_ecs::system::AsSystemLabel;
+use derive_more::Deref;
+use derive_more::DerefMut;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 

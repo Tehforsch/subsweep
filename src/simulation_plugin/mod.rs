@@ -1,8 +1,9 @@
 mod parameters;
 mod time;
 
-use bevy::app::AppExit;
-use bevy::prelude::*;
+use bevy_app::AppExit;
+use bevy_ecs::prelude::*;
+use log::info;
 use mpi::traits::Equivalence;
 
 pub use self::parameters::SimulationParameters;

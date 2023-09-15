@@ -2,9 +2,9 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use bevy::prelude::debug;
-use bevy::prelude::warn;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Resource;
+use log::debug;
+use log::warn;
 
 use super::key::Key;
 use super::DomainKey;

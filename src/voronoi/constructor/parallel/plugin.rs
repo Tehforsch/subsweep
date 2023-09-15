@@ -1,9 +1,9 @@
-use bevy::prelude::debug;
-use bevy::prelude::warn;
-use bevy::prelude::Commands;
-use bevy::prelude::Entity;
-use bevy::prelude::Res;
+use bevy_ecs::prelude::Commands;
+use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::Res;
 use derive_custom::Named;
+use log::debug;
+use log::warn;
 
 use super::super::Constructor;
 use super::ParallelSearch;

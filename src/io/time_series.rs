@@ -3,10 +3,10 @@ use std::marker::PhantomData;
 use std::path::Path;
 use std::path::PathBuf;
 
-use bevy::prelude::EventReader;
-use bevy::prelude::IntoSystemDescriptor;
-use bevy::prelude::NonSend;
-use bevy::prelude::Res;
+use bevy_ecs::prelude::EventReader;
+use bevy_ecs::prelude::IntoSystemDescriptor;
+use bevy_ecs::prelude::NonSend;
+use bevy_ecs::prelude::Res;
 use hdf5::Dataset;
 use hdf5::File;
 use hdf5::SimpleExtents;

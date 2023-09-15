@@ -1,5 +1,5 @@
-use bevy::ecs::system::Commands;
-use bevy::prelude::Res;
+use bevy_ecs::prelude::Res;
+use bevy_ecs::system::Commands;
 
 use crate::components::Position;
 use crate::domain::DomainPlugin;

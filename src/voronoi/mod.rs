@@ -10,7 +10,7 @@ pub mod triangulation_data;
 mod utils;
 pub mod visualizer;
 
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Resource;
 pub use cell::Cell;
 pub use cell::DCell;
 pub use constructor::parallel::plugin::construct_grid_system;

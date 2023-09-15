@@ -1,6 +1,6 @@
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Resource;
+use derive_more::Deref;
+use derive_more::DerefMut;
 use derive_more::From;
 use hdf5::H5Type;
 

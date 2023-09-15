@@ -1,10 +1,10 @@
-use bevy::ecs::archetype::Archetypes;
-use bevy::ecs::component::Components;
-use bevy::prelude::debug;
-use bevy::prelude::Bundle;
-use bevy::prelude::Component;
-use bevy::prelude::Query;
-use bevy::prelude::With;
+use bevy_ecs::archetype::Archetypes;
+use bevy_ecs::component::Components;
+use bevy_ecs::prelude::Bundle;
+use bevy_ecs::prelude::Component;
+use bevy_ecs::prelude::Query;
+use bevy_ecs::prelude::With;
+use log::debug;
 use mpi::traits::Equivalence;
 
 use crate::communication::Rank;
@@ -91,9 +91,9 @@ fn count_types_system(archetypes: &Archetypes, components: &Components) {
 
 #[cfg(test)]
 mod tests {
-    use bevy::prelude::Component;
-    use bevy::prelude::With;
-    use bevy::prelude::World;
+    use bevy_ecs::prelude::Component;
+    use bevy_ecs::prelude::With;
+    use bevy_ecs::prelude::World;
 
     use crate::prelude::LocalParticle;
     use crate::prelude::Particles;

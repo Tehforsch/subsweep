@@ -1,23 +1,23 @@
 mod raxiom_plugin;
 
-use bevy::ecs::event::Event;
-use bevy::ecs::schedule::IntoSystemDescriptor;
-use bevy::ecs::schedule::StateData;
-use bevy::ecs::schedule::SystemDescriptor;
-use bevy::ecs::schedule::SystemLabelId;
-use bevy::ecs::system::Resource;
-use bevy::prelude::warn;
-use bevy::prelude::App;
-use bevy::prelude::Component;
-use bevy::prelude::Mut;
-use bevy::prelude::Plugin;
-use bevy::prelude::PluginGroup;
-use bevy::prelude::Stage;
-use bevy::prelude::StageLabel;
-use bevy::prelude::SystemSet;
-use bevy::prelude::SystemStage;
-use bevy::prelude::World;
+use bevy_app::prelude::App;
+use bevy_app::prelude::Plugin;
+use bevy_app::prelude::PluginGroup;
+use bevy_ecs::event::Event;
+use bevy_ecs::prelude::Component;
+use bevy_ecs::prelude::Mut;
+use bevy_ecs::prelude::Stage;
+use bevy_ecs::prelude::StageLabel;
+use bevy_ecs::prelude::SystemSet;
+use bevy_ecs::prelude::SystemStage;
+use bevy_ecs::prelude::World;
+use bevy_ecs::schedule::IntoSystemDescriptor;
+use bevy_ecs::schedule::StateData;
+use bevy_ecs::schedule::SystemDescriptor;
+use bevy_ecs::schedule::SystemLabelId;
+use bevy_ecs::system::Resource;
 use derive_traits::RaxiomParameters;
+use log::warn;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
 pub use raxiom_plugin::RaxiomPlugin;
@@ -65,7 +65,7 @@ impl Default for Simulation {
 impl Simulation {
     #[cfg(test)]
     pub fn test() -> Self {
-        use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
+        use bevy_ecs::schedule::ReportExecutionOrderAmbiguities;
 
         let mut sim = Self::default();
         sim.insert_resource(ReportExecutionOrderAmbiguities);

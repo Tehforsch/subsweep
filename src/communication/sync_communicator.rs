@@ -1,5 +1,5 @@
-use bevy::prelude::Commands;
-use bevy::prelude::Entity;
+use bevy_ecs::prelude::Commands;
+use bevy_ecs::prelude::Entity;
 use mpi::traits::Equivalence;
 
 use super::communicator::Communicator;

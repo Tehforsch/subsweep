@@ -1,9 +1,9 @@
-use bevy::ecs::schedule::ShouldRun;
-use bevy::prelude::Commands;
-use bevy::prelude::EventReader;
-use bevy::prelude::Res;
-use bevy::prelude::ResMut;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Commands;
+use bevy_ecs::prelude::EventReader;
+use bevy_ecs::prelude::Res;
+use bevy_ecs::prelude::ResMut;
+use bevy_ecs::prelude::Resource;
+use bevy_ecs::schedule::ShouldRun;
 
 use super::parameters::OutputParameters;
 use crate::simulation_plugin::SimulationTime;

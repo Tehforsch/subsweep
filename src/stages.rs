@@ -1,6 +1,8 @@
-use bevy::ecs::schedule::ShouldRun;
-use bevy::ecs::schedule::StageLabelId;
-use bevy::prelude::*;
+use bevy_app::CoreStage;
+use bevy_app::StartupSchedule;
+use bevy_ecs::prelude::*;
+use bevy_ecs::schedule::ShouldRun;
+use bevy_ecs::schedule::StageLabelId;
 
 use crate::simulation_plugin::Stages;
 use crate::simulation_plugin::StartupStages;

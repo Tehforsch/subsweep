@@ -1,6 +1,6 @@
-use bevy::prelude::debug;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Resource;
 use derive_traits::RaxiomParameters;
+use log::debug;
 use serde_yaml::Mapping;
 use serde_yaml::Value;
 

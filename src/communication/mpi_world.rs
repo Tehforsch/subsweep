@@ -8,8 +8,8 @@ use std::marker::PhantomData;
 use std::mem;
 use std::mem::MaybeUninit;
 
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
+use derive_more::Deref;
+use derive_more::DerefMut;
 use mpi::collective::SystemOperation;
 use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;

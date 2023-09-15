@@ -6,11 +6,11 @@ mod timer;
 use std::fs;
 use std::path::Path;
 
-use bevy::prelude::info;
-use bevy::prelude::Res;
-use bevy::prelude::ResMut;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Res;
+use bevy_ecs::prelude::ResMut;
+use bevy_ecs::prelude::Resource;
 use hdf5::File;
+use log::info;
 
 pub use self::attribute::Attribute;
 pub use self::attribute::ToAttribute;

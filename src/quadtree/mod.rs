@@ -2,7 +2,7 @@ pub mod config;
 mod node_index;
 pub mod radius_search;
 
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Resource;
 pub use config::QuadTreeConfig;
 
 use crate::domain::extent::Extent;

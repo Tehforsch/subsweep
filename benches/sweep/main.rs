@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy::prelude::Commands;
+use bevy_ecs::prelude::Commands;
 use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::BatchSize;

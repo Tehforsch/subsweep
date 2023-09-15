@@ -1,6 +1,6 @@
-use bevy::prelude::Component;
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
+use bevy_ecs::prelude::Component;
+use derive_more::Deref;
+use derive_more::DerefMut;
 use derive_more::From;
 use diman::Quotient;
 use hdf5::H5Type;

@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
-use bevy::ecs::schedule::SystemDescriptor;
-use bevy::prelude::IntoSystemDescriptor;
-use bevy::prelude::Res;
-use bevy::prelude::ResMut;
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::IntoSystemDescriptor;
+use bevy_ecs::prelude::Res;
+use bevy_ecs::prelude::ResMut;
+use bevy_ecs::prelude::Resource;
+use bevy_ecs::schedule::SystemDescriptor;
 use hdf5::H5Type;
 
 use super::plugin::IntoOutputSystem;

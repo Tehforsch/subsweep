@@ -2,12 +2,12 @@ use std::iter::once;
 use std::path::Path;
 use std::path::PathBuf;
 
-use bevy::prelude::debug;
-use bevy::prelude::info;
-use bevy::prelude::Entity;
-use bevy::prelude::Res;
+use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::Res;
 use kiddo::distance::squared_euclidean;
 use kiddo::KdTree;
+use log::debug;
+use log::info;
 use mpi::traits::Equivalence;
 use raxiom::communication::communicator::Communicator;
 use raxiom::communication::CommunicatedOption;

@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
-use bevy::ecs::schedule::SystemDescriptor;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use bevy_ecs::schedule::SystemDescriptor;
 use hdf5::Dataset;
 use hdf5::File;
 use hdf5::H5Type;

@@ -1,5 +1,5 @@
-use bevy::prelude::Commands;
-use bevy::prelude::Res;
+use bevy_ecs::prelude::Commands;
+use bevy_ecs::prelude::Res;
 
 use super::grid::init_cartesian_grid_system;
 use super::grid::NumCellsSpec;

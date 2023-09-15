@@ -1,5 +1,5 @@
-use bevy::prelude::debug;
-use bevy::prelude::warn;
+use log::debug;
+use log::warn;
 use mpi::traits::Equivalence;
 
 use super::grid::ParticleType;

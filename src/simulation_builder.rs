@@ -1,14 +1,8 @@
 use std::path::Path;
 use std::path::PathBuf;
 
-use bevy::ecs::schedule::ReportExecutionOrderAmbiguities;
-use bevy::log::Level;
-use bevy::log::LogPlugin;
-use bevy::prelude::CorePlugin;
-use bevy::prelude::MinimalPlugins;
-use bevy::prelude::PluginGroup;
-use bevy::prelude::TaskPoolOptions;
-use bevy::time::TimePlugin;
+use bevy_core::prelude::TaskPoolOptions;
+use bevy_ecs::schedule::ReportExecutionOrderAmbiguities;
 use clap::Parser;
 
 use super::command_line_options::CommandLineOptions;
@@ -144,7 +138,7 @@ impl SimulationBuilder {
             .write_output(self.write_output)
             .maybe_add_plugin(self.base_communication.clone());
         if sim.on_main_rank() && self.log {
-            sim.add_bevy_plugin(self.log_plugin());
+            self.log_setup();
         }
         sim.add_plugin(SimulationPlugin)
             .add_plugin(DomainPlugin)
@@ -160,14 +154,10 @@ impl SimulationBuilder {
     }
 
     fn add_default_bevy_plugins(&self, sim: &mut Simulation) {
-        sim.add_bevy_plugins(
-            MinimalPlugins
-                .build()
-                .disable::<TimePlugin>()
-                .set(CorePlugin {
-                    task_pool_options: self.task_pool_opts(),
-                }),
-        );
+        sim.add_bevy_plugin(bevy_core::CorePlugin {
+            task_pool_options: self.task_pool_opts(),
+        })
+        .add_bevy_plugin(bevy_app::ScheduleRunnerPlugin::default());
     }
 
     fn task_pool_opts(&self) -> TaskPoolOptions {
@@ -178,29 +168,31 @@ impl SimulationBuilder {
         }
     }
 
-    fn log_plugin(&self) -> LogPlugin {
-        match self.verbosity {
-            0 => LogPlugin {
-                level: Level::INFO,
-                filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-            },
-            1 => LogPlugin {
-                level: Level::DEBUG,
-                filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-            },
-            2 => LogPlugin {
-                level: Level::DEBUG,
-                filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-            },
-            3 => LogPlugin {
-                level: Level::DEBUG,
-                ..Default::default()
-            },
-            4 => LogPlugin {
-                level: Level::TRACE,
-                ..Default::default()
-            },
-            v => unimplemented!("Unsupported verbosity level: {}", v)
-        }
-    }
+    fn log_setup(&self) {}
+
+    // fn log_plugin(&self) -> LogPlugin {
+    //     match self.verbosity {
+    //         0 => LogPlugin {
+    //             level: Level::INFO,
+    //             filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
+    //         },
+    //         1 => LogPlugin {
+    //             level: Level::DEBUG,
+    //             filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
+    //         },
+    //         2 => LogPlugin {
+    //             level: Level::DEBUG,
+    //             filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
+    //         },
+    //         3 => LogPlugin {
+    //             level: Level::DEBUG,
+    //             ..Default::default()
+    //         },
+    //         4 => LogPlugin {
+    //             level: Level::TRACE,
+    //             ..Default::default()
+    //         },
+    //         v => unimplemented!("Unsupported verbosity level: {}", v)
+    //     }
+    // }
 }

@@ -1,5 +1,5 @@
-use bevy::prelude::Deref;
-use bevy::prelude::DerefMut;
+use derive_more::Deref;
+use derive_more::DerefMut;
 
 mod communicated_option;
 mod data_by_rank;
@@ -9,7 +9,7 @@ mod plugin;
 mod sized_communicator;
 pub mod sync_communicator; // public because i (currently) cannot test mpi stuff from within this module, but require an externally run example for it
 
-use bevy::prelude::Resource;
+use bevy_ecs::prelude::Resource;
 pub use communicated_option::CommunicatedOption;
 pub use data_by_rank::DataByRank;
 pub use exchange_communicator::ExchangeCommunicator;

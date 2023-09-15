@@ -1,5 +1,5 @@
-use bevy::prelude::debug;
 use hdf5::Dataset;
+use log::debug;
 use raxiom::components::Position;
 use raxiom::cosmology::Cosmology;
 use raxiom::io::DatasetDescriptor;

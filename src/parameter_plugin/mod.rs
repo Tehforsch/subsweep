@@ -4,8 +4,8 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::Path;
 
-use bevy::prelude::debug;
 use derive_traits::RaxiomParameters;
+use log::debug;
 
 use self::parameter_file_contents::Override;
 pub use self::parameter_file_contents::ParameterFileContents;
