@@ -1,53 +1,45 @@
+use bevy::ecs::schedule::ShouldRun;
 use bevy::ecs::schedule::StageLabelId;
 use bevy::prelude::*;
 
-use crate::named::Named;
-use crate::simulation::RaxiomPlugin;
-use crate::simulation::Simulation;
 use crate::simulation_plugin::Stages;
 use crate::simulation_plugin::StartupStages;
 
-#[derive(Named)]
-pub struct SimulationStagesPlugin;
+pub fn create_schedule() -> Schedule {
+    let mut schedule = Schedule::default();
+    let stages: &[StageLabelId] = &[
+        CoreStage::First.as_label(),
+        Stages::Initial.as_label(),
+        Stages::Sweep.as_label(),
+        Stages::AfterSweep.as_label(),
+        Stages::Output.as_label(),
+        Stages::Final.as_label(),
+        CoreStage::Last.as_label(),
+    ];
+    let startup_stages: &[StageLabelId] = &[
+        StartupStages::Initial.as_label(),
+        StartupStages::ReadInput.as_label(),
+        StartupStages::InsertDerivedComponents.as_label(),
+        StartupStages::Decomposition.as_label(),
+        StartupStages::SetOutgoingEntities.as_label(),
+        StartupStages::Exchange.as_label(),
+        StartupStages::AssignParticleIds.as_label(),
+        StartupStages::TreeConstruction.as_label(),
+        StartupStages::Remap.as_label(),
+        StartupStages::InsertGrid.as_label(),
+        StartupStages::InsertComponentsAfterGrid.as_label(),
+        StartupStages::InitSweep.as_label(),
+        StartupStages::Final.as_label(),
+    ];
+    let mut startup_schedule = Schedule::default().with_run_criteria(ShouldRun::once);
+    make_schedule_from_stage_labels(&mut startup_schedule, &startup_stages);
+    schedule.add_stage(StartupSchedule, startup_schedule);
+    make_schedule_from_stage_labels(&mut schedule, &stages);
+    schedule
+}
 
-impl RaxiomPlugin for SimulationStagesPlugin {
-    fn build_everywhere(&self, sim: &mut Simulation) {
-        let stages: &[StageLabelId] = &[
-            CoreStage::Update.as_label(),
-            Stages::Initial.as_label(),
-            Stages::Sweep.as_label(),
-            Stages::AfterSweep.as_label(),
-            Stages::Output.as_label(),
-            Stages::Final.as_label(),
-        ];
-        for window in stages.windows(2) {
-            sim.add_stage_after(
-                window[0].as_label(),
-                window[1].as_label(),
-                SystemStage::parallel(),
-            );
-        }
-        let startup_stages = &[
-            StartupStage::PostStartup.as_label(),
-            StartupStages::ReadInput.as_label(),
-            StartupStages::InsertDerivedComponents.as_label(),
-            StartupStages::Decomposition.as_label(),
-            StartupStages::SetOutgoingEntities.as_label(),
-            StartupStages::Exchange.as_label(),
-            StartupStages::AssignParticleIds.as_label(),
-            StartupStages::TreeConstruction.as_label(),
-            StartupStages::Remap.as_label(),
-            StartupStages::InsertGrid.as_label(),
-            StartupStages::InsertComponentsAfterGrid.as_label(),
-            StartupStages::InitSweep.as_label(),
-            StartupStages::Final.as_label(),
-        ];
-        for window in startup_stages.windows(2) {
-            sim.add_startup_stage_after(
-                window[0].as_label(),
-                window[1].as_label(),
-                SystemStage::parallel(),
-            );
-        }
+fn make_schedule_from_stage_labels(schedule: &mut Schedule, labels: &[StageLabelId]) {
+    for stage in labels {
+        schedule.add_stage(stage.as_label(), SystemStage::single_threaded());
     }
 }

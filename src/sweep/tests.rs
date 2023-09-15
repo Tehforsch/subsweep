@@ -10,7 +10,6 @@ use crate::prelude::StartupStages;
 use crate::prelude::WorldRank;
 use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
-use crate::stages::SimulationStagesPlugin;
 use crate::sweep::initialize_sweep_test_components_system;
 use crate::sweep::parameters::DirectionsSpecification;
 use crate::sweep::SweepPlugin;
@@ -31,7 +30,6 @@ struct SweepSetup {
 
 fn setup_sweep_sim(sim: &mut Simulation, setup: SweepSetup) -> &mut Simulation {
     sim.add_parameter_file_contents("{}".into())
-        .add_plugin(SimulationStagesPlugin)
         .add_parameters_explicitly(setup.box_.clone())
         .add_parameters_explicitly(SweepParameters {
             directions: DirectionsSpecification::Explicit(setup.dirs.clone()),

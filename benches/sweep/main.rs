@@ -23,7 +23,6 @@ use raxiom::prelude::ParticleId;
 use raxiom::prelude::Simulation;
 use raxiom::prelude::StartupStages;
 use raxiom::simulation_plugin::SimulationPlugin;
-use raxiom::stages::SimulationStagesPlugin;
 use raxiom::sweep::initialize_sweep_test_components_system;
 use raxiom::sweep::DirectionsSpecification;
 use raxiom::sweep::SweepPlugin;
@@ -43,7 +42,6 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
     let timestep_safety_factor = Dimensionless::dimensionless(0.1);
     sim.write_output(false)
         .add_parameter_file_contents("{}".into())
-        .add_plugin(SimulationStagesPlugin)
         .add_plugin(DomainPlugin)
         .add_plugin(BaseCommunicationPlugin::new(1, 0))
         .add_parameters_explicitly(SimulationBoxParameters::Normal(Length::meters(1e5)))

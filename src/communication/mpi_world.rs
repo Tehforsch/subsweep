@@ -7,6 +7,7 @@ use std::iter::Sum;
 use std::marker::PhantomData;
 use std::mem;
 use std::mem::MaybeUninit;
+
 use bevy::prelude::Deref;
 use bevy::prelude::DerefMut;
 use mpi::collective::SystemOperation;
@@ -50,13 +51,13 @@ impl StaticUniverse {
 
 thread_local! {
     pub static MPI_UNIVERSE: StaticUniverse = {
-        let threading = Threading::Multiple;
+        let threading = Threading::Single;
         let (mut universe, threading_initialized) =
             mpi::initialize_with_threading(threading).unwrap();
         universe.set_buffer_size(1024 * 16);
         assert_eq!(
             threading, threading_initialized,
-            "Could not initialize MPI with Multithreading"
+            "Could not initialize MPI in single-threaded mode"
         );
         StaticUniverse(RefCell::new(Some(universe)))
     };

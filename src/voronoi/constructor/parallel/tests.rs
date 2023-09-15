@@ -11,7 +11,6 @@ use crate::prelude::ThreeD;
 use crate::prelude::WorldRank;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::StartupStages;
-use crate::stages::SimulationStagesPlugin;
 use crate::test_utils::build_local_communication_sim_with_custom_logic;
 use crate::units::Time;
 use crate::units::VecLength;
@@ -39,7 +38,6 @@ fn build_sim(sim: &mut Simulation) {
         VecLength::meters(0.4, 0.4, 0.4),
     ));
     sim.add_parameter_file_contents("{}".into())
-        .add_plugin(SimulationStagesPlugin)
         .add_plugin(ParallelVoronoiGridConstruction)
         .add_required_component::<Position>()
         .add_plugin(DomainPlugin)
