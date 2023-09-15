@@ -6,9 +6,9 @@ use derive_custom::Named;
 use derive_more::Deref;
 use derive_more::DerefMut;
 use derive_more::From;
-use hdf5::H5Type;
 use log::debug;
 use mpi::traits::Equivalence;
+use serde::Serialize;
 
 use super::grid::Cell;
 use crate::communication::communicator::Communicator;
@@ -19,12 +19,12 @@ use crate::units::Dimensionless;
 use crate::units::Mass;
 use crate::units::Volume;
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
 #[name = "hydrogen_ionization_mass_average"]
 #[repr(transparent)]
 pub struct HydrogenIonizationMassAverage(pub Dimensionless);
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
 #[name = "hydrogen_ionization_volume_average"]
 #[repr(transparent)]
 pub struct HydrogenIonizationVolumeAverage(pub Dimensionless);

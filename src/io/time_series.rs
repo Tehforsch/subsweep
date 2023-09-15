@@ -1,4 +1,6 @@
 use std::fs;
+use std::fs::File;
+use std::fs::OpenOptions;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::path::PathBuf;
@@ -7,13 +9,9 @@ use bevy_ecs::prelude::EventReader;
 use bevy_ecs::prelude::IntoSystemDescriptor;
 use bevy_ecs::prelude::NonSend;
 use bevy_ecs::prelude::Res;
-use hdf5::Dataset;
-use hdf5::File;
-use hdf5::SimpleExtents;
+use serde::Serialize;
 
 use super::output::make_output_dirs_system;
-use super::to_dataset::add_dimension_attrs;
-use super::to_dataset::ToDataset;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
 use crate::named::Named;
@@ -22,12 +20,17 @@ use crate::prelude::Stages;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
 use crate::simulation_plugin::SimulationTime;
+use crate::units::Time;
 
-pub const TIME_DATASET_IDENTIFIER: &str = "time";
+pub trait TimeSeries: 'static + Sync + Send + Clone + Serialize {}
 
-pub trait TimeSeries: ToDataset + std::fmt::Debug {}
+impl<T> TimeSeries for T where T: 'static + Sync + Send + Clone + Serialize {}
 
-impl<T> TimeSeries for T where T: ToDataset + std::fmt::Debug {}
+#[derive(Serialize)]
+struct Entry<T> {
+    time: Time,
+    val: T,
+}
 
 #[derive(Named)]
 pub struct TimeSeriesPlugin<T: TimeSeries> {
@@ -86,33 +89,14 @@ fn setup_time_series_output_system(parameters: Res<OutputParameters>) {
     make_time_series_dir(&time_series_dir);
 }
 
-fn create_empty_dataset<T: ToDataset>(file: &File, descriptor: &DatasetDescriptor) {
-    let dataset = file
-        .new_dataset::<T>()
-        .shape(SimpleExtents::resizable([0]))
-        .chunk_min_kb(1)
-        .create(descriptor.dataset_name())
-        .expect("Failed to write dataset");
-
-    add_dimension_attrs::<T>(&dataset);
-}
-
 fn initialize_output_files_system<T: TimeSeries>(
     parameters: Res<OutputParameters>,
     descriptor: NonSend<OutputDatasetDescriptor<T>>,
 ) where
     T: TimeSeries,
 {
-    let filename = &format!("{}.hdf5", descriptor.dataset_name());
-    let time_series_dir = parameters.time_series_dir();
-    let file = File::create(time_series_dir.join(filename))
-        .expect("Failed to open time series output file");
-    // Initialize empty datasets
-    create_empty_dataset::<SimulationTime>(
-        &file,
-        &DatasetDescriptor::default_for::<SimulationTime>(),
-    );
-    create_empty_dataset::<T>(&file, &descriptor);
+    let filename = get_time_series_filename(&parameters, &descriptor);
+    File::create(filename).expect("Failed to open time series output file");
 }
 
 pub fn output_time_series_system<T: TimeSeries>(
@@ -124,28 +108,19 @@ pub fn output_time_series_system<T: TimeSeries>(
     T: TimeSeries,
 {
     let path = get_time_series_filename::<T>(&parameters, &descriptor);
-    let file = File::open_rw(path).expect("Failed to open time series output file");
-    let time_dataset = file
-        .dataset(TIME_DATASET_IDENTIFIER)
-        .expect("Time dataset not available in file");
-    let value_dataset = file
-        .dataset(descriptor.dataset_name())
-        .expect("Value dataset not available in file");
-    for event in event_reader.iter() {
-        append_value_to_dataset(&time_dataset, *time);
-        append_value_to_dataset(&value_dataset, event.clone());
-    }
-}
-
-fn append_value_to_dataset<T: ToDataset>(dataset: &Dataset, value: T) {
-    let mut shape = dataset.shape();
-    shape[0] += 1;
-    dataset
-        .resize(shape.clone())
-        .expect("Failed to resize dataset");
-    dataset
-        .write_slice(&[value], [shape[0] - 1])
-        .expect("Failed to write time to dataset");
+    let entries: Vec<_> = event_reader
+        .iter()
+        .map(|ev| Entry {
+            time: **time,
+            val: ev.clone(),
+        })
+        .collect();
+    let f = OpenOptions::new()
+        .append(true)
+        .open(&path)
+        .unwrap_or_else(|e| panic!("Failed to open time series file. {}", e));
+    serde_yaml::to_writer(&f, &entries)
+        .unwrap_or_else(|e| panic!("Failed to write to time series file: {}", e));
 }
 
 fn get_time_series_filename<T: TimeSeries>(
@@ -153,5 +128,5 @@ fn get_time_series_filename<T: TimeSeries>(
     descriptor: &OutputDatasetDescriptor<T>,
 ) -> PathBuf {
     let time_series_dir = parameters.time_series_dir();
-    time_series_dir.join(format!("{}.hdf5", descriptor.dataset_name()))
+    time_series_dir.join(format!("{}.yml", descriptor.dataset_name()))
 }
