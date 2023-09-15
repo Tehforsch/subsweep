@@ -39,8 +39,10 @@ pub use self::task::RateData;
 use self::task::Task;
 use self::time_series::hydrogen_ionization_mass_average_system;
 use self::time_series::hydrogen_ionization_volume_average_system;
+use self::time_series::num_particles_at_timestep_levels_system;
 use self::time_series::HydrogenIonizationMassAverage;
 use self::time_series::HydrogenIonizationVolumeAverage;
+use self::time_series::NumParticlesAtTimestepLevels;
 use self::timestep_level::TimestepLevel;
 use self::timestep_state::TimestepState;
 use crate::chemistry::hydrogen_only::HydrogenOnly;
@@ -114,6 +116,7 @@ impl RaxiomPlugin for SweepPlugin {
             .add_derived_component::<components::Temperature>()
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
+            .add_plugin(TimeSeriesPlugin::<NumParticlesAtTimestepLevels>::default())
             .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
@@ -131,7 +134,11 @@ impl RaxiomPlugin for SweepPlugin {
                 hydrogen_ionization_volume_average_system
                     .before(hydrogen_ionization_mass_average_system),
             )
-            .add_system_to_stage(Stages::AfterSweep, hydrogen_ionization_mass_average_system);
+            .add_system_to_stage(Stages::AfterSweep, hydrogen_ionization_mass_average_system)
+            .add_system_to_stage(
+                Stages::AfterSweep,
+                num_particles_at_timestep_levels_system::<HydrogenOnly>,
+            );
         }
         init_optional_component::<HeatingRate>(sim);
         init_optional_component::<Timestep>(sim);
@@ -201,7 +208,7 @@ impl<C: Chemistry> Sweep<C> {
 
     fn count_cells_global(&mut self, level: TimestepLevel) -> usize {
         let local_count = self.cells.enumerate_active(level).count();
-        let mut count_communicator = MpiWorld::new();
+        let mut count_communicator = MpiWorld::new_custom_tag(91100);
         count_communicator.all_gather_sum(&CellCount(local_count))
     }
 

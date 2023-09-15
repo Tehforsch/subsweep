@@ -11,12 +11,16 @@ use mpi::traits::Equivalence;
 use serde::Serialize;
 
 use super::grid::Cell;
+use super::Sweep;
+use super::SweepParameters;
+use crate::chemistry::Chemistry;
 use crate::communication::communicator::Communicator;
 use crate::components::Density;
 use crate::components::IonizedHydrogenFraction;
 use crate::prelude::Particles;
 use crate::units::Dimensionless;
 use crate::units::Mass;
+use crate::units::Time;
 use crate::units::Volume;
 
 #[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
@@ -28,6 +32,17 @@ pub struct HydrogenIonizationMassAverage(pub Dimensionless);
 #[name = "hydrogen_ionization_volume_average"]
 #[repr(transparent)]
 pub struct HydrogenIonizationVolumeAverage(pub Dimensionless);
+
+#[derive(Serialize, Clone, Named)]
+#[name = "num_particles_at_timestep_levels"]
+pub struct NumParticlesAtTimestepLevels(Vec<NumAtLevel>);
+
+#[derive(Serialize, Clone)]
+struct NumAtLevel {
+    level: usize,
+    num: usize,
+    timestep: Time,
+}
 
 pub fn hydrogen_ionization_volume_average_system(
     query: Particles<(&Cell, &Density, &IonizedHydrogenFraction)>,
@@ -79,4 +94,27 @@ where
     let ionized: T = comm.all_gather_sum(&ionized);
     let total: T = comm.all_gather_sum(&total);
     ionized / total
+}
+
+pub(super) fn num_particles_at_timestep_levels_system<C: Chemistry>(
+    mut solver: NonSendMut<Option<Sweep<C>>>,
+    mut writer: EventWriter<NumParticlesAtTimestepLevels>,
+    parameters: Res<SweepParameters>,
+) {
+    let solver = (*solver).as_mut().unwrap();
+    let max_timestep = parameters.max_timestep;
+    writer.send(NumParticlesAtTimestepLevels(
+        solver
+            .timestep_state
+            .iter_all_levels()
+            .map(|level| {
+                let num = solver.count_cells_global(level);
+                NumAtLevel {
+                    level: level.0,
+                    num,
+                    timestep: level.to_timestep(max_timestep),
+                }
+            })
+            .collect(),
+    ));
 }
