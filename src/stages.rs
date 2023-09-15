@@ -6,7 +6,7 @@ use bevy_ecs::prelude::*;
 use bevy_ecs::schedule::ShouldRun;
 use bevy_ecs::schedule::StageLabelId;
 
-use crate::performance_data::Timers;
+use crate::performance::Performance;
 use crate::simulation_plugin::Stages;
 use crate::simulation_plugin::StartupStages;
 
@@ -116,10 +116,10 @@ fn add_stage_timers_for_stages(schedule: &mut Schedule, stages: &[StageLabelId])
     for window in stages.windows(3) {
         let (s1, s2, s3) = (window[0], window[1], window[2]);
         if !is_timer_stage(s2) {
-            schedule.add_system_to_stage(s1, move |mut timers: ResMut<Timers>| {
+            schedule.add_system_to_stage(s1, move |mut timers: ResMut<Performance>| {
                 timers.start(s2.as_str());
             });
-            schedule.add_system_to_stage(s3, move |mut timers: ResMut<Timers>| {
+            schedule.add_system_to_stage(s3, move |mut timers: ResMut<Performance>| {
                 timers.stop(s2.as_str());
             });
         }

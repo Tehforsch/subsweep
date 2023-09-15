@@ -14,8 +14,8 @@ use crate::io::output::OutputPlugin;
 use crate::named::Named;
 use crate::parameters::SimulationBox;
 use crate::particle::ParticlePlugin;
-use crate::performance_data::write_performance_data_system;
-use crate::performance_data::Timers;
+use crate::performance::write_performance_data_system;
+use crate::performance::Performance;
 use crate::prelude::Particles;
 use crate::prelude::WorldSize;
 use crate::simulation::RaxiomPlugin;
@@ -59,7 +59,7 @@ pub struct StopSimulationEvent;
 
 impl RaxiomPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
-        let mut perf = Timers::default();
+        let mut perf = Performance::default();
         perf.start("total");
         sim.insert_non_send_resource(perf)
             .add_parameter_type::<SimulationParameters>()
@@ -113,7 +113,7 @@ fn show_time_system(time: Res<SimulationTime>) {
 fn exit_system(
     mut evs: EventWriter<AppExit>,
     mut stop_sim: EventReader<StopSimulationEvent>,
-    mut timers: NonSendMut<Timers>,
+    mut timers: NonSendMut<Performance>,
 ) {
     if stop_sim.iter().count() > 0 {
         timers.stop("total");
@@ -123,7 +123,7 @@ fn exit_system(
     }
 }
 
-fn show_num_cores_system(world_size: Res<WorldSize>, mut performance_data: ResMut<Timers>) {
+fn show_num_cores_system(world_size: Res<WorldSize>, mut performance_data: ResMut<Performance>) {
     performance_data.record_number("num_ranks", **world_size);
     info!("Running on {} MPI ranks", **world_size);
 }

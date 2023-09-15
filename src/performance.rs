@@ -90,13 +90,13 @@ impl Timer {
 }
 
 #[derive(Resource, Default, Debug, Serialize)]
-pub struct Timers {
+pub struct Performance {
     results: HashMap<Category, Result>,
     #[serde(skip)]
     timers: HashMap<Category, Timer>,
 }
 
-impl Timers {
+impl Performance {
     pub fn start<N: Into<String>>(&mut self, name: N) {
         self.timers.insert(name.into(), Timer::default());
     }
@@ -152,7 +152,7 @@ impl Timers {
 
 #[must_use = "A timer guard needs to be used."]
 pub struct TimerGuard<'a, N: Into<String> + Clone> {
-    data: &'a mut Timers,
+    data: &'a mut Performance,
     name: N,
 }
 
@@ -163,7 +163,7 @@ impl<'a, N: Into<String> + Clone> Drop for TimerGuard<'a, N> {
 }
 
 pub fn write_performance_data_system(
-    timers: NonSendMut<Timers>,
+    timers: NonSendMut<Performance>,
     parameters: Res<OutputParameters>,
 ) {
     fs::write(

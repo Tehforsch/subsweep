@@ -32,7 +32,7 @@ mod parameter_plugin;
 pub mod parameters;
 mod particle;
 mod peano_hilbert;
-mod performance_data;
+mod performance;
 pub mod prelude;
 pub mod quadtree;
 mod simulation;

@@ -72,7 +72,7 @@ use crate::io::time_series::TimeSeriesPlugin;
 use crate::io::to_dataset::ToDataset;
 use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
-use crate::performance_data::Timers;
+use crate::performance::Performance;
 use crate::prelude::*;
 use crate::simulation::RaxiomPlugin;
 use crate::simulation_plugin::SimulationTime;
@@ -235,7 +235,7 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    pub fn run_sweeps(&mut self, timers: &mut Timers) -> Time {
+    pub fn run_sweeps(&mut self, timers: &mut Performance) -> Time {
         let counts = self.get_cell_counts_per_level();
         self.print_cell_counts(&counts);
         for level in self.timestep_state.iter_levels_in_sweep_order() {
@@ -251,7 +251,7 @@ impl<C: Chemistry> Sweep<C> {
         time_elapsed
     }
 
-    fn single_sweep(&mut self, timers: &mut Timers) {
+    fn single_sweep(&mut self, timers: &mut Performance) {
         timers.start(self.current_level);
         trace!("Level {:>2}: Sweeping.", self.current_level.0);
         self.init_counts();
@@ -521,7 +521,7 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    fn update_chemistry(&mut self, timers: &mut Timers) {
+    fn update_chemistry(&mut self, timers: &mut Performance) {
         let _timer = timers.time("chemistry");
         for (id, cell) in self.cells.enumerate_active(self.current_level) {
             let (level, site) = self.sites.get_mut_with_level(id);
@@ -548,7 +548,7 @@ impl<C: Chemistry> Sweep<C> {
         }
     }
 
-    fn update_timestep_levels(&mut self, timers: &mut Timers) {
+    fn update_timestep_levels(&mut self, timers: &mut Performance) {
         let _timer = timers.time("update levels");
         for (id, level, site) in self.sites.enumerate_with_levels_mut() {
             let desired_timestep = self.timestep_safety_factor * site.change_timescale;
@@ -655,7 +655,7 @@ fn run_sweep_system(
     mut ionization_times: Particles<(&ParticleId, &mut IonizationTime)>,
     mut rates: Particles<(&ParticleId, &mut components::PhotonRate)>,
     mut time: ResMut<SimulationTime>,
-    mut timers: NonSendMut<Timers>,
+    mut timers: NonSendMut<Performance>,
 ) {
     let solver = (*solver).as_mut().unwrap();
     let time_elapsed = solver.run_sweeps(&mut timers);
