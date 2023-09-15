@@ -51,5 +51,5 @@ fn main() {
             );
         }
     }
-    MPI_UNIVERSE.drop()
+    MPI_UNIVERSE.with(|universe| universe.drop())
 }

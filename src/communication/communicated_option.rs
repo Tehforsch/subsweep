@@ -104,7 +104,7 @@ mod tests {
     where
         T: Equivalence + Clone + PartialEq + std::fmt::Debug,
     {
-        let world = MPI_UNIVERSE.world();
+        let world = MPI_UNIVERSE.with(|universe| universe.world());
 
         let option_converted: CommunicatedOption<T> = option.clone().into();
         let mut q2: CommunicatedOption<T> = None.into();

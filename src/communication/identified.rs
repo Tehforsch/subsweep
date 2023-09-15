@@ -83,7 +83,7 @@ mod tests {
         T: Clone + Default + Equivalence + core::fmt::Debug + PartialEq,
         <T as Equivalence>::Out: MatchesRaw,
     {
-        let world = MPI_UNIVERSE.world();
+        let world = MPI_UNIVERSE.with(|universe| universe.world());
 
         for num in [0, 50, 100, 1000000].iter() {
             for generation in [0, 50, 100, 1000000].iter() {
