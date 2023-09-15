@@ -24,17 +24,11 @@ pub enum ParticleType {
 
 impl ParticleType {
     pub fn is_boundary(&self) -> bool {
-        match self {
-            Self::Boundary => true,
-            _ => false,
-        }
+        matches!(self, Self::Boundary)
     }
 
     pub fn is_local(&self) -> bool {
-        match self {
-            Self::Local(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Local(_))
     }
 
     pub fn unwrap_id(&self) -> ParticleId {

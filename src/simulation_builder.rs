@@ -165,7 +165,7 @@ impl SimulationBuilder {
         sim.add_bevy_plugin(bevy_core::CorePlugin {
             task_pool_options: self.task_pool_opts(),
         })
-        .add_bevy_plugin(bevy_app::ScheduleRunnerPlugin::default());
+        .add_bevy_plugin(bevy_app::ScheduleRunnerPlugin);
     }
 
     fn task_pool_opts(&self) -> TaskPoolOptions {

@@ -22,7 +22,7 @@ impl<T: 'static> ExchangeCommunicator<T> {
         Self {
             communicator,
             pending_data,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }
@@ -43,7 +43,7 @@ impl<T> From<Communicator<T>> for ExchangeCommunicator<T> {
         Self {
             communicator,
             pending_data,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }

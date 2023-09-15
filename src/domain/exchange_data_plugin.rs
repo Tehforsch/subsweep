@@ -60,7 +60,7 @@ pub struct ExchangeDataPlugin<T> {
 impl<T> Default for ExchangeDataPlugin<T> {
     fn default() -> Self {
         Self {
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }

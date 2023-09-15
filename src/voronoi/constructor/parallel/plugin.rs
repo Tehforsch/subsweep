@@ -90,7 +90,7 @@ pub fn construct_grid_system(
                 num_relevant_haloes += 1;
                 let pos = cons.get_position_for_cell(cell_index);
                 let pos = VecLength::new_unchecked(pos);
-                commands.spawn((HaloParticle { rank: rank }, Position(pos), id));
+                commands.spawn((HaloParticle { rank }, Position(pos), id));
             }
         };
     for (cell_index, cell) in cons.sweep_grid(sweep_parameters.periodic) {

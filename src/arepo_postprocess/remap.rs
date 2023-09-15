@@ -159,7 +159,7 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
         let data = exchange_according_to_domain_decomposition(data, box_, decomposition);
         let tree: Tree = (&data
             .iter()
-            .map(|d| pos_to_tree_coord(&(*d.position)))
+            .map(|d| pos_to_tree_coord(&d.position))
             .collect::<Vec<_>>())
             .into();
         let extents = exchange_extents(&data);
@@ -281,7 +281,7 @@ fn exchange_according_to_domain_decomposition(
     let this_rank = comm.rank();
     let world_size = comm.size();
     for d in data {
-        let key = d.position.into_key(&*box_);
+        let key = d.position.into_key(box_);
         let mut rank = decomposition.get_owning_rank(key);
         // Sometimes the decomposition will return ranks outside of the range,
         // because of lookup points outside the simulation box. Just keep these

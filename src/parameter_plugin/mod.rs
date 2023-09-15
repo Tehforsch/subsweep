@@ -45,7 +45,7 @@ pub struct ParameterPlugin<T> {
 impl<T> Default for ParameterPlugin<T> {
     fn default() -> Self {
         Self {
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }

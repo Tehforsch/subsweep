@@ -177,7 +177,7 @@ pub struct Reader {
 
 impl Reader {
     /// Construct a reader with the contents of the files split evenly between the ranks.
-    pub fn split_between_ranks<'a, U: AsRef<Path>>(paths: impl Iterator<Item = U>) -> Self {
+    pub fn split_between_ranks<U: AsRef<Path>>(paths: impl Iterator<Item = U>) -> Self {
         let t: Communicator<usize> = Communicator::new();
         let rank = t.rank();
         let num_ranks = t.size();
@@ -189,7 +189,7 @@ impl Reader {
     }
 
     /// Construct a reader for the contents of all files.
-    pub fn full<'a, U: AsRef<Path>>(paths: impl Iterator<Item = U>) -> Self {
+    pub fn full<U: AsRef<Path>>(paths: impl Iterator<Item = U>) -> Self {
         let rank = 0;
         let num_ranks = 1;
         Self {
@@ -211,7 +211,7 @@ impl Reader {
         let num_entries = self
             .files
             .iter()
-            .map(|f| self.get_num_entries(dataset_name, &f))
+            .map(|f| self.get_num_entries(dataset_name, f))
             .collect::<Vec<_>>();
         get_rank_assignment_for_rank(&num_entries, self.num_ranks, self.rank)
     }
@@ -229,10 +229,10 @@ impl Reader {
             })
     }
 
-    pub fn read_dataset<'a, T: ToDataset + Named>(
-        &'a self,
+    pub fn read_dataset<T: ToDataset + Named>(
+        &'_ self,
         descriptor: InputDatasetDescriptor<T>,
-    ) -> impl Iterator<Item = T> + 'a {
+    ) -> impl Iterator<Item = T> + '_ {
         let assignment = self.get_assignment(descriptor.dataset_name());
         assignment
             .regions
@@ -240,11 +240,11 @@ impl Reader {
             .flat_map(move |region| self.read_region(descriptor.clone(), &region))
     }
 
-    pub fn read_dataset_chunked<'a, 'b, T>(
-        &'a self,
+    pub fn read_dataset_chunked<T>(
+        &'_ self,
         descriptor: InputDatasetDescriptor<T>,
         chunk_size: usize,
-    ) -> impl Iterator<Item = T> + 'a
+    ) -> impl Iterator<Item = T> + '_
     where
         T: ToDataset + Named,
     {

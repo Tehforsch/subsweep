@@ -92,7 +92,7 @@ impl<T: 'static> MpiWorld<T> {
         let tag = get_tag_for_type::<T>();
         Self {
             world,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
             tag,
         }
     }
@@ -102,7 +102,7 @@ impl<T: 'static> MpiWorld<T> {
         Self {
             world,
             tag,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }
@@ -309,7 +309,7 @@ impl<T> From<MpiWorld<T>> for MpiWorld<Identified<T>> {
     fn from(other: MpiWorld<T>) -> Self {
         Self {
             world: other.world,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
             tag: other.tag,
         }
     }

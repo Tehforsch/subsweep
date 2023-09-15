@@ -155,7 +155,7 @@ fn domain_decomposition_system(
 ) {
     info!("Starting domain decomposition");
     let decomp =
-        get_decomposition_from_points_and_box(particles.iter().map(|x| **x), &*box_, **world_size);
+        get_decomposition_from_points_and_box(particles.iter().map(|x| **x), &box_, **world_size);
     decomp.log_imbalance();
     commands.insert_resource(decomp);
 }

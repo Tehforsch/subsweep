@@ -12,7 +12,7 @@ use crate::units::Dimensionless;
 use crate::units::Time;
 
 #[raxiom_parameters("cosmology")]
-#[derive(Copy, Named, Debug)]
+#[derive(Named, Debug)]
 #[serde(untagged)]
 pub enum Cosmology {
     Cosmological {

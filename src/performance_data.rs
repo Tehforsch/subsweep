@@ -46,10 +46,10 @@ impl Result {
         .sum()
     }
 
-    fn into_value(&self) -> Value {
+    fn as_value(&self) -> Value {
         match self {
-            Result::RunTimes(run_times) => serde_yaml::to_value(&Statistics::new(run_times)),
-            Result::Number(num) => serde_yaml::to_value(&num),
+            Result::RunTimes(run_times) => serde_yaml::to_value(Statistics::new(run_times)),
+            Result::Number(num) => serde_yaml::to_value(num),
         }
         .unwrap()
     }
@@ -132,18 +132,18 @@ impl Timers {
         };
     }
 
-    pub(crate) fn time<'a, N: Into<String> + Clone>(&'a mut self, name: N) -> TimerGuard<'a, N> {
+    pub(crate) fn time<N: Into<String> + Clone>(&mut self, name: N) -> TimerGuard<'_, N> {
         self.start(name.clone());
         TimerGuard { data: self, name }
     }
 
-    pub fn into_output(&self) -> LinkedHashMap<Category, Value> {
+    pub fn as_output(&self) -> LinkedHashMap<Category, Value> {
         let mut names: Vec<_> = self.results.iter().map(|(name, _)| name.clone()).collect();
         names.sort();
         names
             .into_iter()
             .map(move |name| {
-                let result = self.results[&name].into_value();
+                let result = self.results[&name].as_value();
                 (name, result)
             })
             .collect()
@@ -170,7 +170,7 @@ pub fn write_performance_data_system(
         parameters
             .output_dir
             .join(&parameters.performance_data_filename),
-        serde_yaml::to_string(&timers.into_output()).unwrap(),
+        serde_yaml::to_string(&timers.as_output()).unwrap(),
     )
     .unwrap_or_else(|e| panic!("Failed to write performance data to file. {}", e));
 }

@@ -34,9 +34,9 @@ pub fn create_schedule() -> Schedule {
         StartupStages::Final.as_label(),
     ];
     let mut startup_schedule = Schedule::default().with_run_criteria(ShouldRun::once);
-    make_schedule_from_stage_labels(&mut startup_schedule, &startup_stages);
+    make_schedule_from_stage_labels(&mut startup_schedule, startup_stages);
     schedule.add_stage(StartupSchedule, startup_schedule);
-    make_schedule_from_stage_labels(&mut schedule, &stages);
+    make_schedule_from_stage_labels(&mut schedule, stages);
     schedule
 }
 

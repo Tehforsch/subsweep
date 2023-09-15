@@ -184,7 +184,7 @@ impl<C: Chemistry> Sweep<C> {
             halo_levels,
             to_solve: PriorityQueue::new(),
             to_send: DataByRank::from_size_and_rank(world_size, world_rank),
-            directions: directions.clone(),
+            directions,
             to_solve_count: CountByDir::empty(),
             to_receive_count: DataByRank::empty(),
             timestep_safety_factor,
@@ -472,7 +472,7 @@ impl<C: Chemistry> Sweep<C> {
         neighbour: ParticleId,
     ) {
         let site = self.sites.get_mut(neighbour);
-        site.periodic_source[*dir] += incoming_rate_correction.clone();
+        site.periodic_source[*dir] += incoming_rate_correction;
     }
 
     fn handle_remote_neighbour(

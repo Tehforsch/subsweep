@@ -247,11 +247,11 @@ impl<K: Key> LoadCounter<K> for KeyCounter<K> {
     }
 
     fn min_key(&mut self) -> K {
-        self.keys.iter().min().unwrap().clone()
+        *self.keys.iter().min().unwrap()
     }
 
     fn max_key(&mut self) -> K {
-        self.keys.iter().max().unwrap().clone()
+        *self.keys.iter().max().unwrap()
     }
 }
 

@@ -54,7 +54,7 @@ macro_rules! impl_attribute {
             }
         }
 
-        impl crate::io::input::attribute::FromAttribute for $name {
+        impl $crate::io::input::attribute::FromAttribute for $name {
             fn from_value(val: <Self as ToAttribute>::Output) -> Self {
                 Self(val)
             }
