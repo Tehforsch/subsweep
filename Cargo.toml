@@ -43,6 +43,7 @@ derive_custom = { path = "crates/derive_custom" }
 derive_traits = { path = "crates/derive_traits" }
 bevy_core = "0.9.1"
 bevy_app = "0.9.1"
+simplelog = "0.12.1"
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"] }

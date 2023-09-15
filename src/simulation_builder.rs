@@ -1,15 +1,25 @@
+use std::fs;
+use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
 
 use bevy_core::prelude::TaskPoolOptions;
 use bevy_ecs::schedule::ReportExecutionOrderAmbiguities;
 use clap::Parser;
+use log::LevelFilter;
+use simplelog::ColorChoice;
+use simplelog::CombinedLogger;
+use simplelog::Config;
+use simplelog::TermLogger;
+use simplelog::TerminalMode;
+use simplelog::WriteLogger;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainPlugin;
 use super::simulation_plugin::SimulationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::parameter_plugin::parameter_file_contents::Override;
+use crate::prelude::WorldRank;
 use crate::simulation::Simulation;
 
 pub struct SimulationBuilder {
@@ -137,9 +147,7 @@ impl SimulationBuilder {
         sim.read_initial_conditions(self.read_initial_conditions)
             .write_output(self.write_output)
             .maybe_add_plugin(self.base_communication.clone());
-        if sim.on_main_rank() && self.log {
-            self.log_setup();
-        }
+        self.log_setup(**sim.get_resource::<WorldRank>().unwrap());
         sim.add_plugin(SimulationPlugin)
             .add_plugin(DomainPlugin)
             .insert_resource(ReportExecutionOrderAmbiguities);
@@ -168,7 +176,41 @@ impl SimulationBuilder {
         }
     }
 
-    fn log_setup(&self) {}
+    fn log_setup(&self, rank: i32) {
+        if !self.log {
+            return;
+        }
+        let output_file = format!("logs/rank_{}.log", rank);
+        let output_file = Path::new(&output_file);
+        let parent_folder = output_file.parent().unwrap();
+        fs::create_dir_all(parent_folder)
+            .unwrap_or_else(|_| panic!("Failed to create log directory at {:?}", parent_folder));
+        let level = self.get_log_level();
+        if rank == 0 {
+            CombinedLogger::init(vec![
+                TermLogger::new(
+                    level,
+                    Config::default(),
+                    TerminalMode::Mixed,
+                    ColorChoice::Auto,
+                ),
+                WriteLogger::new(level, Config::default(), File::create(output_file).unwrap()),
+            ])
+            .unwrap();
+        } else {
+            WriteLogger::init(level, Config::default(), File::create(output_file).unwrap())
+                .unwrap();
+        }
+    }
+
+    fn get_log_level(&self) -> LevelFilter {
+        match self.verbosity {
+            0 => LevelFilter::Info,
+            1 => LevelFilter::Debug,
+            2 => LevelFilter::Trace,
+            v => unimplemented!("Unsupported verbosity level: {}", v),
+        }
+    }
 
     // fn log_plugin(&self) -> LogPlugin {
     //     match self.verbosity {
