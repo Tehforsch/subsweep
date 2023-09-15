@@ -211,30 +211,4 @@ impl SimulationBuilder {
             v => unimplemented!("Unsupported verbosity level: {}", v),
         }
     }
-
-    // fn log_plugin(&self) -> LogPlugin {
-    //     match self.verbosity {
-    //         0 => LogPlugin {
-    //             level: Level::INFO,
-    //             filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-    //         },
-    //         1 => LogPlugin {
-    //             level: Level::DEBUG,
-    //             filter: "bevy_ecs::world=info,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-    //         },
-    //         2 => LogPlugin {
-    //             level: Level::DEBUG,
-    //             filter: "bevy_ecs::world=debug,bevy_app::plugin_group=info,bevy_app::app=info,winit=error,bevy_render=error,naga=error,wgpu=error".to_string(),
-    //         },
-    //         3 => LogPlugin {
-    //             level: Level::DEBUG,
-    //             ..Default::default()
-    //         },
-    //         4 => LogPlugin {
-    //             level: Level::TRACE,
-    //             ..Default::default()
-    //         },
-    //         v => unimplemented!("Unsupported verbosity level: {}", v)
-    //     }
-    // }
 }
