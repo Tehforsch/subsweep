@@ -1,5 +1,4 @@
 use std::any::TypeId;
-use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -7,9 +6,12 @@ use std::iter::Sum;
 use std::marker::PhantomData;
 use std::mem;
 use std::mem::MaybeUninit;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use derive_more::Deref;
 use derive_more::DerefMut;
+use lazy_static::lazy_static;
 use mpi::collective::SystemOperation;
 use mpi::datatype::PartitionMut;
 use mpi::environment::Universe;
@@ -37,21 +39,21 @@ use super::SizedCommunicator;
 /// the Universe is dropped which will call MPI_FINALIZE.  This is
 /// necessary because anything in a lazy_static will never be dropped.
 #[derive(Deref, DerefMut)]
-pub struct StaticUniverse(RefCell<Option<Universe>>);
+pub struct StaticUniverse(Arc<Mutex<Option<Universe>>>);
 
 impl StaticUniverse {
     pub fn world(&self) -> SystemCommunicator {
-        self.0.borrow_mut().as_ref().unwrap().world()
+        self.0.lock().unwrap().as_ref().unwrap().world()
     }
 
     pub fn drop(&self) {
-        let _ = self.0.take();
+        let _ = self.0.lock().unwrap().take();
     }
 }
 
-thread_local! {
-    pub static MPI_UNIVERSE: StaticUniverse = {
-        let threading = Threading::Single;
+lazy_static! {
+    pub static ref MPI_UNIVERSE: StaticUniverse = {
+        let threading = Threading::Multiple;
         let (mut universe, threading_initialized) =
             mpi::initialize_with_threading(threading).unwrap();
         universe.set_buffer_size(1024 * 16);
@@ -59,7 +61,7 @@ thread_local! {
             threading, threading_initialized,
             "Could not initialize MPI in single-threaded mode"
         );
-        StaticUniverse(RefCell::new(Some(universe)))
+        StaticUniverse(Arc::new(Mutex::new(Some(universe))))
     };
 }
 
@@ -86,7 +88,7 @@ pub struct MpiWorld<T> {
 
 impl<T: 'static> MpiWorld<T> {
     pub fn new() -> Self {
-        let world = MPI_UNIVERSE.with(|universe| universe.world());
+        let world = MPI_UNIVERSE.world();
         let tag = get_tag_for_type::<T>();
         Self {
             world,
@@ -96,7 +98,7 @@ impl<T: 'static> MpiWorld<T> {
     }
 
     pub fn new_custom_tag(tag: Tag) -> Self {
-        let world = MPI_UNIVERSE.with(|universe| universe.world());
+        let world = MPI_UNIVERSE.world();
         Self {
             world,
             tag,

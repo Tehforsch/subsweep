@@ -54,5 +54,5 @@ pub fn main() {
             num_iterations,
         );
     }
-    MPI_UNIVERSE.with(|universe| universe.drop())
+    MPI_UNIVERSE.drop()
 }

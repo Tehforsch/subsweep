@@ -293,7 +293,7 @@ impl Simulation {
     }
 
     pub fn finalize() {
-        crate::communication::MPI_UNIVERSE.with(|universe| universe.drop());
+        crate::communication::MPI_UNIVERSE.drop();
     }
 
     /// Runs the simulation without calling MPI_FINALIZE.  This should
