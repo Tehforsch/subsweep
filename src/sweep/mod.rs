@@ -132,9 +132,14 @@ impl RaxiomPlugin for SweepPlugin {
             sim.add_system_to_stage(
                 Stages::AfterSweep,
                 hydrogen_ionization_volume_average_system
-                    .before(hydrogen_ionization_mass_average_system),
+                    .before(hydrogen_ionization_mass_average_system)
+                    .before(num_particles_at_timestep_levels_system::<HydrogenOnly>),
             )
-            .add_system_to_stage(Stages::AfterSweep, hydrogen_ionization_mass_average_system)
+            .add_system_to_stage(
+                Stages::AfterSweep,
+                hydrogen_ionization_mass_average_system
+                    .before(num_particles_at_timestep_levels_system::<HydrogenOnly>),
+            )
             .add_system_to_stage(
                 Stages::AfterSweep,
                 num_particles_at_timestep_levels_system::<HydrogenOnly>,
