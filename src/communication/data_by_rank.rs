@@ -95,12 +95,6 @@ impl<T: Clone> DataByRank<T> {
     }
 }
 
-impl<T> DataByRank<Vec<T>> {
-    pub fn push(&mut self, rank: Rank, item: T) {
-        self[rank].push(item);
-    }
-}
-
 impl<T> Index<Rank> for DataByRank<T> {
     type Output = T;
 

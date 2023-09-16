@@ -90,11 +90,6 @@ harness = false
 required-features = ["3d"]
 
 [[bench]]
-name = "quadtree"
-harness = false
-required-features = ["3d"]
-
-[[bench]]
 name = "sweep"
 harness = false
 required-features = ["3d"]

@@ -52,20 +52,6 @@ impl<T> ExchangeCommunicator<T>
 where
     T: Equivalence,
 {
-    pub fn send(&mut self, rank: i32, data: T) {
-        self.blocking_send_vec(rank, vec![data]);
-    }
-
-    pub fn receive(&mut self) -> DataByRank<T> {
-        let data = self.receive_vec();
-        data.into_iter()
-            .map(|(rank, mut data)| {
-                debug_assert_eq!(data.len(), 1);
-                (rank, data.remove(0))
-            })
-            .collect()
-    }
-
     pub fn blocking_send_vec(&mut self, rank: i32, data: Vec<T>) {
         debug_assert!(!self.pending_data[rank]);
         self.pending_data[rank] = true;

@@ -30,7 +30,6 @@ use mpi::Count;
 use mpi::Tag;
 use mpi::Threading;
 
-use super::DataByRank;
 use super::Identified;
 use super::SizedCommunicator;
 
@@ -229,19 +228,6 @@ where
         self.world
             .all_reduce_into(send, &mut sum, SystemOperation::sum());
         sum
-    }
-
-    pub fn all_gather_vec(&mut self, send: &[S]) -> DataByRank<Vec<S>> {
-        self.verify_tag();
-        let world_size = self.world.size() as usize;
-        let num_elements = send.len();
-        let mut result_buffer = unsafe { get_buffer::<S>(world_size * num_elements) };
-        self.world.all_gather_into(send, &mut result_buffer[..]);
-        let mut data = DataByRank::empty();
-        for i in 0..world_size {
-            data.insert(i as Rank, result_buffer.drain(0..num_elements).collect())
-        }
-        data
     }
 
     fn all_gather_varcount_with_counts(&mut self, send: &[S], counts: &[Count]) -> Vec<S> {

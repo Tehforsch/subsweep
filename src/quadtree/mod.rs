@@ -15,8 +15,6 @@ pub const NUM_DIMENSIONS: usize = 3;
 
 pub const TWO_TO_NUM_DIMENSIONS: usize = 2i32.pow(NUM_DIMENSIONS as u32) as usize;
 
-pub const MAX_DEPTH: usize = 32;
-
 pub trait LeafDataType: Clone {
     fn pos(&self) -> &VecLength;
 }

@@ -21,7 +21,6 @@ pub trait Dimension {
 }
 
 pub type Point<D> = <D as Dimension>::Point;
-pub type UnitPoint<D> = <D as Dimension>::UnitPoint;
 pub type WrapType<D> = <D as Dimension>::WrapType;
 
 #[derive(Clone, Debug, Default)]

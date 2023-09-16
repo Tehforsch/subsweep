@@ -46,19 +46,6 @@ macro_rules! impl_extent {
                 )
             }
 
-            /// Return an extent with slightly increased size
-            /// but the same center
-            pub fn pad(self) -> Self {
-                let dist_to_min = self.min - self.center;
-                let dist_to_max = self.max - self.center;
-                const PADDING_FRACTION: f64 = 0.01;
-                Self {
-                    min: self.center + dist_to_min * (1.0 + PADDING_FRACTION),
-                    max: self.center + dist_to_max * (1.0 + PADDING_FRACTION),
-                    center: self.center,
-                }
-            }
-
             pub fn from_positions<'a>(
                 positions: impl Iterator<Item = &'a $unit_vec>,
             ) -> Option<Self> {
@@ -83,10 +70,6 @@ macro_rules! impl_extent {
                     update_max(&mut max, *pos);
                 }
                 Some(Self::from_min_max(min?, max?))
-            }
-
-            pub fn contains_extent(&self, other: &Self) -> bool {
-                self.contains(&other.min) && self.contains(&other.max)
             }
         }
 

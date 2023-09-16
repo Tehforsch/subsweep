@@ -33,13 +33,13 @@ mod particle;
 mod peano_hilbert;
 mod performance;
 pub mod prelude;
-pub mod quadtree;
+mod quadtree;
 mod simulation;
 mod simulation_box;
 mod simulation_builder;
 pub mod simulation_plugin;
 pub mod source_systems;
-pub mod stages;
+mod stages;
 pub mod sweep;
 /// Compile-time units and quantities for the simulation.
 pub mod units;

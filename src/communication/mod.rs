@@ -7,7 +7,6 @@ pub mod exchange_communicator; // public because i (currently) cannot test mpi s
 mod identified;
 mod plugin;
 mod sized_communicator;
-pub mod sync_communicator; // public because i (currently) cannot test mpi stuff from within this module, but require an externally run example for it
 
 use bevy_ecs::prelude::Resource;
 pub use communicated_option::CommunicatedOption;
