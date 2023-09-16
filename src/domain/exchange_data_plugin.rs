@@ -82,18 +82,12 @@ where
         let size = **sim.unwrap_resource::<WorldSize>();
         sim.insert_resource(OutgoingEntities(DataByRank::from_size_and_rank(size, rank)))
             .insert_resource(SpawnedEntities(DataByRank::from_size_and_rank(size, rank)));
-        sim.add_startup_system_to_stage(StartupStages::Exchange, send_num_outgoing_entities_system)
-            .add_startup_system_to_stage(StartupStages::Exchange, despawn_outgoing_entities_system)
+        sim.add_startup_system_to_stage(StartupStages::Exchange, despawn_outgoing_entities_system)
             .add_startup_system_to_stage(
                 StartupStages::Exchange,
-                reset_outgoing_entities_system
-                    .after(send_num_outgoing_entities_system)
-                    .after(despawn_outgoing_entities_system),
+                reset_outgoing_entities_system.after(despawn_outgoing_entities_system),
             )
-            .add_startup_system_to_stage(
-                StartupStages::Exchange,
-                spawn_incoming_entities_system.after(send_num_outgoing_entities_system),
-            );
+            .add_startup_system_to_stage(StartupStages::Exchange, spawn_incoming_entities_system);
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
@@ -162,22 +156,28 @@ impl<T: Sync + Send + 'static + Component + Clone + Equivalence> ExchangeDataPlu
     }
 }
 
-fn send_num_outgoing_entities_system(num_outgoing: Res<OutgoingEntities>) {
-    let mut communicator = ExchangeCommunicator::new();
-    for rank in communicator.other_ranks() {
-        communicator.send(rank, NumEntities(num_outgoing.get(&rank).unwrap().len()));
-    }
-}
-
 fn spawn_incoming_entities_system(
     mut commands: Commands,
     mut spawned_entities: ResMut<SpawnedEntities>,
+    num_outgoing: Res<OutgoingEntities>,
 ) {
     let mut communicator: ExchangeCommunicator<NumEntities> = ExchangeCommunicator::new();
-    for (rank, num_incoming) in communicator.receive() {
+    let data: DataByRank<Vec<NumEntities>> = communicator
+        .other_ranks()
+        .into_iter()
+        .map(|rank| {
+            (
+                rank,
+                vec![NumEntities(num_outgoing.get(&rank).unwrap().len())],
+            )
+        })
+        .collect();
+    let incoming = communicator.exchange_all(data);
+    for (rank, num_incoming) in incoming {
+        let num_incoming = &num_incoming[0];
         spawned_entities.insert(
             rank,
-            (0..*num_incoming)
+            (0..**num_incoming)
                 .map(|_| commands.spawn(LocalParticle).id())
                 .collect(),
         );
