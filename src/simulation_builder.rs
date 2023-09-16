@@ -9,7 +9,8 @@ use clap::Parser;
 use log::LevelFilter;
 use simplelog::ColorChoice;
 use simplelog::CombinedLogger;
-use simplelog::Config;
+use simplelog::ConfigBuilder;
+use simplelog::LevelPadding;
 use simplelog::TermLogger;
 use simplelog::TerminalMode;
 use simplelog::WriteLogger;
@@ -186,20 +187,23 @@ impl SimulationBuilder {
         fs::create_dir_all(parent_folder)
             .unwrap_or_else(|_| panic!("Failed to create log directory at {:?}", parent_folder));
         let level = self.get_log_level();
+        let config = ConfigBuilder::default()
+            .set_level_padding(LevelPadding::Right)
+            .set_thread_level(LevelFilter::Off)
+            .build();
         if rank == 0 {
             CombinedLogger::init(vec![
                 TermLogger::new(
                     level,
-                    Config::default(),
+                    config.clone(),
                     TerminalMode::Mixed,
                     ColorChoice::Auto,
                 ),
-                WriteLogger::new(level, Config::default(), File::create(output_file).unwrap()),
+                WriteLogger::new(level, config, File::create(output_file).unwrap()),
             ])
             .unwrap();
         } else {
-            WriteLogger::init(level, Config::default(), File::create(output_file).unwrap())
-                .unwrap();
+            WriteLogger::init(level, config, File::create(output_file).unwrap()).unwrap();
         }
     }
 
