@@ -24,7 +24,7 @@ cargo build --release-lto
 ```
 
 # General Usage
-Subsweep takes output from cosmological simulations (Currently only read-in of Arepo output is supported (TODO LINK)) and performs radiative transfer coupled with radiation chemistry.
+Subsweep takes output from cosmological simulations (Currently only read-in of [Arepo](https://arepo-code.org/) output is supported, but extensions are straightforward) and performs radiative transfer coupled with radiation chemistry.
 This process works as follows:
 
 1. The initial conditions (simulation output of coordinates, densities, temperatures and chemical composition) are read. This also includes the source terms for radiative transfer.
@@ -50,28 +50,20 @@ sweep:
   significant_rate_threshold: 1.0e-5 s^-1
   timestep_safety_factor: 0.1
   check_deadlock: false
-  max_timestep: 5e0 Myr
+  max_timestep: 1 Myr
   periodic: true
 output:
   time_between_snapshots: 1 Myr
   handle_existing_output: delete
 input:
   paths:
-  - ics/1000/snap_subbox0_1000.4.hdf5
-  - ics/1000/snap_subbox0_1000.8.hdf5
-  - ics/1000/snap_subbox0_1000.0.hdf5
-  - ics/1000/snap_subbox0_1000.2.hdf5
-  - ics/1000/snap_subbox0_1000.10.hdf5
-  - ics/1000/snap_subbox0_1000.5.hdf5
-  - ics/1000/snap_subbox0_1000.7.hdf5
-  - ics/1000/snap_subbox0_1000.9.hdf5
-  - ics/1000/snap_subbox0_1000.6.hdf5
-  - ics/1000/snap_subbox0_1000.1.hdf5
-  - ics/1000/snap_subbox0_1000.3.hdf5
+  - ics/snap_0.1.hdf5
+  - ics/snap_0.2.hdf5
+  - ics/snap_0.3.hdf5
 simulation:
   final_time: 5.0 kyr
 cosmology:
-  a: 0.3781220345856126
+  a: 0.3781
   h: 0.6774
   params:
     omega_lambda: 0.6911
@@ -90,3 +82,21 @@ cosmology:
 - - `significant_rate_threshold`: The minimum number of photons per second which will be treated as non-zero. A non-zero value (~1.0e-5 / s) is recommended for performance reasons.
 - - `timestep_safety_factor`: The ratio of desired timestep to computed timescale at which the fastest changing quantity changes. Smaller values mean more accurate results but come at the cost of performance since more particles will move to lower timesteps.
 - - `check_deadlock`: Defaults to `false`. If `true`, check for deadlocks before sweeping. This is mostly meant for debugging.
+- - `max_timestep`: The maximum sweep timestep (i.e. the timestep that level 0 particles will be updated with).
+- - `periodic`: Whether periodic boundary conditions are enabled. If `true`, fluxes leaving the box on one side will re-enter on the other. In the current code, this is not done iteratively but fluxes from previous timesteps are used as inputs to the next one, which usually gives good convergence to a periodic result.
+- `output`:
+- - `time_between_snapshots`: The simulated time between two snapshots. Should be commensurate with `max_timestep` if regular snapshots are desired.
+- - `handle_existing_output`: What to do if the output folder already exists (which happens when re-running a simulation in the same folder). Options: `panic`, `overwrite`, `delete`. For large runs, `panic` is recommended, to avoid accidental deletion.
+- - `time_first_snapshot`: The simulated time at which to output the first snapshot. If left out, begin writing snapshots immediately.
+- - `output_dir`: The name output folder. Defaults to "output".
+- - `snapshots_dir`: The name of the snapshot folder within the output folder. Defaults to "snapshots".
+- - `time_series_dir`: The name of the time series folder within the output folder. Defaults to "time_series".
+- - `performance_data_filename`: The name of the file to which performance data, such as total runtime and runtime of individual parts of the code should be written.
+- - `used_parameters_filename`: The name of the file in the output folder into which the used parameters are written. Defaults to `params.yml`.
+- - `fields`: Which fields to include in the snapshots. Defaults to `all`. Alternatively, specify a list of field names, for example: ```["position", "ionized_hydrogen_fraction"]```
+- - `snapshot_padding`: Determines to how many digits the snapshot numbers should be zero-padded.
+- `input`:
+- - `paths`: A list of files from which to read the initial conditions.
+- `simulation`:
+- - `final_time`: The time at which the simulation should be stopped. If not specified, run indefinitely.
+- `cosmology`: The cosmology to use when re-scaling quantities in the ICS. Defaults to present time (a = 1). If cosmological runs are used, specify `a` (scale factor) and `h` (hubble parameter in units of 100 km / s / Mpc). If remapping is performed, the cosmological parameters `omega_lambda` and `omega` are required as well.
