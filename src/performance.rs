@@ -164,13 +164,15 @@ impl<'a, N: Into<String> + Clone> Drop for TimerGuard<'a, N> {
 
 pub fn write_performance_data_system(
     timers: NonSendMut<Performance>,
-    parameters: Res<OutputParameters>,
+    parameters: Option<Res<OutputParameters>>,
 ) {
-    fs::write(
-        parameters
-            .output_dir
-            .join(&parameters.performance_data_filename),
-        serde_yaml::to_string(&timers.as_output()).unwrap(),
-    )
-    .unwrap_or_else(|e| panic!("Failed to write performance data to file. {}", e));
+    if let Some(parameters) = parameters {
+        fs::write(
+            parameters
+                .output_dir
+                .join(&parameters.performance_data_filename),
+            serde_yaml::to_string(&timers.as_output()).unwrap(),
+        )
+        .unwrap_or_else(|e| panic!("Failed to write performance data to file. {}", e));
+    }
 }
