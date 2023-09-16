@@ -1,7 +1,7 @@
-use derive_custom::raxiom_parameters;
+use derive_custom::subsweep_parameters;
 
 /// Parameters controlling the construction of a tree.
-#[raxiom_parameters]
+#[subsweep_parameters]
 pub struct QuadTreeConfig {
     /// The maximum depth of the tree. Should be high enough to ensure
     /// that the tree can keep an approximately constant number of

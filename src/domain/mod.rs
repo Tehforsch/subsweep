@@ -33,8 +33,8 @@ use crate::prelude::Particles;
 use crate::prelude::StartupStages;
 use crate::prelude::WorldSize;
 use crate::quadtree::QuadTreeConfig;
-use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 use crate::units::VecLength;
 
 #[cfg(feature = "2d")]
@@ -51,7 +51,7 @@ pub struct IdEntityMap(BiMap<ParticleId, Entity>);
 #[derive(Named)]
 pub struct DomainPlugin;
 
-impl RaxiomPlugin for DomainPlugin {
+impl SubsweepPlugin for DomainPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_startup_system_to_stage(
             StartupStages::AssignParticleIds,

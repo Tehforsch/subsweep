@@ -16,7 +16,7 @@ use crate::io::OutputDatasetDescriptor;
 use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::prelude::Stages;
-use crate::simulation::RaxiomPlugin;
+use crate::simulation::SubsweepPlugin;
 
 pub(crate) trait IntoOutputSystem {
     fn system() -> SystemDescriptor;
@@ -49,7 +49,7 @@ impl<T> OutputPlugin<T> {
     }
 }
 
-impl<T: 'static> RaxiomPlugin for OutputPlugin<T>
+impl<T: 'static> SubsweepPlugin for OutputPlugin<T>
 where
     T: IntoOutputSystem + Named,
 {

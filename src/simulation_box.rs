@@ -1,4 +1,4 @@
-use derive_custom::raxiom_parameters;
+use derive_custom::subsweep_parameters;
 use derive_custom::Named;
 use derive_more::Deref;
 use derive_more::DerefMut;
@@ -13,22 +13,22 @@ use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::parameters::Cosmology;
 use crate::prelude::Float;
-use crate::prelude::RaxiomPlugin;
 use crate::prelude::Simulation;
 use crate::prelude::StartupStages;
+use crate::prelude::SubsweepPlugin;
 use crate::units::ComovingLength;
 use crate::units::Length;
 use crate::units::VecLength;
 
 #[derive(From, Into, Deref, DerefMut, Debug)]
-#[raxiom_parameters]
+#[subsweep_parameters]
 pub struct SimulationBox(pub Extent);
 
 /// The box size of the simulation. Periodic boundary conditions apply
 /// beyond this box, meaning that the positions of particles outside
 /// of this box are wrapped back into it.
 #[derive(Debug)]
-#[raxiom_parameters("box_size")]
+#[subsweep_parameters("box_size")]
 #[serde(untagged)]
 pub enum SimulationBoxParameters {
     /// Comoving length
@@ -39,7 +39,7 @@ pub enum SimulationBoxParameters {
 #[derive(Named)]
 pub struct SimulationBoxPlugin;
 
-impl RaxiomPlugin for SimulationBoxPlugin {
+impl SubsweepPlugin for SimulationBoxPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         if sim.contains_resource::<SimulationBox>() {
             return;

@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::*;
-use derive_custom::raxiom_parameters;
+use derive_custom::subsweep_parameters;
 use log::info;
 
 use super::cell::Face;
@@ -31,7 +31,7 @@ pub const NUM_DIMENSIONS: usize = 2;
 #[cfg(not(feature = "2d"))]
 pub const NUM_DIMENSIONS: usize = 3;
 
-#[raxiom_parameters]
+#[subsweep_parameters]
 #[derive(Copy)]
 #[serde(untagged)]
 pub enum NumCellsSpec {

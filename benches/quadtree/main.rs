@@ -2,15 +2,15 @@ use criterion::criterion_group;
 use criterion::criterion_main;
 use criterion::BenchmarkId;
 use criterion::Criterion;
-use raxiom::domain::LeafData;
-use raxiom::prelude::Extent;
-use raxiom::prelude::ParticleId;
-use raxiom::prelude::SimulationBox;
-use raxiom::quadtree::NodeDataType;
-use raxiom::quadtree::QuadTree;
-use raxiom::quadtree::QuadTreeConfig;
-use raxiom::units::Length;
-use raxiom::units::VecLength;
+use subsweep::domain::LeafData;
+use subsweep::prelude::Extent;
+use subsweep::prelude::ParticleId;
+use subsweep::prelude::SimulationBox;
+use subsweep::quadtree::NodeDataType;
+use subsweep::quadtree::QuadTree;
+use subsweep::quadtree::QuadTreeConfig;
+use subsweep::units::Length;
+use subsweep::units::VecLength;
 
 #[derive(Default)]
 struct Empty;

@@ -4,14 +4,14 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::Path;
 
-use derive_traits::RaxiomParameters;
+use derive_traits::SubsweepParameters;
 use log::debug;
 
 use self::parameter_file_contents::Override;
 pub use self::parameter_file_contents::ParameterFileContents;
 use crate::named::Named;
-use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 
 impl Simulation {
     pub fn add_parameters_from_file(&mut self, parameter_file_name: &Path) -> &mut Self {
@@ -50,9 +50,9 @@ impl<T> Default for ParameterPlugin<T> {
     }
 }
 
-impl<T> RaxiomPlugin for ParameterPlugin<T>
+impl<T> SubsweepPlugin for ParameterPlugin<T>
 where
-    T: RaxiomParameters,
+    T: SubsweepParameters,
 {
     fn allow_adding_twice(&self) -> bool {
         true
@@ -80,20 +80,20 @@ where
 
 #[cfg(test)]
 mod tests {
-    use derive_custom::raxiom_parameters;
+    use derive_custom::subsweep_parameters;
 
     use super::ParameterFileContents;
     use super::ParameterPlugin;
     use crate::simulation::Simulation;
 
     #[derive(Default)]
-    #[raxiom_parameters("parameters1")]
+    #[subsweep_parameters("parameters1")]
     struct Parameters1 {
         i: i32,
     }
 
     #[derive(Default)]
-    #[raxiom_parameters("parameters2")]
+    #[subsweep_parameters("parameters2")]
     struct Parameters2 {
         s: String,
         #[serde(default)]
@@ -125,7 +125,7 @@ parameters2:
     #[test]
     #[should_panic]
     fn do_not_accept_missing_required_parameter_section() {
-        #[raxiom_parameters("parameters1")]
+        #[subsweep_parameters("parameters1")]
         struct Parameters1 {
             _i: i32,
         }
@@ -137,7 +137,7 @@ parameters2:
 
     #[test]
     fn allow_leaving_out_struct_with_complete_set_of_defaults() {
-        #[raxiom_parameters("parameters1")]
+        #[subsweep_parameters("parameters1")]
         struct Parameters1 {
             #[serde(default = "get_default_i")]
             i: i32,
@@ -161,7 +161,7 @@ parameters2:
 
     #[test]
     fn allow_defaults_from_type_default() {
-        #[raxiom_parameters("parameters1")]
+        #[subsweep_parameters("parameters1")]
         struct Parameters1 {
             #[serde(default)]
             i: i32,

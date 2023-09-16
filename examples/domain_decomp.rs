@@ -3,14 +3,14 @@ use std::time::Instant;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use raxiom::communication::MpiWorld;
-use raxiom::communication::SizedCommunicator;
-use raxiom::communication::MPI_UNIVERSE;
-use raxiom::domain::get_decomposition_from_points_and_box;
-use raxiom::domain::DecompositionState;
-use raxiom::prelude::*;
-use raxiom::units::Time;
-use raxiom::units::VecLength;
+use subsweep::communication::MpiWorld;
+use subsweep::communication::SizedCommunicator;
+use subsweep::communication::MPI_UNIVERSE;
+use subsweep::domain::get_decomposition_from_points_and_box;
+use subsweep::domain::DecompositionState;
+use subsweep::prelude::*;
+use subsweep::units::Time;
+use subsweep::units::VecLength;
 
 fn setup_points_3d(num_particles: usize) -> Vec<VecLength> {
     let mut rng = StdRng::seed_from_u64(1338);

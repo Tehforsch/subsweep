@@ -1,16 +1,16 @@
 use hdf5::Dataset;
 use log::debug;
-use raxiom::components::Position;
-use raxiom::cosmology::Cosmology;
-use raxiom::io::DatasetDescriptor;
-use raxiom::io::DatasetShape;
-use raxiom::io::InputDatasetDescriptor;
-use raxiom::io::UnitReader;
-use raxiom::prelude::Float;
-use raxiom::prelude::MVec;
-use raxiom::units::Dimension;
-use raxiom::units::VecLength;
-use raxiom::units::NONE;
+use subsweep::components::Position;
+use subsweep::cosmology::Cosmology;
+use subsweep::io::DatasetDescriptor;
+use subsweep::io::DatasetShape;
+use subsweep::io::InputDatasetDescriptor;
+use subsweep::io::UnitReader;
+use subsweep::prelude::Float;
+use subsweep::prelude::MVec;
+use subsweep::units::Dimension;
+use subsweep::units::VecLength;
+use subsweep::units::NONE;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "to_cgs";
 pub const LENGTH_IDENTIFIER: &str = "length_scaling";
@@ -20,7 +20,7 @@ pub const A_IDENTIFIER: &str = "a_scaling";
 pub const H_IDENTIFIER: &str = "h_scaling";
 
 /// This special reader exists arepo writes out different vector types
-/// than raxiom.
+/// than subsweep.
 pub fn read_vec(data: &[Float]) -> Position {
     Position(VecLength::new_unchecked(MVec::new(
         data[0], data[1], data[2],

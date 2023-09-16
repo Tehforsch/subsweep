@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::Resource;
-use derive_traits::RaxiomParameters;
+use derive_traits::SubsweepParameters;
 use log::debug;
 use serde_yaml::Mapping;
 use serde_yaml::Value;
@@ -35,7 +35,7 @@ fn insert_sublevel_override(value: &mut Value, o: &Override) {
     set_sublevel_value_by_keys(value, &o.keys, o.value.clone());
 }
 
-fn extract_from_default<T: RaxiomParameters>(overrides: &[Override]) -> T {
+fn extract_from_default<T: SubsweepParameters>(overrides: &[Override]) -> T {
     let section_name = T::unwrap_section_name();
     debug!("Parameter section missing for '{section_name}', assuming defaults",);
     let get_value = || {
@@ -64,7 +64,7 @@ fn extract_from_default<T: RaxiomParameters>(overrides: &[Override]) -> T {
     }
 }
 
-fn extract_from_section<T: RaxiomParameters>(
+fn extract_from_section<T: SubsweepParameters>(
     overrides: &[Override],
     section_value: &mut Value,
 ) -> T {
@@ -159,7 +159,7 @@ impl ParameterFileContents {
         serde_yaml::to_string(&map).unwrap()
     }
 
-    pub(super) fn extract_parameter_struct<T: RaxiomParameters>(&mut self) -> T {
+    pub(super) fn extract_parameter_struct<T: SubsweepParameters>(&mut self) -> T {
         let section_name = T::unwrap_section_name();
         let overrides_this_section = self
             .get_overrides_for_section(section_name.to_owned())
@@ -180,12 +180,12 @@ impl ParameterFileContents {
 
 #[cfg(test)]
 mod tests {
-    use derive_custom::raxiom_parameters;
+    use derive_custom::subsweep_parameters;
 
     use super::Override;
     use super::ParameterFileContents;
 
-    #[raxiom_parameters("x")]
+    #[subsweep_parameters("x")]
     struct X {
         a: usize,
         b: usize,
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn r#override_omitted_section() {
-        #[raxiom_parameters("s")]
+        #[subsweep_parameters("s")]
         struct Section(i32);
 
         let mut contents = ParameterFileContents::new("{}".into());
@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn r#override_omitted_field() {
-        #[raxiom_parameters("y")]
+        #[subsweep_parameters("y")]
         struct Y {
             #[serde(default)]
             a: usize,

@@ -20,7 +20,7 @@ use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::StartupStages;
-use crate::simulation::RaxiomPlugin;
+use crate::simulation::SubsweepPlugin;
 use crate::sweep::grid::Cell;
 use crate::sweep::grid::ParticleType;
 use crate::units::VecLength;
@@ -30,7 +30,7 @@ use crate::voronoi::CellIndex;
 #[derive(Named)]
 pub struct ParallelVoronoiGridConstruction;
 
-impl RaxiomPlugin for ParallelVoronoiGridConstruction {
+impl SubsweepPlugin for ParallelVoronoiGridConstruction {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_startup_system_to_stage(StartupStages::InsertGrid, construct_grid_system);
     }

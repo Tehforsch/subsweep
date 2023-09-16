@@ -74,7 +74,7 @@ use crate::particle::HaloParticles;
 use crate::particle::ParticleId;
 use crate::performance::Performance;
 use crate::prelude::*;
-use crate::simulation::RaxiomPlugin;
+use crate::simulation::SubsweepPlugin;
 use crate::simulation_plugin::SimulationTime;
 use crate::units::Dimensionless;
 use crate::units::Mass;
@@ -106,7 +106,7 @@ pub struct TimestepLevelData {
     id: ParticleId,
 }
 
-impl RaxiomPlugin for SweepPlugin {
+impl SubsweepPlugin for SweepPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let parameters = sim
             .add_derived_component::<IonizedHydrogenFraction>()

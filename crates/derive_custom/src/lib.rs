@@ -51,7 +51,7 @@ pub(crate) fn type_name_derive(input: proc_macro::TokenStream) -> proc_macro::To
 }
 
 #[proc_macro_attribute]
-pub fn raxiom_parameters(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn subsweep_parameters(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     parameter_attr_derive(args, input)
 }
 
@@ -82,7 +82,7 @@ pub(crate) fn parameters_trait_impl(input: proc_macro::TokenStream, section_name
 
     let gen = match section_name {
         Some(section_name) => quote! {
-            impl #impl_generics ::derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
+            impl #impl_generics ::derive_traits::SubsweepParameters for #type_name #type_generics #where_clause {
                 fn section_name() -> Option<&'static str> {
                     Some(#section_name)
                 }
@@ -90,7 +90,7 @@ pub(crate) fn parameters_trait_impl(input: proc_macro::TokenStream, section_name
         },
         None => {
             quote! {
-                impl #impl_generics ::derive_traits::RaxiomParameters for #type_name #type_generics #where_clause {
+                impl #impl_generics ::derive_traits::SubsweepParameters for #type_name #type_generics #where_clause {
                     fn section_name() -> Option<&'static str> {
                         None
                     }

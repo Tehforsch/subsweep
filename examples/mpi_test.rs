@@ -12,16 +12,16 @@ use std::time::Duration;
 
 use mpi::traits::Communicator;
 use mpi::Tag;
-use raxiom::communication::exchange_communicator::ExchangeCommunicator;
-use raxiom::communication::DataByRank;
-use raxiom::communication::MpiWorld;
-use raxiom::communication::SizedCommunicator;
-use raxiom::communication::MPI_UNIVERSE;
-use raxiom::prelude::ParticleId;
-use raxiom::sweep::DirectionIndex;
-use raxiom::sweep::RateData;
-use raxiom::sweep::SweepCommunicator;
-use raxiom::units::PhotonRate;
+use subsweep::communication::exchange_communicator::ExchangeCommunicator;
+use subsweep::communication::DataByRank;
+use subsweep::communication::MpiWorld;
+use subsweep::communication::SizedCommunicator;
+use subsweep::communication::MPI_UNIVERSE;
+use subsweep::prelude::ParticleId;
+use subsweep::sweep::DirectionIndex;
+use subsweep::sweep::RateData;
+use subsweep::sweep::SweepCommunicator;
+use subsweep::units::PhotonRate;
 
 pub fn main() {
     let fns: &[(&str, fn())] = &[

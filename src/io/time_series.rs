@@ -17,8 +17,8 @@ use super::OutputDatasetDescriptor;
 use crate::named::Named;
 use crate::parameters::OutputParameters;
 use crate::prelude::Stages;
-use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 use crate::simulation_plugin::SimulationTime;
 use crate::units::Time;
 
@@ -48,7 +48,7 @@ impl<T: Named + TimeSeries> Default for TimeSeriesPlugin<T> {
     }
 }
 
-impl<T: TimeSeries> RaxiomPlugin for TimeSeriesPlugin<T> {
+impl<T: TimeSeries> SubsweepPlugin for TimeSeriesPlugin<T> {
     fn should_build(&self, sim: &Simulation) -> bool {
         sim.write_output
     }

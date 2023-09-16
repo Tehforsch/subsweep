@@ -9,9 +9,9 @@ use criterion::Throughput;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use raxiom::prelude::TwoD;
-use raxiom::voronoi::Constructor;
-use raxiom::voronoi::Point2d;
+use subsweep::prelude::TwoD;
+use subsweep::voronoi::Constructor;
+use subsweep::voronoi::Point2d;
 
 pub fn voronoi_benchmark(c: &mut Criterion) {
     let mut group_2d = c.benchmark_group("voronoi2d");

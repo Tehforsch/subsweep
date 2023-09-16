@@ -1,10 +1,10 @@
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
-use raxiom::prelude::ParticleId;
-use raxiom::prelude::ThreeD;
-use raxiom::voronoi::Constructor;
-use raxiom::voronoi::Point3d;
+use subsweep::prelude::ParticleId;
+use subsweep::prelude::ThreeD;
+use subsweep::voronoi::Constructor;
+use subsweep::voronoi::Point3d;
 
 pub fn main() {
     let p = setup_particles_3d(100000);

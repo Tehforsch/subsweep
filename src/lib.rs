@@ -13,7 +13,6 @@
 // MPI Equivalence derive.
 #![allow(clippy::unneeded_wildcard_pattern)]
 #![allow(clippy::new_without_default)]
-#![doc = include_str!("../README.md")]
 
 mod chemistry;
 mod command_line_options;

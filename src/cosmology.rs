@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::Commands;
 use bevy_ecs::prelude::Res;
 use bevy_ecs::prelude::Resource;
-use derive_custom::raxiom_parameters;
+use derive_custom::subsweep_parameters;
 use derive_custom::Named;
 use hdf5::H5Type;
 
@@ -11,7 +11,7 @@ use crate::units::Dimension;
 use crate::units::Dimensionless;
 use crate::units::Time;
 
-#[raxiom_parameters("cosmology")]
+#[subsweep_parameters("cosmology")]
 #[derive(Named, Debug)]
 #[serde(untagged)]
 pub enum Cosmology {
@@ -23,7 +23,7 @@ pub enum Cosmology {
     NonCosmological,
 }
 
-#[raxiom_parameters]
+#[subsweep_parameters]
 #[derive(Copy, Named, Debug)]
 pub struct CosmologyParams {
     omega_0: f64,

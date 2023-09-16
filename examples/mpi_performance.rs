@@ -1,11 +1,11 @@
 use std::time::Instant;
 
-use raxiom::communication::DataByRank;
-use raxiom::communication::ExchangeCommunicator;
-use raxiom::communication::MpiWorld;
-use raxiom::communication::SizedCommunicator;
-use raxiom::communication::MPI_UNIVERSE;
-use raxiom::units::Time;
+use subsweep::communication::DataByRank;
+use subsweep::communication::ExchangeCommunicator;
+use subsweep::communication::MpiWorld;
+use subsweep::communication::SizedCommunicator;
+use subsweep::communication::MPI_UNIVERSE;
+use subsweep::units::Time;
 
 fn exchange_all(num_elements: usize, world_size: usize, this_rank: usize) {
     let data: DataByRank<Vec<usize>> = (0..world_size)

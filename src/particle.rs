@@ -12,7 +12,7 @@ use crate::components::Position;
 use crate::named::Named;
 use crate::prelude::Simulation;
 use crate::prelude::StartupStages;
-use crate::simulation::RaxiomPlugin;
+use crate::simulation::SubsweepPlugin;
 
 #[derive(
     Component, Clone, Debug, PartialEq, Eq, Hash, Equivalence, Copy, Named, PartialOrd, Ord,
@@ -42,9 +42,9 @@ pub struct HaloParticle {
 
 /// A convenience type to query for particles.
 /// ```
-/// # use raxiom::components::Position;
-/// # use raxiom::components::Mass;
-/// # use raxiom::prelude::Particles;
+/// # use subsweep::components::Position;
+/// # use subsweep::components::Mass;
+/// # use subsweep::prelude::Particles;
 /// fn my_system(particles: Particles<(&Position, &Mass)>) {
 ///     for (pos, mass) in particles.iter() {
 ///        println!("Particle with mass  {} at {} m", mass.in_kilograms(), pos.in_meters());
@@ -66,7 +66,7 @@ pub struct LocalParticleBundle {
 #[derive(Named)]
 pub struct ParticlePlugin;
 
-impl RaxiomPlugin for ParticlePlugin {
+impl SubsweepPlugin for ParticlePlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         sim.add_startup_system_to_stage(StartupStages::Final, count_types_system);
     }

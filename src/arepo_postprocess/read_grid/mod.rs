@@ -12,40 +12,40 @@ use hdf5::H5Type;
 use log::debug;
 use log::info;
 use mpi::traits::Equivalence;
-use raxiom::communication::communicator::Communicator;
-use raxiom::communication::Rank;
-use raxiom::communication::SizedCommunicator;
-use raxiom::components::Density;
-use raxiom::cosmology::Cosmology;
-use raxiom::dimension::ActiveWrapType;
-use raxiom::hash_map::HashMap;
-use raxiom::io::input::DatasetInputPlugin;
-use raxiom::io::input::Reader;
-use raxiom::io::to_dataset::ToDataset;
-use raxiom::io::unit_reader::IdReader;
-use raxiom::io::DatasetDescriptor;
-use raxiom::io::DatasetShape;
-use raxiom::io::InputDatasetDescriptor;
-use raxiom::prelude::Float;
-use raxiom::prelude::HaloParticle;
-use raxiom::prelude::ParticleId;
-use raxiom::prelude::Particles;
-use raxiom::prelude::RaxiomPlugin;
-use raxiom::prelude::Simulation;
-use raxiom::simulation_plugin::remove_components_system;
-use raxiom::simulation_plugin::StartupStages;
-use raxiom::sweep::grid::Cell;
-use raxiom::sweep::grid::Face;
-use raxiom::sweep::grid::ParticleType;
-use raxiom::sweep::grid::PeriodicNeighbour;
-use raxiom::sweep::grid::RemoteNeighbour;
-use raxiom::sweep::grid::RemotePeriodicNeighbour;
-use raxiom::sweep::SweepParameters;
-use raxiom::units;
-use raxiom::units::MVec;
-use raxiom::units::VecDimensionless;
-use raxiom::units::Volume;
-use raxiom::units::NONE;
+use subsweep::communication::communicator::Communicator;
+use subsweep::communication::Rank;
+use subsweep::communication::SizedCommunicator;
+use subsweep::components::Density;
+use subsweep::cosmology::Cosmology;
+use subsweep::dimension::ActiveWrapType;
+use subsweep::hash_map::HashMap;
+use subsweep::io::input::DatasetInputPlugin;
+use subsweep::io::input::Reader;
+use subsweep::io::to_dataset::ToDataset;
+use subsweep::io::unit_reader::IdReader;
+use subsweep::io::DatasetDescriptor;
+use subsweep::io::DatasetShape;
+use subsweep::io::InputDatasetDescriptor;
+use subsweep::prelude::Float;
+use subsweep::prelude::HaloParticle;
+use subsweep::prelude::ParticleId;
+use subsweep::prelude::Particles;
+use subsweep::prelude::Simulation;
+use subsweep::prelude::SubsweepPlugin;
+use subsweep::simulation_plugin::remove_components_system;
+use subsweep::simulation_plugin::StartupStages;
+use subsweep::sweep::grid::Cell;
+use subsweep::sweep::grid::Face;
+use subsweep::sweep::grid::ParticleType;
+use subsweep::sweep::grid::PeriodicNeighbour;
+use subsweep::sweep::grid::RemoteNeighbour;
+use subsweep::sweep::grid::RemotePeriodicNeighbour;
+use subsweep::sweep::SweepParameters;
+use subsweep::units;
+use subsweep::units::MVec;
+use subsweep::units::VecDimensionless;
+use subsweep::units::Volume;
+use subsweep::units::NONE;
 
 use self::id_cache::IdCache;
 use super::unit_reader::make_descriptor;
@@ -101,7 +101,7 @@ pub struct Area(pub units::Area);
 pub struct FaceNormal(pub units::VecDimensionless);
 
 impl ToDataset for UniqueParticleId {
-    fn dimension() -> raxiom::units::Dimension {
+    fn dimension() -> subsweep::units::Dimension {
         NONE
     }
 
@@ -111,7 +111,7 @@ impl ToDataset for UniqueParticleId {
 }
 
 impl ToDataset for ConnectionTypeInt {
-    fn dimension() -> raxiom::units::Dimension {
+    fn dimension() -> subsweep::units::Dimension {
         NONE
     }
 
@@ -154,7 +154,7 @@ impl TryFrom<ConnectionTypeInt> for ConnectionType {
     }
 }
 
-impl RaxiomPlugin for ReadSweepGridPlugin {
+impl SubsweepPlugin for ReadSweepGridPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let cosmology = sim.get_parameters::<Cosmology>().clone();
         let unit_reader = Box::new(ArepoUnitReader::new(cosmology));

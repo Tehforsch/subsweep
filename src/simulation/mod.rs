@@ -1,4 +1,4 @@
-mod raxiom_plugin;
+mod subsweep_plugin;
 
 use bevy_app::prelude::App;
 use bevy_app::prelude::Plugin;
@@ -16,11 +16,11 @@ use bevy_ecs::schedule::StateData;
 use bevy_ecs::schedule::SystemDescriptor;
 use bevy_ecs::schedule::SystemLabelId;
 use bevy_ecs::system::Resource;
-use derive_traits::RaxiomParameters;
+use derive_traits::SubsweepParameters;
 use log::warn;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
-pub use raxiom_plugin::RaxiomPlugin;
+pub use subsweep_plugin::SubsweepPlugin;
 
 use crate::communication::WorldRank;
 use crate::domain::ExchangeDataPlugin;
@@ -92,7 +92,7 @@ impl Simulation {
         !self.labels.insert(P::name())
     }
 
-    pub fn add_plugin<T: RaxiomPlugin>(&mut self, plugin: T) -> &mut Self {
+    pub fn add_plugin<T: SubsweepPlugin>(&mut self, plugin: T) -> &mut Self {
         let already_added = self.already_added::<T>();
         if !already_added {
             plugin.build_always_once(self);
@@ -122,7 +122,7 @@ impl Simulation {
         self
     }
 
-    pub fn maybe_add_plugin<T: Sync + Send + 'static + RaxiomPlugin>(
+    pub fn maybe_add_plugin<T: Sync + Send + 'static + SubsweepPlugin>(
         &mut self,
         plugin: Option<T>,
     ) -> &mut Self {
@@ -369,7 +369,7 @@ impl Simulation {
 
     pub fn add_parameter_type<T>(&mut self) -> &mut Self
     where
-        T: RaxiomParameters,
+        T: SubsweepParameters,
     {
         self.parameter_sections
             .insert(T::unwrap_section_name().into());
@@ -379,7 +379,7 @@ impl Simulation {
 
     pub fn try_add_parameter_type<T>(&mut self) -> &mut Self
     where
-        T: RaxiomParameters,
+        T: SubsweepParameters,
     {
         if !self.parameter_sections.contains(T::unwrap_section_name()) {
             self.add_parameter_type::<T>();
@@ -389,7 +389,7 @@ impl Simulation {
 
     pub fn add_parameter_type_and_get_result<T>(&mut self) -> &T
     where
-        T: RaxiomParameters,
+        T: SubsweepParameters,
     {
         self.add_parameter_type::<T>();
         self.unwrap_resource::<T>()
@@ -397,7 +397,7 @@ impl Simulation {
 
     pub fn try_add_parameter_type_and_get_result<T>(&mut self) -> &T
     where
-        T: RaxiomParameters,
+        T: SubsweepParameters,
     {
         if !self.parameter_sections.contains(T::unwrap_section_name()) {
             self.add_parameter_type::<T>();
@@ -405,12 +405,12 @@ impl Simulation {
         self.unwrap_resource::<T>()
     }
 
-    pub fn add_parameters_explicitly<T: RaxiomParameters>(&mut self, parameters: T) -> &mut Self {
+    pub fn add_parameters_explicitly<T: SubsweepParameters>(&mut self, parameters: T) -> &mut Self {
         self.insert_resource(parameters);
         self
     }
 
-    pub fn get_parameters<T: RaxiomParameters>(&self) -> &T {
+    pub fn get_parameters<T: SubsweepParameters>(&self) -> &T {
         self.get_resource::<T>().unwrap()
     }
 
@@ -501,8 +501,8 @@ impl Simulation {
 #[cfg(test)]
 mod tests {
     use crate::named::Named;
-    use crate::simulation::RaxiomPlugin;
     use crate::simulation::Simulation;
+    use crate::simulation::SubsweepPlugin;
 
     #[test]
     #[should_panic]
@@ -510,7 +510,7 @@ mod tests {
         #[derive(Named)]
         #[name = "my_plugin"]
         struct MyPlugin;
-        impl RaxiomPlugin for MyPlugin {}
+        impl SubsweepPlugin for MyPlugin {}
         let mut sim = Simulation::default();
         sim.add_plugin(MyPlugin);
         sim.add_plugin(MyPlugin);

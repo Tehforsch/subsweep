@@ -18,8 +18,8 @@ use crate::performance::write_performance_data_system;
 use crate::performance::Performance;
 use crate::prelude::Particles;
 use crate::prelude::WorldSize;
-use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 use crate::simulation_box::SimulationBoxPlugin;
 use crate::units;
 
@@ -57,7 +57,7 @@ pub(super) struct ShouldExit(bool);
 
 pub struct StopSimulationEvent;
 
-impl RaxiomPlugin for SimulationPlugin {
+impl SubsweepPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let mut perf = Performance::default();
         perf.start("total");

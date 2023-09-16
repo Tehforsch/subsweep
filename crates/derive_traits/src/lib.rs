@@ -58,7 +58,7 @@ mod tests {
     }
 }
 
-pub trait RaxiomParameters: Serialize + for<'de> Deserialize<'de> + bevy_ecs::prelude::Resource {
+pub trait SubsweepParameters: Serialize + for<'de> Deserialize<'de> + bevy_ecs::prelude::Resource {
     fn section_name() -> Option<&'static str>;
 
     fn unwrap_section_name() -> &'static str {

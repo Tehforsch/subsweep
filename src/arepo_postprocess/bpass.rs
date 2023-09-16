@@ -1,8 +1,8 @@
 use ordered_float::OrderedFloat;
-use raxiom::units::Dimensionless;
-use raxiom::units::Mass;
-use raxiom::units::SourceRate;
-use raxiom::units::Time;
+use subsweep::units::Dimensionless;
+use subsweep::units::Mass;
+use subsweep::units::SourceRate;
+use subsweep::units::Time;
 
 fn linear_interpolate(x1: f64, x2: f64, y1: f64, y2: f64, x: f64) -> f64 {
     y1 + (x - x1) / (x2 - x1) * (y2 - y1)
@@ -887,10 +887,10 @@ const BPASS_TABLE: [[f64; NUM_BPASS_METALLICITIES]; NUM_BPASS_AGES] = [
 
 #[cfg(test)]
 mod tests {
-    use raxiom::prelude::Float;
-    use raxiom::units::Dimensionless;
-    use raxiom::units::Mass;
-    use raxiom::units::Time;
+    use subsweep::prelude::Float;
+    use subsweep::units::Dimensionless;
+    use subsweep::units::Mass;
+    use subsweep::units::Time;
 
     use super::bpass_lookup;
 

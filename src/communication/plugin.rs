@@ -1,8 +1,8 @@
 use super::WorldRank;
 use super::WorldSize;
 use crate::named::Named;
-use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 
 #[derive(Clone, Named)]
 pub struct BaseCommunicationPlugin {
@@ -19,7 +19,7 @@ impl BaseCommunicationPlugin {
     }
 }
 
-impl RaxiomPlugin for BaseCommunicationPlugin {
+impl SubsweepPlugin for BaseCommunicationPlugin {
     fn build_once_everywhere(&self, sim: &mut Simulation) {
         sim.insert_resource(self.world_rank)
             .insert_resource(self.num_ranks);

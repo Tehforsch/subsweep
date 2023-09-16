@@ -1,11 +1,11 @@
-use derive_custom::raxiom_parameters;
+use derive_custom::subsweep_parameters;
 
 use crate::units::Dimensionless;
 use crate::units::PhotonRate;
 use crate::units::Time;
 use crate::units::VecDimensionless;
 
-#[raxiom_parameters("sweep")]
+#[subsweep_parameters("sweep")]
 pub struct SweepParameters {
     /// The number (or concrete list) of directions to use in the
     /// sweep.
@@ -33,7 +33,7 @@ pub struct SweepParameters {
     pub check_deadlock: bool,
 }
 
-#[raxiom_parameters]
+#[subsweep_parameters]
 #[serde(untagged)]
 pub enum DirectionsSpecification {
     Num(usize),

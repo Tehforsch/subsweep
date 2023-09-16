@@ -23,8 +23,8 @@ use crate::named::Named;
 use crate::prelude::LocalParticle;
 use crate::prelude::Particles;
 use crate::prelude::StartupStages;
-use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 
 #[derive(Named)]
 struct ExchangeDataOrder;
@@ -68,7 +68,7 @@ impl<T> Default for ExchangeDataPlugin<T> {
 #[derive(Equivalence, Deref, DerefMut)]
 struct NumEntities(usize);
 
-impl<T: Sync + Send + 'static + Component + Clone + Equivalence> RaxiomPlugin
+impl<T: Sync + Send + 'static + Component + Clone + Equivalence> SubsweepPlugin
     for ExchangeDataPlugin<T>
 where
     <T as Equivalence>::Out: MatchesRaw,

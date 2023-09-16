@@ -17,7 +17,7 @@ use bevy_ecs::prelude::Res;
 use bevy_ecs::prelude::ResMut;
 use bevy_ecs::prelude::Resource;
 use bevy_ecs::prelude::SystemLabel;
-use derive_custom::raxiom_parameters;
+use derive_custom::subsweep_parameters;
 use derive_more::Deref;
 use derive_more::DerefMut;
 use hdf5::Dataset;
@@ -45,8 +45,8 @@ use crate::performance::Performance;
 use crate::prelude::Float;
 use crate::prelude::LocalParticle;
 use crate::prelude::Named;
-use crate::simulation::RaxiomPlugin;
 use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 
 /// Determines how a component is input into the simulation.
 pub enum ComponentInput<T> {
@@ -61,7 +61,7 @@ pub enum ComponentInput<T> {
 /// should be read. Only required if should_read_initial_conditions
 /// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
 #[derive(Default)]
-#[raxiom_parameters("input")]
+#[subsweep_parameters("input")]
 pub struct InputParameters {
     /// The files containing the initial conditions
     paths: Vec<PathBuf>,
@@ -122,7 +122,7 @@ pub struct RegisteredDataset {
     name: String,
 }
 
-impl<T: Named + ToDataset + Component + Sync + Send + 'static> RaxiomPlugin
+impl<T: Named + ToDataset + Component + Sync + Send + 'static> SubsweepPlugin
     for DatasetInputPlugin<T>
 {
     fn allow_adding_twice(&self) -> bool {

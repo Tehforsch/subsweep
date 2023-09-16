@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use derive_custom::raxiom_parameters;
+use derive_custom::subsweep_parameters;
 
 use crate::named::Named;
 use crate::simulation::Simulation;
@@ -8,7 +8,7 @@ use crate::units::Time;
 
 /// How to handle the case of an already existing output directory.
 #[derive(Default)]
-#[raxiom_parameters]
+#[subsweep_parameters]
 pub enum HandleExistingOutput {
     /// Halt program execution.
     #[default]
@@ -22,7 +22,7 @@ pub enum HandleExistingOutput {
     Delete,
 }
 
-#[raxiom_parameters]
+#[subsweep_parameters]
 #[serde(untagged)]
 pub enum Fields {
     All,
@@ -32,7 +32,7 @@ pub enum Fields {
 /// Parameters for the output of the simulation.
 /// Only required if write_output
 /// is set in the [SimulationBuilder](crate::prelude::SimulationBuilder)
-#[raxiom_parameters("output")]
+#[subsweep_parameters("output")]
 pub struct OutputParameters {
     /// The time between two subsequent snapshots. If set to zero,
     /// snapshots will be written at every timestep.

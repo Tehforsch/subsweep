@@ -1,11 +1,11 @@
 use std::process::Command;
 
-use macro_utils::RaxiomManifest;
+use macro_utils::SubsweepManifest;
 
 #[test]
 #[ignore]
 fn run_all_examples() {
-    let manifest = RaxiomManifest::default();
+    let manifest = SubsweepManifest::default();
     for example in manifest.examples() {
         let name = example.name.unwrap();
         if name == "mpi_test" {

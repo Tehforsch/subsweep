@@ -1,11 +1,11 @@
 use mpi::traits::Equivalence;
-use raxiom::communication::DataByRank;
-use raxiom::communication::ExchangeCommunicator;
-use raxiom::communication::Rank;
-use raxiom::communication::SizedCommunicator;
-use raxiom::hash_map::HashMap;
-use raxiom::hash_map::HashSet;
-use raxiom::prelude::ParticleId;
+use subsweep::communication::DataByRank;
+use subsweep::communication::ExchangeCommunicator;
+use subsweep::communication::Rank;
+use subsweep::communication::SizedCommunicator;
+use subsweep::hash_map::HashMap;
+use subsweep::hash_map::HashSet;
+use subsweep::prelude::ParticleId;
 
 use super::UniqueParticleId;
 

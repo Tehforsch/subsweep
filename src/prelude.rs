@@ -1,4 +1,4 @@
-pub use derive_custom::raxiom_parameters;
+pub use derive_custom::subsweep_parameters;
 
 pub use crate::communication::WorldRank;
 pub use crate::communication::WorldSize;
@@ -11,8 +11,8 @@ pub use crate::particle::LocalParticle;
 pub use crate::particle::ParticleId;
 pub use crate::particle::Particles;
 pub use crate::quadtree::QuadTree;
-pub use crate::simulation::RaxiomPlugin;
 pub use crate::simulation::Simulation;
+pub use crate::simulation::SubsweepPlugin;
 pub use crate::simulation_box::SimulationBox;
 pub use crate::simulation_builder::SimulationBuilder;
 pub use crate::simulation_plugin::Stages;

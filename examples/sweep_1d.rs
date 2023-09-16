@@ -1,37 +1,37 @@
 use std::path::Path;
 
 use bevy_ecs::prelude::*;
-use derive_custom::raxiom_parameters;
-use raxiom::components;
-use raxiom::components::Density;
-use raxiom::parameters::Cosmology;
-use raxiom::prelude::Extent;
-use raxiom::prelude::LocalParticle;
-use raxiom::prelude::Simulation;
-use raxiom::prelude::SimulationBox;
-use raxiom::prelude::SimulationBuilder;
-use raxiom::prelude::StartupStages;
-use raxiom::prelude::WorldRank;
-use raxiom::prelude::WorldSize;
-use raxiom::source_systems::set_source_terms_system;
-use raxiom::source_systems::Source;
-use raxiom::source_systems::Sources;
-use raxiom::sweep::grid::init_cartesian_grid_system;
-use raxiom::sweep::grid::NumCellsSpec;
-use raxiom::sweep::SweepParameters;
-use raxiom::sweep::SweepPlugin;
-use raxiom::units::Dimensionless;
-use raxiom::units::Length;
-use raxiom::units::NumberDensity;
-use raxiom::units::PhotonFlux;
-use raxiom::units::PhotonRate;
-use raxiom::units::Temperature;
-use raxiom::units::VecLength;
-use raxiom::units::PROTON_MASS;
+use derive_custom::subsweep_parameters;
+use subsweep::components;
+use subsweep::components::Density;
+use subsweep::parameters::Cosmology;
+use subsweep::prelude::Extent;
+use subsweep::prelude::LocalParticle;
+use subsweep::prelude::Simulation;
+use subsweep::prelude::SimulationBox;
+use subsweep::prelude::SimulationBuilder;
+use subsweep::prelude::StartupStages;
+use subsweep::prelude::WorldRank;
+use subsweep::prelude::WorldSize;
+use subsweep::source_systems::set_source_terms_system;
+use subsweep::source_systems::Source;
+use subsweep::source_systems::Sources;
+use subsweep::sweep::grid::init_cartesian_grid_system;
+use subsweep::sweep::grid::NumCellsSpec;
+use subsweep::sweep::SweepParameters;
+use subsweep::sweep::SweepPlugin;
+use subsweep::units::Dimensionless;
+use subsweep::units::Length;
+use subsweep::units::NumberDensity;
+use subsweep::units::PhotonFlux;
+use subsweep::units::PhotonRate;
+use subsweep::units::Temperature;
+use subsweep::units::VecLength;
+use subsweep::units::PROTON_MASS;
 
 const BOX_SIZE_MEGAPARSEC: f64 = 1.0;
 
-#[raxiom_parameters("1d")]
+#[subsweep_parameters("1d")]
 struct Params {
     num_particles: usize,
     photon_flux: PhotonFlux,
