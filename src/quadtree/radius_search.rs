@@ -70,7 +70,7 @@ struct StackItem<'a, N, L> {
 impl<'a, N, L> Clone for StackItem<'a, N, L> {
     fn clone(&self) -> Self {
         Self {
-            tree: self.tree.clone(),
+            tree: self.tree,
             pos_in_parent: self.pos_in_parent,
             should_be_visited: self.should_be_visited,
         }
