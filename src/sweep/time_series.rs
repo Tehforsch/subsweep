@@ -25,12 +25,10 @@ use crate::units::Volume;
 
 #[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
 #[name = "hydrogen_ionization_mass_average"]
-#[repr(transparent)]
 pub struct HydrogenIonizationMassAverage(pub Dimensionless);
 
 #[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
 #[name = "hydrogen_ionization_volume_average"]
-#[repr(transparent)]
 pub struct HydrogenIonizationVolumeAverage(pub Dimensionless);
 
 #[derive(Serialize, Clone, Named)]

@@ -24,6 +24,7 @@ use subsweep::components::IonizedHydrogenFraction;
 use subsweep::components::Position;
 use subsweep::cosmology::Cosmology;
 use subsweep::io::input::DatasetInputPlugin;
+use subsweep::io::time_series::TimeSeriesPlugin;
 use subsweep::io::DatasetDescriptor;
 use subsweep::io::DatasetShape;
 use subsweep::io::InputDatasetDescriptor;
@@ -31,6 +32,7 @@ use subsweep::prelude::*;
 use subsweep::simulation_plugin::remove_components_system;
 use subsweep::source_systems::set_source_terms_system;
 use subsweep::source_systems::Sources;
+use subsweep::source_systems::TotalLuminosity;
 use subsweep::units::Dimensionless;
 use subsweep::units::PhotonRate;
 use subsweep::units::SourceRate;
@@ -104,6 +106,7 @@ fn main() {
             StartupStages::InsertGrid,
             remove_components_system::<ElectronAbundance>,
         )
+        .add_plugin(TimeSeriesPlugin::<TotalLuminosity>::default())
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
             InputDatasetDescriptor::<Position>::new(
                 DatasetDescriptor {

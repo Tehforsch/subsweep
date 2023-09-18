@@ -117,12 +117,14 @@ pub fn output_time_series_system<T: TimeSeries>(
             val: ev.clone(),
         })
         .collect();
-    let f = OpenOptions::new()
-        .append(true)
-        .open(&path)
-        .unwrap_or_else(|e| panic!("Failed to open time series file. {}", e));
-    serde_yaml::to_writer(&f, &entries)
-        .unwrap_or_else(|e| panic!("Failed to write to time series file: {}", e));
+    if entries.len() > 0 {
+        let f = OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap_or_else(|e| panic!("Failed to open time series file. {}", e));
+        serde_yaml::to_writer(&f, &entries)
+            .unwrap_or_else(|e| panic!("Failed to write to time series file: {}", e));
+    }
 }
 
 fn get_time_series_filename<T: TimeSeries>(

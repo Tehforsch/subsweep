@@ -1,8 +1,11 @@
+use bevy_ecs::event::EventWriter;
 use bevy_ecs::prelude::Res;
 use bevy_ecs::prelude::Resource;
+use derive_custom::Named;
 use log::debug;
 use mpi::traits::Equivalence;
 use ordered_float::OrderedFloat;
+use serde::Serialize;
 
 use crate::communication::MpiWorld;
 use crate::components;
@@ -15,6 +18,10 @@ use crate::prelude::WorldRank;
 use crate::units::Length;
 use crate::units::SourceRate;
 use crate::units::VecLength;
+
+#[derive(Debug, Clone, Equivalence, Named, Serialize)]
+#[name = "total_luminosity"]
+pub struct TotalLuminosity(pub SourceRate);
 
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
 pub struct DistanceToSourceData(Length);
@@ -36,6 +43,7 @@ pub fn set_source_terms_system(
     decomposition: Res<DecompositionState>,
     box_: Res<SimulationBox>,
     world_rank: Res<WorldRank>,
+    mut writer: EventWriter<TotalLuminosity>,
 ) {
     let mut source_comm = MpiWorld::<Source>::new();
     let all_sources = source_comm.all_gather_varcount(&sources.sources);
@@ -55,5 +63,6 @@ pub fn set_source_terms_system(
         }
     }
     let total: SourceRate = all_sources.iter().map(|source| source.rate).sum();
+    writer.send(TotalLuminosity(total));
     debug!("Total luminosity: {:+.2e}", total.in_photons_per_second());
 }
