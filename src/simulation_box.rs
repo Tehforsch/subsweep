@@ -5,8 +5,9 @@ use derive_more::DerefMut;
 use derive_more::From;
 use derive_more::Into;
 
-use crate::cosmology::set_cosmology_attributes_system;
+use crate::cosmology::set_initial_cosmology_attributes_system;
 use crate::cosmology::LittleH;
+use crate::cosmology::Redshift;
 use crate::cosmology::ScaleFactor;
 use crate::domain::Extent;
 use crate::io::output::Attribute;
@@ -52,9 +53,10 @@ impl SubsweepPlugin for SimulationBoxPlugin {
         if let Cosmology::Cosmological { .. } = cosmology {
             sim.add_startup_system_to_stage(
                 StartupStages::InsertDerivedComponents,
-                set_cosmology_attributes_system,
+                set_initial_cosmology_attributes_system,
             );
             sim.add_plugin(OutputPlugin::<Attribute<ScaleFactor>>::default());
+            sim.add_plugin(OutputPlugin::<Attribute<Redshift>>::default());
             sim.add_plugin(OutputPlugin::<Attribute<LittleH>>::default());
         }
         sim.add_parameters_explicitly(box_);

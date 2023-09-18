@@ -41,6 +41,7 @@ pub mod simulation_plugin;
 pub mod source_systems;
 mod stages;
 pub mod sweep;
+pub mod time_spec;
 /// Compile-time units and quantities for the simulation.
 pub mod units;
 pub mod voronoi;

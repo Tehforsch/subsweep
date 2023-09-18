@@ -30,7 +30,15 @@ pub struct CosmologyParams {
     omega_lambda: f64,
 }
 
+pub fn scalefactor_to_redshift(a: Dimensionless) -> Dimensionless {
+    1.0 / a - 1.0
+}
+
 impl Cosmology {
+    pub fn redshift(&self) -> Dimensionless {
+        scalefactor_to_redshift(self.scale_factor())
+    }
+
     pub fn scale_factor(&self) -> Dimensionless {
         match self {
             Cosmology::Cosmological { a, .. } => Dimensionless::dimensionless(*a),
@@ -133,7 +141,8 @@ fn depth_limited_binary_search(
     threshold: f64,
     depth: usize,
 ) -> f64 {
-    if depth > 100 {
+    const MAX_DEPTH: usize = 100;
+    if depth > MAX_DEPTH {
         panic!("Binary search failed");
     }
     let guess = (min + max) / 2.0;
@@ -149,8 +158,9 @@ fn depth_limited_binary_search(
     }
 }
 
-pub fn set_cosmology_attributes_system(mut commands: Commands, cosmology: Res<Cosmology>) {
+pub fn set_initial_cosmology_attributes_system(mut commands: Commands, cosmology: Res<Cosmology>) {
     commands.insert_resource(ScaleFactor(cosmology.scale_factor()));
+    commands.insert_resource(Redshift(cosmology.redshift()));
     commands.insert_resource(LittleH(cosmology.little_h()));
 }
 
@@ -158,6 +168,11 @@ pub fn set_cosmology_attributes_system(mut commands: Commands, cosmology: Res<Co
 #[repr(transparent)]
 #[name = "scale_factor"]
 pub struct ScaleFactor(pub Dimensionless);
+
+#[derive(H5Type, Clone, Copy, Named, Resource)]
+#[repr(transparent)]
+#[name = "redshift"]
+pub struct Redshift(pub Dimensionless);
 
 #[derive(H5Type, Clone, Copy, Named, Resource)]
 #[repr(transparent)]
@@ -175,6 +190,7 @@ pub struct OmegaLambda(pub Dimensionless);
 pub struct Omega0(pub Dimensionless);
 
 impl_attribute!(ScaleFactor, Dimensionless);
+impl_attribute!(Redshift, Dimensionless);
 impl_attribute!(LittleH, Dimensionless);
 impl_attribute!(OmegaLambda, Dimensionless);
 impl_attribute!(Omega0, Dimensionless);

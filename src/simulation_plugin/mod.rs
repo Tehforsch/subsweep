@@ -9,9 +9,12 @@ use mpi::traits::Equivalence;
 pub use self::parameters::SimulationParameters;
 pub use self::time::SimulationTime;
 use crate::components::Position;
+use crate::cosmology::Redshift;
+use crate::cosmology::ScaleFactor;
 use crate::io::output::Attribute;
 use crate::io::output::OutputPlugin;
 use crate::named::Named;
+use crate::parameters::Cosmology;
 use crate::parameters::SimulationBox;
 use crate::particle::ParticlePlugin;
 use crate::performance::write_performance_data_system;
@@ -21,6 +24,7 @@ use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 use crate::simulation::SubsweepPlugin;
 use crate::simulation_box::SimulationBoxPlugin;
+use crate::time_spec::TimeSpec;
 use crate::units;
 
 #[derive(Named)]
@@ -76,6 +80,10 @@ impl SubsweepPlugin for SimulationPlugin {
             .add_startup_system_to_stage(StartupStages::ReadInput, show_num_cores_system)
             .add_system_to_stage(Stages::Output, write_performance_data_system)
             .add_system_to_stage(Stages::Initial, show_time_system)
+            .add_system_to_stage(
+                Stages::Initial,
+                set_cosmological_time_variables_system.before(show_time_system),
+            )
             .add_system_to_stage(Stages::Final, exit_system)
             .add_system_to_stage(Stages::Initial, stop_simulation_system);
     }
@@ -106,8 +114,21 @@ fn stop_simulation_system(
     }
 }
 
-fn show_time_system(time: Res<SimulationTime>) {
-    info!("Time: {:?}", **time);
+fn show_time_system(time: Res<SimulationTime>, cosmology: Res<Cosmology>) {
+    let time_spec = TimeSpec::new(**time, &cosmology);
+    match time_spec {
+        TimeSpec::Time(time) => {
+            info!("Time: {:.4} Myr", time.in_megayears());
+        }
+        TimeSpec::Cosmological(c) => {
+            info!(
+                "Time: a = {:.4}, z = {:.4}, t = {:.4} Myr",
+                *c.scale_factor,
+                *c.redshift,
+                time.in_megayears()
+            );
+        }
+    }
 }
 
 fn exit_system(
@@ -134,5 +155,21 @@ pub fn remove_components_system<C: Component>(
 ) {
     for entity in particles.iter() {
         commands.entity(entity).remove::<C>();
+    }
+}
+
+fn set_cosmological_time_variables_system(
+    cosmology: Res<Cosmology>,
+    simulation_time: Res<SimulationTime>,
+    mut scalefactor: ResMut<ScaleFactor>,
+    mut redshift: ResMut<Redshift>,
+) {
+    let time_spec = TimeSpec::new(**simulation_time, &cosmology);
+    match time_spec {
+        TimeSpec::Time(_) => {}
+        TimeSpec::Cosmological(cosmological_time) => {
+            scalefactor.0 = cosmological_time.scale_factor;
+            redshift.0 = cosmological_time.redshift;
+        }
     }
 }
