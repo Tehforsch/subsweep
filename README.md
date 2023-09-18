@@ -77,7 +77,7 @@ cosmology:
 - - `grid`: either `!construct` if the grid should be constructed or `!read GRID_FILE` if the grid should be read from `GRID_FILE`
 - - `remap_from`: If given, specifies a file or a folder (in which case all the hdf5 files in the folder are used) from which to remap temperatures and ionization fractions.
 - `sweep`:
-- - `directions`: The number of directions to use. More means higher angular resolution at the cost of memory and runtime.
+- - `directions`: The number of directions to use. More means higher angular resolution at the cost of memory and runtime. Supported values: 1, 16, 21, 32, 64, 84
 - - `num_timestep_levels`: How many levels of substepping to use. If `1`, sweeps and chemistry updates are always done at level `0`, using the `max_timestep` (the chemistry will internally substep if required). If `n > 1`, particles will be distributed onto the available levels `i=0..n-1` according to their desired timesteps. The timestep of level `i` is given by `max_timestep * 2^-i`. The desired timestep is computed as the minimum of the timescales at which the 1. ionization fraction, 2. temperature and 3. photon rates change.
 - - `significant_rate_threshold`: The minimum number of photons per second which will be treated as non-zero. A non-zero value (~1.0e-5 / s) is recommended for performance reasons.
 - - `timestep_safety_factor`: The ratio of desired timestep to computed timescale at which the fastest changing quantity changes. Smaller values mean more accurate results but come at the cost of performance since more particles will move to lower timesteps.

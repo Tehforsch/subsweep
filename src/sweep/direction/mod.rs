@@ -55,17 +55,19 @@ impl Directions {
 
     #[cfg(not(feature = "2d"))]
     fn from_num(num: usize) -> Self {
-        let bins: &[&[f64; 3]] = match num {
-            1 => &[&[1.0, 0.0, 0.0]],
+        let bins: &[[f64; 3]] = match num {
+            1 => &[[1.0, 0.0, 0.0]],
+            16 => &healpix::DIRECTION_BINS_16,
+            21 => &healpix::DIRECTION_BINS_21,
+            32 => &healpix::DIRECTION_BINS_32,
+            64 => &healpix::DIRECTION_BINS_64,
             84 => &healpix::DIRECTION_BINS_84,
             _ => unimplemented!(),
         };
         Self {
             directions: bins
                 .iter()
-                .map(|&[x, y, z]| {
-                    Direction(MVec::new(*x, *y, *z) * Dimensionless::dimensionless(1.0))
-                })
+                .map(|&[x, y, z]| Direction(MVec::new(x, y, z) * Dimensionless::dimensionless(1.0)))
                 .collect(),
         }
     }
