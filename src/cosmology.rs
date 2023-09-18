@@ -97,6 +97,56 @@ impl CosmologyParams {
         let t1 = time(a1);
         Time::seconds(*(t1 - t0) / (HUBBLE * *h))
     }
+
+    /// Get the scale factor a which the given cosmology has when
+    /// delta_t time elapses after the time at which the scale factor was a.
+    pub fn get_scalefactor_from_scalefactor_and_time_difference(
+        &self,
+        a: Dimensionless,
+        h: Dimensionless,
+        delta_t: Time,
+    ) -> Dimensionless {
+        let min = 0.0;
+        let max = 1.0;
+        binary_search(
+            |a1| {
+                (self.time_difference_between_scalefactors(a, a1.into(), h) - delta_t)
+                    .value_unchecked()
+            },
+            min,
+            max,
+            Time::years(100.0).value_unchecked(),
+        )
+        .into()
+    }
+}
+
+/// Find a root of the monotonously increasing function f by binary search on the interval [min, max].
+fn binary_search(f: impl Fn(f64) -> f64, min: f64, max: f64, threshold: f64) -> f64 {
+    depth_limited_binary_search(f, min, max, threshold, 0)
+}
+
+fn depth_limited_binary_search(
+    f: impl Fn(f64) -> f64,
+    min: f64,
+    max: f64,
+    threshold: f64,
+    depth: usize,
+) -> f64 {
+    if depth > 100 {
+        panic!("Binary search failed");
+    }
+    let guess = (min + max) / 2.0;
+    let val = f(guess);
+    if val.abs() <= threshold {
+        guess
+    } else {
+        if val.is_sign_negative() {
+            depth_limited_binary_search(f, guess, max, threshold, depth + 1)
+        } else {
+            depth_limited_binary_search(f, min, guess, threshold, depth + 1)
+        }
+    }
 }
 
 pub fn set_cosmology_attributes_system(mut commands: Commands, cosmology: Res<Cosmology>) {
@@ -132,18 +182,42 @@ impl_attribute!(Omega0, Dimensionless);
 #[cfg(test)]
 mod tests {
     use super::CosmologyParams;
+    use crate::units::Dimensionless;
     use crate::units::Time;
 
-    #[test]
-    fn time_difference_between_scalefactors() {
+    fn get_test_cosmology_and_h() -> (CosmologyParams, Dimensionless) {
         let cosmology = CosmologyParams {
             omega_lambda: 0.6911,
             omega_0: 0.308983,
         };
+        (cosmology, 0.6774.into())
+    }
+
+    #[test]
+    fn time_difference_between_scalefactors() {
+        let (cosmology, h) = get_test_cosmology_and_h();
         let diff = |a0: f64, a1: f64| {
-            cosmology.time_difference_between_scalefactors(a0.into(), a1.into(), 0.6774.into())
+            cosmology.time_difference_between_scalefactors(a0.into(), a1.into(), h)
         };
         assert_eq!(diff(1.0, 1.0), Time::zero());
         assert!((diff(0.99, 1.0) - Time::gigayears(0.14473176)).abs() < Time::years(10000.0));
+    }
+
+    #[test]
+    fn get_scalefactor_from_scalefactor_and_time_difference() {
+        let (cosmology, h) = get_test_cosmology_and_h();
+        for a0 in [0.01, 0.1, 0.2, 0.5, 0.9] {
+            for a1 in [0.01, 0.1, 0.2, 0.5, 0.9] {
+                let delta_t =
+                    cosmology.time_difference_between_scalefactors(a0.into(), a1.into(), h);
+                let diff = (cosmology.get_scalefactor_from_scalefactor_and_time_difference(
+                    a0.into(),
+                    h,
+                    delta_t,
+                ) - a1)
+                    .abs();
+                assert!(diff < 1e-5);
+            }
+        }
     }
 }

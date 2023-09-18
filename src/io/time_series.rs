@@ -9,17 +9,20 @@ use bevy_ecs::prelude::EventReader;
 use bevy_ecs::prelude::IntoSystemDescriptor;
 use bevy_ecs::prelude::NonSend;
 use bevy_ecs::prelude::Res;
+use log::error;
 use serde::Serialize;
 
 use super::output::make_output_dirs_system;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
 use crate::named::Named;
+use crate::parameters::Cosmology;
 use crate::parameters::OutputParameters;
 use crate::prelude::Stages;
 use crate::simulation::Simulation;
 use crate::simulation::SubsweepPlugin;
 use crate::simulation_plugin::SimulationTime;
+use crate::units::Dimensionless;
 use crate::units::Time;
 
 pub trait TimeSeries: 'static + Sync + Send + Clone + Serialize {}
@@ -27,8 +30,32 @@ pub trait TimeSeries: 'static + Sync + Send + Clone + Serialize {}
 impl<T> TimeSeries for T where T: 'static + Sync + Send + Clone + Serialize {}
 
 #[derive(Serialize)]
+#[serde(untagged)]
+enum TimeSpec {
+    Time(Time),
+    Cosmological(CosmologicalTime),
+}
+
+#[derive(Serialize)]
+struct CosmologicalTime {
+    time_elapsed: Time,
+    redshift: Dimensionless,
+    scale_factor: Dimensionless,
+}
+
+impl CosmologicalTime {
+    fn new(time_elapsed: Time, scale_factor: Dimensionless) -> Self {
+        Self {
+            time_elapsed,
+            scale_factor,
+            redshift: 1.0 / scale_factor - 1.0,
+        }
+    }
+}
+
+#[derive(Serialize)]
 struct Entry<T> {
-    time: Time,
+    time: TimeSpec,
     val: T,
 }
 
@@ -103,6 +130,7 @@ pub fn output_time_series_system<T: TimeSeries>(
     mut event_reader: EventReader<T>,
     time: Res<SimulationTime>,
     parameters: Res<OutputParameters>,
+    cosmology: Res<Cosmology>,
     descriptor: NonSend<OutputDatasetDescriptor<T>>,
 ) where
     T: TimeSeries,
@@ -111,7 +139,7 @@ pub fn output_time_series_system<T: TimeSeries>(
     let entries: Vec<_> = event_reader
         .iter()
         .map(|ev| Entry {
-            time: **time,
+            time: convert_to_time_spec(**time, &cosmology),
             val: ev.clone(),
         })
         .collect();
@@ -129,4 +157,25 @@ fn get_time_series_filename<T: TimeSeries>(
 ) -> PathBuf {
     let time_series_dir = parameters.time_series_dir();
     time_series_dir.join(format!("{}.yml", descriptor.dataset_name()))
+}
+
+fn convert_to_time_spec(time: Time, cosmology: &Cosmology) -> TimeSpec {
+    match cosmology {
+        Cosmology::Cosmological { a, h, params } => {
+            if let Some(params) = params {
+                TimeSpec::Cosmological(CosmologicalTime::new(
+                    time,
+                    params.get_scalefactor_from_scalefactor_and_time_difference(
+                        (*a).into(),
+                        (*h).into(),
+                        time,
+                    ),
+                ))
+            } else {
+                error!("No cosmological parameters given. Cannot determine current redshift and scale factor for output.");
+                TimeSpec::Time(time)
+            }
+        }
+        Cosmology::NonCosmological => TimeSpec::Time(time),
+    }
 }
