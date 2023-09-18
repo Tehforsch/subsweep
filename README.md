@@ -87,14 +87,14 @@ cosmology:
 - `output`:
 - - `time_between_snapshots`: The simulated time between two snapshots. Should be commensurate with `max_timestep` if regular snapshots are desired.
 - - `handle_existing_output`: What to do if the output folder already exists (which happens when re-running a simulation in the same folder). Options: `panic`, `overwrite`, `delete`. For large runs, `panic` is recommended, to avoid accidental deletion.
-- - `time_first_snapshot`: The simulated time at which to output the first snapshot. If left out, begin writing snapshots immediately.
-- - `output_dir`: The name output folder. Defaults to "output".
-- - `snapshots_dir`: The name of the snapshot folder within the output folder. Defaults to "snapshots".
-- - `time_series_dir`: The name of the time series folder within the output folder. Defaults to "time_series".
-- - `performance_data_filename`: The name of the file to which performance data, such as total runtime and runtime of individual parts of the code should be written.
-- - `used_parameters_filename`: The name of the file in the output folder into which the used parameters are written. Defaults to `params.yml`.
-- - `fields`: Which fields to include in the snapshots. Defaults to `all`. Alternatively, specify a list of field names, for example: ```["position", "ionized_hydrogen_fraction"]```
-- - `snapshot_padding`: Determines to how many digits the snapshot numbers should be zero-padded.
+- - `time_first_snapshot` [Optional]: The simulated time at which to output the first snapshot. If left out, begin writing snapshots immediately.
+- - `output_dir` [Optional]: The name output folder. Defaults to "output".
+- - `snapshots_dir` [Optional]: The name of the snapshot folder within the output folder. Defaults to "snapshots".
+- - `time_series_dir` [Optional]: The name of the time series folder within the output folder. Defaults to "time_series".
+- - `performance_data_filename` [Optional]: The name of the file to which performance data, such as total runtime and runtime of individual parts of the code should be written. Defaults to `performancy.yml`.
+- - `used_parameters_filename` [Optional]: The name of the file in the output folder into which the used parameters are written. Defaults to `params.yml`.
+- - `fields` [Optional]: Which fields to include in the snapshots. Defaults to `all`. Alternatively, specify a list of field names, for example: ```["position", "ionized_hydrogen_fraction"]```
+- - `snapshot_padding` [Optional]: Determines to how many digits the snapshot numbers should be zero-padded.
 - `input`:
 - - `paths`: A list of files from which to read the initial conditions.
 - `simulation`:
