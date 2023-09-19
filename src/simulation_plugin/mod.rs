@@ -84,6 +84,7 @@ impl SubsweepPlugin for SimulationPlugin {
                 Stages::Initial,
                 set_cosmological_time_variables_system.before(show_time_system),
             )
+            .add_system_to_stage(Stages::AfterSweep, write_simulated_time_system)
             .add_system_to_stage(Stages::Final, exit_system)
             .add_system_to_stage(Stages::Initial, stop_simulation_system);
     }
@@ -131,8 +132,13 @@ fn show_time_system(time: Res<SimulationTime>, cosmology: Res<Cosmology>) {
     }
 }
 
-fn exit_system(
-    mut evs: EventWriter<AppExit>,
+fn exit_system(mut evs: EventWriter<AppExit>, mut stop_sim: EventReader<StopSimulationEvent>) {
+    if stop_sim.iter().count() > 0 {
+        evs.send(AppExit);
+    }
+}
+
+fn write_simulated_time_system(
     mut stop_sim: EventReader<StopSimulationEvent>,
     mut timers: NonSendMut<Performance>,
 ) {
@@ -140,7 +146,6 @@ fn exit_system(
         timers.stop("total");
         let time_in_secs = timers.total("total").in_seconds();
         info!("Run finished after {:.03} seconds.", time_in_secs);
-        evs.send(AppExit);
     }
 }
 
