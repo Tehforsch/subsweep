@@ -140,6 +140,7 @@ impl SubsweepPlugin for SweepPlugin {
                 hydrogen_ionization_mass_average_system
                     .before(num_particles_at_timestep_levels_system::<HydrogenOnly>),
             )
+            .add_startup_system_to_stage(StartupStages::InitSweep, show_num_directions_system)
             .add_system_to_stage(
                 Stages::AfterSweep,
                 num_particles_at_timestep_levels_system::<HydrogenOnly>,
@@ -728,4 +729,11 @@ pub fn initialize_sweep_test_components_system(
             PhotonRate(units::PhotonRate::zero()),
         ));
     }
+}
+
+fn show_num_directions_system(
+    parameters: Res<SweepParameters>,
+    mut performance_data: ResMut<Performance>,
+) {
+    performance_data.record_number("num_sweep_directions", parameters.directions.num());
 }
