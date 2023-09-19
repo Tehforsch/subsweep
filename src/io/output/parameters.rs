@@ -71,7 +71,12 @@ pub struct OutputParameters {
     #[serde(default)]
     pub handle_existing_output: HandleExistingOutput,
     #[serde(default = "default_performance_data_filename")]
+    /// The name of the file containing the performance data of
+    /// the simulation.
     pub performance_data_filename: String,
+    #[serde(default = "default_num_output_files")]
+    /// The number of output files per snapshot. Default: 1
+    pub num_output_files: usize,
 }
 
 fn default_snapshot_padding() -> usize {
@@ -100,6 +105,10 @@ fn default_used_parameters_filename() -> String {
 
 fn default_performance_data_filename() -> String {
     "performance.yml".into()
+}
+
+fn default_num_output_files() -> usize {
+    1
 }
 
 pub fn is_desired_field<T: Named>(sim: &Simulation) -> bool {
