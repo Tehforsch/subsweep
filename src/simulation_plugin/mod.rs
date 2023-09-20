@@ -9,6 +9,8 @@ use mpi::traits::Equivalence;
 pub use self::parameters::SimulationParameters;
 pub use self::time::SimulationTime;
 use crate::components::Position;
+use crate::cosmology::set_initial_cosmology_attributes_system;
+use crate::cosmology::LittleH;
 use crate::cosmology::Redshift;
 use crate::cosmology::ScaleFactor;
 use crate::io::output::Attribute;
@@ -68,6 +70,7 @@ impl SubsweepPlugin for SimulationPlugin {
         sim.insert_non_send_resource(perf)
             .add_parameter_type::<SimulationParameters>()
             .add_required_component::<Position>()
+            .add_parameter_type::<Cosmology>()
             .add_plugin(SimulationBoxPlugin)
             .add_plugin(ParticlePlugin)
             .add_plugin(OutputPlugin::<Attribute<SimulationTime>>::default())
@@ -80,13 +83,23 @@ impl SubsweepPlugin for SimulationPlugin {
             .add_startup_system_to_stage(StartupStages::ReadInput, show_num_cores_system)
             .add_system_to_stage(Stages::Output, write_performance_data_system)
             .add_system_to_stage(Stages::Initial, show_time_system)
+            .add_system_to_stage(Stages::AfterSweep, write_simulated_time_system)
+            .add_system_to_stage(Stages::Final, exit_system)
+            .add_system_to_stage(Stages::Initial, stop_simulation_system);
+        let cosmology = sim.get_parameters::<Cosmology>();
+        if let Cosmology::Cosmological { .. } = cosmology {
+            sim.add_startup_system_to_stage(
+                StartupStages::InsertDerivedComponents,
+                set_initial_cosmology_attributes_system,
+            )
             .add_system_to_stage(
                 Stages::Initial,
                 set_cosmological_time_variables_system.before(show_time_system),
             )
-            .add_system_to_stage(Stages::AfterSweep, write_simulated_time_system)
-            .add_system_to_stage(Stages::Final, exit_system)
-            .add_system_to_stage(Stages::Initial, stop_simulation_system);
+            .add_plugin(OutputPlugin::<Attribute<ScaleFactor>>::default())
+            .add_plugin(OutputPlugin::<Attribute<Redshift>>::default())
+            .add_plugin(OutputPlugin::<Attribute<LittleH>>::default());
+        }
     }
 }
 

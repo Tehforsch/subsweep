@@ -5,17 +5,10 @@ use derive_more::DerefMut;
 use derive_more::From;
 use derive_more::Into;
 
-use crate::cosmology::set_initial_cosmology_attributes_system;
-use crate::cosmology::LittleH;
-use crate::cosmology::Redshift;
-use crate::cosmology::ScaleFactor;
 use crate::domain::Extent;
-use crate::io::output::Attribute;
-use crate::io::output::OutputPlugin;
 use crate::parameters::Cosmology;
 use crate::prelude::Float;
 use crate::prelude::Simulation;
-use crate::prelude::StartupStages;
 use crate::prelude::SubsweepPlugin;
 use crate::units::ComovingLength;
 use crate::units::Length;
@@ -46,19 +39,9 @@ impl SubsweepPlugin for SimulationBoxPlugin {
             return;
         }
         sim.add_parameter_type::<SimulationBoxParameters>();
-        sim.add_parameter_type::<Cosmology>();
         let box_ = sim.get_parameters::<SimulationBoxParameters>();
         let cosmology = sim.get_parameters::<Cosmology>();
         let box_ = get_simulation_box(box_, cosmology);
-        if let Cosmology::Cosmological { .. } = cosmology {
-            sim.add_startup_system_to_stage(
-                StartupStages::InsertDerivedComponents,
-                set_initial_cosmology_attributes_system,
-            );
-            sim.add_plugin(OutputPlugin::<Attribute<ScaleFactor>>::default());
-            sim.add_plugin(OutputPlugin::<Attribute<Redshift>>::default());
-            sim.add_plugin(OutputPlugin::<Attribute<LittleH>>::default());
-        }
         sim.add_parameters_explicitly(box_);
     }
 }
