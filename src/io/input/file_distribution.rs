@@ -6,7 +6,7 @@ struct Position {
     pos: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Region {
     pub file_index: usize,
     pub start: usize,
@@ -57,18 +57,7 @@ fn get_regions_from(
     (regions, end)
 }
 
-pub fn get_rank_assignment_for_rank(
-    num_entries_per_file: &[usize],
-    num_ranks: usize,
-    rank: Rank,
-) -> RankAssignment {
-    get_rank_assignment(num_entries_per_file, num_ranks).remove(rank as usize)
-}
-
-pub fn get_rank_assignment(
-    num_entries_per_file: &[usize],
-    num_ranks: usize,
-) -> Vec<RankAssignment> {
+fn get_rank_assignment(num_entries_per_file: &[usize], num_ranks: usize) -> Vec<RankAssignment> {
     let num_entries: usize = num_entries_per_file.iter().sum();
     let num_entries_per_rank = num_entries / num_ranks;
     let num_entries_last_rank = num_entries - num_entries_per_rank * (num_ranks - 1);
@@ -94,9 +83,40 @@ pub fn get_rank_assignment(
     assignments
 }
 
+pub fn get_rank_input_assignment_for_rank(
+    num_entries_per_file: &[usize],
+    num_ranks: usize,
+    rank: Rank,
+) -> RankAssignment {
+    get_rank_assignment(num_entries_per_file, num_ranks).remove(rank as usize)
+}
+
+fn get_rank_output_assignment(
+    total_num_particles: usize,
+    num_desired_files: usize,
+    num_ranks: usize,
+) -> Vec<RankAssignment> {
+    let mut num_entries_per_file: Vec<_> = (0..num_desired_files - 1)
+        .map(|_| total_num_particles / num_desired_files)
+        .collect();
+    num_entries_per_file.push(total_num_particles - num_entries_per_file.iter().sum::<usize>());
+    get_rank_assignment(&num_entries_per_file, num_ranks)
+}
+
+pub fn get_rank_output_assignment_for_rank(
+    total_num_particles: usize,
+    num_desired_files: usize,
+    num_ranks: usize,
+    rank: Rank,
+) -> RankAssignment {
+    get_rank_output_assignment(total_num_particles, num_desired_files, num_ranks)
+        .remove(rank as usize)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::io::input::file_distribution::get_rank_assignment;
+    use crate::io::input::file_distribution::Region;
 
     #[test]
     fn rank_assignment() {
@@ -175,5 +195,66 @@ mod tests {
         assert_eq!(assignment[1].regions[0].file_index, 2);
         assert_eq!(assignment[1].regions[0].start, 0);
         assert_eq!(assignment[1].regions[0].end, 100);
+    }
+
+    #[test]
+    fn get_rank_output_assignment() {
+        let assignment = super::get_rank_output_assignment(100, 2, 2);
+        assert_eq!(assignment[0].regions.len(), 1);
+        assert_eq!(assignment[1].regions.len(), 1);
+        assert_eq!(
+            assignment[0].regions[0],
+            Region {
+                file_index: 0,
+                start: 0,
+                end: 50,
+            }
+        );
+        assert_eq!(
+            assignment[1].regions[0],
+            Region {
+                file_index: 1,
+                start: 0,
+                end: 50,
+            }
+        );
+        let assignment = super::get_rank_output_assignment(101, 2, 2);
+        assert_eq!(assignment[0].regions.len(), 1);
+        assert_eq!(assignment[1].regions.len(), 1);
+        assert_eq!(
+            assignment[0].regions[0],
+            Region {
+                file_index: 0,
+                start: 0,
+                end: 50,
+            }
+        );
+        assert_eq!(
+            assignment[1].regions[0],
+            Region {
+                file_index: 1,
+                start: 0,
+                end: 51,
+            }
+        );
+        let assignment = super::get_rank_output_assignment(100, 1, 2);
+        assert_eq!(assignment[0].regions.len(), 1);
+        assert_eq!(assignment[1].regions.len(), 1);
+        assert_eq!(
+            assignment[0].regions[0],
+            Region {
+                file_index: 0,
+                start: 0,
+                end: 50,
+            }
+        );
+        assert_eq!(
+            assignment[1].regions[0],
+            Region {
+                file_index: 0,
+                start: 50,
+                end: 100,
+            }
+        );
     }
 }

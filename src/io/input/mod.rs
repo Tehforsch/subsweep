@@ -31,7 +31,7 @@ use ndarray::ArrayBase;
 use ndarray::Dim;
 use ndarray::OwnedRepr;
 
-use self::file_distribution::get_rank_assignment_for_rank;
+use self::file_distribution::get_rank_input_assignment_for_rank;
 use self::file_distribution::RankAssignment;
 use self::file_distribution::Region;
 use super::to_dataset::ToDataset;
@@ -213,7 +213,7 @@ impl Reader {
             .iter()
             .map(|f| self.get_num_entries(dataset_name, f))
             .collect::<Vec<_>>();
-        get_rank_assignment_for_rank(&num_entries, self.num_ranks, self.rank)
+        get_rank_input_assignment_for_rank(&num_entries, self.num_ranks, self.rank)
     }
 
     fn get_num_entries(&self, dataset_name: &str, file: &File) -> usize {
