@@ -445,7 +445,8 @@ mod unit_tests {
                 &Region {
                     file_index: 0,
                     start: 0,
-                    end: 450
+                    end: 450,
+                    dataset_size: 450,
                 },
                 100
             ),
@@ -456,7 +457,8 @@ mod unit_tests {
                 &Region {
                     file_index: 0,
                     start: 0,
-                    end: 400
+                    end: 400,
+                    dataset_size: 400,
                 },
                 100
             ),
@@ -467,7 +469,8 @@ mod unit_tests {
                 &Region {
                     file_index: 0,
                     start: 30,
-                    end: 420
+                    end: 420,
+                    dataset_size: 450,
                 },
                 100
             ),
@@ -478,7 +481,8 @@ mod unit_tests {
                 &Region {
                     file_index: 0,
                     start: 20,
-                    end: 420
+                    end: 420,
+                    dataset_size: 440,
                 },
                 100
             ),

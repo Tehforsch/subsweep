@@ -11,6 +11,9 @@ pub struct Region {
     pub file_index: usize,
     pub start: usize,
     pub end: usize,
+    /// The total number of entries for all ranks in this dataset for
+    /// the file given by file_index
+    pub dataset_size: usize,
 }
 
 impl Region {
@@ -43,6 +46,7 @@ fn get_regions_from(
             file_index: end.file_index,
             start: start.pos,
             end: num_entries_per_file[end.file_index],
+            dataset_size: num_entries_per_file[end.file_index],
         });
         end.pos -= num_entries_per_file[end.file_index];
         end.file_index += 1;
@@ -53,6 +57,7 @@ fn get_regions_from(
         file_index: end.file_index,
         start: start.pos,
         end: end.pos,
+        dataset_size: num_entries_per_file[end.file_index],
     });
     (regions, end)
 }
@@ -126,75 +131,91 @@ mod tests {
         assert_eq!(assignment[0].regions[0].file_index, 0);
         assert_eq!(assignment[0].regions[0].start, 0);
         assert_eq!(assignment[0].regions[0].end, 100);
+        assert_eq!(assignment[0].regions[0].dataset_size, 100);
         let assignment = get_rank_assignment(&[100], 2);
         assert_eq!(assignment.len(), 2);
         assert_eq!(assignment[0].regions.len(), 1);
         assert_eq!(assignment[0].regions[0].file_index, 0);
         assert_eq!(assignment[0].regions[0].start, 0);
         assert_eq!(assignment[0].regions[0].end, 50);
+        assert_eq!(assignment[0].regions[0].dataset_size, 100);
         assert_eq!(assignment[1].regions.len(), 1);
         assert_eq!(assignment[1].regions[0].file_index, 0);
         assert_eq!(assignment[1].regions[0].start, 50);
         assert_eq!(assignment[1].regions[0].end, 100);
+        assert_eq!(assignment[1].regions[0].dataset_size, 100);
         let assignment = get_rank_assignment(&[100], 3);
         assert_eq!(assignment.len(), 3);
         assert_eq!(assignment[0].regions.len(), 1);
         assert_eq!(assignment[0].regions[0].file_index, 0);
         assert_eq!(assignment[0].regions[0].start, 0);
         assert_eq!(assignment[0].regions[0].end, 33);
+        assert_eq!(assignment[0].regions[0].dataset_size, 100);
         assert_eq!(assignment[1].regions.len(), 1);
         assert_eq!(assignment[1].regions[0].file_index, 0);
         assert_eq!(assignment[1].regions[0].start, 33);
         assert_eq!(assignment[1].regions[0].end, 66);
+        assert_eq!(assignment[1].regions[0].dataset_size, 100);
         assert_eq!(assignment[2].regions.len(), 1);
         assert_eq!(assignment[2].regions[0].file_index, 0);
         assert_eq!(assignment[2].regions[0].start, 66);
         assert_eq!(assignment[2].regions[0].end, 100);
+        assert_eq!(assignment[2].regions[0].dataset_size, 100);
         let assignment = get_rank_assignment(&[100, 200], 3);
         assert_eq!(assignment.len(), 3);
         assert_eq!(assignment[0].regions.len(), 1);
         assert_eq!(assignment[0].regions[0].file_index, 0);
         assert_eq!(assignment[0].regions[0].start, 0);
         assert_eq!(assignment[0].regions[0].end, 100);
+        assert_eq!(assignment[0].regions[0].dataset_size, 100);
         assert_eq!(assignment[1].regions.len(), 1);
         assert_eq!(assignment[1].regions[0].file_index, 1);
         assert_eq!(assignment[1].regions[0].start, 0);
         assert_eq!(assignment[1].regions[0].end, 100);
+        assert_eq!(assignment[1].regions[0].dataset_size, 200);
         assert_eq!(assignment[2].regions.len(), 1);
         assert_eq!(assignment[2].regions[0].file_index, 1);
         assert_eq!(assignment[2].regions[0].start, 100);
         assert_eq!(assignment[2].regions[0].end, 200);
+        assert_eq!(assignment[2].regions[0].dataset_size, 200);
         let assignment = get_rank_assignment(&[100, 200, 301], 4);
         assert_eq!(assignment.len(), 4);
         assert_eq!(assignment[0].regions.len(), 2);
         assert_eq!(assignment[0].regions[0].file_index, 0);
         assert_eq!(assignment[0].regions[0].start, 0);
         assert_eq!(assignment[0].regions[0].end, 100);
+        assert_eq!(assignment[0].regions[0].dataset_size, 100);
         assert_eq!(assignment[0].regions[1].file_index, 1);
         assert_eq!(assignment[0].regions[1].start, 0);
         assert_eq!(assignment[0].regions[1].end, 50);
+        assert_eq!(assignment[0].regions[1].dataset_size, 200);
         assert_eq!(assignment[1].regions.len(), 1);
         assert_eq!(assignment[1].regions[0].file_index, 1);
         assert_eq!(assignment[1].regions[0].start, 50);
         assert_eq!(assignment[1].regions[0].end, 200);
+        assert_eq!(assignment[1].regions[0].dataset_size, 200);
         assert_eq!(assignment[2].regions.len(), 1);
         assert_eq!(assignment[2].regions[0].file_index, 2);
         assert_eq!(assignment[2].regions[0].start, 0);
         assert_eq!(assignment[2].regions[0].end, 150);
+        assert_eq!(assignment[2].regions[0].dataset_size, 301);
         assert_eq!(assignment[3].regions.len(), 1);
         assert_eq!(assignment[3].regions[0].file_index, 2);
         assert_eq!(assignment[3].regions[0].start, 150);
         assert_eq!(assignment[3].regions[0].end, 301);
+        assert_eq!(assignment[3].regions[0].dataset_size, 301);
         let assignment = get_rank_assignment(&[100, 0, 100], 2);
         assert_eq!(assignment.len(), 2);
         assert_eq!(assignment[0].regions.len(), 1);
         assert_eq!(assignment[0].regions[0].file_index, 0);
         assert_eq!(assignment[0].regions[0].start, 0);
         assert_eq!(assignment[0].regions[0].end, 100);
+        assert_eq!(assignment[0].regions[0].dataset_size, 100);
         assert_eq!(assignment[1].regions.len(), 1);
         assert_eq!(assignment[1].regions[0].file_index, 2);
         assert_eq!(assignment[1].regions[0].start, 0);
         assert_eq!(assignment[1].regions[0].end, 100);
+        assert_eq!(assignment[1].regions[0].dataset_size, 100);
     }
 
     #[test]
@@ -208,6 +229,7 @@ mod tests {
                 file_index: 0,
                 start: 0,
                 end: 50,
+                dataset_size: 50,
             }
         );
         assert_eq!(
@@ -216,6 +238,7 @@ mod tests {
                 file_index: 1,
                 start: 0,
                 end: 50,
+                dataset_size: 50,
             }
         );
         let assignment = super::get_rank_output_assignment(101, 2, 2);
@@ -227,6 +250,7 @@ mod tests {
                 file_index: 0,
                 start: 0,
                 end: 50,
+                dataset_size: 50,
             }
         );
         assert_eq!(
@@ -235,6 +259,7 @@ mod tests {
                 file_index: 1,
                 start: 0,
                 end: 51,
+                dataset_size: 51,
             }
         );
         let assignment = super::get_rank_output_assignment(100, 1, 2);
@@ -246,6 +271,7 @@ mod tests {
                 file_index: 0,
                 start: 0,
                 end: 50,
+                dataset_size: 100,
             }
         );
         assert_eq!(
@@ -254,6 +280,7 @@ mod tests {
                 file_index: 0,
                 start: 50,
                 end: 100,
+                dataset_size: 100,
             }
         );
     }
