@@ -37,6 +37,7 @@ pub enum Stages {
     Initial,
     Sweep,
     AfterSweep,
+    CreateOutputFiles,
     Output,
     Final,
 }

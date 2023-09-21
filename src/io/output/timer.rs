@@ -6,6 +6,7 @@ use bevy_ecs::prelude::Resource;
 use bevy_ecs::schedule::ShouldRun;
 
 use super::parameters::OutputParameters;
+use crate::io::to_dataset::ToDataset;
 use crate::simulation_plugin::SimulationTime;
 use crate::simulation_plugin::StopSimulationEvent;
 use crate::units;
@@ -34,6 +35,23 @@ impl Timer {
         let simulation_finished = !events.is_empty();
         if simulation_finished || time.0 >= timer.next_output_time {
             ShouldRun::Yes
+        } else {
+            ShouldRun::No
+        }
+    }
+
+    pub fn dataset_write_run_criterion<T: ToDataset>(
+        time: Res<SimulationTime>,
+        timer: Res<Self>,
+        events: EventReader<StopSimulationEvent>,
+    ) -> ShouldRun {
+        let is_first_snapshot = timer.is_first_snapshot();
+        let should_run = Self::run_criterion(time, timer, events);
+        if should_run == ShouldRun::Yes {
+            match !T::is_static() || is_first_snapshot {
+                true => ShouldRun::Yes,
+                false => ShouldRun::No,
+            }
         } else {
             ShouldRun::No
         }

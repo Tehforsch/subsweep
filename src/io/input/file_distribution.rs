@@ -1,3 +1,5 @@
+use bevy_ecs::system::Resource;
+
 use crate::communication::Rank;
 
 #[derive(Debug)]
@@ -22,7 +24,7 @@ impl Region {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Resource)]
 pub struct RankAssignment {
     pub regions: Vec<Region>,
 }

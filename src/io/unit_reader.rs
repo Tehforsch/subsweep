@@ -1,10 +1,10 @@
 use hdf5::Dataset;
 
-use super::to_dataset::LENGTH_IDENTIFIER;
-use super::to_dataset::MASS_IDENTIFIER;
-use super::to_dataset::SCALE_FACTOR_IDENTIFIER;
-use super::to_dataset::TEMPERATURE_IDENTIFIER;
-use super::to_dataset::TIME_IDENTIFIER;
+use super::output::LENGTH_IDENTIFIER;
+use super::output::MASS_IDENTIFIER;
+use super::output::SCALE_FACTOR_IDENTIFIER;
+use super::output::TEMPERATURE_IDENTIFIER;
+use super::output::TIME_IDENTIFIER;
 use crate::units::Dimension;
 use crate::units::NONE;
 

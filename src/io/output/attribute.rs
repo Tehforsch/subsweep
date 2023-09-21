@@ -8,7 +8,9 @@ use bevy_ecs::schedule::SystemDescriptor;
 use hdf5::H5Type;
 
 use super::plugin::IntoOutputSystem;
-use super::OutputFile;
+use super::timer::Timer;
+use super::FileWithRegion;
+use super::OutputFiles;
 use crate::named::Named;
 
 pub trait ToAttribute: Named + Resource {
@@ -27,19 +29,26 @@ impl<T: Named> Named for Attribute<T> {
 }
 
 impl<T: ToAttribute> IntoOutputSystem for Attribute<T> {
-    fn system() -> SystemDescriptor {
-        write_attribute::<T>.into_descriptor()
+    fn create_system() -> SystemDescriptor {
+        write_attribute::<T>
+            .into_descriptor()
+            .with_run_criteria(Timer::run_criterion)
+    }
+
+    fn write_system() -> SystemDescriptor {
+        (|| {}).into_descriptor()
     }
 }
 
-fn write_attribute<T: ToAttribute>(res: Res<T>, file: ResMut<OutputFile>) {
-    let f = file.f.as_ref().unwrap();
-    let attr = f
-        .new_attr::<T::Output>()
-        .shape(())
-        .create(T::name())
-        .unwrap();
-    attr.write_scalar(&res.to_value()).unwrap();
+fn write_attribute<T: ToAttribute>(res: Res<T>, file: ResMut<OutputFiles>) {
+    for FileWithRegion { file, .. } in file.0.as_ref().unwrap().iter() {
+        let attr = file
+            .new_attr::<T::Output>()
+            .shape(())
+            .create(T::name())
+            .unwrap();
+        attr.write_scalar(&res.to_value()).unwrap();
+    }
 }
 
 // The poor man's procedural macro

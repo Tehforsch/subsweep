@@ -49,12 +49,13 @@ impl TimerStages {
     }
 }
 
-fn get_stages() -> [StageLabelId; 7] {
+fn get_stages() -> [StageLabelId; 8] {
     [
         CoreStage::First.as_label(),
         Stages::Initial.as_label(),
         Stages::Sweep.as_label(),
         Stages::AfterSweep.as_label(),
+        Stages::CreateOutputFiles.as_label(),
         Stages::Output.as_label(),
         Stages::Final.as_label(),
         CoreStage::Last.as_label(),
