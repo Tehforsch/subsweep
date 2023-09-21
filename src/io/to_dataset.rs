@@ -5,6 +5,7 @@ use hdf5::File;
 use hdf5::H5Type;
 
 use super::output::plugin::IntoOutputSystem;
+use super::output::timer::Timer;
 use super::output::OutputFile;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
@@ -45,9 +46,13 @@ fn write_dataset_system<T: Component + ToDataset>(
     query: Particles<&T>,
     file: ResMut<OutputFile>,
     descriptor: NonSend<OutputDatasetDescriptor<T>>,
+    output_timer: Res<Timer>,
 ) {
-    let data: Vec<T> = query.iter().cloned().collect();
-    write_dataset(data, file.f.as_ref().unwrap(), &descriptor);
+    let f = file.f.as_ref().unwrap();
+    if !T::is_static() || output_timer.is_first_snapshot() {
+        let data: Vec<T> = query.iter().cloned().collect();
+        write_dataset(data, f, &descriptor);
+    }
 }
 
 pub fn write_dataset<T: ToDataset>(data: Vec<T>, file: &File, descriptor: &DatasetDescriptor) {

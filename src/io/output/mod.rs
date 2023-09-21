@@ -1,7 +1,7 @@
 mod attribute;
 pub(crate) mod parameters;
 pub(super) mod plugin;
-mod timer;
+pub mod timer;
 
 use std::fs;
 use std::path::Path;

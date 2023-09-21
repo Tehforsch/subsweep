@@ -11,7 +11,7 @@ use crate::simulation_plugin::StopSimulationEvent;
 use crate::units;
 
 #[derive(Resource)]
-pub(super) struct Timer {
+pub struct Timer {
     next_output_time: units::Time,
     snapshot_num: usize,
 }
@@ -46,5 +46,9 @@ impl Timer {
 
     pub fn snapshot_num(&self) -> usize {
         self.snapshot_num
+    }
+
+    pub fn is_first_snapshot(&self) -> bool {
+        self.snapshot_num == 0
     }
 }
