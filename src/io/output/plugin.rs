@@ -3,6 +3,7 @@ use bevy_ecs::schedule::SystemDescriptor;
 use log::error;
 
 use super::close_file_system;
+use super::compute_output_rank_assignment_system;
 use super::create_file_system;
 use super::finish_wait_for_other_ranks_system;
 use super::init_wait_for_other_ranks_system;
@@ -14,17 +15,12 @@ use super::parameters::OutputParameters;
 use super::timer::Timer;
 use super::write_used_parameters_system;
 use super::OutputFiles;
-use crate::communication::communicator::Communicator;
-use crate::io::input::file_distribution::get_rank_output_assignment_for_rank;
 use crate::io::DatasetDescriptor;
 use crate::io::OutputDatasetDescriptor;
 use crate::named::Named;
-use crate::prelude::Particles;
 use crate::prelude::Simulation;
 use crate::prelude::Stages;
 use crate::prelude::StartupStages;
-use crate::prelude::WorldRank;
-use crate::prelude::WorldSize;
 use crate::simulation::SubsweepPlugin;
 
 pub(crate) trait IntoOutputSystem {
@@ -165,23 +161,4 @@ fn verify_output_fields_system(
             }
         }
     }
-}
-
-fn compute_output_rank_assignment_system(
-    mut commands: Commands,
-    particles: Particles<()>,
-    rank: Res<WorldRank>,
-    world_size: Res<WorldSize>,
-    parameters: Res<OutputParameters>,
-) {
-    let num_particles = particles.iter().count();
-    let mut comm: Communicator<usize> = Communicator::new();
-    let total_num_particles: usize = comm.all_gather_sum(&num_particles);
-    let rank_assignment = get_rank_output_assignment_for_rank(
-        total_num_particles,
-        parameters.num_output_files,
-        **world_size,
-        **rank,
-    );
-    commands.insert_resource(rank_assignment);
 }

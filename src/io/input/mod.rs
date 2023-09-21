@@ -67,6 +67,9 @@ pub struct InputParameters {
     paths: Vec<PathBuf>,
 }
 
+#[derive(Resource)]
+pub struct NumParticlesTotal(pub usize);
+
 pub fn get_file_or_all_hdf5_files_in_path_if_dir(path: &Path) -> Vec<PathBuf> {
     if path.is_file() {
         vec![path.to_owned()]
@@ -329,6 +332,7 @@ fn spawn_entities_system(
     let mut comm: Communicator<usize> = Communicator::new();
     let num_entities_total: usize = comm.all_gather_sum(&num_entities);
     info!("Spawned {} particles", num_entities_total);
+    commands.insert_resource(NumParticlesTotal(num_entities_total));
     performance_data.record_number("num_particles", num_entities_total);
     assert_eq!(spawned_entities.len(), 0);
     spawned_entities.0 = (0..num_entities)
@@ -446,7 +450,6 @@ mod unit_tests {
                     file_index: 0,
                     start: 0,
                     end: 450,
-                    dataset_size: 450,
                 },
                 100
             ),
@@ -458,7 +461,6 @@ mod unit_tests {
                     file_index: 0,
                     start: 0,
                     end: 400,
-                    dataset_size: 400,
                 },
                 100
             ),
@@ -470,7 +472,6 @@ mod unit_tests {
                     file_index: 0,
                     start: 30,
                     end: 420,
-                    dataset_size: 450,
                 },
                 100
             ),
@@ -482,7 +483,6 @@ mod unit_tests {
                     file_index: 0,
                     start: 20,
                     end: 420,
-                    dataset_size: 440,
                 },
                 100
             ),

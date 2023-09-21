@@ -11,6 +11,7 @@ use bevy_ecs::component::Component;
 use bevy_ecs::prelude::Res;
 use bevy_ecs::prelude::ResMut;
 use bevy_ecs::prelude::Resource;
+use bevy_ecs::system::Commands;
 use bevy_ecs::system::NonSend;
 use hdf5::Dataset;
 use hdf5::File;
@@ -23,10 +24,12 @@ use self::parameters::OutputParameters;
 pub use self::plugin::OutputPlugin;
 use self::timer::Timer;
 use super::input::file_distribution::Region;
+use super::input::NumParticlesTotal;
 use super::to_dataset::ToDataset;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
 use crate::communication::MPI_UNIVERSE;
+use crate::io::input::file_distribution::get_rank_output_assignment_for_rank;
 use crate::io::input::file_distribution::RankAssignment;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::prelude::Particles;
@@ -109,10 +112,26 @@ fn make_snapshot_dir(snapshot_dir: &Path) {
         .unwrap_or_else(|_| panic!("Failed to create snapshot dir: {snapshot_dir:?}"));
 }
 
-fn get_output_files(
+pub fn compute_output_rank_assignment_system(
+    mut commands: Commands,
+    rank: Res<WorldRank>,
+    world_size: Res<WorldSize>,
     parameters: Res<OutputParameters>,
-    output_timer: Res<Timer>,
-    assignment: Res<RankAssignment>,
+    num_particles_total: Res<NumParticlesTotal>,
+) {
+    let rank_assignment = get_rank_output_assignment_for_rank(
+        num_particles_total.0,
+        parameters.num_output_files,
+        **world_size,
+        **rank,
+    );
+    commands.insert_resource(rank_assignment);
+}
+
+fn get_output_files(
+    parameters: &OutputParameters,
+    output_timer: &Timer,
+    assignment: &RankAssignment,
     get_file: impl Fn(PathBuf) -> hdf5::Result<File>,
 ) -> Vec<FileWithRegion> {
     let file_index_padding = ((parameters.num_output_files as f64).log10().floor() as usize) + 1;
@@ -145,14 +164,22 @@ fn create_file_system(
     mut file: ResMut<OutputFiles>,
     parameters: Res<OutputParameters>,
     output_timer: Res<Timer>,
-    assignment: Res<RankAssignment>,
+    num_particles_total: Res<NumParticlesTotal>,
 ) {
     info!("Writing snapshot: {}", &output_timer.snapshot_num());
     assert!(file.0.is_none());
+    // In order to know how large the datasets are that we need to create:
+    // Compute rank assignment for one rank.
+    let assignment = get_rank_output_assignment_for_rank(
+        num_particles_total.0,
+        parameters.num_output_files,
+        1,
+        0,
+    );
     file.0 = Some(get_output_files(
-        parameters,
-        output_timer,
-        assignment,
+        &parameters,
+        &output_timer,
+        &assignment,
         File::create,
     ));
 }
@@ -165,9 +192,9 @@ fn open_file_system(
 ) {
     assert!(file.0.is_none());
     file.0 = Some(get_output_files(
-        parameters,
-        output_timer,
-        assignment,
+        &parameters,
+        &output_timer,
+        &assignment,
         File::open_rw,
     ))
 }
@@ -189,9 +216,10 @@ pub fn create_dataset_in_files<T: ToDataset>(
     descriptor: &DatasetDescriptor,
 ) {
     for FileWithRegion { file, region } in files.iter() {
+        assert!(region.start == 0);
         let dataset = file
             .new_dataset::<T>()
-            .shape(&[region.dataset_size])
+            .shape(&[region.end - region.start])
             .create(descriptor.dataset_name())
             .expect("Failed to create dataset");
         add_dimension_attrs::<T>(&dataset);
@@ -213,13 +241,16 @@ pub fn write_dataset_to_files<T: ToDataset>(
     files: &[FileWithRegion],
     descriptor: &DatasetDescriptor,
 ) {
+    let mut data_start = 0;
     for FileWithRegion { file, region } in files.iter() {
         let dataset = file
             .dataset(&descriptor.dataset_name())
             .expect("Failed to open dataset");
+        let data_end = data_start + region.size();
         dataset
-            .write_slice(&data, region.start..region.end)
+            .write_slice(&data[data_start..data_end], region.start..region.end)
             .expect("Failed to write slice to dataset");
+        data_start += region.size();
     }
 }
 
