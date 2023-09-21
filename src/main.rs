@@ -23,6 +23,7 @@ use subsweep::components::Density;
 use subsweep::components::IonizedHydrogenFraction;
 use subsweep::components::Position;
 use subsweep::cosmology::Cosmology;
+use subsweep::impl_to_dataset;
 use subsweep::io::input::DatasetInputPlugin;
 use subsweep::io::time_series::TimeSeriesPlugin;
 use subsweep::io::DatasetDescriptor;
@@ -147,6 +148,9 @@ pub struct InternalEnergy(pub crate::units::EnergyPerMass);
 #[name = "electron_abundance"]
 #[repr(transparent)]
 pub struct ElectronAbundance(pub crate::units::Dimensionless);
+
+impl_to_dataset!(InternalEnergy, crate::units::EnergyPerMass, false);
+impl_to_dataset!(ElectronAbundance, crate::units::Dimensionless, false);
 
 fn insert_missing_components_system(
     mut commands: Commands,

@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use bevy_ecs::prelude::*;
 use bevy_ecs::schedule::SystemDescriptor;
 use hdf5::Dataset;
@@ -10,10 +8,8 @@ use super::output::plugin::IntoOutputSystem;
 use super::output::OutputFile;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
-use crate::named::Named;
 use crate::prelude::Particles;
 use crate::units::Dimension;
-use crate::units::Quantity;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor_si";
 pub const LENGTH_IDENTIFIER: &str = "scaling_length";
@@ -29,27 +25,10 @@ struct DatasetSystemAmbiguityLabel;
 pub trait ToDataset: Clone + H5Type + Sync + Send + 'static {
     fn dimension() -> Dimension;
     fn convert_base_units(self, factor: f64) -> Self;
-}
-
-impl<const D: Dimension, S, T> ToDataset for T
-where
-    S: Clone + 'static + std::ops::Mul<f64, Output = S>,
-    T: Clone
-        + Named
-        + Sync
-        + Send
-        + 'static
-        + H5Type
-        + Deref<Target = Quantity<S, D>>
-        + From<<Quantity<S, D> as std::ops::Mul<f64>>::Output>,
-    Quantity<S, D>: std::ops::Mul<f64>,
-{
-    fn dimension() -> Dimension {
-        D
-    }
-
-    fn convert_base_units(self, factor: f64) -> T {
-        (T::deref(&self).clone() * factor).into()
+    /// A static quantity does not change over the course of the
+    /// simulation and only needs to be written to output once.
+    fn is_static() -> bool {
+        false
     }
 }
 

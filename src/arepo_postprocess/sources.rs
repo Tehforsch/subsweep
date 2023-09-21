@@ -10,12 +10,14 @@ use mpi::traits::Equivalence;
 use subsweep::components;
 use subsweep::components::Position;
 use subsweep::cosmology::Cosmology;
+use subsweep::impl_to_dataset;
 use subsweep::io::input::Reader;
 use subsweep::io::DatasetShape;
 use subsweep::parameters::InputParameters;
 use subsweep::prelude::SimulationBox;
 use subsweep::source_systems::Source;
 use subsweep::source_systems::Sources;
+use subsweep::units;
 use subsweep::units::Dimensionless;
 use subsweep::units::Mass;
 use subsweep::units::Time;
@@ -38,6 +40,9 @@ pub struct Metallicity(pub Dimensionless);
 #[repr(transparent)]
 // This is dimensionless in the arepo outputs, since its the scale factor
 pub struct StellarFormationTime(pub Dimensionless);
+
+impl_to_dataset!(StellarFormationTime, units::Dimensionless, true);
+impl_to_dataset!(Metallicity, units::Dimensionless, true);
 
 pub fn add_single_source_system(
     box_size: Res<SimulationBox>,

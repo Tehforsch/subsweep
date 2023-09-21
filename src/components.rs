@@ -8,6 +8,7 @@ use mpi::traits::Equivalence;
 
 use crate::named::Named;
 use crate::prelude::Float;
+use crate::units;
 use crate::units::EnergyDensity;
 use crate::units::Time;
 use crate::units::VecLength;
@@ -17,15 +18,15 @@ use crate::units::VecLength;
 #[repr(transparent)]
 pub struct Position(pub VecLength);
 
-#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
-#[repr(transparent)]
-#[name = "mass"]
-pub struct Mass(pub crate::units::Mass);
-
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
 #[repr(transparent)]
 #[name = "density"]
 pub struct Density(pub crate::units::Density);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[repr(transparent)]
+#[name = "mass"]
+pub struct Mass(pub crate::units::Mass);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "ionized_hydrogen_fraction"]
@@ -67,3 +68,36 @@ impl Default for IonizationTime {
         IonizationTime(Time::new_unchecked(Float::INFINITY))
     }
 }
+
+#[macro_export]
+macro_rules! impl_to_dataset {
+    ($name: ty, $dim: ty, $is_static: expr) => {
+        impl $crate::io::to_dataset::ToDataset for $name {
+            fn dimension() -> crate::units::Dimension {
+                <$dim>::dimension()
+            }
+
+            fn convert_base_units(self, factor: f64) -> Self {
+                Self(self.0 * factor)
+            }
+
+            fn is_static() -> bool {
+                $is_static
+            }
+        }
+    };
+}
+
+// Static quantities
+impl_to_dataset!(Position, units::Length, true);
+impl_to_dataset!(Density, units::Density, true);
+impl_to_dataset!(Source, units::SourceRate, true);
+impl_to_dataset!(Mass, units::Mass, true);
+
+// Dynamic quantities
+impl_to_dataset!(IonizedHydrogenFraction, units::Dimensionless, false);
+impl_to_dataset!(Temperature, units::Temperature, false);
+impl_to_dataset!(PhotonRate, units::SourceRate, false);
+impl_to_dataset!(HeatingRate, units::HeatingRate, false);
+impl_to_dataset!(Timestep, units::Time, false);
+impl_to_dataset!(IonizationTime, units::Time, false);

@@ -19,6 +19,7 @@ use subsweep::components::Density;
 use subsweep::cosmology::Cosmology;
 use subsweep::dimension::ActiveWrapType;
 use subsweep::hash_map::HashMap;
+use subsweep::impl_to_dataset;
 use subsweep::io::input::DatasetInputPlugin;
 use subsweep::io::input::Reader;
 use subsweep::io::to_dataset::ToDataset;
@@ -119,6 +120,10 @@ impl ToDataset for ConnectionTypeInt {
         self
     }
 }
+
+impl_to_dataset!(Area, units::Area, true);
+impl_to_dataset!(Mass, units::Mass, true);
+impl_to_dataset!(FaceNormal, units::Dimensionless, true);
 
 #[derive(Debug)]
 struct ConnectionType {
