@@ -37,7 +37,7 @@ This process works as follows:
 Subsweep requires a single parameter file in yaml format (called `params.yml` unless explicitly specified otherwise). An example parameter consists of individual sections and might read as follows:
 
 ```
-box_size: 4000 kpc h^-1 a^1
+box_size: 4000 kpc h^-1 a^-1
 postprocess:
   initial_fraction_ionized_hydrogen: 1e-10
   sources: !from_ics
