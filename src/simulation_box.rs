@@ -10,7 +10,7 @@ use crate::parameters::Cosmology;
 use crate::prelude::Float;
 use crate::prelude::Simulation;
 use crate::prelude::SubsweepPlugin;
-use crate::units::ComovingLengthOverH;
+use crate::units::ComovingLengthTimesH;
 use crate::units::Length;
 use crate::units::VecLength;
 
@@ -26,7 +26,7 @@ pub struct SimulationBox(pub Extent);
 #[serde(untagged)]
 pub enum SimulationBoxParameters {
     /// Comoving length
-    Comoving(ComovingLengthOverH),
+    Comoving(ComovingLengthTimesH),
     Normal(Length),
 }
 

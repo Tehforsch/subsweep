@@ -99,7 +99,7 @@ impl UnitReader for ArepoUnitReader {
     fn read_scale_factor(&self, set: &Dataset) -> f64 {
         let dimension = self.read_raw_dimension(set);
         let cosmology_scale_factor = if is_cosmological(&dimension) {
-            self.get_cosmological_factor(&dimension)
+            1.0 / self.get_cosmological_factor(&dimension)
         } else {
             1.0
         };

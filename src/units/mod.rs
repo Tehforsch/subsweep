@@ -27,7 +27,15 @@ unit_system!(
         unit (comoving_kiloparsec, "ckpc") = 1000 * comoving_parsec,
         unit (comoving_megaparsec, "cMpc") = 1000000 * comoving_parsec,
         unit (comoving_gigaparsec, "cGpc") = 1000000000 * comoving_parsec,
-        def ComovingLengthOverH = ComovingLength / H,
+        def ComovingLengthTimesH = ComovingLength * H,
+        // This notation is absolute garbage. 
+        // People write h^-1 to mean "divide this by h to get the physical quantity"
+        // which is against the basic laws of math. Its very inconsistent too. Arepo
+        // treats the "h_scaling" in its datasets properly (i.e. you need to multiply by
+        // h^-h_scaling to get rid of it.)
+        unit (weird_cosmological_notation_parsec, "cpc/h") = comoving_parsec * h,
+        unit (weird_cosmological_notation_kiloparsec, "ckpc/h") = comoving_kiloparsec * h,
+        unit (weird_cosmological_notation_megaparsec, "cMpc/h") = comoving_megaparsec * h,
         def H = { h: 1 },
         unit (h, "h") = H,
         def A = { a: 1 },
