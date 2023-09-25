@@ -66,19 +66,28 @@ where
         }
     }
 
-    pub fn exchange_all(&mut self, data: DataByRank<Vec<T>>) -> DataByRank<Vec<T>> {
+    pub fn exchange_all<U: AsRef<[T]>>(&mut self, data: DataByRank<U>) -> DataByRank<Vec<T>> {
         scope(|scope| {
             let mut guards = vec![];
             for (rank, items) in data.iter() {
                 debug_assert!(!self.pending_data[rank]);
                 self.pending_data[rank] = true;
-                let guard = self
-                    .communicator
-                    .immediate_send_vec_wait_guard(scope, rank, items);
+                let guard =
+                    self.communicator
+                        .immediate_send_vec_wait_guard(scope, rank, items.as_ref());
                 guards.extend(guard.into_iter());
             }
             self.receive_vec()
         })
+    }
+
+    pub fn exchange_same_for_all(&mut self, data: &[T]) -> DataByRank<Vec<T>> {
+        self.exchange_all(
+            self.other_ranks()
+                .iter()
+                .map(|rank| (*rank, data))
+                .collect(),
+        )
     }
 
     pub fn receive_vec(&mut self) -> DataByRank<Vec<T>> {

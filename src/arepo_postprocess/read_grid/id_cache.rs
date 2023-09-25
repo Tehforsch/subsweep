@@ -2,7 +2,6 @@ use mpi::traits::Equivalence;
 use subsweep::communication::DataByRank;
 use subsweep::communication::ExchangeCommunicator;
 use subsweep::communication::Rank;
-use subsweep::communication::SizedCommunicator;
 use subsweep::hash_map::HashMap;
 use subsweep::hash_map::HashSet;
 use subsweep::prelude::ParticleId;
@@ -50,12 +49,8 @@ impl IdCache {
         let mut request_comm: ExchangeCommunicator<IdLookupRequest> = ExchangeCommunicator::new();
         let mut reply_comm: ExchangeCommunicator<IdLookupReply> = ExchangeCommunicator::new();
         // For now: ask everyone everything
-        let mut outgoing_requests = DataByRank::empty();
         let requests: Vec<_> = self.requests.drain().collect();
-        for rank in request_comm.other_ranks() {
-            outgoing_requests.insert(rank, requests.clone());
-        }
-        let incoming_requests = request_comm.exchange_all(outgoing_requests);
+        let incoming_requests = request_comm.exchange_same_for_all(requests);
         let mut outgoing_replies = DataByRank::empty();
         for (rank, incoming_requests) in incoming_requests.iter() {
             let outgoing_replies_this_rank: Vec<_> = incoming_requests
