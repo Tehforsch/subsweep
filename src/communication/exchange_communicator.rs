@@ -104,3 +104,22 @@ where
         received_data
     }
 }
+
+pub fn divide_into_chunks_with_same_num_globally<T>(
+    items: &[T],
+    chunk_size: usize,
+) -> impl Iterator<Item = &[T]> + '_ {
+    let num_chunks = global_num_chunks(items.len(), chunk_size);
+    let mut chunk_iter = items.chunks(chunk_size);
+    (0..num_chunks).map(move |_| chunk_iter.next().unwrap_or(&[]))
+}
+
+fn global_num_chunks(num_elements: usize, chunk_size: usize) -> usize {
+    let mut comm: Communicator<usize> = Communicator::new();
+    let num_chunks = div_ceil(num_elements, chunk_size);
+    comm.all_gather_max(&num_chunks).unwrap()
+}
+
+fn div_ceil(x: usize, y: usize) -> usize {
+    (x / y) + if x.rem_euclid(y) > 0 { 1 } else { 0 }
+}

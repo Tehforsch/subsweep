@@ -1,4 +1,5 @@
 use mpi::traits::Equivalence;
+use subsweep::communication::exchange_communicator::divide_into_chunks_with_same_num_globally;
 use subsweep::communication::DataByRank;
 use subsweep::communication::ExchangeCommunicator;
 use subsweep::communication::Rank;
@@ -7,6 +8,8 @@ use subsweep::hash_map::HashSet;
 use subsweep::prelude::ParticleId;
 
 use super::UniqueParticleId;
+
+const CHUNK_SIZE: usize = 10000;
 
 #[derive(Equivalence, Clone, Debug, PartialEq, Eq, Hash)]
 struct IdLookupRequest {
@@ -46,11 +49,17 @@ impl IdCache {
     }
 
     pub fn perform_lookup(&mut self) {
+        let requests: Vec<_> = self.requests.drain().collect();
+        for chunk in divide_into_chunks_with_same_num_globally(&requests, CHUNK_SIZE) {
+            self.exchange_request_chunk(chunk);
+        }
+    }
+
+    fn exchange_request_chunk(&mut self, requests: &[IdLookupRequest]) {
         let mut request_comm: ExchangeCommunicator<IdLookupRequest> = ExchangeCommunicator::new();
         let mut reply_comm: ExchangeCommunicator<IdLookupReply> = ExchangeCommunicator::new();
         // For now: ask everyone everything
-        let requests: Vec<_> = self.requests.drain().collect();
-        let incoming_requests = request_comm.exchange_same_for_all(requests);
+        let incoming_requests = request_comm.exchange_same_for_all(&requests);
         let mut outgoing_replies = DataByRank::empty();
         for (rank, incoming_requests) in incoming_requests.iter() {
             let outgoing_replies_this_rank: Vec<_> = incoming_requests

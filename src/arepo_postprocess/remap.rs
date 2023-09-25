@@ -10,6 +10,7 @@ use log::debug;
 use log::info;
 use mpi::traits::Equivalence;
 use subsweep::communication::communicator::Communicator;
+use subsweep::communication::exchange_communicator::divide_into_chunks_with_same_num_globally;
 use subsweep::communication::CommunicatedOption;
 use subsweep::communication::DataByRank;
 use subsweep::communication::ExchangeCommunicator;
@@ -179,10 +180,7 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
             .iter()
             .map(|(entity, pos, _, _)| Identified::new(entity, SearchRequest { pos: pos.clone() }))
             .collect();
-        let num_chunks = global_num_chunks(requests.len(), CHUNK_SIZE);
-        let mut chunk_iter = requests.chunks(CHUNK_SIZE);
-        for _ in 0..num_chunks {
-            let chunk = chunk_iter.next().unwrap_or(&[]);
+        for chunk in divide_into_chunks_with_same_num_globally(&requests, CHUNK_SIZE) {
             self.exchange_request_chunk(chunk);
         }
         debug!("Finished remapping.");
@@ -375,16 +373,6 @@ fn pos_to_tree_coord(pos: &VecLength) -> [f64; 3] {
         pos.y().value_unchecked(),
         pos.z().value_unchecked(),
     ]
-}
-
-fn global_num_chunks(num_elements: usize, chunk_size: usize) -> usize {
-    let mut comm: Communicator<usize> = Communicator::new();
-    let num_chunks = div_ceil(num_elements, chunk_size);
-    comm.all_gather_max(&num_chunks).unwrap()
-}
-
-fn div_ceil(x: usize, y: usize) -> usize {
-    (x / y) + if x.rem_euclid(y) > 0 { 1 } else { 0 }
 }
 
 pub fn remap_abundances_and_energies_system(
