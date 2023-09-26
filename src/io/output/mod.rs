@@ -184,6 +184,33 @@ fn create_file_system(
     ));
 }
 
+#[cfg(feature = "parallel-hdf5")]
+fn open_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    use hdf5::file::LibraryVersion;
+    use hdf5::plist;
+    use hdf5::FileBuilder;
+    use mpi::traits::AsRaw;
+
+    let comm = MPI_UNIVERSE.world();
+    let fapl = plist::FileAccess::build()
+        .mpio(comm.as_raw(), None)
+        .libver_bounds(LibraryVersion::V18, LibraryVersion::V110)
+        .finish()
+        .unwrap();
+    let fcpl = plist::FileCreate::build().finish().unwrap();
+    FileBuilder::new()
+        .set_access_plist(&fapl)
+        .unwrap()
+        .set_create_plist(&fcpl)
+        .unwrap()
+        .open_rw(path)
+}
+
+#[cfg(not(feature = "parallel-hdf5"))]
+fn open_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    File::open_rw(path)
+}
+
 fn open_file_system(
     mut file: ResMut<OutputFiles>,
     parameters: Res<OutputParameters>,
@@ -195,7 +222,7 @@ fn open_file_system(
         &parameters,
         &output_timer,
         &assignment,
-        File::open_rw,
+        open_file_rw,
     ))
 }
 
@@ -291,7 +318,23 @@ fn write_dimension(dataset: &Dataset, identifier: &str, dimension: i32) {
     attr.write_scalar(&dimension).unwrap();
 }
 
+#[cfg(feature = "parallel-hdf5")]
+pub fn init_wait_for_other_ranks_system() {
+    // Make sure all ranks wait for the main rank to arrive who
+    // creates the datasets
+
+    let world = MPI_UNIVERSE.world();
+    world.barrier();
+}
+
+#[cfg(feature = "parallel-hdf5")]
+pub fn finish_wait_for_other_ranks_system() {}
+
+#[cfg(not(feature = "parallel-hdf5"))]
 pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
+    if **world_size > 10 {
+        log::warn!("Serial hdf5 output is very slow on many ranks, try compiling with the parallel-hdf5 feature enabled")
+    }
     let world = MPI_UNIVERSE.world();
     for i in 0..**world_size {
         if i < **rank as usize {
@@ -300,6 +343,7 @@ pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<Wo
     }
 }
 
+#[cfg(not(feature = "parallel-hdf5"))]
 pub fn finish_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
     let world = MPI_UNIVERSE.world();
     for i in 0..**world_size {
