@@ -24,7 +24,7 @@ bevy_utils = { version = "0.9.1", default-features = false, features = [] }
 bimap = "0.6.3"
 clap = {version = "3.2.25", features = ["derive"]}
 derive_more = "0.99.17"
-diman = { git = "https://github.com/tehforsch/diman", default-features = false, branch = "fixed-hdf5-version", features = ["mpi", "hdf5", "serde", "glam", "f64", "glam-dvec3", "glam-dvec2"] }
+diman = { git = "https://github.com/tehforsch/diman", default-features = false, branch = "fixed-hdf5-version-parallel", features = ["mpi", "hdf5", "serde", "glam", "f64", "glam-dvec3", "glam-dvec2"] }
 generational-arena = "0.2.9"
 glam = "0.24.1"
 # Hdf5 dependency is complicated:
