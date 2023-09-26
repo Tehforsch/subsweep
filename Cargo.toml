@@ -13,6 +13,7 @@ mpi_test = []
 2d = []
 3d = []
 vis = []
+parallel-hdf5 = ["hdf5/mpio"]
 
 [dependencies]
 array-init = "2.1.0"
@@ -27,8 +28,11 @@ derive_more = "0.99.17"
 diman = { git = "https://github.com/tehforsch/diman", default-features = false, branch = "fixed-hdf5-version", features = ["mpi", "hdf5", "serde", "glam", "f64", "glam-dvec3", "glam-dvec2"] }
 generational-arena = "0.2.9"
 glam = "0.24.1"
-# Keeping hdf5 pointed at master
-hdf5 = { branch = "master", git = "https://github.com/aldanor/hdf5-rust" }
+# Hdf5 dependency is complicated:
+# 1. 14.x versions of hdf5 are only supported on master (and not on 0.8.1).
+# 2. I have my own custom fork in order to fix panics with H5Pset_evict_on_close
+#    in parallel builds of hdf5. See https://github.com/aldanor/hdf5-rust/issues/259
+hdf5 = { branch = "master", git = "https://github.com/tehforsch/hdf5-rust" }
 kiddo = "2.1.1"
 lazy_static = "1.4.0"
 linked-hash-map = { version = "0.5.6", features = ["serde", "serde_impl"] }
