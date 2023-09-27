@@ -21,6 +21,7 @@ use crate::parameters::SimulationBox;
 use crate::particle::ParticlePlugin;
 use crate::performance::write_performance_data_system;
 use crate::performance::Performance;
+use crate::performance::TOTAL_RUNTIME_IDENTIFIER;
 use crate::prelude::Particles;
 use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
@@ -67,7 +68,7 @@ pub struct StopSimulationEvent;
 impl SubsweepPlugin for SimulationPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let mut perf = Performance::default();
-        perf.start("total");
+        perf.start(TOTAL_RUNTIME_IDENTIFIER);
         sim.insert_non_send_resource(perf)
             .add_parameter_type::<SimulationParameters>()
             .add_required_component::<Position>()
@@ -82,7 +83,6 @@ impl SubsweepPlugin for SimulationPlugin {
                 check_particles_in_simulation_box_system,
             )
             .add_startup_system_to_stage(StartupStages::ReadInput, show_num_cores_system)
-            .add_system_to_stage(Stages::Output, write_performance_data_system)
             .add_system_to_stage(Stages::Initial, show_time_system)
             .add_system_to_stage(Stages::AfterSweep, write_simulated_time_system)
             .add_system_to_stage(Stages::Final, exit_system)
@@ -101,6 +101,10 @@ impl SubsweepPlugin for SimulationPlugin {
             .add_plugin(OutputPlugin::<Attribute<Redshift>>::default())
             .add_plugin(OutputPlugin::<Attribute<LittleH>>::default());
         }
+    }
+
+    fn build_on_main_rank(&self, sim: &mut Simulation) {
+        sim.add_system_to_stage(Stages::Output, write_performance_data_system);
     }
 }
 
@@ -157,8 +161,8 @@ fn write_simulated_time_system(
     mut timers: NonSendMut<Performance>,
 ) {
     if stop_sim.iter().count() > 0 {
-        timers.stop("total");
-        let time_in_secs = timers.total("total").in_seconds();
+        timers.stop(TOTAL_RUNTIME_IDENTIFIER);
+        let time_in_secs = timers.total(TOTAL_RUNTIME_IDENTIFIER).in_seconds();
         info!("Run finished after {:.03} seconds.", time_in_secs);
     }
 }
