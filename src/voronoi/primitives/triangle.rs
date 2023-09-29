@@ -161,19 +161,20 @@ impl<V: Vector2d + Clone + Sub<Output = V> + std::fmt::Debug> TriangleData<V> {
     fn generic_contains(&self, p: V) -> Result<bool, PrecisionError> {
         let (r, s) = self.transform_point_to_canonical_coordinates(p);
         let values = [r.clone(), s.clone(), V::Float::one() - (r + s)];
-        let is_definitely_outside = values.iter().any(|value| {
-            Sign::try_from_val(value)
-                .map(|sign| {
-                    sign.panic_if_zero("Degenerate case of point on edge of triangle")
-                        .is_negative()
-                })
-                .unwrap_or(false)
+        dbg!(&values);
+        let signs = || values.iter().map(|value| Sign::try_from_val(value));
+        let is_definitely_outside = signs().any(|sign| {
+            if let Ok(sign) = sign {
+                sign.is_negative()
+            } else {
+                false
+            }
         });
         if is_definitely_outside {
             Ok(false)
         } else {
-            for value in values {
-                PrecisionError::check(&value)?;
+            for sign in signs() {
+                sign?.panic_if_zero("Degenerate case of point on edge of triangle");
             }
             Ok(true)
         }
