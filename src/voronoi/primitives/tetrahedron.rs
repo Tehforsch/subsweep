@@ -289,4 +289,39 @@ mod tests {
         assert_float_is_close(d, tetra.p3.distance(circumsphere_center));
         assert_float_is_close(d, tetra.p4.distance(circumsphere_center));
     }
+
+    #[test]
+    fn positively_oriented_precision() {
+        let p1 = Point3d::new(
+            8.304315728040103e2,
+            1.5326624395954854e3,
+            7.152848445527569e2,
+        );
+        let p2 = Point3d::new(
+            8.333373092643403e2,
+            1.526559671691492e3,
+            7.2375575000938654e2,
+        );
+        let p3 = Point3d::new(
+            8.308990882295372e2,
+            1.5329064734562154e3,
+            7.239976730694985e2,
+        );
+        let p4 = Point3d::new(
+            8.311159621179705e2,
+            1.531659342434437e3,
+            7.1988372898183815e2,
+        );
+        for scale_exponent in -30..30 {
+            let scale = 10.0f64.powi(scale_exponent);
+            let tetra = TetrahedronData {
+                p1: p1 * scale,
+                p2: p2 * scale,
+                p3: p3 * scale,
+                p4: p4 * scale,
+            };
+            // This test will fail if it is not performed in arbitrary precision arithmetic.
+            assert!(!tetra.is_positively_oriented());
+        }
+    }
 }
