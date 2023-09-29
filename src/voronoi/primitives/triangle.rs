@@ -161,7 +161,6 @@ impl<V: Vector2d + Clone + Sub<Output = V> + std::fmt::Debug> TriangleData<V> {
     fn generic_contains(&self, p: V) -> Result<bool, PrecisionError> {
         let (r, s) = self.transform_point_to_canonical_coordinates(p);
         let values = [r.clone(), s.clone(), V::Float::one() - (r + s)];
-        dbg!(&values);
         let signs = || values.iter().map(|value| Sign::try_from_val(value));
         let is_definitely_outside = signs().any(|sign| {
             if let Ok(sign) = sign {
