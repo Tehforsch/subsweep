@@ -78,7 +78,7 @@ fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFl
     arr
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Sign {
     Positive,
     Negative,
@@ -141,6 +141,18 @@ impl Sign {
     }
 }
 
+fn compare_result_against_entries<const D: usize>(
+    val: f64,
+    m: &Matrix<D, D, f64>,
+) -> Result<f64, PrecisionError> {
+    for row in m.iter() {
+        for entry in row.iter() {
+            PrecisionError::check(&(val / entry))?;
+        }
+    }
+    Ok(val)
+}
+
 // I would use a HRTB here, but these arent stable for non-lifetime bindings
 // as far as I can tell.
 fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
@@ -149,10 +161,13 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
     f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
 ) -> Sign {
     let val = f(m);
-    Sign::try_from_val(&val).unwrap_or_else(|_| {
-        let m = lift_matrix(m);
-        Sign::of(f_arbitrary_precision(m))
-    })
+    match compare_result_against_entries(val, &m) {
+        Ok(val) => Sign::of(val),
+        Err(_) => {
+            let m = lift_matrix(m);
+            Sign::of(f_arbitrary_precision(m))
+        }
+    }
 }
 
 pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
@@ -216,6 +231,10 @@ pub fn determinant5x5<F: Num>(
 #[cfg(test)]
 mod tests {
     use crate::test_utils::assert_float_is_close;
+    use crate::voronoi::math::utils::determinant3x3_sign;
+    use crate::voronoi::math::utils::lift_matrix;
+    use crate::voronoi::math::utils::Matrix;
+    use crate::voronoi::math::utils::Sign;
 
     // All of the following are completely made up matrices selected purely by the criteria of
     // not having zero determinant (I felt like that tested the code more somehow)
@@ -317,5 +336,30 @@ mod tests {
         assert_float_is_close(res[0], 5.0 / 3.0);
         assert_float_is_close(res[1], -5.0 / 3.0);
         assert_float_is_close(res[2], 5.0 / 3.0);
+    }
+
+    #[test]
+    fn matrix_with_zero_determinant_precision() {
+        let matrix: Matrix<3, 3, f64> = [
+            [
+                7.041529113171147e-9,
+                7.041529113171147e-9,
+                7.041529113171147e-9,
+            ],
+            [
+                -0.013275610231885723,
+                -4.576711463239629e-246,
+                7.041529113212176e-9,
+            ],
+            [
+                7.041529113171147e-9,
+                7.041529113171147e-9,
+                7.041529113171147e-9,
+            ],
+        ];
+        assert_eq!(
+            determinant3x3_sign(matrix),
+            Sign::of(super::determinant3x3(lift_matrix(matrix)))
+        );
     }
 }
