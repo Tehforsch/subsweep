@@ -14,6 +14,8 @@ use crate::units::Time;
 
 type Category = String;
 
+pub const TOTAL_RUNTIME_IDENTIFIER: &'static str = "total";
+
 #[derive(Debug, Serialize)]
 enum Result {
     RunTimes(Vec<Time>),
@@ -140,13 +142,19 @@ impl Performance {
     pub fn as_output(&self) -> LinkedHashMap<Category, Value> {
         let mut names: Vec<_> = self.results.iter().map(|(name, _)| name.clone()).collect();
         names.sort();
-        names
+        let mut results: LinkedHashMap<_, _> = names
             .into_iter()
             .map(move |name| {
                 let result = self.results[&name].as_value();
                 (name, result)
             })
-            .collect()
+            .collect();
+        if self.timers.contains_key(TOTAL_RUNTIME_IDENTIFIER) {
+            let mut result = Result::RunTimes(vec![]);
+            result.add_timing(self.timers[TOTAL_RUNTIME_IDENTIFIER].elapsed_time());
+            results.insert(TOTAL_RUNTIME_IDENTIFIER.to_string(), result.as_value());
+        };
+        results
     }
 }
 
