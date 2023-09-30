@@ -319,16 +319,19 @@ fn write_dimension(dataset: &Dataset, identifier: &str, dimension: i32) {
 }
 
 #[cfg(feature = "parallel-hdf5")]
-pub fn init_wait_for_other_ranks_system() {
+pub fn init_wait_for_other_ranks_system(mut perf: ResMut<crate::performance::Performance>) {
     // Make sure all ranks wait for the main rank to arrive who
     // creates the datasets
+    perf.start("output_dataset");
 
     let world = MPI_UNIVERSE.world();
     world.barrier();
 }
 
 #[cfg(feature = "parallel-hdf5")]
-pub fn finish_wait_for_other_ranks_system() {}
+pub fn finish_wait_for_other_ranks_system(mut perf: ResMut<crate::performance::Performance>) {
+    perf.stop("output_dataset");
+}
 
 #[cfg(not(feature = "parallel-hdf5"))]
 pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
