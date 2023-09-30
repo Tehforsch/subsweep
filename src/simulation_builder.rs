@@ -15,6 +15,7 @@ use simplelog::LevelPadding;
 use simplelog::TermLogger;
 use simplelog::TerminalMode;
 use simplelog::WriteLogger;
+use time::UtcOffset;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainPlugin;
@@ -198,8 +199,11 @@ impl SimulationBuilder {
         fs::create_dir_all(parent_folder)
             .unwrap_or_else(|_| panic!("Failed to create log directory at {:?}", parent_folder));
         let level = self.get_log_level(log_params.verbosity);
+        let local = chrono::Local::now();
+        let offset = local.offset();
         let config = ConfigBuilder::default()
             .set_level_padding(LevelPadding::Right)
+            .set_time_offset(UtcOffset::from_whole_seconds(offset.local_minus_utc()).unwrap())
             .set_thread_level(LevelFilter::Off)
             .build();
         if rank == 0 {
