@@ -31,6 +31,7 @@ pub struct SimulationBuilder {
     pub write_output: bool,
     pub log: bool,
     pub parameter_overrides: Vec<Override>,
+    pub write_logs_on_non_main_ranks: bool,
     base_communication: Option<BaseCommunicationPlugin>,
     require_parameter_file: bool,
 }
@@ -47,6 +48,7 @@ impl Default for SimulationBuilder {
             base_communication: None,
             parameter_overrides: vec![],
             require_parameter_file: false,
+            write_logs_on_non_main_ranks: false,
         }
     }
 }
@@ -135,6 +137,14 @@ impl SimulationBuilder {
         self
     }
 
+    pub fn write_logs_on_non_main_ranks(
+        &mut self,
+        write_logs_on_non_main_ranks: bool,
+    ) -> &mut Self {
+        self.write_logs_on_non_main_ranks = write_logs_on_non_main_ranks;
+        self
+    }
+
     pub fn build_with_sim<'a>(&self, sim: &'a mut Simulation) -> &'a mut Simulation {
         if let Some(ref file) = self.parameter_file_path {
             sim.add_parameters_from_file(file);
@@ -202,7 +212,7 @@ impl SimulationBuilder {
                 WriteLogger::new(level, config, File::create(output_file).unwrap()),
             ])
             .unwrap();
-        } else {
+        } else if self.write_logs_on_non_main_ranks {
             WriteLogger::init(level, config, File::create(output_file).unwrap()).unwrap();
         }
     }
