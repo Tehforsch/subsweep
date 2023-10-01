@@ -22,7 +22,6 @@ use super::primitives::Float;
 use crate::communication::Rank;
 use crate::dimension::Dimension;
 use crate::domain::IntoKey;
-use crate::extent::get_extent;
 use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashMap;
@@ -101,6 +100,7 @@ pub struct Triangulation<D: DDimension> {
     pub points: PointList<D>,
     pub(super) point_kinds: HashMap<PointIndex, PointKind>,
     last_insertion_tetra: Option<TetraIndex>,
+    extent: Extent<Point<D>>,
 }
 
 pub trait Delaunay<D: DDimension> {
@@ -139,7 +139,7 @@ where
         iter: impl Iterator<Item = (T, Point<D>)>,
     ) -> (Self, BiMap<T, PointIndex>) {
         let points: Vec<_> = iter.collect();
-        let extent = get_extent(points.iter().map(|(_, p)| *p)).unwrap();
+        let extent = Extent::from_points(points.iter().map(|(_, p)| *p)).unwrap();
         Self::construct(points, &extent)
     }
 
@@ -163,6 +163,7 @@ where
             points: PointList::<D>::default(),
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
+            extent: tetra.extent(),
         };
         triangulation.insert_basic_tetra(tetra);
         triangulation
@@ -308,7 +309,7 @@ pub(super) mod tests {
     use super::Triangulation;
     use crate::dimension::ThreeD;
     use crate::dimension::TwoD;
-    use crate::extent::get_extent;
+    use crate::extent::Extent;
     use crate::voronoi::test_utils::TestDimension;
 
     #[instantiate_tests(<TwoD>)]
@@ -324,7 +325,7 @@ pub(super) mod tests {
         Triangulation<D>: Delaunay<D>,
     {
         let points = D::get_example_point_set(0);
-        let extent = get_extent(points.iter().copied()).unwrap();
+        let extent = Extent::from_points(points.iter().copied()).unwrap();
         let mut triangulation = Triangulation::all_encompassing(&extent);
         for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);

@@ -253,7 +253,6 @@ mod tests {
     use crate::dimension::Dimension;
     use crate::dimension::Point;
     use crate::dimension::WrapType;
-    use crate::extent::get_extent;
     use crate::extent::Extent;
     use crate::prelude::ParticleId;
     use crate::test_utils::assert_float_is_close_high_error;
@@ -409,7 +408,7 @@ mod tests {
         let full_constructor = Constructor::new(points.iter().cloned());
         // Now construct the triangulation of the first set using imported
         // halo particles imported from the other set.
-        let extent = get_extent(points.iter().map(|(_, p)| p).cloned()).unwrap();
+        let extent = Extent::from_points(points.iter().map(|(_, p)| p).cloned()).unwrap();
         let sub_constructor = Constructor::construct_from_iter(
             local_points.iter().cloned(),
             TestRadiusSearch {

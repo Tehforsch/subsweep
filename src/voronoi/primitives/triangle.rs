@@ -17,6 +17,7 @@ use crate::voronoi::delaunay::dimension::DFaceData;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::face_info::FaceInfo;
+use crate::voronoi::delaunay::Point;
 use crate::voronoi::math::precision_types::PrecisionError;
 use crate::voronoi::math::precision_types::PrecisionPoint2d;
 use crate::voronoi::math::precision_types::PrecisionPoint3d;
@@ -207,7 +208,11 @@ impl DTetraData for TriangleData<Point2d> {
         Self { p1, p2, p3 }
     }
 
-    fn contains(&self, p: Point2d) -> bool {
+    fn extent(&self) -> Extent<Point<Self::Dimension>> {
+        Extent::from_points([self.p1, self.p2, self.p3].into_iter()).unwrap()
+    }
+
+    fn contains(&self, p: Point<Self::Dimension>, extent: &Extent<Point<Self::Dimension>>) -> bool {
         self.f64_contains(p)
             .unwrap_or_else(|_| self.arbitrary_precision_contains(p))
     }
@@ -414,6 +419,7 @@ mod tests {
     use super::EdgeIdentifier;
     use super::IntersectionType;
     use super::TriangleData;
+    use crate::extent::Extent;
     use crate::voronoi::delaunay::dimension::DTetraData;
     use crate::voronoi::primitives::Point2d;
     use crate::voronoi::primitives::Point3d;
@@ -480,15 +486,18 @@ mod tests {
             p2: Point2d::new(4.0, 2.0),
             p3: Point2d::new(2.0, 6.0),
         };
-        assert!(triangle.contains(Point2d::new(3.0, 3.0)));
+        let extent =
+            Extent::<Point2d>::from_points([triangle.p1, triangle.p2, triangle.p3].into_iter())
+                .unwrap();
+        assert!(triangle.contains(Point2d::new(3.0, 3.0), &extent));
 
-        assert!(!triangle.contains(Point2d::new(1.0, 1.0)));
-        assert!(!triangle.contains(Point2d::new(2.0, 9.0)));
-        assert!(!triangle.contains(Point2d::new(9.0, 2.0)));
-        assert!(!triangle.contains(Point2d::new(-1.0, 2.0)));
+        assert!(!triangle.contains(Point2d::new(1.0, 1.0), &extent));
+        assert!(!triangle.contains(Point2d::new(2.0, 9.0), &extent));
+        assert!(!triangle.contains(Point2d::new(9.0, 2.0), &extent));
+        assert!(!triangle.contains(Point2d::new(-1.0, 2.0), &extent));
 
         let should_panic = |p| {
-            std::panic::catch_unwind(|| triangle.contains(p)).unwrap_err();
+            std::panic::catch_unwind(|| triangle.contains(p, &extent)).unwrap_err();
         };
 
         should_panic(Point2d::new(2.0, 2.0));

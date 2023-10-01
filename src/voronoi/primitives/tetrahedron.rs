@@ -11,6 +11,7 @@ use crate::dimension::ThreeD;
 use crate::extent::Extent;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
+use crate::voronoi::delaunay::Point;
 use crate::voronoi::math::precision_types::PrecisionError;
 use crate::voronoi::math::precision_types::PrecisionPoint3d;
 use crate::voronoi::math::traits::Cross3d;
@@ -143,14 +144,21 @@ impl DTetraData for TetrahedronData {
         Self { p1, p2, p3, p4 }
     }
 
+    fn extent(&self) -> Extent<Point<Self::Dimension>> {
+        Extent::from_points([self.p1, self.p2, self.p3, self.p4].into_iter()).unwrap()
+    }
+
     #[rustfmt::skip]
-    fn contains(&self, point: Point3d) -> bool {
+    fn contains(&self, point: Point3d, extent: &Extent<Point<Self::Dimension>>) -> bool {
         self.f64_contains(point).unwrap_or_else(|_| self.arbitrary_precision_contains(point))
     }
 
     /// This only works if the point is outside of the tetrahedron
     fn distance_to_point(&self, p: Point3d) -> Float {
-        if self.contains(p) {
+        if self
+            .f64_contains(p)
+            .unwrap_or_else(|_| self.arbitrary_precision_contains(p))
+        {
             return 0.0;
         }
         let a1 = TriangleData {

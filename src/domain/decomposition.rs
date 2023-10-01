@@ -215,9 +215,7 @@ impl<K: Key> KeyCounter<K> {
             + Clone
             + Copy,
     {
-        use crate::extent::get_extent;
-
-        let extent = get_extent(points.iter().copied()).unwrap();
+        let extent = Extent::from_points(points.iter().copied()).unwrap();
         Self::from_points_and_extent(points.into_iter(), &extent)
     }
 
