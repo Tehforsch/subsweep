@@ -461,6 +461,7 @@ impl Triangulation<ThreeD> {
 mod tests {
     use super::Tetra;
     use crate::dimension::ThreeD;
+    use crate::extent::Extent;
     use crate::hash_map::HashMap;
     use crate::voronoi::delaunay::dimension::DFace;
     use crate::voronoi::delaunay::dimension::DTetra;
@@ -557,6 +558,7 @@ mod tests {
             Point3d::new(1.0, -1.0, 0.0),
             Point3d::new(-0.3, -0.3, 1.0),
         ];
+        let extent = Extent::from_points(points.iter().cloned()).unwrap();
         let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
 
         let mut triangulation = Triangulation::<ThreeD> {
@@ -565,6 +567,7 @@ mod tests {
             points: point_list,
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
+            extent,
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,
@@ -672,6 +675,7 @@ mod tests {
             Point3d::new(1.0, -1.0, 0.0),
             Point3d::new(-0.3, -0.3, 1.0),
         ];
+        let extent = Extent::from_points(points.iter().cloned()).unwrap();
         let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
 
         let mut triangulation = Triangulation::<ThreeD> {
@@ -680,6 +684,7 @@ mod tests {
             points: point_list,
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
+            extent,
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,

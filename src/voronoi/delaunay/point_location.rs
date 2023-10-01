@@ -42,7 +42,7 @@ where
     Triangulation<D>: Delaunay<D>,
 {
     let tetra_data = t.get_tetra_data(tetra);
-    tetra_data.contains(point)
+    tetra_data.contains(point, &t.extent)
 }
 
 fn find_breadth_first<D>(
