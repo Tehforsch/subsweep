@@ -127,6 +127,15 @@ impl TetrahedronData {
             .unwrap()
             && points_are_on_same_side_of_triangle(point, p4, (p1, p2, p3)).unwrap()
     }
+
+    fn remap(&self, extent: &Extent<Point3d>) -> Self {
+        Self {
+            p1: remap_point(self.p1, extent),
+            p2: remap_point(self.p2, extent),
+            p3: remap_point(self.p3, extent),
+            p4: remap_point(self.p4, extent),
+        }
+    }
 }
 
 impl DTetraData for TetrahedronData {
@@ -150,7 +159,9 @@ impl DTetraData for TetrahedronData {
 
     #[rustfmt::skip]
     fn contains(&self, point: Point3d, extent: &Extent<Point<Self::Dimension>>) -> bool {
-        self.f64_contains(point).unwrap_or_else(|_| self.arbitrary_precision_contains(point))
+        let remapped = self.remap(extent);
+        let remapped_point = remap_point(point, extent);
+        remapped.f64_contains(remapped_point).unwrap_or_else(|_| self.arbitrary_precision_contains(point))
     }
 
     /// This only works if the point is outside of the tetrahedron
@@ -191,7 +202,6 @@ impl DTetraData for TetrahedronData {
     #[rustfmt::skip]
     fn circumcircle_contains(&self, point: Point3d) -> bool {
         // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
-        debug_assert!(self.is_positively_oriented());
         let a = self.p1;
         let b = self.p2;
         let c = self.p3;
@@ -209,13 +219,14 @@ impl DTetraData for TetrahedronData {
     }
 
     #[rustfmt::skip]
-    fn is_positively_oriented(&self) -> bool {
+    fn is_positively_oriented(&self, extent: &Extent<Point3d>) -> bool {
+        let r = self.remap(extent);
         determinant4x4_sign(
             [
-                [1.0, self.p1.x, self.p1.y, self.p1.z],
-                [1.0, self.p2.x, self.p2.y, self.p2.z],
-                [1.0, self.p3.x, self.p3.y, self.p3.z],
-                [1.0, self.p4.x, self.p4.y, self.p4.z],
+                [1.0, r.p1.x, r.p1.y, r.p1.z],
+                [1.0, r.p2.x, r.p2.y, r.p2.z],
+                [1.0, r.p3.x, r.p3.y, r.p3.z],
+                [1.0, r.p4.x, r.p4.y, r.p4.z],
             ]
         ).panic_if_zero("Zero volume tetra encountered").is_positive()
     }
@@ -262,6 +273,11 @@ impl DTetraData for TetrahedronData {
     }
 }
 
+fn remap_point(point: Point3d, extent: &Extent<Point3d>) -> Point3d {
+    debug_assert!(extent.contains(&point));
+    (point - extent.min) * (1.0 / extent.side_lengths())
+}
+
 fn points_are_on_same_side_of_triangle<P: Vector3d + Cross3d + Sub<Output = P> + Dot + Clone>(
     p1: P,
     p2: P,
@@ -280,6 +296,7 @@ fn points_are_on_same_side_of_triangle<P: Vector3d + Cross3d + Sub<Output = P> +
 mod tests {
     use super::super::Point3d;
     use super::TetrahedronData;
+    use crate::extent::Extent;
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::delaunay::dimension::DTetraData;
 
@@ -328,8 +345,11 @@ mod tests {
                 p3: p3 * scale,
                 p4: p4 * scale,
             };
+            let extent =
+                Extent::from_points([p1 * scale, p2 * scale, p3 * scale, p4 * scale].into_iter())
+                    .unwrap();
             // This test will fail if it is not performed in arbitrary precision arithmetic.
-            assert!(!tetra.is_positively_oriented());
+            assert!(!tetra.is_positively_oriented(&extent));
         }
     }
 }

@@ -233,7 +233,6 @@ impl DTetraData for TriangleData<Point2d> {
     #[rustfmt::skip]
     fn circumcircle_contains(&self, point: Point2d) -> bool {
         // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
-        debug_assert!(self.is_positively_oriented());
         let a = self.p1;
         let b = self.p2;
         let c = self.p3;
@@ -249,7 +248,7 @@ impl DTetraData for TriangleData<Point2d> {
     }
 
     #[rustfmt::skip]
-    fn is_positively_oriented(&self) -> bool {
+    fn is_positively_oriented(&self, extent: &Extent<Point2d>) -> bool {
         let sign = determinant3x3_sign(
             [
                 [1.0, self.p1.x, self.p1.y],

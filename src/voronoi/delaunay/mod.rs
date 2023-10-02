@@ -205,7 +205,9 @@ where
 
     fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
         let tetra = self.make_positively_oriented_tetra(tetra);
-        debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
+        debug_assert!(self
+            .get_tetra_data(&tetra)
+            .is_positively_oriented(&self.extent));
         let tetra_index = self.tetras.insert(tetra);
         self.update_connections_in_existing_tetra(tetra_index);
         tetra_index
