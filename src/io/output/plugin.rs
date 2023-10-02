@@ -90,6 +90,18 @@ where
                 Timer::update_system
                     .after(close_file_system)
                     .with_run_criteria(Timer::run_criterion),
+            )
+            .add_system_to_stage(
+                Stages::Output,
+                init_wait_for_other_ranks_system
+                    .before(open_file_system)
+                    .with_run_criteria(Timer::run_criterion),
+            )
+            .add_system_to_stage(
+                Stages::Output,
+                finish_wait_for_other_ranks_system
+                    .after(close_file_system)
+                    .with_run_criteria(Timer::run_criterion),
             );
     }
 
@@ -99,14 +111,6 @@ where
         );
         if is_desired_field::<T>(sim) {
             sim.add_system_to_stage(
-                Stages::Output,
-                init_wait_for_other_ranks_system.before(open_file_system),
-            )
-            .add_system_to_stage(
-                Stages::Output,
-                finish_wait_for_other_ranks_system.after(close_file_system),
-            )
-            .add_system_to_stage(
                 Stages::Output,
                 T::write_system()
                     .after(open_file_system)
