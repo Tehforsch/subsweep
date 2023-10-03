@@ -16,8 +16,10 @@ use crate::chemistry::Chemistry;
 use crate::communication::communicator::Communicator;
 use crate::components;
 use crate::components::IonizedHydrogenFraction;
+use crate::components::Mass;
 use crate::prelude::Particles;
 use crate::units::Dimensionless;
+use crate::units::Temperature;
 use crate::units::Time;
 
 #[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
@@ -27,6 +29,10 @@ pub struct HydrogenIonizationMassAverage(pub Dimensionless);
 #[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
 #[name = "hydrogen_ionization_volume_average"]
 pub struct HydrogenIonizationVolumeAverage(pub Dimensionless);
+
+#[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
+#[name = "temperature_mass_average"]
+pub struct TemperatureMassAverage(pub Temperature);
 
 #[derive(Serialize, Clone, Named)]
 #[name = "num_particles_at_timestep_levels"]
@@ -66,6 +72,18 @@ pub fn hydrogen_ionization_volume_average_system(
         ratio.in_percent()
     );
     writer.send(HydrogenIonizationMassAverage(ratio));
+}
+
+pub fn temperature_mass_average_system(
+    query: Particles<(&components::Temperature, &Mass)>,
+    mut writer: EventWriter<TemperatureMassAverage>,
+) {
+    let mass_weighted_temperature =
+        compute_global_sum(query.iter().map(|(temp, mass)| **temp * **mass));
+    let total_mass = compute_global_sum(query.iter().map(|(_, mass)| **mass));
+    let average = mass_weighted_temperature / total_mass;
+    debug!("Mass av. temperature: {:.5} K", average.in_kelvins());
+    writer.send(TemperatureMassAverage(average));
 }
 
 fn compute_global_sum<T>(i: impl Iterator<Item = T>) -> T
