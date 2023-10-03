@@ -112,6 +112,7 @@ impl SubsweepPlugin for SweepPlugin {
             .add_derived_component::<IonizedHydrogenFraction>()
             .add_derived_component::<Source>()
             .add_derived_component::<Density>()
+            .add_derived_component::<components::Mass>()
             .add_derived_component::<components::PhotonRate>()
             .add_derived_component::<components::Temperature>()
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
