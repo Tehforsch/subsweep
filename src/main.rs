@@ -34,7 +34,9 @@ use subsweep::simulation_plugin::remove_components_system;
 use subsweep::source_systems::set_source_terms_system;
 use subsweep::source_systems::Sources;
 use subsweep::source_systems::TotalLuminosity;
+use subsweep::sweep::grid::Cell;
 use subsweep::units::Dimensionless;
+use subsweep::units::Mass;
 use subsweep::units::PhotonRate;
 use subsweep::units::SourceRate;
 use subsweep::units::Temperature;
@@ -97,6 +99,10 @@ fn main() {
             StartupStages::InsertDerivedComponents,
             insert_missing_components_system
                 .after(set_initial_ionized_fraction_from_electron_abundance_system),
+        )
+        .add_startup_system_to_stage(
+            StartupStages::InsertComponentsAfterGrid,
+            compute_cell_mass_system,
         )
         .add_startup_system_to_stage(StartupStages::Remap, remap_abundances_and_energies_system)
         .add_startup_system_to_stage(
@@ -166,6 +172,8 @@ fn insert_missing_components_system(
             components::PhotonRate(PhotonRate::zero()),
             components::Source(SourceRate::zero()),
             components::Temperature(temperature),
+            // Will be computed later
+            components::Mass(Mass::zero()),
         ));
     }
 }
@@ -184,6 +192,16 @@ fn insert_initial_ionized_fraction_system(
             .insert((components::IonizedHydrogenFraction(
                 ionized_hydrogen_fraction,
             ),));
+    }
+}
+
+fn compute_cell_mass_system(
+    mut commands: Commands,
+    particles: Particles<(Entity, &Density, &Cell)>,
+) {
+    for (entity, dens, cell) in particles.iter() {
+        let mass = **dens * cell.volume();
+        commands.entity(entity).insert(components::Mass(mass));
     }
 }
 
