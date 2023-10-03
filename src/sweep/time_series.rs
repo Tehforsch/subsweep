@@ -1,5 +1,4 @@
-use std::iter::Sum;
-use std::ops::Div;
+use std::iter;
 
 use bevy_ecs::prelude::*;
 use derive_custom::Named;
@@ -15,13 +14,11 @@ use super::Sweep;
 use super::SweepParameters;
 use crate::chemistry::Chemistry;
 use crate::communication::communicator::Communicator;
-use crate::components::Density;
+use crate::components;
 use crate::components::IonizedHydrogenFraction;
 use crate::prelude::Particles;
 use crate::units::Dimensionless;
-use crate::units::Mass;
 use crate::units::Time;
-use crate::units::Volume;
 
 #[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
 #[name = "hydrogen_ionization_mass_average"]
@@ -42,56 +39,43 @@ struct NumAtLevel {
     timestep: Time,
 }
 
-pub fn hydrogen_ionization_volume_average_system(
-    query: Particles<(&Cell, &Density, &IonizedHydrogenFraction)>,
-    mut writer: EventWriter<HydrogenIonizationVolumeAverage>,
-) {
-    let comm = Communicator::new_custom_tag(10000);
-    let average = compute_global_average::<Volume>(
-        comm,
-        query,
-        |(cell, _, frac)| **frac * cell.volume(),
-        |(cell, _, _)| cell.volume(),
-    );
-    debug!(
-        "Volume av. ionized hydrogen fraction: {:.2}%",
-        average.in_percent()
-    );
-    writer.send(HydrogenIonizationVolumeAverage(average));
-}
-
 pub fn hydrogen_ionization_mass_average_system(
-    query: Particles<(&Cell, &Density, &IonizedHydrogenFraction)>,
+    query: Particles<(&components::Mass, &IonizedHydrogenFraction)>,
     mut writer: EventWriter<HydrogenIonizationMassAverage>,
 ) {
-    let comm = Communicator::new_custom_tag(10001);
-    let average = compute_global_average::<Mass>(
-        comm,
-        query,
-        |(cell, density, frac)| **frac * cell.volume() * **density,
-        |(cell, density, _)| cell.volume() * **density,
-    );
+    let ionized_mass = compute_global_sum(query.iter().map(|(mass, frac)| **mass * **frac));
+    let total_mass = compute_global_sum(query.iter().map(|(mass, _)| **mass));
+    let ratio = ionized_mass / total_mass;
     debug!(
         "Mass av. ionized hydrogen fraction: {:.2}%",
-        average.in_percent()
+        ratio.in_percent()
     );
-    writer.send(HydrogenIonizationMassAverage(average));
+    writer.send(HydrogenIonizationMassAverage(ratio));
 }
 
-fn compute_global_average<T>(
-    mut comm: Communicator<T>,
-    query: Particles<(&Cell, &Density, &IonizedHydrogenFraction)>,
-    fn_1: impl Fn((&Cell, &Density, &IonizedHydrogenFraction)) -> T,
-    fn_2: impl Fn((&Cell, &Density, &IonizedHydrogenFraction)) -> T,
-) -> Dimensionless
+pub fn hydrogen_ionization_volume_average_system(
+    query: Particles<(&Cell, &IonizedHydrogenFraction)>,
+    mut writer: EventWriter<HydrogenIonizationMassAverage>,
+) {
+    let ionized_volume =
+        compute_global_sum(query.iter().map(|(cell, frac)| cell.volume() * **frac));
+    let total_volume = compute_global_sum(query.iter().map(|(cell, _)| cell.volume()));
+    let ratio = ionized_volume / total_volume;
+    debug!(
+        "Volume av. ionized hydrogen fraction: {:.2}%",
+        ratio.in_percent()
+    );
+    writer.send(HydrogenIonizationMassAverage(ratio));
+}
+
+fn compute_global_sum<T>(i: impl Iterator<Item = T>) -> T
 where
-    T: Equivalence + Sum<T> + Clone + Div<T, Output = Dimensionless> + 'static,
+    T: iter::Sum<T> + Clone + Equivalence + 'static,
 {
-    let ionized: T = query.iter().map(fn_1).sum();
-    let total: T = query.iter().map(fn_2).sum();
-    let ionized: T = comm.all_gather_sum(&ionized);
-    let total: T = comm.all_gather_sum(&total);
-    ionized / total
+    let mut comm = Communicator::new();
+    let local_value: T = i.sum();
+    let value: T = comm.all_gather_sum(&local_value);
+    value
 }
 
 pub(super) fn num_particles_at_timestep_levels_system<C: Chemistry>(
