@@ -49,6 +49,11 @@ pub struct Source(pub crate::units::SourceRate);
 pub struct PhotonRate(pub crate::units::PhotonRate);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
+#[name = "photoionization_rate"]
+#[repr(transparent)]
+pub struct PhotoionizationRate(pub crate::units::PhotonRateDensity);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
 #[name = "heating_rate"]
 #[repr(transparent)]
 pub struct HeatingRate(pub Quotient<EnergyDensity, Time>);
@@ -98,6 +103,7 @@ impl_to_dataset!(Mass, units::Mass, true);
 impl_to_dataset!(IonizedHydrogenFraction, units::Dimensionless, false);
 impl_to_dataset!(Temperature, units::Temperature, false);
 impl_to_dataset!(PhotonRate, units::SourceRate, false);
+impl_to_dataset!(PhotoionizationRate, units::PhotonRateDensity, false);
 impl_to_dataset!(HeatingRate, units::HeatingRate, false);
 impl_to_dataset!(Timestep, units::Time, false);
 impl_to_dataset!(IonizationTime, units::Time, false);

@@ -17,8 +17,10 @@ use crate::communication::communicator::Communicator;
 use crate::components;
 use crate::components::IonizedHydrogenFraction;
 use crate::components::Mass;
+use crate::parameters::SimulationBox;
 use crate::prelude::Particles;
 use crate::units::Dimensionless;
+use crate::units::PhotonRate;
 use crate::units::Temperature;
 use crate::units::Time;
 
@@ -34,6 +36,14 @@ pub struct HydrogenIonizationVolumeAverage(pub Dimensionless);
 #[name = "temperature_mass_average"]
 pub struct TemperatureMassAverage(pub Temperature);
 
+#[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
+#[name = "photoionization_rate_volume_average"]
+pub struct PhotoionizationRateVolumeAverage(pub PhotonRate);
+
+#[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
+#[name = "weighted_photoionization_rate_volume_average"]
+pub struct WeightedPhotoionizationRateVolumeAverage(pub PhotonRate);
+
 #[derive(Serialize, Clone, Named)]
 #[name = "num_particles_at_timestep_levels"]
 pub struct NumParticlesAtTimestepLevels(Vec<NumAtLevel>);
@@ -45,45 +55,90 @@ struct NumAtLevel {
     timestep: Time,
 }
 
-pub fn hydrogen_ionization_mass_average_system(
-    query: Particles<(&components::Mass, &IonizedHydrogenFraction)>,
-    mut writer: EventWriter<HydrogenIonizationMassAverage>,
+pub fn compute_time_series_system(
+    mass_av_frac: Particles<(&components::Mass, &IonizedHydrogenFraction)>,
+    volume_av_frac: Particles<(&Cell, &IonizedHydrogenFraction)>,
+    mut mass_av_frac_writer: EventWriter<HydrogenIonizationMassAverage>,
+    mut volume_av_frac_writer: EventWriter<HydrogenIonizationVolumeAverage>,
+    temperature_mass_av: Particles<(&components::Temperature, &Mass)>,
+    mut temperature_mass_av_writer: EventWriter<TemperatureMassAverage>,
+    photoionization_rate: Particles<(&components::PhotoionizationRate, &Cell)>,
+    mut photoionization_rate_writer: EventWriter<PhotoionizationRateVolumeAverage>,
+    weighted_photoionization_rate: Particles<(
+        &components::PhotoionizationRate,
+        &IonizedHydrogenFraction,
+        &Cell,
+    )>,
+    mut weighted_photoionization_rate_writer: EventWriter<WeightedPhotoionizationRateVolumeAverage>,
+    box_: Res<SimulationBox>,
 ) {
-    let ionized_mass = compute_global_sum(query.iter().map(|(mass, frac)| **mass * **frac));
-    let total_mass = compute_global_sum(query.iter().map(|(mass, _)| **mass));
+    let ionized_mass = compute_global_sum(mass_av_frac.iter().map(|(mass, frac)| **mass * **frac));
+    let total_mass = compute_global_sum(mass_av_frac.iter().map(|(mass, _)| **mass));
     let ratio = ionized_mass / total_mass;
     debug!(
-        "Mass av. ionized hydrogen fraction: {:.2}%",
+        "{:<41}: {:.2}%",
+        "Mass av. ionized hydrogen fraction",
         ratio.in_percent()
     );
-    writer.send(HydrogenIonizationMassAverage(ratio));
-}
+    mass_av_frac_writer.send(HydrogenIonizationMassAverage(ratio));
 
-pub fn hydrogen_ionization_volume_average_system(
-    query: Particles<(&Cell, &IonizedHydrogenFraction)>,
-    mut writer: EventWriter<HydrogenIonizationMassAverage>,
-) {
-    let ionized_volume =
-        compute_global_sum(query.iter().map(|(cell, frac)| cell.volume() * **frac));
-    let total_volume = compute_global_sum(query.iter().map(|(cell, _)| cell.volume()));
+    let ionized_volume = compute_global_sum(
+        volume_av_frac
+            .iter()
+            .map(|(cell, frac)| cell.volume() * **frac),
+    );
+    let total_volume = compute_global_sum(volume_av_frac.iter().map(|(cell, _)| cell.volume()));
     let ratio = ionized_volume / total_volume;
     debug!(
-        "Volume av. ionized hydrogen fraction: {:.2}%",
+        "{:<41}: {:.2}%",
+        "Volume av. ionized hydrogen fraction",
         ratio.in_percent()
     );
-    writer.send(HydrogenIonizationMassAverage(ratio));
-}
+    volume_av_frac_writer.send(HydrogenIonizationVolumeAverage(ratio));
 
-pub fn temperature_mass_average_system(
-    query: Particles<(&components::Temperature, &Mass)>,
-    mut writer: EventWriter<TemperatureMassAverage>,
-) {
-    let mass_weighted_temperature =
-        compute_global_sum(query.iter().map(|(temp, mass)| **temp * **mass));
-    let total_mass = compute_global_sum(query.iter().map(|(_, mass)| **mass));
+    let mass_weighted_temperature = compute_global_sum(
+        temperature_mass_av
+            .iter()
+            .map(|(temp, mass)| **temp * **mass),
+    );
+    let total_mass = compute_global_sum(temperature_mass_av.iter().map(|(_, mass)| **mass));
     let average = mass_weighted_temperature / total_mass;
-    debug!("Mass av. temperature: {:.5} K", average.in_kelvins());
-    writer.send(TemperatureMassAverage(average));
+    debug!(
+        "{:<41}: {:.5} K",
+        "Mass av. temperature",
+        average.in_kelvins()
+    );
+    temperature_mass_av_writer.send(TemperatureMassAverage(average));
+
+    let volume_weighted_rate = compute_global_sum(
+        photoionization_rate
+            .iter()
+            .map(|(rate, cell)| **rate * cell.volume()),
+    );
+    let total_volume =
+        compute_global_sum(photoionization_rate.iter().map(|(_, cell)| cell.volume()));
+    let average = volume_weighted_rate / total_volume * box_.volume();
+    debug!(
+        "{:<41}: {:.5e} s^-1",
+        "Volume av. photoionization rate",
+        average.in_photons_per_second()
+    );
+    photoionization_rate_writer.send(PhotoionizationRateVolumeAverage(average));
+
+    let volume_weighted_rate = compute_global_sum(
+        weighted_photoionization_rate
+            .iter()
+            .map(|(rate, ion_frac, cell)| **rate * **ion_frac * cell.volume()),
+    );
+    let total_volume =
+        compute_global_sum(photoionization_rate.iter().map(|(_, cell)| cell.volume()));
+    let average = volume_weighted_rate / total_volume * box_.volume();
+    debug!(
+        "{:<41}: {:.5e} s^-1",
+        "Volume av. weighted photoionization rate",
+        average.in_photons_per_second()
+    );
+    weighted_photoionization_rate_writer.send(WeightedPhotoionizationRateVolumeAverage(average));
 }
 
 fn compute_global_sum<T>(i: impl Iterator<Item = T>) -> T

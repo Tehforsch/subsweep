@@ -16,6 +16,7 @@ use crate::units::InverseTemperature;
 use crate::units::Length;
 use crate::units::NumberDensity;
 use crate::units::PhotonRate;
+use crate::units::PhotonRateDensity;
 use crate::units::Quantity;
 use crate::units::Rate;
 use crate::units::Temperature;
@@ -49,6 +50,7 @@ pub struct HydrogenOnlySpecies {
     pub ionized_hydrogen_fraction: Dimensionless,
     pub temperature: Temperature,
     pub heating_rate: HeatingRate,
+    pub photoionization_rate: PhotonRateDensity,
     pub timestep: Time,
 }
 
@@ -61,6 +63,7 @@ impl HydrogenOnlySpecies {
             ionized_hydrogen_fraction,
             temperature,
             heating_rate: HeatingRate::zero(),
+            photoionization_rate: PhotonRateDensity::zero(),
             timestep: Time::zero(),
         }
     }
@@ -105,11 +108,13 @@ impl Chemistry for HydrogenOnly {
             rate,
             scale_factor: self.scale_factor,
             heating_rate: HeatingRate::zero(),
+            photoionization_rate: PhotonRateDensity::zero(),
         };
         let timestep_used = solver.perform_timestep(timestep, self.timestep_safety_factor);
         site.species.temperature = solver.temperature;
         site.species.ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
         site.species.heating_rate = solver.heating_rate;
+        site.species.photoionization_rate = solver.photoionization_rate;
         site.species.timestep = timestep_used.time;
         // Timescale of change
         timestep_used
@@ -129,6 +134,7 @@ pub(crate) struct Solver {
     pub rate: PhotonRate,
     pub scale_factor: Dimensionless,
     pub heating_rate: HeatingRate,
+    pub photoionization_rate: PhotonRateDensity,
 }
 
 // All numbers taken from Rosdahl et al (2015)
@@ -329,7 +335,7 @@ impl Solver {
         fraction_ionized_hydrogen_atoms / timestep
     }
 
-    fn ionized_fraction_change(&self, timestep: Time) -> Dimensionless {
+    fn ionized_fraction_change(&mut self, timestep: Time) -> Dimensionless {
         // See A23 of Rosdahl et al
         let nh = self.hydrogen_number_density();
         let ne = self.electron_number_density();
@@ -337,7 +343,9 @@ impl Solver {
         let dalpha = self.case_b_recombination_rate_derivative();
         let beta = self.collisional_ionization_rate();
         let dbeta = self.collisional_ionization_rate_derivative();
-        let c: Rate = beta * ne + self.photoionization_rate(timestep);
+        let photoionization_rate = self.photoionization_rate(timestep);
+        self.photoionization_rate = photoionization_rate / self.volume;
+        let c: Rate = beta * ne + photoionization_rate;
         let mu = self.mu();
         let d: Rate = alpha * ne;
         let xhii = self.ionized_hydrogen_fraction;
@@ -464,6 +472,7 @@ mod tests {
     use crate::units::NumberDensity;
     use crate::units::PhotonFlux;
     use crate::units::PhotonRate;
+    use crate::units::PhotonRateDensity;
     use crate::units::Quantity;
     use crate::units::Rate;
     use crate::units::Temperature;
@@ -505,6 +514,7 @@ mod tests {
                 length: Length::zero(),
                 rate: Rate::zero(),
                 heating_rate: HeatingRate::zero(),
+                photoionization_rate: PhotonRateDensity::zero(),
                 scale_factor: Dimensionless::dimensionless(1.0),
             };
             let analytical = derivative(&solver);
@@ -644,6 +654,7 @@ mod tests {
                 rate,
                 scale_factor: Dimensionless::dimensionless(1.0),
                 heating_rate: HeatingRate::zero(),
+                photoionization_rate: PhotonRateDensity::zero(),
             }
         }
 
@@ -946,6 +957,7 @@ mod tests {
             rate: PhotonRate::photons_per_second(466103097665666700000000000000000000000000000.0),
             scale_factor: 8.35028211377591.into(),
             heating_rate: HeatingRate::zero(),
+            photoionization_rate: PhotonRateDensity::zero(),
         };
         s.perform_timestep(Time::megayears(1.0), 0.1.into());
     }
@@ -965,6 +977,7 @@ mod tests {
             rate: PhotonRate::photons_per_second(466103097665666700000000000000000000000000000.0),
             scale_factor: 8.35028211377591.into(),
             heating_rate: HeatingRate::zero(),
+            photoionization_rate: PhotonRateDensity::zero(),
         };
         s.perform_timestep(Time::megayears(1.0), 0.1.into());
     }
