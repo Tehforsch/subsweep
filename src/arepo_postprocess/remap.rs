@@ -1,3 +1,4 @@
+use std::iter;
 use std::iter::once;
 use std::path::Path;
 use std::path::PathBuf;
@@ -79,12 +80,17 @@ impl From<FullRemapData> for RemapData {
     }
 }
 
-fn read_remap_data(files: Vec<PathBuf>, cosmology: &Cosmology) -> Vec<FullRemapData> {
-    let reader = Reader::split_between_ranks(files.iter());
+fn read_remap_data(
+    last_snap_files: Vec<PathBuf>,
+    first_snap_files: Vec<PathBuf>,
+    cosmology: &Cosmology,
+) -> Vec<FullRemapData> {
+    let initial_files_reader = Reader::split_between_ranks(last_snap_files.iter());
+    let reader = Reader::split_between_ranks(first_snap_files.iter());
     let unit_reader = DefaultUnitReader;
     let descriptor =
         make_descriptor::<Position, _>(&unit_reader, "position", DatasetShape::OneDimensional);
-    let position = reader.read_dataset(descriptor);
+    let position = initial_files_reader.read_dataset(descriptor);
     let descriptor = make_descriptor::<IonizedHydrogenFraction, _>(
         &unit_reader,
         "ionized_hydrogen_fraction",
@@ -97,8 +103,8 @@ fn read_remap_data(files: Vec<PathBuf>, cosmology: &Cosmology) -> Vec<FullRemapD
         DatasetShape::OneDimensional,
     );
     let temperature = reader.read_dataset(descriptor);
-    let scale_factor = read_attribute::<ScaleFactor>(&files[0]);
-    let little_h = read_attribute::<LittleH>(&files[0]);
+    let scale_factor = read_attribute::<ScaleFactor>(&last_snap_files[0]);
+    let little_h = read_attribute::<LittleH>(&last_snap_files[0]);
     let remap_cosmology = Cosmology::Cosmological {
         a: *scale_factor.0,
         h: *little_h.0,
@@ -139,7 +145,8 @@ struct Remapper<'a, 'w, 's> {
 
 impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
     fn new(
-        files: Vec<PathBuf>,
+        last_snap_files: Vec<PathBuf>,
+        first_snap_files: Vec<PathBuf>,
         cosmology: &Cosmology,
         particles: &'a mut Particles<
             'w,
@@ -154,7 +161,7 @@ impl<'a, 'w, 's> Remapper<'a, 'w, 's> {
         box_: &SimulationBox,
         decomposition: &DecompositionState,
     ) -> Self {
-        let data = read_remap_data(files, cosmology);
+        let data = read_remap_data(last_snap_files, first_snap_files, cosmology);
         let comm1 = ExchangeCommunicator::<Identified<SearchRequest>>::new();
         let comm2 = ExchangeCommunicator::<Identified<SearchReply>>::new();
         let data = exchange_according_to_domain_decomposition(data, box_, decomposition);
@@ -310,31 +317,39 @@ fn exchange_extents(data: &[FullRemapData]) -> DataByRank<Extent> {
 }
 
 fn get_files_of_last_snapshot(path: &Path) -> Vec<PathBuf> {
-    let last_snapshot = get_highest_number_snapshot_dir(path);
+    let last_snapshot = get_highest_or_lowest_snapshot_dir(path, true);
     get_file_or_all_hdf5_files_in_path_if_dir(&last_snapshot)
 }
 
-fn get_highest_number_snapshot_dir(path: &Path) -> PathBuf {
-    path.read_dir()
-        .unwrap()
-        .flat_map(|entry| {
-            let entry = entry.unwrap();
-            if entry.path().is_dir() {
-                Some(entry.path())
-            } else {
-                None
-            }
-        })
-        .max_by_key(|snap_folder| {
-            snap_folder
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .parse::<usize>()
-                .unwrap_or_else(|_| panic!("Unexpected folder in snapshot dir: {snap_folder:?}"))
-        })
-        .expect("No snapshot folder exists. Failed to remap")
+fn get_files_of_first_snapshot(path: &Path) -> Vec<PathBuf> {
+    let first_snapshot = get_highest_or_lowest_snapshot_dir(path, false);
+    get_file_or_all_hdf5_files_in_path_if_dir(&first_snapshot)
+}
+
+fn get_highest_or_lowest_snapshot_dir(path: &Path, max: bool) -> PathBuf {
+    let paths = path.read_dir().unwrap().flat_map(|entry| {
+        let entry = entry.unwrap();
+        if entry.path().is_dir() {
+            Some(entry.path())
+        } else {
+            None
+        }
+    });
+    let parse = |snap_folder: &PathBuf| {
+        snap_folder
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .parse::<usize>()
+            .unwrap_or_else(|_| panic!("Unexpected folder in snapshot dir: {snap_folder:?}"))
+    };
+    if max {
+        paths.max_by_key(parse)
+    } else {
+        paths.min_by_key(parse)
+    }
+    .expect("No snapshot folder exists. Failed to remap")
 }
 
 fn get_scale_factor_difference(
@@ -387,14 +402,25 @@ pub fn remap_abundances_and_energies_system(
         &'static mut IonizedHydrogenFraction,
     )>,
 ) {
-    let files = match &parameters.remap_from {
+    let last_snap = match &parameters.remap_from {
         Some(path) => get_files_of_last_snapshot(path),
         None => return,
     };
+    let first_snap = match &parameters.remap_from {
+        Some(path) => get_files_of_first_snapshot(path),
+        None => return,
+    };
     info!("Remapping abundances and temperatures.");
-    for file in files.iter() {
+    for file in last_snap.iter() {
         debug!("Remapping from file: {file:?}");
     }
-    let mut remapper = Remapper::new(files, &cosmology, &mut particles, &box_, &decomposition);
+    let mut remapper = Remapper::new(
+        last_snap,
+        first_snap,
+        &cosmology,
+        &mut particles,
+        &box_,
+        &decomposition,
+    );
     remapper.remap();
 }
