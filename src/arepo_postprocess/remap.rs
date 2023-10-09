@@ -85,24 +85,24 @@ fn read_remap_data(
     first_snap_files: Vec<PathBuf>,
     cosmology: &Cosmology,
 ) -> Vec<FullRemapData> {
-    let initial_files_reader = Reader::split_between_ranks(last_snap_files.iter());
-    let reader = Reader::split_between_ranks(first_snap_files.iter());
+    let first_snap_reader = Reader::split_between_ranks(first_snap_files.iter());
+    let last_snap_reader = Reader::split_between_ranks(last_snap_files.iter());
     let unit_reader = DefaultUnitReader;
     let descriptor =
         make_descriptor::<Position, _>(&unit_reader, "position", DatasetShape::OneDimensional);
-    let position = initial_files_reader.read_dataset(descriptor);
+    let position = first_snap_reader.read_dataset(descriptor);
     let descriptor = make_descriptor::<IonizedHydrogenFraction, _>(
         &unit_reader,
         "ionized_hydrogen_fraction",
         DatasetShape::OneDimensional,
     );
-    let ionized_hydrogen_fraction = reader.read_dataset(descriptor);
+    let ionized_hydrogen_fraction = last_snap_reader.read_dataset(descriptor);
     let descriptor = make_descriptor::<Temperature, _>(
         &unit_reader,
         "temperature",
         DatasetShape::OneDimensional,
     );
-    let temperature = reader.read_dataset(descriptor);
+    let temperature = last_snap_reader.read_dataset(descriptor);
     let scale_factor = read_attribute::<ScaleFactor>(&last_snap_files[0]);
     let little_h = read_attribute::<LittleH>(&last_snap_files[0]);
     let remap_cosmology = Cosmology::Cosmological {
@@ -413,6 +413,9 @@ pub fn remap_abundances_and_energies_system(
     info!("Remapping abundances and temperatures.");
     for file in last_snap.iter() {
         debug!("Remapping from file: {file:?}");
+    }
+    for file in first_snap.iter() {
+        debug!("Remapping position data from file: {file:?}");
     }
     let mut remapper = Remapper::new(
         last_snap,
