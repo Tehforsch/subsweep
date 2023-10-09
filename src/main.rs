@@ -171,7 +171,7 @@ fn insert_missing_components_system(
         commands.entity(entity).insert((
             components::PhotonRate(PhotonRate::zero()),
             components::Source(SourceRate::zero()),
-            components::Temperature(temperature),
+            components::Temperature(Temperature::kelvins(100.0)),
             // Will be computed later
             components::Mass(Mass::zero()),
         ));

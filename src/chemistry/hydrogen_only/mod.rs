@@ -176,46 +176,34 @@ impl Solver {
     }
 
     fn case_b_recombination_rate(&self) -> VolumeRate {
-        let lambda = Temperature::kelvins(315614.0) / self.temperature;
-        VolumeRate::centimeters_cubed_per_s(
-            2.753e-14 * lambda.powf(1.5) / (1.0 + (lambda / 2.74).powf(0.407)).powf(2.242),
-        )
+        // let lambda = Temperature::kelvins(315614.0) / self.temperature;
+        // VolumeRate::centimeters_cubed_per_s(
+        //     2.753e-14 * lambda.powf(1.5) / (1.0 + (lambda / 2.74).powf(0.407)).powf(2.242),
+        // )
+        VolumeRate::centimeters_cubed_per_s(2.59e-13)
     }
 
     fn case_b_recombination_rate_derivative(&self) -> Quotient<VolumeRate, Temperature> {
-        let lambda = (Temperature::kelvins(315614.0) / self.temperature).value();
-        let dlambda_dt: InverseTemperature =
-            -Temperature::kelvins(315614.0) / self.temperature.squared();
-        let c1 = 1.0 / 2.74;
-        let c2 = 0.407;
-        let c3 = 2.242;
-        let d = -lambda.sqrt()
-            * ((c1 * lambda).powf(c2) + 1.0).powf(-c3 - 1.0)
-            * (c2 * c3 * (c1 * lambda).powf(c2) - 1.5 * (c1 * lambda).powf(c2) - 1.5);
-
-        VolumeRate::centimeters_cubed_per_s(2.753e-14 * d) * dlambda_dt
+        Quotient::<VolumeRate, Temperature>::zero()
     }
 
     fn case_b_recombination_cooling_rate(&self) -> HeatingTerm {
-        let lambda = Temperature::kelvins(315614.0) / self.temperature;
-        HeatingTerm::ergs_centimeters_cubed_per_s(
-            3.435e-30 * self.temperature.in_kelvins() * lambda.powf(1.97)
-                / (1.0 + (lambda / 2.25).powf(0.376)).powf(3.72),
-        )
+        HeatingTerm::zero()
     }
 
     fn case_b_recombination_cooling_rate_derivative(&self) -> Quotient<HeatingTerm, Temperature> {
-        let c1 = 315614.0;
-        let c2 = 1.97;
-        let c3 = 0.376;
-        let c4 = 3.72;
-        let c5 = 2.25;
-        let t = self.temperature.in_kelvins();
-        let derivative = (1.0 + (c1 / (c5 * t)).powf(c3)).powf(-1.0 - c4)
-            * (1.0 - 1.0 * c2 + (1.0 - 1.0 * c2 + c3 * c4) * (c1 / (c5 * t)).powf(c3))
-            * (c1 / t).powf(c2);
-        HeatingTerm::ergs_centimeters_cubed_per_s(3.435e-30 * derivative)
-            / Temperature::kelvins(1.0)
+        Quotient::<HeatingTerm, Temperature>::zero()
+        // let c1 = 315614.0;
+        // let c2 = 1.97;
+        // let c3 = 0.376;
+        // let c4 = 3.72;
+        // let c5 = 2.25;
+        // let t = self.temperature.in_kelvins();
+        // let derivative = (1.0 + (c1 / (c5 * t)).powf(c3)).powf(-1.0 - c4)
+        //     * (1.0 - 1.0 * c2 + (1.0 - 1.0 * c2 + c3 * c4) * (c1 / (c5 * t)).powf(c3))
+        //     * (c1 / t).powf(c2);
+        // HeatingTerm::ergs_centimeters_cubed_per_s(3.435e-30 * derivative)
+        //     / Temperature::kelvins(1.0)
     }
 
     fn collisional_ionization_rate(&self) -> VolumeRate {
@@ -323,9 +311,10 @@ impl Solver {
     }
 
     fn photoheating_rate(&self, timestep: Time) -> HeatingRate {
-        let num_ionized_hydrogen_atoms = self.num_newly_ionized_hydrogen_atoms(timestep);
-        let ionization_density = num_ionized_hydrogen_atoms / self.volume;
-        ionization_density * (PHOTON_AVERAGE_ENERGY - RYDBERG_CONSTANT) / timestep
+        // let num_ionized_hydrogen_atoms = self.num_newly_ionized_hydrogen_atoms(timestep);
+        // let ionization_density = num_ionized_hydrogen_atoms / self.volume;
+        // ionization_density * (PHOTON_AVERAGE_ENERGY - RYDBERG_CONSTANT) / timestep
+        HeatingRate::zero()
     }
 
     fn photoionization_rate(&self, timestep: Time) -> Rate {
@@ -370,7 +359,7 @@ impl Solver {
         timestep: Time,
         timestep_safety_factor: Dimensionless,
     ) -> Result<Timescale, TimestepCriterionViolated> {
-        let temperature_change = self.temperature_change(timestep);
+        let temperature_change = Temperature::zero();
         let ideal_temperature_timestep = Timescale::temperature(update(
             &mut self.temperature,
             temperature_change,

@@ -735,7 +735,7 @@ pub fn initialize_sweep_test_components_system(
             // It really doesnt matter as long as nothing crashes
             Density(Mass::kilograms(1.0e-10) / Volume::cubic_centimeters(1.0)),
             components::IonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
-            components::Temperature(Temperature::kelvins(1000.0)),
+            components::Temperature(Temperature::kelvins(100.0)),
             Source(SourceRate::zero()),
             PhotonRate(units::PhotonRate::zero()),
         ));
