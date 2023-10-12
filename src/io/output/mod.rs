@@ -128,6 +128,15 @@ pub fn compute_output_rank_assignment_system(
     commands.insert_resource(rank_assignment);
 }
 
+fn get_snapshot_dir(parameters: &OutputParameters, output_timer: &Timer) -> PathBuf {
+    let snapshot_name = format!(
+        "{:0snap_padding$}",
+        output_timer.snapshot_num(),
+        snap_padding = parameters.snapshot_padding
+    );
+    parameters.snapshot_dir().join(&snapshot_name)
+}
+
 fn get_output_files(
     parameters: &OutputParameters,
     output_timer: &Timer,
@@ -135,12 +144,7 @@ fn get_output_files(
     get_file: impl Fn(PathBuf) -> hdf5::Result<File>,
 ) -> Vec<FileWithRegion> {
     let file_index_padding = ((parameters.num_output_files as f64).log10().floor() as usize) + 1;
-    let snapshot_name = format!(
-        "{:0snap_padding$}",
-        output_timer.snapshot_num(),
-        snap_padding = parameters.snapshot_padding
-    );
-    let snapshot_dir = parameters.snapshot_dir().join(&snapshot_name);
+    let snapshot_dir = get_snapshot_dir(parameters, output_timer);
     make_snapshot_dir(&snapshot_dir);
     assignment
         .regions
@@ -180,12 +184,12 @@ fn create_file_system(
         &parameters,
         &output_timer,
         &assignment,
-        File::create,
+        create_file_rw,
     ));
 }
 
 #[cfg(feature = "parallel-hdf5")]
-fn open_file_rw(path: PathBuf) -> hdf5::Result<File> {
+fn create_file_rw(path: PathBuf) -> hdf5::Result<File> {
     use hdf5::file::LibraryVersion;
     use hdf5::plist;
     use hdf5::FileBuilder;
@@ -202,6 +206,25 @@ fn open_file_rw(path: PathBuf) -> hdf5::Result<File> {
         .set_access_plist(&fapl)
         .unwrap()
         .set_create_plist(&fcpl)
+        .unwrap()
+        .create(path)
+}
+
+#[cfg(feature = "parallel-hdf5")]
+fn open_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    use hdf5::file::LibraryVersion;
+    use hdf5::plist;
+    use hdf5::FileBuilder;
+    use mpi::raw::AsRaw;
+
+    let comm = MPI_UNIVERSE.world();
+    let fapl = plist::FileAccess::build()
+        .mpio(comm.as_raw(), None)
+        .libver_bounds(LibraryVersion::V18, LibraryVersion::V110)
+        .finish()
+        .unwrap();
+    FileBuilder::new()
+        .set_access_plist(&fapl)
         .unwrap()
         .open_rw(path)
 }
@@ -279,6 +302,7 @@ pub fn write_dataset_to_files<T: ToDataset>(
             .expect("Failed to write slice to dataset");
         data_start += region.size();
     }
+    assert_eq!(data_start, data.len());
 }
 
 pub fn add_dimension_attrs<T: ToDataset>(dataset: &Dataset) {

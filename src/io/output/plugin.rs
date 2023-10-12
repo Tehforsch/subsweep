@@ -76,6 +76,14 @@ where
             )
             .add_startup_system(Timer::initialize_system)
             .add_system_to_stage(
+                Stages::CreateOutputFiles,
+                create_file_system.with_run_criteria(Timer::run_criterion),
+            )
+            .add_system_to_stage(
+                Stages::CreateOutputFiles,
+                close_file_system.with_run_criteria(Timer::run_criterion),
+            )
+            .add_system_to_stage(
                 Stages::Output,
                 open_file_system.with_run_criteria(Timer::run_criterion),
             )
@@ -117,32 +125,8 @@ where
                     .before(close_file_system)
                     .label(OutputSystemLabel)
                     .ambiguous_with(OutputSystemLabel),
-            );
-        }
-    }
-
-    fn build_once_on_main_rank(&self, sim: &mut Simulation) {
-        sim.insert_resource(RegisteredFields::default());
-        sim.add_startup_system(make_output_dirs_system)
-            .add_startup_system(write_used_parameters_system.after(make_output_dirs_system))
-            .add_startup_system(verify_output_fields_system)
-            .add_system_to_stage(
-                Stages::CreateOutputFiles,
-                create_file_system.with_run_criteria(Timer::run_criterion),
             )
             .add_system_to_stage(
-                Stages::CreateOutputFiles,
-                close_file_system.with_run_criteria(Timer::run_criterion),
-            );
-    }
-
-    fn build_on_main_rank(&self, sim: &mut Simulation) {
-        sim.get_resource_mut::<RegisteredFields>()
-            .unwrap()
-            .0
-            .push(T::name().into());
-        if is_desired_field::<T>(sim) {
-            sim.add_system_to_stage(
                 Stages::CreateOutputFiles,
                 T::create_system()
                     .after(create_file_system)
@@ -151,6 +135,20 @@ where
                     .ambiguous_with(OutputSystemLabel),
             );
         }
+    }
+
+    fn build_once_on_main_rank(&self, sim: &mut Simulation) {
+        sim.insert_resource(RegisteredFields::default());
+        sim.add_startup_system(make_output_dirs_system)
+            .add_startup_system(write_used_parameters_system.after(make_output_dirs_system))
+            .add_startup_system(verify_output_fields_system);
+    }
+
+    fn build_on_main_rank(&self, sim: &mut Simulation) {
+        sim.get_resource_mut::<RegisteredFields>()
+            .unwrap()
+            .0
+            .push(T::name().into());
     }
 }
 
