@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_ecs::schedule::SystemDescriptor;
+use bevy_ecs::schedule::SystemLabelId;
 use log::error;
 
 use super::close_file_system;
@@ -23,9 +24,12 @@ use crate::prelude::Stages;
 use crate::prelude::StartupStages;
 use crate::simulation::SubsweepPlugin;
 
+#[derive(Named)]
+pub struct OutputDataMarker;
+
 pub(crate) trait IntoOutputSystem {
     fn write_system() -> SystemDescriptor;
-    fn create_system() -> SystemDescriptor;
+    fn create_system() -> (SystemDescriptor, SystemLabelId);
 }
 
 #[derive(SystemLabel)]
@@ -68,13 +72,15 @@ fn add_file_creation_systems(sim: &mut Simulation) {
 
 fn add_dataset_creation_system_if_desired<T: IntoOutputSystem + Named>(sim: &mut Simulation) {
     if is_desired_field::<T>(sim) {
-        sim.add_system_to_stage(
+        let (system, label) = T::create_system();
+        sim.add_well_ordered_system_to_stage::<_, OutputDataMarker>(
             Stages::CreateOutputFiles,
-            T::create_system()
+            system
                 .after(create_file_system)
                 .before(close_file_system)
                 .label(OutputSystemLabel)
                 .ambiguous_with(OutputSystemLabel),
+            label,
         );
     }
 }

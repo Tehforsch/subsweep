@@ -1,5 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_ecs::schedule::SystemDescriptor;
+use bevy_ecs::schedule::SystemLabelId;
+use bevy_ecs::system::AsSystemLabel;
 use hdf5::H5Type;
 
 use super::output::create_dataset_system;
@@ -30,11 +32,12 @@ impl<T: ToDataset + Component> IntoOutputSystem for T {
             .ambiguous_with(DatasetSystemAmbiguityLabel)
     }
 
-    fn create_system() -> SystemDescriptor {
-        create_dataset_system::<T>
-            .with_run_criteria(Timer::dataset_write_run_criterion::<T>)
-            .into_descriptor()
-            .label(DatasetSystemAmbiguityLabel)
-            .ambiguous_with(DatasetSystemAmbiguityLabel)
+    fn create_system() -> (SystemDescriptor, SystemLabelId) {
+        (
+            create_dataset_system::<T>
+                .with_run_criteria(Timer::dataset_write_run_criterion::<T>)
+                .into_descriptor(),
+            create_dataset_system::<T>.as_system_label(),
+        )
     }
 }
