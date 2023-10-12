@@ -169,9 +169,11 @@ fn create_file_system(
     parameters: Res<OutputParameters>,
     output_timer: Res<Timer>,
     num_particles_total: Res<NumParticlesTotal>,
+    _rank: Res<WorldRank>,
 ) {
     info!("Writing snapshot: {}", &output_timer.snapshot_num());
     assert!(file.0.is_none());
+
     // In order to know how large the datasets are that we need to create:
     // Compute rank assignment for one rank.
     let assignment = get_rank_output_assignment_for_rank(
@@ -189,7 +191,7 @@ fn create_file_system(
 }
 
 #[cfg(feature = "parallel-hdf5")]
-fn create_file_rw(path: PathBuf) -> hdf5::Result<File> {
+fn make_mpi_file_builder() -> hdf5::FileBuilder {
     use hdf5::file::LibraryVersion;
     use hdf5::plist;
     use hdf5::FileBuilder;
@@ -201,32 +203,29 @@ fn create_file_rw(path: PathBuf) -> hdf5::Result<File> {
         .libver_bounds(LibraryVersion::V18, LibraryVersion::V110)
         .finish()
         .unwrap();
+    let mut builder = FileBuilder::new();
+    builder.set_access_plist(&fapl).unwrap();
+    builder
+}
+
+#[cfg(feature = "parallel-hdf5")]
+fn create_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    use hdf5::plist;
+
+    let mut builder = make_mpi_file_builder();
     let fcpl = plist::FileCreate::build().finish().unwrap();
-    FileBuilder::new()
-        .set_access_plist(&fapl)
-        .unwrap()
-        .set_create_plist(&fcpl)
-        .unwrap()
-        .create(path)
+    builder.set_create_plist(&fcpl).unwrap().create(path)
 }
 
 #[cfg(feature = "parallel-hdf5")]
 fn open_file_rw(path: PathBuf) -> hdf5::Result<File> {
-    use hdf5::file::LibraryVersion;
-    use hdf5::plist;
-    use hdf5::FileBuilder;
-    use mpi::raw::AsRaw;
+    let builder = make_mpi_file_builder();
+    builder.open_rw(path)
+}
 
-    let comm = MPI_UNIVERSE.world();
-    let fapl = plist::FileAccess::build()
-        .mpio(comm.as_raw(), None)
-        .libver_bounds(LibraryVersion::V18, LibraryVersion::V110)
-        .finish()
-        .unwrap();
-    FileBuilder::new()
-        .set_access_plist(&fapl)
-        .unwrap()
-        .open_rw(path)
+#[cfg(not(feature = "parallel-hdf5"))]
+fn create_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    File::create(path)
 }
 
 #[cfg(not(feature = "parallel-hdf5"))]

@@ -55,6 +55,30 @@ impl<T> OutputPlugin<T> {
     }
 }
 
+fn add_file_creation_systems(sim: &mut Simulation) {
+    sim.add_system_to_stage(
+        Stages::CreateOutputFiles,
+        create_file_system.with_run_criteria(Timer::run_criterion),
+    )
+    .add_system_to_stage(
+        Stages::CreateOutputFiles,
+        close_file_system.with_run_criteria(Timer::run_criterion),
+    );
+}
+
+fn add_dataset_creation_system_if_desired<T: IntoOutputSystem + Named>(sim: &mut Simulation) {
+    if is_desired_field::<T>(sim) {
+        sim.add_system_to_stage(
+            Stages::CreateOutputFiles,
+            T::create_system()
+                .after(create_file_system)
+                .before(close_file_system)
+                .label(OutputSystemLabel)
+                .ambiguous_with(OutputSystemLabel),
+        );
+    }
+}
+
 impl<T: 'static> SubsweepPlugin for OutputPlugin<T>
 where
     T: IntoOutputSystem + Named,
@@ -75,14 +99,6 @@ where
                 compute_output_rank_assignment_system,
             )
             .add_startup_system(Timer::initialize_system)
-            .add_system_to_stage(
-                Stages::CreateOutputFiles,
-                create_file_system.with_run_criteria(Timer::run_criterion),
-            )
-            .add_system_to_stage(
-                Stages::CreateOutputFiles,
-                close_file_system.with_run_criteria(Timer::run_criterion),
-            )
             .add_system_to_stage(
                 Stages::Output,
                 open_file_system.with_run_criteria(Timer::run_criterion),
@@ -111,6 +127,9 @@ where
                     .after(close_file_system)
                     .with_run_criteria(Timer::run_criterion),
             );
+
+        #[cfg(feature = "parallel-hdf5")]
+        add_file_creation_systems(sim);
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
@@ -125,16 +144,10 @@ where
                     .before(close_file_system)
                     .label(OutputSystemLabel)
                     .ambiguous_with(OutputSystemLabel),
-            )
-            .add_system_to_stage(
-                Stages::CreateOutputFiles,
-                T::create_system()
-                    .after(create_file_system)
-                    .before(close_file_system)
-                    .label(OutputSystemLabel)
-                    .ambiguous_with(OutputSystemLabel),
             );
         }
+        #[cfg(feature = "parallel-hdf5")]
+        add_dataset_creation_system_if_desired::<T>(sim);
     }
 
     fn build_once_on_main_rank(&self, sim: &mut Simulation) {
@@ -142,6 +155,8 @@ where
         sim.add_startup_system(make_output_dirs_system)
             .add_startup_system(write_used_parameters_system.after(make_output_dirs_system))
             .add_startup_system(verify_output_fields_system);
+        #[cfg(not(feature = "parallel-hdf5"))]
+        add_file_creation_systems(sim);
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
@@ -149,6 +164,8 @@ where
             .unwrap()
             .0
             .push(T::name().into());
+        #[cfg(not(feature = "parallel-hdf5"))]
+        add_dataset_creation_system_if_desired::<T>(sim);
     }
 }
 
