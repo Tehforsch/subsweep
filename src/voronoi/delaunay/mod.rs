@@ -153,19 +153,15 @@ where
 
     fn all_encompassing(extent: &Extent<Point<D>>) -> Self {
         let initial_tetra_data = TetraData::<D>::all_encompassing(extent);
-        Triangulation::from_basic_tetra(initial_tetra_data)
-    }
-
-    fn from_basic_tetra(tetra: TetraData<D>) -> Self {
         let mut triangulation = Triangulation {
             tetras: TetraList::<D>::default(),
             faces: FaceList::<D>::default(),
             points: PointList::<D>::default(),
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
-            extent: tetra.extent(),
+            extent: initial_tetra_data.extent(),
         };
-        triangulation.insert_basic_tetra(tetra);
+        triangulation.insert_basic_tetra(initial_tetra_data);
         triangulation
     }
 
@@ -204,7 +200,6 @@ where
     }
 
     fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
-        let tetra = self.make_positively_oriented_tetra(tetra);
         debug_assert!(self
             .get_tetra_data(&tetra)
             .is_positively_oriented(&self.extent));
