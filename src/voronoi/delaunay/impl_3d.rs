@@ -87,6 +87,7 @@ impl Triangulation<ThreeD> {
     ) -> TetrasRequiringCheck {
         let ta = self.tetras.remove(ta_index).unwrap();
         let tb = self.tetras.remove(tb_index).unwrap();
+        let flipped = ta.find_face(shared_face).flipped;
         let shared_face = self.faces.remove(shared_face).unwrap();
         let f1 = self.faces.insert(Face {
             p1,
@@ -106,6 +107,11 @@ impl Triangulation<ThreeD> {
         let mut make_tetra = |pa, pb, fa, fb, other_point| {
             let f1 = *ta.find_face_opposite(other_point);
             let f2 = *tb.find_face_opposite(other_point);
+            let (p1, p2, f1, f2) = if !flipped {
+                (p2, p1, f2, f1)
+            } else {
+                (p1, p2, f1, f2)
+            };
             self.insert_positively_oriented_tetra(self.make_nice_tetra(
                 Tetra {
                     p1,
@@ -118,12 +124,12 @@ impl Triangulation<ThreeD> {
                     f3: FaceInfo {
                         face: fb,
                         opposing: None,
-                        flipped: false,
+                        flipped: flipped,
                     },
                     f4: FaceInfo {
                         face: fa,
                         opposing: None,
-                        flipped: false,
+                        flipped: !flipped,
                     },
                 },
                 true,
