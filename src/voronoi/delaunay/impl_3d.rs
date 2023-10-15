@@ -58,14 +58,17 @@ impl Triangulation<ThreeD> {
             f1: FaceInfo {
                 face: f_a,
                 opposing: None,
+                flipped: todo!(),
             },
             f2: FaceInfo {
                 face: f_b,
                 opposing: None,
+                flipped: todo!(),
             },
             f3: FaceInfo {
                 face: f_c,
                 opposing: None,
+                flipped: todo!(),
             },
             f4: old_face,
         })
@@ -111,10 +114,12 @@ impl Triangulation<ThreeD> {
                 f3: FaceInfo {
                     face: fb,
                     opposing: None,
+                    flipped: todo!(),
                 },
                 f4: FaceInfo {
                     face: fa,
                     opposing: None,
+                    flipped: todo!(),
                 },
             })
         };
@@ -189,6 +194,7 @@ impl Triangulation<ThreeD> {
                 f4: FaceInfo {
                     face: new_face,
                     opposing: None,
+                    flipped: todo!(),
                 },
             })
         };
@@ -440,18 +446,22 @@ impl Triangulation<ThreeD> {
             f1: FaceInfo {
                 face: fa,
                 opposing: None,
+                flipped: todo!(),
             },
             f2: FaceInfo {
                 face: fb,
                 opposing: None,
+                flipped: todo!(),
             },
             f3: FaceInfo {
                 face: fc,
                 opposing: None,
+                flipped: todo!(),
             },
             f4: FaceInfo {
                 face: fd,
                 opposing: None,
+                flipped: todo!(),
             },
         })
     }
@@ -508,11 +518,13 @@ mod tests {
                 FaceInfo {
                     face,
                     opposing: Some(connection_data),
+                    flipped: todo!(),
                 }
             } else {
                 FaceInfo {
                     face: t.faces.insert(face),
                     opposing: None,
+                    flipped: todo!(),
                 }
             }
         };

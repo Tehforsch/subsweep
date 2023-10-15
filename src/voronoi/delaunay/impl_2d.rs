@@ -40,7 +40,9 @@ impl Triangulation<TwoD> {
         p_b: PointIndex,
         p: PointIndex,
         f_a: FaceIndex,
+        f_a_flipped: bool,
         f_b: FaceIndex,
+        f_b_flipped: bool,
         old_face: FaceInfo,
     ) -> TetraIndex {
         // Leave opposing data of the newly created faces
@@ -53,10 +55,12 @@ impl Triangulation<TwoD> {
             f1: FaceInfo {
                 face: f_a,
                 opposing: None,
+                flipped: f_a_flipped,
             },
             f2: FaceInfo {
                 face: f_b,
                 opposing: None,
+                flipped: f_b_flipped,
             },
             f3: old_face,
         })
@@ -104,9 +108,36 @@ impl Delaunay<TwoD> for Triangulation<TwoD> {
             p1: point,
             p2: old_tetra.p3,
         });
-        let t1 = self.insert_split_tetra(old_tetra.p2, old_tetra.p3, point, f3, f2, old_tetra.f1);
-        let t2 = self.insert_split_tetra(old_tetra.p3, old_tetra.p1, point, f1, f3, old_tetra.f2);
-        let t3 = self.insert_split_tetra(old_tetra.p1, old_tetra.p2, point, f2, f1, old_tetra.f3);
+        let t1 = self.insert_split_tetra(
+            old_tetra.p2,
+            old_tetra.p3,
+            point,
+            f3,
+            true,
+            f2,
+            false,
+            old_tetra.f1,
+        );
+        let t2 = self.insert_split_tetra(
+            old_tetra.p3,
+            old_tetra.p1,
+            point,
+            f1,
+            true,
+            f3,
+            false,
+            old_tetra.f2,
+        );
+        let t3 = self.insert_split_tetra(
+            old_tetra.p1,
+            old_tetra.p2,
+            point,
+            f2,
+            true,
+            f1,
+            false,
+            old_tetra.f3,
+        );
         self.set_opposing_in_new_tetra(t1, f3, t2, old_tetra.p1);
         self.set_opposing_in_new_tetra(t1, f2, t3, old_tetra.p1);
         self.set_opposing_in_new_tetra(t2, f3, t1, old_tetra.p2);
@@ -143,6 +174,7 @@ impl Delaunay<TwoD> for Triangulation<TwoD> {
             f1: FaceInfo {
                 face: new_face,
                 opposing: None,
+                flipped: false,
             },
             f2: f1_a,
             f3: f1_b,
@@ -155,6 +187,7 @@ impl Delaunay<TwoD> for Triangulation<TwoD> {
             f1: FaceInfo {
                 face: new_face,
                 opposing: None,
+                flipped: true,
             },
             f2: f2_a,
             f3: f2_b,
@@ -188,14 +221,17 @@ impl Delaunay<TwoD> for Triangulation<TwoD> {
             f1: FaceInfo {
                 face: fa,
                 opposing: None,
+                flipped: false,
             },
             f2: FaceInfo {
                 face: fb,
                 opposing: None,
+                flipped: false,
             },
             f3: FaceInfo {
                 face: fc,
                 opposing: None,
+                flipped: false,
             },
         });
     }
