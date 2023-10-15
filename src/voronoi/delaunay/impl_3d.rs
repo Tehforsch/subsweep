@@ -106,7 +106,7 @@ impl Triangulation<ThreeD> {
         let mut make_tetra = |pa, pb, fa, fb, other_point| {
             let f1 = *ta.find_face_opposite(other_point);
             let f2 = *tb.find_face_opposite(other_point);
-            self.insert_positively_oriented_tetra(Tetra {
+            self.insert_positively_oriented_tetra(self.make_nice_tetra(Tetra {
                 p1,
                 p2,
                 p3: pa,
@@ -124,7 +124,7 @@ impl Triangulation<ThreeD> {
                     opposing: None,
                     flipped: false,
                 },
-            })
+            }))
         };
         let t1 = make_tetra(shared_face.p2, shared_face.p3, f2, f3, shared_face.p1);
         let t2 = make_tetra(shared_face.p3, shared_face.p1, f3, f1, shared_face.p2);
@@ -186,7 +186,7 @@ impl Triangulation<ThreeD> {
             let f1 = *t2.find_face_opposite(opposite_point);
             let f2 = *t1.find_face_opposite(opposite_point);
             let f3 = *t3.find_face_opposite(opposite_point);
-            self.insert_positively_oriented_tetra(Tetra {
+            self.insert_positively_oriented_tetra(self.make_nice_tetra(Tetra {
                 p1,
                 p2,
                 p3,
@@ -199,7 +199,7 @@ impl Triangulation<ThreeD> {
                     opposing: None,
                     flipped: false,
                 },
-            })
+            }))
         };
         let ta = make_new_tetra(shared_edge_p1, shared_edge_p2);
         let tb = make_new_tetra(shared_edge_p2, shared_edge_p1);
