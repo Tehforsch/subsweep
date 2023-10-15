@@ -214,6 +214,9 @@ impl Triangulation<ThreeD> {
 }
 
 impl Delaunay<ThreeD> for Triangulation<ThreeD> {
+    fn assert_reasonable_tetra(&self, tetra: &Tetra) {
+        todo!()
+    }
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
         let tetra_data = TetraData {
             p1: self.points[tetra.p1],
