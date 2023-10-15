@@ -43,8 +43,11 @@ impl Triangulation<ThreeD> {
         p_c: PointIndex,
         p: PointIndex,
         f_a: FaceIndex,
+        f_a_split: bool,
         f_b: FaceIndex,
+        f_b_split: bool,
         f_c: FaceIndex,
+        f_c_split: bool,
         old_face: FaceInfo,
     ) -> TetraIndex {
         // Leave opposing data of the newly created faces
@@ -58,17 +61,17 @@ impl Triangulation<ThreeD> {
             f1: FaceInfo {
                 face: f_a,
                 opposing: None,
-                flipped: todo!(),
+                flipped: f_a_split,
             },
             f2: FaceInfo {
                 face: f_b,
                 opposing: None,
-                flipped: todo!(),
+                flipped: f_b_split,
             },
             f3: FaceInfo {
                 face: f_c,
                 opposing: None,
-                flipped: todo!(),
+                flipped: f_c_split,
             },
             f4: old_face,
         })
@@ -114,12 +117,12 @@ impl Triangulation<ThreeD> {
                 f3: FaceInfo {
                     face: fb,
                     opposing: None,
-                    flipped: todo!(),
+                    flipped: false,
                 },
                 f4: FaceInfo {
                     face: fa,
                     opposing: None,
-                    flipped: todo!(),
+                    flipped: false,
                 },
             })
         };
@@ -194,7 +197,7 @@ impl Triangulation<ThreeD> {
                 f4: FaceInfo {
                     face: new_face,
                     opposing: None,
-                    flipped: todo!(),
+                    flipped: false,
                 },
             })
         };
@@ -215,8 +218,29 @@ impl Triangulation<ThreeD> {
 
 impl Delaunay<ThreeD> for Triangulation<ThreeD> {
     fn assert_reasonable_tetra(&self, tetra: &Tetra) {
-        todo!()
+        let check_face = |face: &FaceInfo, p: PointIndex, debug: &str| {
+            let face_data = &self.faces[face.face];
+            let (p_a, p_b, p_c) = if !face.flipped {
+                (face_data.p1, face_data.p2, face_data.p3)
+            } else {
+                (face_data.p1, face_data.p3, face_data.p2)
+            };
+            let (p_a, p_b, p_c) = (self.points[p_a], self.points[p_b], self.points[p_c]);
+            let p = self.points[p];
+            let normal = (p_b - p_a.clone()).cross(p_c - p_a.clone());
+            let is_valid = (p - p_a.clone()).dot(normal.clone()) > 0.0;
+            if !is_valid {
+                dbg!(face.flipped, face_data.p1, face_data.p2, face_data.p3);
+                dbg!(debug);
+            }
+            assert!(is_valid);
+        };
+        check_face(&tetra.f1, tetra.p1, "f1");
+        check_face(&tetra.f2, tetra.p2, "f2");
+        check_face(&tetra.f3, tetra.p3, "f3");
+        check_face(&tetra.f4, tetra.p4, "f4");
     }
+
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
         let tetra_data = TetraData {
             p1: self.points[tetra.p1],
@@ -288,8 +312,11 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             old_tetra.p4,
             point,
             f6,
+            false,
             f5,
+            false,
             f4,
+            false,
             old_tetra.f1,
         );
         let t2 = self.insert_split_tetra(
@@ -298,8 +325,11 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             old_tetra.p4,
             point,
             f6,
+            false,
             f3,
+            false,
             f2,
+            false,
             old_tetra.f2,
         );
         let t3 = self.insert_split_tetra(
@@ -308,8 +338,11 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             old_tetra.p4,
             point,
             f5,
+            false,
             f3,
+            false,
             f1,
+            false,
             old_tetra.f3,
         );
         let t4 = self.insert_split_tetra(
@@ -318,8 +351,11 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             old_tetra.p3,
             point,
             f4,
+            false,
             f2,
+            false,
             f1,
+            false,
             old_tetra.f4,
         );
         self.set_opposing_in_new_tetra(t1, f6, t2, old_tetra.p1);
@@ -422,19 +458,19 @@ impl Triangulation<ThreeD> {
         pd: PointIndex,
     ) -> TetraIndex {
         let fa = self.faces.insert(Face {
-            p1: pb,
-            p2: pc,
+            p1: pc,
+            p2: pb,
             p3: pd,
         });
         let fb = self.faces.insert(Face {
-            p1: pa,
-            p2: pc,
-            p3: pd,
+            p1: pc,
+            p2: pd,
+            p3: pa,
         });
         let fc = self.faces.insert(Face {
             p1: pa,
-            p2: pb,
-            p3: pd,
+            p2: pd,
+            p3: pb,
         });
         let fd = self.faces.insert(Face {
             p1: pa,
@@ -449,22 +485,22 @@ impl Triangulation<ThreeD> {
             f1: FaceInfo {
                 face: fa,
                 opposing: None,
-                flipped: todo!(),
+                flipped: false,
             },
             f2: FaceInfo {
                 face: fb,
                 opposing: None,
-                flipped: todo!(),
+                flipped: false,
             },
             f3: FaceInfo {
                 face: fc,
                 opposing: None,
-                flipped: todo!(),
+                flipped: false,
             },
             f4: FaceInfo {
                 face: fd,
                 opposing: None,
-                flipped: todo!(),
+                flipped: false,
             },
         })
     }
