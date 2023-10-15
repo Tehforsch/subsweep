@@ -214,31 +214,109 @@ impl Triangulation<ThreeD> {
         });
         [ta, tb].into()
     }
+
+    fn make_nice_tetra(&self, mut t: Tetra) -> Tetra {
+        assert!(self.faces[t.f1.face]
+            .points()
+            .find(|p| *p == t.p1)
+            .is_none());
+        assert!(self.faces[t.f2.face]
+            .points()
+            .find(|p| *p == t.p2)
+            .is_none());
+        assert!(self.faces[t.f3.face]
+            .points()
+            .find(|p| *p == t.p3)
+            .is_none());
+        assert!(self.faces[t.f4.face]
+            .points()
+            .find(|p| *p == t.p4)
+            .is_none());
+        if !self.get_tetra_data(&t).is_positively_oriented(&self.extent) {
+            t = Tetra {
+                p1: t.p2,
+                p2: t.p1,
+                p3: t.p3,
+                p4: t.p4,
+                f1: t.f2,
+                f2: t.f1,
+                f3: t.f3,
+                f4: t.f4,
+            }
+        }
+        assert!(self.faces[t.f1.face]
+            .points()
+            .find(|p| *p == t.p1)
+            .is_none());
+        assert!(self.faces[t.f2.face]
+            .points()
+            .find(|p| *p == t.p2)
+            .is_none());
+        assert!(self.faces[t.f3.face]
+            .points()
+            .find(|p| *p == t.p3)
+            .is_none());
+        assert!(self.faces[t.f4.face]
+            .points()
+            .find(|p| *p == t.p4)
+            .is_none());
+        if !self.check_face(&t.f1, t.p1, "1") {
+            t.f1.flipped = !t.f1.flipped;
+        }
+        if !self.check_face(&t.f2, t.p2, "2") {
+            t.f2.flipped = !t.f2.flipped;
+        }
+        if !self.check_face(&t.f3, t.p3, "3") {
+            t.f3.flipped = !t.f3.flipped;
+        }
+        if !self.check_face(&t.f4, t.p4, "4") {
+            t.f4.flipped = !t.f4.flipped;
+        }
+        assert!(self.faces[t.f1.face]
+            .points()
+            .find(|p| *p == t.p1)
+            .is_none());
+        assert!(self.faces[t.f2.face]
+            .points()
+            .find(|p| *p == t.p2)
+            .is_none());
+        assert!(self.faces[t.f3.face]
+            .points()
+            .find(|p| *p == t.p3)
+            .is_none());
+        assert!(self.faces[t.f4.face]
+            .points()
+            .find(|p| *p == t.p4)
+            .is_none());
+        self.assert_reasonable_tetra(&t);
+        t
+    }
+
+    fn check_face(&self, face: &FaceInfo, p: PointIndex, debug: &str) -> bool {
+        let face_data = &self.faces[face.face];
+        let (p_a, p_b, p_c) = if !face.flipped {
+            (face_data.p1, face_data.p2, face_data.p3)
+        } else {
+            (face_data.p1, face_data.p3, face_data.p2)
+        };
+        let (p_a, p_b, p_c) = (self.points[p_a], self.points[p_b], self.points[p_c]);
+        let p = self.points[p];
+        let normal = (p_b - p_a.clone()).cross(p_c - p_a.clone());
+        let is_valid = (p - p_a.clone()).dot(normal.clone()) > 0.0;
+        if !is_valid {
+            dbg!(face.flipped, face_data.p1, face_data.p2, face_data.p3);
+            dbg!(debug);
+        }
+        is_valid
+    }
 }
 
 impl Delaunay<ThreeD> for Triangulation<ThreeD> {
     fn assert_reasonable_tetra(&self, tetra: &Tetra) {
-        let check_face = |face: &FaceInfo, p: PointIndex, debug: &str| {
-            let face_data = &self.faces[face.face];
-            let (p_a, p_b, p_c) = if !face.flipped {
-                (face_data.p1, face_data.p2, face_data.p3)
-            } else {
-                (face_data.p1, face_data.p3, face_data.p2)
-            };
-            let (p_a, p_b, p_c) = (self.points[p_a], self.points[p_b], self.points[p_c]);
-            let p = self.points[p];
-            let normal = (p_b - p_a.clone()).cross(p_c - p_a.clone());
-            let is_valid = (p - p_a.clone()).dot(normal.clone()) > 0.0;
-            if !is_valid {
-                dbg!(face.flipped, face_data.p1, face_data.p2, face_data.p3);
-                dbg!(debug);
-            }
-            assert!(is_valid);
-        };
-        check_face(&tetra.f1, tetra.p1, "f1");
-        check_face(&tetra.f2, tetra.p2, "f2");
-        check_face(&tetra.f3, tetra.p3, "f3");
-        check_face(&tetra.f4, tetra.p4, "f4");
+        assert!(self.check_face(&tetra.f1, tetra.p1, "f1"));
+        assert!(self.check_face(&tetra.f2, tetra.p2, "f2"));
+        assert!(self.check_face(&tetra.f3, tetra.p3, "f3"));
+        assert!(self.check_face(&tetra.f4, tetra.p4, "f4"));
     }
 
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
