@@ -85,6 +85,19 @@ pub struct TriangleWithFaces {
     pub f3: FaceInfo,
 }
 
+impl TriangleWithFaces {
+    pub fn swap(self) -> Self {
+        Self {
+            p2: self.p1,
+            p1: self.p2,
+            p3: self.p3,
+            f2: self.f1,
+            f1: self.f2,
+            f3: self.f3,
+        }
+    }
+}
+
 impl DTetra for TriangleWithFaces {
     type Dimension = TwoD;
 
@@ -202,10 +215,15 @@ impl DTetraData for TriangleData<Point2d> {
         // An overshooting factor for numerical safety
         let alpha = 1.00;
         let (min, max) = (extent.min, extent.max);
-        let p1 = min - (max - min) * alpha;
-        let p2 = Point2d::new(min.x, max.y + (max.y - min.y) * (1.0 + alpha));
-        let p3 = Point2d::new(max.x + (max.x - min.x) * (1.0 + alpha), min.y);
-        Self { p1, p2, p3 }
+        let pa = min - (max - min) * alpha;
+        let pb = Point2d::new(min.x, max.y + (max.y - min.y) * (1.0 + alpha));
+        let pc = Point2d::new(max.x + (max.x - min.x) * (1.0 + alpha), min.y);
+        // Flip pa and pb so that the triangle is positively oriented
+        Self {
+            p1: pb,
+            p2: pa,
+            p3: pc,
+        }
     }
 
     fn extent(&self) -> Extent<Point<Self::Dimension>> {
