@@ -37,12 +37,14 @@ use self::grid::RemotePeriodicNeighbour;
 use self::site::Site;
 pub use self::task::RateData;
 use self::task::Task;
-use self::time_series::hydrogen_ionization_mass_average_system;
-use self::time_series::hydrogen_ionization_volume_average_system;
+use self::time_series::compute_time_series_system;
 use self::time_series::num_particles_at_timestep_levels_system;
 use self::time_series::HydrogenIonizationMassAverage;
 use self::time_series::HydrogenIonizationVolumeAverage;
 use self::time_series::NumParticlesAtTimestepLevels;
+use self::time_series::PhotoionizationRateVolumeAverage;
+use self::time_series::TemperatureMassAverage;
+use self::time_series::WeightedPhotoionizationRateVolumeAverage;
 use self::timestep_level::TimestepLevel;
 use self::timestep_state::TimestepState;
 use crate::chemistry::hydrogen_only::HydrogenOnly;
@@ -61,6 +63,7 @@ use crate::components::Density;
 use crate::components::HeatingRate;
 use crate::components::IonizationTime;
 use crate::components::IonizedHydrogenFraction;
+use crate::components::PhotoionizationRate;
 use crate::components::PhotonRate;
 use crate::components::Source;
 use crate::components::Timestep;
@@ -100,6 +103,9 @@ type Sites<C> = ActiveList<Site<C>>;
 #[derive(Named)]
 pub struct SweepPlugin;
 
+#[derive(Resource, derive_more::Deref, derive_more::DerefMut)]
+pub struct IsFirstTime(bool);
+
 #[derive(Debug, Equivalence, PartialEq, Eq, Hash)]
 pub struct TimestepLevelData {
     level: TimestepLevel,
@@ -112,13 +118,23 @@ impl SubsweepPlugin for SweepPlugin {
             .add_derived_component::<IonizedHydrogenFraction>()
             .add_derived_component::<Source>()
             .add_derived_component::<Density>()
+            .add_derived_component::<components::Mass>()
             .add_derived_component::<components::PhotonRate>()
             .add_derived_component::<components::Temperature>()
+            .add_derived_component::<PhotoionizationRate>()
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
+            .add_plugin(TimeSeriesPlugin::<TemperatureMassAverage>::default())
+            .add_plugin(TimeSeriesPlugin::<PhotoionizationRateVolumeAverage>::default())
+            .add_plugin(TimeSeriesPlugin::<WeightedPhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<NumParticlesAtTimestepLevels>::default())
+            .insert_resource(IsFirstTime(true))
             .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
+            .add_startup_system_to_stage(
+                StartupStages::InsertDerivedComponents,
+                initialize_optional_component_system::<PhotoionizationRate>,
+            )
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
             .add_parameter_type_and_get_result::<SweepParameters>();
         if parameters.rotate_directions {
@@ -131,20 +147,14 @@ impl SubsweepPlugin for SweepPlugin {
         if sim.write_output {
             sim.add_system_to_stage(
                 Stages::AfterSweep,
-                hydrogen_ionization_volume_average_system
-                    .before(hydrogen_ionization_mass_average_system)
+                compute_time_series_system
                     .before(num_particles_at_timestep_levels_system::<HydrogenOnly>),
             )
-            .add_system_to_stage(
-                Stages::AfterSweep,
-                hydrogen_ionization_mass_average_system
-                    .before(num_particles_at_timestep_levels_system::<HydrogenOnly>),
-            )
-            .add_startup_system_to_stage(StartupStages::InitSweep, show_num_directions_system)
             .add_system_to_stage(
                 Stages::AfterSweep,
                 num_particles_at_timestep_levels_system::<HydrogenOnly>,
-            );
+            )
+            .add_startup_system_to_stage(StartupStages::InitSweep, show_num_directions_system);
         }
         init_optional_component::<HeatingRate>(sim);
         init_optional_component::<Timestep>(sim);
@@ -655,9 +665,18 @@ fn run_sweep_system(
     mut timesteps: Particles<(&ParticleId, &mut Timestep)>,
     mut ionization_times: Particles<(&ParticleId, &mut IonizationTime)>,
     mut rates: Particles<(&ParticleId, &mut components::PhotonRate)>,
+    mut photoionization_rates: Particles<(&ParticleId, &mut components::PhotoionizationRate)>,
     mut time: ResMut<SimulationTime>,
     mut timers: NonSendMut<Performance>,
+    mut is_first: ResMut<IsFirstTime>,
 ) {
+    // This is a slightly hacky way of making sure that we can output
+    // the ICS. The first time this system would run, it doesn't run so that
+    // we get to the output stage before any quantities have changed.
+    if **is_first {
+        **is_first = false;
+        return;
+    }
     let solver = (*solver).as_mut().unwrap();
     let time_elapsed = solver.run_sweeps(&mut timers);
     **time += time_elapsed;
@@ -669,6 +688,10 @@ fn run_sweep_system(
     for (id, mut heating_rate) in heating_rates.iter_mut() {
         let site = solver.sites.get(*id);
         **heating_rate = site.species.heating_rate;
+    }
+    for (id, mut photoionization_rate) in photoionization_rates.iter_mut() {
+        let site = solver.sites.get(*id);
+        **photoionization_rate = site.species.photoionization_rate;
     }
     for (id, mut timestep) in timesteps.iter_mut() {
         let site = solver.sites.get(*id);

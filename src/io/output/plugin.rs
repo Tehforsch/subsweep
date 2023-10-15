@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::*;
 use bevy_ecs::schedule::SystemDescriptor;
+use bevy_ecs::schedule::SystemLabelId;
 use log::error;
 
 use super::close_file_system;
@@ -23,9 +24,12 @@ use crate::prelude::Stages;
 use crate::prelude::StartupStages;
 use crate::simulation::SubsweepPlugin;
 
+#[derive(Named)]
+pub struct OutputDataMarker;
+
 pub(crate) trait IntoOutputSystem {
     fn write_system() -> SystemDescriptor;
-    fn create_system() -> SystemDescriptor;
+    fn create_system() -> (SystemDescriptor, SystemLabelId);
 }
 
 #[derive(SystemLabel)]
@@ -52,6 +56,32 @@ impl<T> OutputPlugin<T> {
         Self {
             descriptor: OutputDatasetDescriptor::<T>::new(descriptor),
         }
+    }
+}
+
+fn add_file_creation_systems(sim: &mut Simulation) {
+    sim.add_system_to_stage(
+        Stages::CreateOutputFiles,
+        create_file_system.with_run_criteria(Timer::run_criterion),
+    )
+    .add_system_to_stage(
+        Stages::CreateOutputFiles,
+        close_file_system.with_run_criteria(Timer::run_criterion),
+    );
+}
+
+fn add_dataset_creation_system_if_desired<T: IntoOutputSystem + Named>(sim: &mut Simulation) {
+    if is_desired_field::<T>(sim) {
+        let (system, label) = T::create_system();
+        sim.add_well_ordered_system_to_stage::<_, OutputDataMarker>(
+            Stages::CreateOutputFiles,
+            system
+                .after(create_file_system)
+                .before(close_file_system)
+                .label(OutputSystemLabel)
+                .ambiguous_with(OutputSystemLabel),
+            label,
+        );
     }
 }
 
@@ -90,7 +120,22 @@ where
                 Timer::update_system
                     .after(close_file_system)
                     .with_run_criteria(Timer::run_criterion),
+            )
+            .add_system_to_stage(
+                Stages::Output,
+                init_wait_for_other_ranks_system
+                    .before(open_file_system)
+                    .with_run_criteria(Timer::run_criterion),
+            )
+            .add_system_to_stage(
+                Stages::Output,
+                finish_wait_for_other_ranks_system
+                    .after(close_file_system)
+                    .with_run_criteria(Timer::run_criterion),
             );
+
+        #[cfg(feature = "parallel-hdf5")]
+        add_file_creation_systems(sim);
     }
 
     fn build_everywhere(&self, sim: &mut Simulation) {
@@ -100,14 +145,6 @@ where
         if is_desired_field::<T>(sim) {
             sim.add_system_to_stage(
                 Stages::Output,
-                init_wait_for_other_ranks_system.before(open_file_system),
-            )
-            .add_system_to_stage(
-                Stages::Output,
-                finish_wait_for_other_ranks_system.after(close_file_system),
-            )
-            .add_system_to_stage(
-                Stages::Output,
                 T::write_system()
                     .after(open_file_system)
                     .before(close_file_system)
@@ -115,21 +152,17 @@ where
                     .ambiguous_with(OutputSystemLabel),
             );
         }
+        #[cfg(feature = "parallel-hdf5")]
+        add_dataset_creation_system_if_desired::<T>(sim);
     }
 
     fn build_once_on_main_rank(&self, sim: &mut Simulation) {
         sim.insert_resource(RegisteredFields::default());
         sim.add_startup_system(make_output_dirs_system)
             .add_startup_system(write_used_parameters_system.after(make_output_dirs_system))
-            .add_startup_system(verify_output_fields_system)
-            .add_system_to_stage(
-                Stages::CreateOutputFiles,
-                create_file_system.with_run_criteria(Timer::run_criterion),
-            )
-            .add_system_to_stage(
-                Stages::CreateOutputFiles,
-                close_file_system.with_run_criteria(Timer::run_criterion),
-            );
+            .add_startup_system(verify_output_fields_system);
+        #[cfg(not(feature = "parallel-hdf5"))]
+        add_file_creation_systems(sim);
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
@@ -137,16 +170,8 @@ where
             .unwrap()
             .0
             .push(T::name().into());
-        if is_desired_field::<T>(sim) {
-            sim.add_system_to_stage(
-                Stages::CreateOutputFiles,
-                T::create_system()
-                    .after(create_file_system)
-                    .before(close_file_system)
-                    .label(OutputSystemLabel)
-                    .ambiguous_with(OutputSystemLabel),
-            );
-        }
+        #[cfg(not(feature = "parallel-hdf5"))]
+        add_dataset_creation_system_if_desired::<T>(sim);
     }
 }
 

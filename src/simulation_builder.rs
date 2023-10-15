@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use bevy_core::prelude::TaskPoolOptions;
 use bevy_ecs::schedule::ReportExecutionOrderAmbiguities;
 use clap::Parser;
+use derive_custom::subsweep_parameters;
 use log::LevelFilter;
 use simplelog::ColorChoice;
 use simplelog::CombinedLogger;
@@ -14,6 +15,7 @@ use simplelog::LevelPadding;
 use simplelog::TermLogger;
 use simplelog::TerminalMode;
 use simplelog::WriteLogger;
+use time::UtcOffset;
 
 use super::command_line_options::CommandLineOptions;
 use super::domain::DomainPlugin;
@@ -33,6 +35,13 @@ pub struct SimulationBuilder {
     pub parameter_overrides: Vec<Override>,
     base_communication: Option<BaseCommunicationPlugin>,
     require_parameter_file: bool,
+}
+
+#[subsweep_parameters("logging")]
+#[derive(Debug)]
+struct LogParameters {
+    pub verbosity: Option<usize>,
+    pub only_main_rank: Option<bool>,
 }
 
 impl Default for SimulationBuilder {
@@ -148,7 +157,10 @@ impl SimulationBuilder {
         sim.read_initial_conditions(self.read_initial_conditions)
             .write_output(self.write_output)
             .maybe_add_plugin(self.base_communication.clone());
-        self.log_setup(**sim.get_resource::<WorldRank>().unwrap());
+        let log_params = sim
+            .add_parameter_type_and_get_result::<LogParameters>()
+            .clone();
+        self.log_setup(**sim.get_resource::<WorldRank>().unwrap(), &log_params);
         sim.add_plugin(SimulationPlugin)
             .add_plugin(DomainPlugin)
             .insert_resource(ReportExecutionOrderAmbiguities);
@@ -177,7 +189,7 @@ impl SimulationBuilder {
         }
     }
 
-    fn log_setup(&self, rank: i32) {
+    fn log_setup(&self, rank: i32, log_params: &LogParameters) {
         if !self.log {
             return;
         }
@@ -186,9 +198,12 @@ impl SimulationBuilder {
         let parent_folder = output_file.parent().unwrap();
         fs::create_dir_all(parent_folder)
             .unwrap_or_else(|_| panic!("Failed to create log directory at {:?}", parent_folder));
-        let level = self.get_log_level();
+        let level = self.get_log_level(log_params.verbosity);
+        let local = chrono::Local::now();
+        let offset = local.offset();
         let config = ConfigBuilder::default()
             .set_level_padding(LevelPadding::Right)
+            .set_time_offset(UtcOffset::from_whole_seconds(offset.local_minus_utc()).unwrap())
             .set_thread_level(LevelFilter::Off)
             .build();
         if rank == 0 {
@@ -202,13 +217,16 @@ impl SimulationBuilder {
                 WriteLogger::new(level, config, File::create(output_file).unwrap()),
             ])
             .unwrap();
-        } else {
+        } else if !log_params.only_main_rank.unwrap_or(true) {
             WriteLogger::init(level, config, File::create(output_file).unwrap()).unwrap();
         }
     }
 
-    fn get_log_level(&self) -> LevelFilter {
-        match self.verbosity {
+    fn get_log_level(&self, parameter_verbosity: Option<usize>) -> LevelFilter {
+        let verbosity = parameter_verbosity
+            .map(|verbosity| self.verbosity.max(verbosity))
+            .unwrap_or(self.verbosity);
+        match verbosity {
             0 => LevelFilter::Info,
             1 => LevelFilter::Debug,
             2 => LevelFilter::Trace,

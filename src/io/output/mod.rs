@@ -128,6 +128,15 @@ pub fn compute_output_rank_assignment_system(
     commands.insert_resource(rank_assignment);
 }
 
+fn get_snapshot_dir(parameters: &OutputParameters, output_timer: &Timer) -> PathBuf {
+    let snapshot_name = format!(
+        "{:0snap_padding$}",
+        output_timer.snapshot_num(),
+        snap_padding = parameters.snapshot_padding
+    );
+    parameters.snapshot_dir().join(&snapshot_name)
+}
+
 fn get_output_files(
     parameters: &OutputParameters,
     output_timer: &Timer,
@@ -135,12 +144,7 @@ fn get_output_files(
     get_file: impl Fn(PathBuf) -> hdf5::Result<File>,
 ) -> Vec<FileWithRegion> {
     let file_index_padding = ((parameters.num_output_files as f64).log10().floor() as usize) + 1;
-    let snapshot_name = format!(
-        "{:0snap_padding$}",
-        output_timer.snapshot_num(),
-        snap_padding = parameters.snapshot_padding
-    );
-    let snapshot_dir = parameters.snapshot_dir().join(&snapshot_name);
+    let snapshot_dir = get_snapshot_dir(parameters, output_timer);
     make_snapshot_dir(&snapshot_dir);
     assignment
         .regions
@@ -165,9 +169,11 @@ fn create_file_system(
     parameters: Res<OutputParameters>,
     output_timer: Res<Timer>,
     num_particles_total: Res<NumParticlesTotal>,
+    _rank: Res<WorldRank>,
 ) {
     info!("Writing snapshot: {}", &output_timer.snapshot_num());
     assert!(file.0.is_none());
+
     // In order to know how large the datasets are that we need to create:
     // Compute rank assignment for one rank.
     let assignment = get_rank_output_assignment_for_rank(
@@ -180,8 +186,51 @@ fn create_file_system(
         &parameters,
         &output_timer,
         &assignment,
-        File::create,
+        create_file_rw,
     ));
+}
+
+#[cfg(feature = "parallel-hdf5")]
+fn make_mpi_file_builder() -> hdf5::FileBuilder {
+    use hdf5::file::LibraryVersion;
+    use hdf5::plist;
+    use hdf5::FileBuilder;
+    use mpi::traits::AsRaw;
+
+    let comm = MPI_UNIVERSE.world();
+    let fapl = plist::FileAccess::build()
+        .mpio(comm.as_raw(), None)
+        .libver_bounds(LibraryVersion::V18, LibraryVersion::V110)
+        .finish()
+        .unwrap();
+    let mut builder = FileBuilder::new();
+    builder.set_access_plist(&fapl).unwrap();
+    builder
+}
+
+#[cfg(feature = "parallel-hdf5")]
+fn create_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    use hdf5::plist;
+
+    let mut builder = make_mpi_file_builder();
+    let fcpl = plist::FileCreate::build().finish().unwrap();
+    builder.set_create_plist(&fcpl).unwrap().create(path)
+}
+
+#[cfg(feature = "parallel-hdf5")]
+fn open_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    let builder = make_mpi_file_builder();
+    builder.open_rw(path)
+}
+
+#[cfg(not(feature = "parallel-hdf5"))]
+fn create_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    File::create(path)
+}
+
+#[cfg(not(feature = "parallel-hdf5"))]
+fn open_file_rw(path: PathBuf) -> hdf5::Result<File> {
+    File::open_rw(path)
 }
 
 fn open_file_system(
@@ -195,7 +244,7 @@ fn open_file_system(
         &parameters,
         &output_timer,
         &assignment,
-        File::open_rw,
+        open_file_rw,
     ))
 }
 
@@ -252,6 +301,7 @@ pub fn write_dataset_to_files<T: ToDataset>(
             .expect("Failed to write slice to dataset");
         data_start += region.size();
     }
+    assert_eq!(data_start, data.len());
 }
 
 pub fn add_dimension_attrs<T: ToDataset>(dataset: &Dataset) {
@@ -291,7 +341,27 @@ fn write_dimension(dataset: &Dataset, identifier: &str, dimension: i32) {
     attr.write_scalar(&dimension).unwrap();
 }
 
+#[cfg(feature = "parallel-hdf5")]
+pub fn init_wait_for_other_ranks_system(mut perf: ResMut<crate::performance::Performance>) {
+    // Make sure all ranks wait for the main rank to arrive who
+    // creates the datasets
+
+    perf.start("output_dataset");
+
+    let world = MPI_UNIVERSE.world();
+    world.barrier();
+}
+
+#[cfg(feature = "parallel-hdf5")]
+pub fn finish_wait_for_other_ranks_system(mut perf: ResMut<crate::performance::Performance>) {
+    perf.stop("output_dataset");
+}
+
+#[cfg(not(feature = "parallel-hdf5"))]
 pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
+    if **world_size > 10 {
+        log::warn!("Serial hdf5 output is very slow on many ranks, try compiling with the parallel-hdf5 feature enabled")
+    }
     let world = MPI_UNIVERSE.world();
     for i in 0..**world_size {
         if i < **rank as usize {
@@ -300,6 +370,7 @@ pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<Wo
     }
 }
 
+#[cfg(not(feature = "parallel-hdf5"))]
 pub fn finish_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
     let world = MPI_UNIVERSE.world();
     for i in 0..**world_size {
