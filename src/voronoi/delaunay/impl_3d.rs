@@ -276,46 +276,46 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
 
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> Vec<TetraIndex> {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
-        let f1 = self.faces.insert(Face {
+        let f12 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p1,
             p3: old_tetra.p2,
         });
-        let f2 = self.faces.insert(Face {
+        let f13 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p1,
             p3: old_tetra.p3,
         });
-        let f3 = self.faces.insert(Face {
+        let f14 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p1,
             p3: old_tetra.p4,
         });
-        let f4 = self.faces.insert(Face {
+        let f23 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p2,
             p3: old_tetra.p3,
         });
-        let f5 = self.faces.insert(Face {
+        let f24 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p2,
             p3: old_tetra.p4,
         });
-        let f6 = self.faces.insert(Face {
+        let f34 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p3,
             p3: old_tetra.p4,
         });
         let t1 = self.insert_split_tetra(
-            old_tetra.p2,
             old_tetra.p3,
+            old_tetra.p2,
             old_tetra.p4,
             point,
-            f6,
+            f24,
+            true,
+            f34,
             false,
-            f5,
-            false,
-            f4,
+            f23,
             false,
             old_tetra.f1,
         );
@@ -324,24 +324,24 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             old_tetra.p3,
             old_tetra.p4,
             point,
-            f6,
+            f34,
+            true,
+            f14,
             false,
-            f3,
-            false,
-            f2,
-            false,
+            f13,
+            true,
             old_tetra.f2,
         );
         let t3 = self.insert_split_tetra(
-            old_tetra.p1,
             old_tetra.p2,
+            old_tetra.p1,
             old_tetra.p4,
             point,
-            f5,
+            f14,
+            true,
+            f24,
             false,
-            f3,
-            false,
-            f1,
+            f12,
             false,
             old_tetra.f3,
         );
@@ -350,29 +350,29 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             old_tetra.p2,
             old_tetra.p3,
             point,
-            f4,
+            f23,
+            true,
+            f13,
             false,
-            f2,
-            false,
-            f1,
-            false,
+            f12,
+            true,
             old_tetra.f4,
         );
-        self.set_opposing_in_new_tetra(t1, f6, t2, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t1, f5, t3, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t1, f4, t4, old_tetra.p1);
+        self.set_opposing_in_new_tetra(t1, f34, t2, old_tetra.p1);
+        self.set_opposing_in_new_tetra(t1, f24, t3, old_tetra.p1);
+        self.set_opposing_in_new_tetra(t1, f23, t4, old_tetra.p1);
 
-        self.set_opposing_in_new_tetra(t2, f6, t1, old_tetra.p2);
-        self.set_opposing_in_new_tetra(t2, f3, t3, old_tetra.p2);
-        self.set_opposing_in_new_tetra(t2, f2, t4, old_tetra.p2);
+        self.set_opposing_in_new_tetra(t2, f34, t1, old_tetra.p2);
+        self.set_opposing_in_new_tetra(t2, f14, t3, old_tetra.p2);
+        self.set_opposing_in_new_tetra(t2, f13, t4, old_tetra.p2);
 
-        self.set_opposing_in_new_tetra(t3, f5, t1, old_tetra.p3);
-        self.set_opposing_in_new_tetra(t3, f3, t2, old_tetra.p3);
-        self.set_opposing_in_new_tetra(t3, f1, t4, old_tetra.p3);
+        self.set_opposing_in_new_tetra(t3, f24, t1, old_tetra.p3);
+        self.set_opposing_in_new_tetra(t3, f14, t2, old_tetra.p3);
+        self.set_opposing_in_new_tetra(t3, f12, t4, old_tetra.p3);
 
-        self.set_opposing_in_new_tetra(t4, f4, t1, old_tetra.p4);
-        self.set_opposing_in_new_tetra(t4, f2, t2, old_tetra.p4);
-        self.set_opposing_in_new_tetra(t4, f1, t3, old_tetra.p4);
+        self.set_opposing_in_new_tetra(t4, f23, t1, old_tetra.p4);
+        self.set_opposing_in_new_tetra(t4, f13, t2, old_tetra.p4);
+        self.set_opposing_in_new_tetra(t4, f12, t3, old_tetra.p4);
 
         [t1, t2, t3, t4].into()
     }
