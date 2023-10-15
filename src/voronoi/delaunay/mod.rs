@@ -200,7 +200,7 @@ where
     }
 
     fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
-        debug_assert!(self
+        assert!(self
             .get_tetra_data(&tetra)
             .is_positively_oriented(&self.extent));
         let tetra_index = self.tetras.insert(tetra);
