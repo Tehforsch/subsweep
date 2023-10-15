@@ -105,6 +105,7 @@ pub struct Triangulation<D: DDimension> {
 
 pub trait Delaunay<D: DDimension> {
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> Tetra<D>;
+    fn assert_reasonable_tetra(&self, tetra: &Tetra<D>);
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> TetrasRequiringCheck;
     fn flip(&mut self, check: FlipCheckData) -> TetrasRequiringCheck;
     fn insert_basic_tetra(&mut self, tetra: TetraData<D>);
@@ -200,7 +201,8 @@ where
     }
 
     fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
-        assert!(self
+        self.assert_reasonable_tetra(&tetra);
+        debug_assert!(self
             .get_tetra_data(&tetra)
             .is_positively_oriented(&self.extent));
         let tetra_index = self.tetras.insert(tetra);

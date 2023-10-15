@@ -68,6 +68,8 @@ impl Triangulation<TwoD> {
 }
 
 impl Delaunay<TwoD> for Triangulation<TwoD> {
+    fn assert_reasonable_tetra(&self, _tetra: &Tetra) {}
+
     fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
         let tetra_data = TetraData {
             p1: self.points[tetra.p1],
@@ -150,24 +152,41 @@ impl Delaunay<TwoD> for Triangulation<TwoD> {
     fn flip(&mut self, check: FlipCheckData) -> TetrasRequiringCheck {
         let old_tetra = self.tetras.remove(check.tetra).unwrap();
         let old_face = self.faces.remove(check.face).unwrap();
-        // I am not sure whether unwrapping here is correct -
-        // can a boundary face require a flip? what does that even mean?
-        let opposing = old_tetra.find_face(check.face).opposing.unwrap();
+        let face = old_tetra.find_face(check.face);
+        let opposing = face.opposing.unwrap();
         let opposing_old_tetra = self.tetras.remove(opposing.tetra).unwrap();
         let opposing_point = opposing.point;
         let check_point = old_tetra.find_point_opposite(check.face);
+        let (p1, p2) = if face.flipped {
+            (old_face.p2, old_face.p1)
+        } else {
+            (old_face.p1, old_face.p2)
+        };
         let new_face = self.faces.insert(Face {
             p1: check_point,
             p2: opposing_point,
         });
 
-        let f1_a = *opposing_old_tetra.find_face_opposite(old_face.p2);
-        let f1_b = *old_tetra.find_face_opposite(old_face.p2);
-        let f2_a = *opposing_old_tetra.find_face_opposite(old_face.p1);
-        let f2_b = *old_tetra.find_face_opposite(old_face.p1);
+        let f1_a = *opposing_old_tetra.find_face_opposite(p2);
+        let f1_b = *old_tetra.find_face_opposite(p2);
+        let f2_a = *opposing_old_tetra.find_face_opposite(p1);
+        let f2_b = *old_tetra.find_face_opposite(p1);
 
-        let t1 = self.insert_positively_oriented_tetra(Tetra {
-            p1: old_face.p1,
+        let t1 = Tetra {
+            p1: check_point,
+            p2: p1,
+            p3: opposing_point,
+            // Leave uninitialized for now
+            f1: f1_a,
+            f2: FaceInfo {
+                face: new_face,
+                opposing: None,
+                flipped: true,
+            },
+            f3: f1_b,
+        };
+        let t2 = Tetra {
+            p1: p2,
             p2: check_point,
             p3: opposing_point,
             // Leave uninitialized for now
@@ -176,30 +195,19 @@ impl Delaunay<TwoD> for Triangulation<TwoD> {
                 opposing: None,
                 flipped: false,
             },
-            f2: f1_a,
-            f3: f1_b,
-        });
-        let t2 = self.insert_positively_oriented_tetra(Tetra {
-            p1: old_face.p2,
-            p2: check_point,
-            p3: opposing_point,
-            // Leave uninitialized for now
-            f1: FaceInfo {
-                face: new_face,
-                opposing: None,
-                flipped: true,
-            },
             f2: f2_a,
             f3: f2_b,
-        });
+        };
+        let t1 = self.insert_positively_oriented_tetra(t1);
+        let t2 = self.insert_positively_oriented_tetra(t2);
         // Set previously uninitialized opposing data, now that we know the tetra indices
         self.tetras[t1].find_face_mut(new_face).opposing = Some(ConnectionData {
             tetra: t2,
-            point: old_face.p2,
+            point: p2,
         });
         self.tetras[t2].find_face_mut(new_face).opposing = Some(ConnectionData {
             tetra: t1,
-            point: old_face.p1,
+            point: p1,
         });
         [t1, t2].into()
     }

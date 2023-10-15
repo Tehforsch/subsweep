@@ -85,19 +85,6 @@ pub struct TriangleWithFaces {
     pub f3: FaceInfo,
 }
 
-impl TriangleWithFaces {
-    pub fn swap(self) -> Self {
-        Self {
-            p2: self.p1,
-            p1: self.p2,
-            p3: self.p3,
-            f2: self.f1,
-            f1: self.f2,
-            f3: self.f3,
-        }
-    }
-}
-
 impl DTetra for TriangleWithFaces {
     type Dimension = TwoD;
 
