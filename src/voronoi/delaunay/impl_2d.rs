@@ -10,8 +10,6 @@ use super::TetraIndex;
 use super::TetrasRequiringCheck;
 use super::Triangulation;
 use crate::dimension::TwoD;
-use crate::voronoi::delaunay::dimension::DFace;
-use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::FlipCheckData;
 use crate::voronoi::primitives::line::Line;
 use crate::voronoi::primitives::line::LineData;
@@ -48,7 +46,7 @@ impl Triangulation<TwoD> {
         // Leave opposing data of the newly created faces
         // uninitialized for now, since we do not know the indices of
         // the other tetras before we have inserted them.
-        self.insert_positively_oriented_tetra(Tetra {
+        self.insert_tetra(Tetra {
             p1: p_a,
             p2: p_b,
             p3: p,
@@ -68,34 +66,6 @@ impl Triangulation<TwoD> {
 }
 
 impl Delaunay<TwoD> for Triangulation<TwoD> {
-    fn assert_reasonable_tetra(&self, _tetra: &Tetra) {}
-
-    fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
-        let tetra_data = TetraData {
-            p1: self.points[tetra.p1],
-            p2: self.points[tetra.p2],
-            p3: self.points[tetra.p3],
-        };
-        debug_assert!(self.faces[tetra.f1.face].contains_point(tetra.p2));
-        debug_assert!(self.faces[tetra.f1.face].contains_point(tetra.p3));
-        debug_assert!(self.faces[tetra.f2.face].contains_point(tetra.p1));
-        debug_assert!(self.faces[tetra.f2.face].contains_point(tetra.p3));
-        debug_assert!(self.faces[tetra.f3.face].contains_point(tetra.p1));
-        debug_assert!(self.faces[tetra.f3.face].contains_point(tetra.p2));
-        if tetra_data.is_positively_oriented(&self.extent) {
-            tetra
-        } else {
-            Tetra {
-                p1: tetra.p2,
-                p2: tetra.p1,
-                p3: tetra.p3,
-                f1: tetra.f2,
-                f2: tetra.f1,
-                f3: tetra.f3,
-            }
-        }
-    }
-
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> TetrasRequiringCheck {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
         let f1 = self.faces.insert(Face {
@@ -198,8 +168,8 @@ impl Delaunay<TwoD> for Triangulation<TwoD> {
             f2: f2_a,
             f3: f2_b,
         };
-        let t1 = self.insert_positively_oriented_tetra(t1);
-        let t2 = self.insert_positively_oriented_tetra(t2);
+        let t1 = self.insert_tetra(t1);
+        let t2 = self.insert_tetra(t2);
         // Set previously uninitialized opposing data, now that we know the tetra indices
         self.tetras[t1].find_face_mut(new_face).opposing = Some(ConnectionData {
             tetra: t2,
@@ -222,7 +192,7 @@ impl Delaunay<TwoD> for Triangulation<TwoD> {
         let fa = self.faces.insert(Face { p1: pb, p2: pc });
         let fb = self.faces.insert(Face { p1: pc, p2: pa });
         let fc = self.faces.insert(Face { p1: pa, p2: pb });
-        self.insert_positively_oriented_tetra(Tetra {
+        self.insert_tetra(Tetra {
             p1: pa,
             p2: pb,
             p3: pc,
