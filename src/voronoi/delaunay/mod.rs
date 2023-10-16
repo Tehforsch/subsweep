@@ -171,14 +171,18 @@ where
     }
 
     pub(super) fn get_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
+        tetra.points().map(|p| self.get_original_point(p)).collect()
+    }
+
+    fn get_remapped_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
         tetra.points().map(|p| self.get_remapped_point(p)).collect()
     }
 
-    fn get_face_data(&self, face: &Face<D>) -> FaceData<D> {
+    fn get_remapped_face_data(&self, face: &Face<D>) -> FaceData<D> {
         face.points().map(|p| self.get_remapped_point(p)).collect()
     }
 
-    pub fn get_remapped_point(&self, point: PointIndex) -> Point<D> {
+    pub(super) fn get_remapped_point(&self, point: PointIndex) -> Point<D> {
         D::remap_point(self.points[point], &self.extent)
     }
 
@@ -186,9 +190,9 @@ where
         point_location::find_containing_tetra(self, point)
     }
 
-    pub(super) fn get_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
+    pub(super) fn get_remapped_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
         let tetra = &self.tetras.get(tetra).unwrap();
-        let tetra_data = self.get_tetra_data(tetra);
+        let tetra_data = self.get_remapped_tetra_data(tetra);
         let center = tetra_data.get_center_of_circumcircle();
         let sample_point = self.get_remapped_point(tetra.points().next().unwrap());
         let radius = center.distance(sample_point);
@@ -300,14 +304,21 @@ where
     }
 
     fn circumcircle_contains_point(&self, tetra: &Tetra<D>, point: PointIndex) -> bool {
-        let tetra_data = self.get_tetra_data(tetra);
+        let tetra_data = self.get_remapped_tetra_data(tetra);
         tetra_data.circumcircle_contains(self.get_remapped_point(point))
     }
 
-    pub fn iter_points(&self) -> impl Iterator<Item = (PointIndex, Point<D>)> + '_ {
+    #[cfg(test)]
+    pub(super) fn iter_remapped_points(&self) -> impl Iterator<Item = (PointIndex, Point<D>)> + '_ {
         self.points
             .iter()
             .map(|(p, _)| (p, self.get_remapped_point(p)))
+    }
+
+    pub fn iter_original_points(&self) -> impl Iterator<Item = (PointIndex, Point<D>)> + '_ {
+        self.points
+            .iter()
+            .map(|(p, _)| (p, self.get_original_point(p)))
     }
 }
 
@@ -557,7 +568,7 @@ pub(super) mod tests {
     {
         perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
             for (_, t) in triangulation.tetras.iter() {
-                let td = triangulation.get_tetra_data(t);
+                let td = triangulation.get_remapped_tetra_data(t);
                 assert!(D::tetra_is_positively_oriented(&td));
             }
         });
