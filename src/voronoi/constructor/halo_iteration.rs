@@ -222,7 +222,7 @@ where
         UndecidedTetraInfo {
             tetra,
             search_radius: None,
-            circumcircle: self.triangulation.get_tetra_circumcircle(tetra),
+            circumcircle: self.triangulation.get_remapped_tetra_circumcircle(tetra),
         }
     }
 
@@ -357,7 +357,7 @@ mod tests {
             }
             let c = sub_triangulation_data
                 .triangulation
-                .get_tetra_circumcircle(t);
+                .get_remapped_tetra_circumcircle(t);
             let search = SearchData::<D> {
                 point: c.center,
                 radius: c.radius,
@@ -368,7 +368,7 @@ mod tests {
             for (id, _) in points_in_radius {
                 assert!(sub_triangulation_data
                     .triangulation
-                    .iter_points()
+                    .iter_remapped_points()
                     .any(|(p_index, _)| {
                         sub_triangulation_data
                             .point_to_cell_map

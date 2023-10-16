@@ -41,7 +41,7 @@ where
     D: DDimension,
     Triangulation<D>: Delaunay<D>,
 {
-    let tetra_data = t.get_tetra_data(tetra);
+    let tetra_data = t.get_remapped_tetra_data(tetra);
     tetra_data.contains(point)
 }
 
@@ -64,7 +64,7 @@ where
     let mut ts = vec![];
     while let Some(check) = to_check.pop() {
         let tetra = &t.tetras[check.tetra];
-        ts.push(t.get_tetra_data(tetra));
+        ts.push(t.get_remapped_tetra_data(tetra));
         if tetra_contains_point(t, tetra, point) {
             return Some(check.tetra);
         } else {
@@ -72,7 +72,7 @@ where
                 if let Some(opp) = face.opposing {
                     if already_checked.insert(opp.tetra) {
                         let heuristic_distance = OrderedFloat(
-                            t.get_tetra_data(&t.tetras[opp.tetra])
+                            t.get_remapped_tetra_data(&t.tetras[opp.tetra])
                                 .distance_to_point(point),
                         );
                         to_check.push(CheckData {

@@ -105,7 +105,7 @@ where
 {
     fn get_statements(&self) -> Vec<String> {
         let mut s = vec![];
-        for (index, point) in self.iter_points() {
+        for (index, point) in self.iter_original_points() {
             let color = match self.point_kinds[&index] {
                 PointKind::Inner => (1.0, 0.0, 0.0),
                 PointKind::Outer => (0.0, 1.0, 0.0),
