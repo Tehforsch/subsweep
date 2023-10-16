@@ -252,18 +252,6 @@ impl DTetraData for TriangleData<Point2d> {
         sign.panic_if_zero("Degenerate case in circumcircle test.").is_negative()
     }
 
-    #[rustfmt::skip]
-    fn is_positively_oriented(&self, extent: &Extent<Point2d>) -> bool {
-        let sign = determinant3x3_sign(
-            [
-                [1.0, self.p1.x, self.p1.y],
-                [1.0, self.p2.x, self.p2.y],
-                [1.0, self.p3.x, self.p3.y],
-            ]
-        );
-        sign.panic_if_zero("Zero volume tetra encountered").is_positive()
-    }
-
     fn get_center_of_circumcircle(&self) -> Point2d {
         let a = self.p1;
         let b = self.p2;

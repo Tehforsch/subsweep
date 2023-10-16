@@ -2,6 +2,9 @@ use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
 
+use super::delaunay::TetraData;
+use super::math::utils::determinant3x3_sign;
+use super::math::utils::determinant4x4_sign;
 use super::DDimension;
 use super::Point3d;
 use crate::dimension::ThreeD;
@@ -20,6 +23,8 @@ pub trait TestDimension: DDimension {
     fn number_of_faces(num_inserted_points: usize) -> Option<usize>;
     fn number_of_points(num_inserted_points: usize) -> Option<usize>;
     fn get_lookup_points() -> Vec<Self::Point>;
+
+    fn tetra_is_positively_oriented(t: &TetraData<Self>) -> bool;
 
     fn get_combined_point_set() -> Vec<(ParticleId, Self::Point)> {
         let (p1, p2) = Self::get_example_point_sets_with_ids();
@@ -83,6 +88,18 @@ impl TestDimension for TwoD {
             .map(|(i, j)| Point2d::new(0.01 * i as f64, 0.01 * j as f64))
             .collect()
     }
+
+    #[rustfmt::skip]
+    fn tetra_is_positively_oriented(t: &TetraData<TwoD>) -> bool {
+        let sign = determinant3x3_sign(
+            [
+                [1.0, t.p1.x, t.p1.y],
+                [1.0, t.p2.x, t.p2.y],
+                [1.0, t.p3.x, t.p3.y],
+            ]
+        );
+        sign.panic_if_zero("Zero volume tetra encountered").is_positive()
+    }
 }
 
 impl TestDimension for ThreeD {
@@ -123,5 +140,17 @@ impl TestDimension for ThreeD {
             .flat_map(move |(i, j)| (0..10).map(move |k| (i, j, k)))
             .map(|(i, j, k)| Point3d::new(0.1 * i as f64, 0.1 * j as f64, 0.1 * k as f64))
             .collect()
+    }
+
+    #[rustfmt::skip]
+    fn tetra_is_positively_oriented(t: &TetraData<ThreeD>) -> bool {
+        determinant4x4_sign(
+            [
+                [1.0, t.p1.x, t.p1.y, t.p1.z],
+                [1.0, t.p2.x, t.p2.y, t.p2.z],
+                [1.0, t.p3.x, t.p3.y, t.p3.z],
+                [1.0, t.p4.x, t.p4.y, t.p4.z],
+            ]
+        ).panic_if_zero("Zero volume tetra encountered").is_positive()
     }
 }

@@ -104,8 +104,6 @@ pub struct Triangulation<D: DDimension> {
 }
 
 pub trait Delaunay<D: DDimension> {
-    fn make_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> Tetra<D>;
-    fn assert_reasonable_tetra(&self, tetra: &Tetra<D>);
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> TetrasRequiringCheck;
     fn flip(&mut self, check: FlipCheckData) -> TetrasRequiringCheck;
     fn insert_basic_tetra(&mut self, tetra: TetraData<D>);
@@ -200,11 +198,7 @@ where
         })
     }
 
-    fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
-        self.assert_reasonable_tetra(&tetra);
-        debug_assert!(self
-            .get_tetra_data(&tetra)
-            .is_positively_oriented(&self.extent));
+    fn insert_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
         debug_assert!(tetra
             .points()
             .zip(tetra.faces())
@@ -537,5 +531,19 @@ pub(super) mod tests {
                 assert_eq!(num_inner_points, num_inserted);
             },
         );
+    }
+
+    #[test]
+    fn all_tetras_positively_oriented<D>()
+    where
+        D: DDimension + TestDimension,
+        Triangulation<D>: Delaunay<D>,
+    {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
+            for (_, t) in triangulation.tetras.iter() {
+                let td = triangulation.get_tetra_data(t);
+                assert!(D::tetra_is_positively_oriented(&td));
+            }
+        });
     }
 }
