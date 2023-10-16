@@ -105,13 +105,13 @@ where
 {
     fn get_statements(&self) -> Vec<String> {
         let mut s = vec![];
-        for (index, point) in self.points.iter() {
+        for (index, point) in self.iter_points() {
             let color = match self.point_kinds[&index] {
                 PointKind::Inner => (1.0, 0.0, 0.0),
                 PointKind::Outer => (0.0, 1.0, 0.0),
                 PointKind::Halo(_) => (0.0, 0.0, 1.0),
             };
-            s.extend(Color { x: *point, color }.get_statements());
+            s.extend(Color { x: point, color }.get_statements());
         }
         for (_, tetra) in self.tetras.iter() {
             s.extend(self.get_tetra_data(tetra).get_statements());

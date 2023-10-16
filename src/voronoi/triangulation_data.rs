@@ -86,8 +86,7 @@ where
     Triangulation<D>: Delaunay<D>,
 {
     let mut map: HashMap<_, _> = triangulation
-        .points
-        .iter()
+        .iter_points()
         .map(|(i, _)| (i, vec![]))
         .collect();
     for (tetra_index, tetra) in triangulation.tetras.iter() {
