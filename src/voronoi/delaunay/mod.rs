@@ -165,7 +165,10 @@ where
     }
 
     pub fn get_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
-        tetra.points().map(|p| self.points[p]).collect()
+        tetra
+            .points()
+            .map(|p| D::remap_point(self.points[p], &self.extent))
+            .collect()
     }
 
     pub fn get_face_data(&self, face: &Face<D>) -> FaceData<D> {

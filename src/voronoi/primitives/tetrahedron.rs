@@ -126,15 +126,6 @@ impl TetrahedronData {
             .unwrap()
             && points_are_on_same_side_of_triangle(point, p4, (p1, p2, p3)).unwrap()
     }
-
-    fn remap(&self, extent: &Extent<Point3d>) -> Self {
-        Self {
-            p1: remap_point(self.p1, extent),
-            p2: remap_point(self.p2, extent),
-            p3: remap_point(self.p3, extent),
-            p4: remap_point(self.p4, extent),
-        }
-    }
 }
 
 impl DTetraData for TetrahedronData {
@@ -157,10 +148,8 @@ impl DTetraData for TetrahedronData {
     }
 
     #[rustfmt::skip]
-    fn contains(&self, point: Point3d, extent: &Extent<Point<Self::Dimension>>) -> bool {
-        let remapped = self.remap(extent);
-        let remapped_point = remap_point(point, extent);
-        remapped.f64_contains(remapped_point).unwrap_or_else(|_| self.arbitrary_precision_contains(point))
+    fn contains(&self, point: Point3d) -> bool {
+        self.f64_contains(point).unwrap_or_else(|_| self.arbitrary_precision_contains(point))
     }
 
     /// This only works if the point is outside of the tetrahedron
@@ -257,11 +246,6 @@ impl DTetraData for TetrahedronData {
         );
         Point3d::new(dx,dy,dz) / (2.0 * a)
     }
-}
-
-fn remap_point(point: Point3d, extent: &Extent<Point3d>) -> Point3d {
-    debug_assert!(extent.contains(&point));
-    (point - extent.min) * (1.0 / extent.side_lengths())
 }
 
 fn points_are_on_same_side_of_triangle<P: Vector3d + Cross3d + Sub<Output = P> + Dot + Clone>(
