@@ -80,7 +80,7 @@ pub trait DTetraData:
 
     fn all_encompassing(extent: &Extent<Point<Self::Dimension>>) -> Self;
     fn extent(&self) -> Extent<Point<Self::Dimension>>;
-    fn contains(&self, p: Point<Self::Dimension>, extent: &Extent<Point<Self::Dimension>>) -> bool;
+    fn contains(&self, p: Point<Self::Dimension>) -> bool;
     fn distance_to_point(&self, p: Point<Self::Dimension>) -> Float;
     fn circumcircle_contains(&self, point: <Self::Dimension as Dimension>::Point) -> bool;
     fn get_center_of_circumcircle(&self) -> Point<Self::Dimension>;

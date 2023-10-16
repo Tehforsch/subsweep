@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use crate::domain::IntoKey;
+use crate::extent::Extent;
 use crate::prelude::Float;
 use crate::simulation_box::PeriodicWrapType2d;
 use crate::simulation_box::PeriodicWrapType3d;
@@ -18,6 +19,7 @@ pub trait Dimension {
     type Point: Clone + Copy + DVector<Float = Float> + IntoKey + Debug + Visualizable;
     type UnitPoint: Clone + Copy + IntoKey + Debug;
     type WrapType: Default + Clone + Debug + PartialEq + Eq + std::hash::Hash + Copy;
+    fn remap_point(point: Point<Self>, extent: &Extent<Point<Self>>) -> Point<Self>;
 }
 
 pub type Point<D> = <D as Dimension>::Point;
@@ -39,6 +41,10 @@ impl Dimension for TwoD {
     type Point = MVec2;
     type UnitPoint = Vec2Length;
     type WrapType = PeriodicWrapType2d;
+    fn remap_point(point: Point<Self>, extent: &Extent<Point<Self>>) -> Point<Self> {
+        debug_assert!(extent.contains(&point));
+        (point - extent.min) * (1.0 / extent.side_lengths())
+    }
 }
 
 impl Dimension for ThreeD {
@@ -47,6 +53,10 @@ impl Dimension for ThreeD {
     type Point = MVec3;
     type UnitPoint = Vec3Length;
     type WrapType = PeriodicWrapType3d;
+    fn remap_point(point: Point<Self>, extent: &Extent<Point<Self>>) -> Point<Self> {
+        debug_assert!(extent.contains(&point));
+        (point - extent.min) * (1.0 / extent.side_lengths())
+    }
 }
 
 #[cfg(feature = "2d")]

@@ -297,6 +297,7 @@ mod tests {
     use super::Key;
     use super::KeyCounter;
     use crate::dimension::Dimension;
+    use crate::dimension::Point;
     use crate::domain::IntoKey;
     use crate::extent::Extent;
     use crate::test_utils::get_particles;
@@ -311,6 +312,9 @@ mod tests {
         type Point = f64;
         type UnitPoint = Length;
         type WrapType = ();
+        fn remap_point(point: Point<Self>, _: &Extent<Point<Self>>) -> Point<Self> {
+            point
+        }
     }
 
     #[derive(PartialOrd, Ord, Copy, Clone, PartialEq, Eq, Debug, Equivalence)]
