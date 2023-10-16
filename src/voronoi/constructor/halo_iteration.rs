@@ -190,7 +190,7 @@ where
                         .points()
                         .find(|p| self.triangulation.point_kinds[p] == PointKind::Inner)
                         .unwrap();
-                    self.triangulation.points[p_index]
+                    self.triangulation.get_remapped_point(p_index)
                 };
                 undecided.search_radius = Some(search_radius);
                 Some(SearchData::<D> {
@@ -368,8 +368,7 @@ mod tests {
             for (id, _) in points_in_radius {
                 assert!(sub_triangulation_data
                     .triangulation
-                    .points
-                    .iter()
+                    .iter_points()
                     .any(|(p_index, _)| {
                         sub_triangulation_data
                             .point_to_cell_map

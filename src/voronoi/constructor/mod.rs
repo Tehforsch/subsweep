@@ -113,7 +113,9 @@ where
     }
 
     pub fn get_position_for_cell(&self, cell_index: CellIndex) -> Point<D> {
-        self.data.triangulation.points[self.get_point_by_cell(cell_index).unwrap()]
+        self.data
+            .triangulation
+            .get_original_point(self.get_point_by_cell(cell_index).unwrap())
     }
 }
 

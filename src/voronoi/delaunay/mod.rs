@@ -97,10 +97,16 @@ impl FlipCheckStack {
 pub struct Triangulation<D: DDimension> {
     pub tetras: TetraList<D>,
     pub faces: FaceList<D>,
-    pub points: PointList<D>,
+    points: PointList<D>,
     pub(super) point_kinds: HashMap<PointIndex, PointKind>,
     last_insertion_tetra: Option<TetraIndex>,
     extent: Extent<Point<D>>,
+}
+
+impl<D: DDimension> Triangulation<D> {
+    pub fn get_original_point(&self, p: PointIndex) -> Point<D> {
+        self.points[p]
+    }
 }
 
 pub trait Delaunay<D: DDimension> {
@@ -164,26 +170,27 @@ where
         triangulation
     }
 
-    pub fn get_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
-        tetra
-            .points()
-            .map(|p| D::remap_point(self.points[p], &self.extent))
-            .collect()
+    pub(super) fn get_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
+        tetra.points().map(|p| self.get_remapped_point(p)).collect()
     }
 
-    pub fn get_face_data(&self, face: &Face<D>) -> FaceData<D> {
-        face.points().map(|p| self.points[p]).collect()
+    fn get_face_data(&self, face: &Face<D>) -> FaceData<D> {
+        face.points().map(|p| self.get_remapped_point(p)).collect()
     }
 
-    pub fn find_containing_tetra(&self, point: Point<D>) -> Option<TetraIndex> {
+    pub fn get_remapped_point(&self, point: PointIndex) -> Point<D> {
+        D::remap_point(self.points[point], &self.extent)
+    }
+
+    fn find_containing_tetra(&self, point: Point<D>) -> Option<TetraIndex> {
         point_location::find_containing_tetra(self, point)
     }
 
-    pub fn get_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
+    pub(super) fn get_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
         let tetra = &self.tetras.get(tetra).unwrap();
         let tetra_data = self.get_tetra_data(tetra);
         let center = tetra_data.get_center_of_circumcircle();
-        let sample_point = self.points[tetra.points().next().unwrap()];
+        let sample_point = self.get_remapped_point(tetra.points().next().unwrap());
         let radius = center.distance(sample_point);
         Circumcircle { center, radius }
     }
@@ -241,10 +248,10 @@ where
     }
 
     pub fn insert(&mut self, point: Point<D>, kind: PointKind) -> (PointIndex, Vec<TetraIndex>) {
-        let t = self
-            .find_containing_tetra(point)
-            .unwrap_or_else(|| panic!("No tetra containing the point {point:?} found"));
         let new_point_index = self.points.insert(point);
+        let t = self
+            .find_containing_tetra(self.get_remapped_point(new_point_index))
+            .unwrap_or_else(|| panic!("No tetra containing the point {point:?} found"));
         self.point_kinds.insert(new_point_index, kind);
         let new_tetras = self.split(t, new_point_index);
         let new_tetras = self.perform_flip_checks(new_point_index, new_tetras);
@@ -294,7 +301,13 @@ where
 
     fn circumcircle_contains_point(&self, tetra: &Tetra<D>, point: PointIndex) -> bool {
         let tetra_data = self.get_tetra_data(tetra);
-        tetra_data.circumcircle_contains(self.points[point])
+        tetra_data.circumcircle_contains(self.get_remapped_point(point))
+    }
+
+    pub fn iter_points(&self) -> impl Iterator<Item = (PointIndex, Point<D>)> + '_ {
+        self.points
+            .iter()
+            .map(|(p, _)| (p, self.get_remapped_point(p)))
     }
 }
 
