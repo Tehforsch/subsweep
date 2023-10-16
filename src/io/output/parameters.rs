@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use derive_custom::subsweep_parameters;
 
+use super::plugin::IntoOutputSystem;
 use crate::named::Named;
 use crate::simulation::Simulation;
 use crate::units::Time;
@@ -111,9 +112,11 @@ fn default_num_output_files() -> usize {
     1
 }
 
-pub fn is_desired_field<T: Named>(sim: &Simulation) -> bool {
-    sim.unwrap_resource::<OutputParameters>()
-        .is_desired_field::<T>()
+pub fn is_desired_field<T: Named + IntoOutputSystem>(sim: &Simulation) -> bool {
+    T::is_always_desired()
+        || sim
+            .unwrap_resource::<OutputParameters>()
+            .is_desired_field::<T>()
 }
 
 impl OutputParameters {

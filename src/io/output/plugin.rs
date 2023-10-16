@@ -30,6 +30,7 @@ pub struct OutputDataMarker;
 pub(crate) trait IntoOutputSystem {
     fn write_system() -> SystemDescriptor;
     fn create_system() -> (SystemDescriptor, SystemLabelId);
+    fn is_always_desired() -> bool;
 }
 
 #[derive(SystemLabel)]

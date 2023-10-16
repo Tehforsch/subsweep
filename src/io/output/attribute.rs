@@ -41,6 +41,10 @@ impl<T: ToAttribute> IntoOutputSystem for Attribute<T> {
     fn write_system() -> SystemDescriptor {
         (|| {}).into_descriptor()
     }
+
+    fn is_always_desired() -> bool {
+        true
+    }
 }
 
 fn write_attribute<T: ToAttribute>(res: Res<T>, file: ResMut<OutputFiles>) {

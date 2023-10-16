@@ -40,4 +40,8 @@ impl<T: ToDataset + Component> IntoOutputSystem for T {
             create_dataset_system::<T>.as_system_label(),
         )
     }
+
+    fn is_always_desired() -> bool {
+        false
+    }
 }
