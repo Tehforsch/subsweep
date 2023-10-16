@@ -171,8 +171,8 @@ impl Triangulation<ThreeD> {
         t1_index: TetraIndex,
         t2_index: TetraIndex,
         t3_index: TetraIndex,
-        p2: PointIndex,
         p1: PointIndex,
+        p2: PointIndex,
         p3: PointIndex,
         shared_edge_p1: PointIndex,
         shared_edge_p2: PointIndex,
@@ -188,20 +188,20 @@ impl Triangulation<ThreeD> {
         debug_assert_eq!(t2.find_face_opposite(p3).face, f1);
         debug_assert_eq!(t1.find_face_opposite(p3).face, f2);
         debug_assert_eq!(t2.find_face_opposite(p1).face, f3);
-        let f3_flipped = !t2.find_face_opposite(p1).flipped;
+        let f3_flipped = t2.find_face_opposite(p1).flipped;
         self.faces.remove(f1);
         self.faces.remove(f2);
         self.faces.remove(f3);
-        let new_face = self.faces.insert(Face { p1: p2, p2: p1, p3 });
+        let new_face = self.faces.insert(Face { p1, p2, p3 });
 
         let mut make_new_tetra = |contained_point, opposite_point, flip: bool| {
             let f1 = *t1.find_face_opposite(opposite_point);
             let f2 = *t2.find_face_opposite(opposite_point);
             let f3 = *t3.find_face_opposite(opposite_point);
             let (p1, p2, f1, f2) = if flip {
-                (p1, p2, f1, f2)
-            } else {
                 (p2, p1, f2, f1)
+            } else {
+                (p1, p2, f1, f2)
             };
             self.insert_positively_oriented_tetra(self.make_nice_tetra(
                 Tetra {
@@ -518,8 +518,8 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
                         check.tetra,
                         opposing.tetra,
                         t3,
-                        p1,
                         p2,
+                        p1,
                         opposite_point,
                         shared_face_p1,
                         shared_face_p2,
@@ -861,7 +861,7 @@ mod tests {
             points[1],
         );
         let tetras = triangulation.three_to_two_flip(
-            t1, t2, t3, points[1], points[3], points[2], points[0], points[4],
+            t1, t2, t3, points[3], points[1], points[2], points[0], points[4],
         );
         let ta = tetras[0];
         let tb = tetras[1];
