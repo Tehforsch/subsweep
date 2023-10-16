@@ -16,7 +16,6 @@ use crate::voronoi::math::precision_types::PrecisionError;
 use crate::voronoi::math::precision_types::PrecisionPoint3d;
 use crate::voronoi::math::traits::Cross3d;
 use crate::voronoi::math::utils::determinant4x4;
-use crate::voronoi::math::utils::determinant4x4_sign;
 use crate::voronoi::math::utils::determinant5x5_sign;
 use crate::voronoi::math::utils::Sign;
 use crate::voronoi::PointIndex;
@@ -219,19 +218,6 @@ impl DTetraData for TetrahedronData {
     }
 
     #[rustfmt::skip]
-    fn is_positively_oriented(&self, extent: &Extent<Point3d>) -> bool {
-        let r = self.remap(extent);
-        determinant4x4_sign(
-            [
-                [1.0, r.p1.x, r.p1.y, r.p1.z],
-                [1.0, r.p2.x, r.p2.y, r.p2.z],
-                [1.0, r.p3.x, r.p3.y, r.p3.z],
-                [1.0, r.p4.x, r.p4.y, r.p4.z],
-            ]
-        ).panic_if_zero("Zero volume tetra encountered").is_positive()
-    }
-
-    #[rustfmt::skip]
     fn get_center_of_circumcircle(&self) -> Point3d {
         let v1 = self.p1.x.powi(2) + self.p1.y.powi(2) + self.p1.z.powi(2);
         let v2 = self.p2.x.powi(2) + self.p2.y.powi(2) + self.p2.z.powi(2);
@@ -296,7 +282,6 @@ fn points_are_on_same_side_of_triangle<P: Vector3d + Cross3d + Sub<Output = P> +
 mod tests {
     use super::super::Point3d;
     use super::TetrahedronData;
-    use crate::extent::Extent;
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::delaunay::dimension::DTetraData;
 
@@ -313,43 +298,5 @@ mod tests {
         assert_float_is_close(d, tetra.p2.distance(circumsphere_center));
         assert_float_is_close(d, tetra.p3.distance(circumsphere_center));
         assert_float_is_close(d, tetra.p4.distance(circumsphere_center));
-    }
-
-    #[test]
-    fn positively_oriented_precision() {
-        let p1 = Point3d::new(
-            8.304315728040103e2,
-            1.5326624395954854e3,
-            7.152848445527569e2,
-        );
-        let p2 = Point3d::new(
-            8.333373092643403e2,
-            1.526559671691492e3,
-            7.2375575000938654e2,
-        );
-        let p3 = Point3d::new(
-            8.308990882295372e2,
-            1.5329064734562154e3,
-            7.239976730694985e2,
-        );
-        let p4 = Point3d::new(
-            8.311159621179705e2,
-            1.531659342434437e3,
-            7.1988372898183815e2,
-        );
-        for scale_exponent in -30..30 {
-            let scale = 10.0f64.powi(scale_exponent);
-            let tetra = TetrahedronData {
-                p1: p1 * scale,
-                p2: p2 * scale,
-                p3: p3 * scale,
-                p4: p4 * scale,
-            };
-            let extent =
-                Extent::from_points([p1 * scale, p2 * scale, p3 * scale, p4 * scale].into_iter())
-                    .unwrap();
-            // This test will fail if it is not performed in arbitrary precision arithmetic.
-            assert!(!tetra.is_positively_oriented(&extent));
-        }
     }
 }
