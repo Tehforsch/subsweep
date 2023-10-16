@@ -420,6 +420,10 @@ mod tests {
         let sub_data = sub_constructor.data;
         let full_voronoi = full_data.construct_voronoi();
         let sub_voronoi = sub_data.construct_voronoi();
+        assert!(
+            sub_voronoi.cells.len() != full_voronoi.cells.len(),
+            "All haloes imported - this test is not super useful in this way."
+        );
         all_points_in_radius_imported(&sub_data, points);
         for (id, _) in local_points.iter() {
             let c1 = get_cell_for_local_particle(&full_voronoi, &full_data, *id);
