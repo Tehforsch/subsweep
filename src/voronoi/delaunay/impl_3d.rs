@@ -640,7 +640,7 @@ mod tests {
                 .iter()
                 .map(|(tetra, point)| {
                     (
-                        t.tetras[*tetra].find_face_opposite(*point).face,
+                        t.tetras[*tetra].find_face_opposite(*point),
                         ConnectionData {
                             tetra: *tetra,
                             point: *point,
@@ -648,21 +648,22 @@ mod tests {
                     )
                 })
                 .find(|(neighbour_face, _)| {
-                    t.faces[*neighbour_face]
+                    t.faces[neighbour_face.face]
                         .points()
                         .all(|p| face.contains_point(p))
                 });
+
             if let Some((face, connection_data)) = corresponding_neighbour {
                 FaceInfo {
-                    face,
+                    face: face.face,
                     opposing: Some(connection_data),
-                    flipped: todo!(),
+                    flipped: !face.flipped,
                 }
             } else {
                 FaceInfo {
                     face: t.faces.insert(face),
                     opposing: None,
-                    flipped: todo!(),
+                    flipped: true,
                 }
             }
         };
@@ -672,8 +673,8 @@ mod tests {
             p3: p4,
         });
         let f2 = insert_face(Triangle {
-            p1: p1,
-            p2: p3,
+            p1: p3,
+            p2: p1,
             p3: p4,
         });
         let f3 = insert_face(Triangle {
@@ -682,20 +683,23 @@ mod tests {
             p3: p4,
         });
         let f4 = insert_face(Triangle {
-            p1: p1,
-            p2: p2,
+            p1: p2,
+            p2: p1,
             p3: p3,
         });
-        t.insert_positively_oriented_tetra(Tetra {
-            p1,
-            p2,
-            p3,
-            p4,
-            f1,
-            f2,
-            f3,
-            f4,
-        })
+        t.insert_positively_oriented_tetra(t.make_nice_tetra(
+            Tetra {
+                p1,
+                p2,
+                p3,
+                p4,
+                f1,
+                f2,
+                f3,
+                f4,
+            },
+            true,
+        ))
     }
 
     #[test]
@@ -719,24 +723,24 @@ mod tests {
             point_kinds: HashMap::default(),
             extent,
         };
-        let t1 = insert_tetra_with_neighbours(
+        let t0 = insert_tetra_with_neighbours(
             &mut triangulation,
             &[],
-            points[0],
             points[1],
+            points[0],
             points[2],
             points[3],
         );
-        let t2 = insert_tetra_with_neighbours(
+        let t4 = insert_tetra_with_neighbours(
             &mut triangulation,
-            &[(t1, points[0])],
-            points[1],
+            &[(t0, points[0])],
             points[2],
+            points[1],
             points[3],
             points[4],
         );
-        let shared_face = triangulation.tetras[t1].find_face_opposite(points[0]).face;
-        let tetras = triangulation.two_to_three_flip(t1, t2, points[0], points[4], shared_face);
+        let shared_face = triangulation.tetras[t0].find_face_opposite(points[0]).face;
+        let tetras = triangulation.two_to_three_flip(t0, t4, points[0], points[4], shared_face);
         assert_eq!(triangulation.tetras.len(), 3);
         assert_eq!(triangulation.points.len(), 5);
         assert_eq!(triangulation.faces.len(), 9);
@@ -839,29 +843,29 @@ mod tests {
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,
             &[],
-            points[0],
             points[4],
-            points[1],
+            points[0],
             points[2],
+            points[3],
         );
         let t2 = insert_tetra_with_neighbours(
             &mut triangulation,
-            &[(t1, points[1])],
-            points[0],
+            &[(t1, points[2])],
             points[4],
-            points[2],
-            points[3],
-        );
-        let t3 = insert_tetra_with_neighbours(
-            &mut triangulation,
-            &[(t1, points[2]), (t2, points[2])],
             points[0],
-            points[4],
             points[3],
             points[1],
         );
+        let t3 = insert_tetra_with_neighbours(
+            &mut triangulation,
+            &[(t1, points[3]), (t2, points[3])],
+            points[4],
+            points[0],
+            points[1],
+            points[2],
+        );
         let tetras = triangulation.three_to_two_flip(
-            t1, t2, t3, points[3], points[1], points[2], points[0], points[4],
+            t1, t3, t2, points[1], points[3], points[2], points[0], points[4],
         );
         let ta = tetras[0];
         let tb = tetras[1];
