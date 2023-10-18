@@ -5,6 +5,8 @@ use bevy_ecs::prelude::Res;
 use bevy_ecs::prelude::ResMut;
 use bevy_ecs::prelude::Resource;
 use bevy_ecs::schedule::SystemDescriptor;
+use bevy_ecs::schedule::SystemLabelId;
+use bevy_ecs::system::AsSystemLabel;
 use hdf5::H5Type;
 
 use super::plugin::IntoOutputSystem;
@@ -29,14 +31,19 @@ impl<T: Named> Named for Attribute<T> {
 }
 
 impl<T: ToAttribute> IntoOutputSystem for Attribute<T> {
-    fn create_system() -> SystemDescriptor {
-        write_attribute::<T>
+    fn create_system() -> (SystemDescriptor, SystemLabelId) {
+        let system = write_attribute::<T>
             .into_descriptor()
-            .with_run_criteria(Timer::run_criterion)
+            .with_run_criteria(Timer::run_criterion);
+        (system, write_attribute::<T>.as_system_label())
     }
 
     fn write_system() -> SystemDescriptor {
         (|| {}).into_descriptor()
+    }
+
+    fn is_always_desired() -> bool {
+        true
     }
 }
 

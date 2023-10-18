@@ -103,6 +103,9 @@ type Sites<C> = ActiveList<Site<C>>;
 #[derive(Named)]
 pub struct SweepPlugin;
 
+#[derive(Resource, derive_more::Deref, derive_more::DerefMut)]
+pub struct IsFirstTime(bool);
+
 #[derive(Debug, Equivalence, PartialEq, Eq, Hash)]
 pub struct TimestepLevelData {
     level: TimestepLevel,
@@ -125,6 +128,7 @@ impl SubsweepPlugin for SweepPlugin {
             .add_plugin(TimeSeriesPlugin::<PhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<WeightedPhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<NumParticlesAtTimestepLevels>::default())
+            .insert_resource(IsFirstTime(true))
             .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
             .add_startup_system_to_stage(
@@ -664,7 +668,15 @@ fn run_sweep_system(
     mut photoionization_rates: Particles<(&ParticleId, &mut components::PhotoionizationRate)>,
     mut time: ResMut<SimulationTime>,
     mut timers: NonSendMut<Performance>,
+    mut is_first: ResMut<IsFirstTime>,
 ) {
+    // This is a slightly hacky way of making sure that we can output
+    // the ICS. The first time this system would run, it doesn't run so that
+    // we get to the output stage before any quantities have changed.
+    if **is_first {
+        **is_first = false;
+        return;
+    }
     let solver = (*solver).as_mut().unwrap();
     let time_elapsed = solver.run_sweeps(&mut timers);
     **time += time_elapsed;
