@@ -23,6 +23,7 @@ use super::simulation_plugin::SimulationPlugin;
 use crate::communication::BaseCommunicationPlugin;
 use crate::parameter_plugin::parameter_file_contents::Override;
 use crate::prelude::WorldRank;
+use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 
 pub struct SimulationBuilder {
@@ -160,7 +161,11 @@ impl SimulationBuilder {
         let log_params = sim
             .add_parameter_type_and_get_result::<LogParameters>()
             .clone();
-        self.log_setup(**sim.get_resource::<WorldRank>().unwrap(), &log_params);
+        self.log_setup(
+            **sim.get_resource::<WorldRank>().unwrap(),
+            **sim.get_resource::<WorldSize>().unwrap(),
+            &log_params,
+        );
         sim.add_plugin(SimulationPlugin)
             .add_plugin(DomainPlugin)
             .insert_resource(ReportExecutionOrderAmbiguities);
@@ -189,12 +194,11 @@ impl SimulationBuilder {
         }
     }
 
-    fn log_setup(&self, rank: i32, log_params: &LogParameters) {
+    fn log_setup(&self, rank: i32, num_ranks: usize, log_params: &LogParameters) {
         if !self.log {
             return;
         }
-        let output_file = format!("logs/rank_{}.log", rank);
-        let output_file = Path::new(&output_file);
+        let output_file = self.get_output_file(rank, num_ranks);
         let parent_folder = output_file.parent().unwrap();
         fs::create_dir_all(parent_folder)
             .unwrap_or_else(|_| panic!("Failed to create log directory at {:?}", parent_folder));
@@ -232,5 +236,11 @@ impl SimulationBuilder {
             2 => LevelFilter::Trace,
             v => unimplemented!("Unsupported verbosity level: {}", v),
         }
+    }
+
+    fn get_output_file(&self, rank: i32, num_ranks: usize) -> PathBuf {
+        let padding = ((num_ranks as f64).log10().floor() as usize) + 1;
+        let output_file = format!("logs/rank_{:0padding$}.log", rank, padding = padding);
+        Path::new(&output_file).into()
     }
 }
