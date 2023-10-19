@@ -232,7 +232,7 @@ impl SimulationBuilder {
                 WriteLogger::new(level, config, File::create(output_file).unwrap()),
             ])
             .unwrap();
-        } else if !log_params.only_main_rank.unwrap_or(true) {
+        } else if !log_params.only_main_rank.unwrap_or(false) {
             WriteLogger::init(level, config, File::create(output_file).unwrap()).unwrap();
         }
     }
