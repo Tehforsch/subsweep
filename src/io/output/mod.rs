@@ -83,7 +83,7 @@ fn write_used_parameters_system(
     });
 }
 
-pub(super) fn make_output_dirs_system(parameters: Res<OutputParameters>) {
+pub fn make_output_dirs(parameters: &OutputParameters) {
     if parameters.output_dir.exists() {
         match parameters.handle_existing_output {
             parameters::HandleExistingOutput::Panic => panic!(

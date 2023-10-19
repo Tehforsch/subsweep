@@ -48,6 +48,10 @@ impl StaticUniverse {
     pub fn drop(&self) {
         let _ = self.0.lock().unwrap().take();
     }
+
+    pub fn barrier(&self) {
+        self.world().barrier()
+    }
 }
 
 lazy_static! {
