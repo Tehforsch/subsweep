@@ -37,7 +37,6 @@ use crate::io::file_distribution::RankAssignment;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::prelude::Particles;
 use crate::prelude::WorldRank;
-use crate::prelude::WorldSize;
 use crate::units::Dimension;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor_si";
@@ -369,7 +368,7 @@ pub fn finish_wait_for_other_ranks_system(mut perf: ResMut<crate::performance::P
 }
 
 #[cfg(not(feature = "parallel-hdf5"))]
-pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
+pub fn init_wait_for_other_ranks_system(world_size: Res<crate::prelude::WorldSize>, rank: Res<WorldRank>) {
     if **world_size > 10 {
         log::warn!("Serial hdf5 output is very slow on many ranks, try compiling with the parallel-hdf5 feature enabled")
     }
@@ -382,7 +381,7 @@ pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<Wo
 }
 
 #[cfg(not(feature = "parallel-hdf5"))]
-pub fn finish_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
+pub fn finish_wait_for_other_ranks_system(world_size: Res<crate::prelude::WorldSize>, rank: Res<WorldRank>) {
     let world = MPI_UNIVERSE.world();
     for i in 0..**world_size {
         if i >= **rank as usize {
