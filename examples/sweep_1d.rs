@@ -13,8 +13,8 @@ use subsweep::prelude::SimulationBuilder;
 use subsweep::prelude::StartupStages;
 use subsweep::prelude::WorldRank;
 use subsweep::prelude::WorldSize;
-use subsweep::source_systems::set_source_terms_system;
 use subsweep::source_systems::Source;
+use subsweep::source_systems::SourcePlugin;
 use subsweep::source_systems::Sources;
 use subsweep::sweep::grid::init_cartesian_grid_system;
 use subsweep::sweep::grid::NumCellsSpec;
@@ -70,14 +70,11 @@ fn setup_sweep_sim() -> Simulation {
         panic!("1d test not supported on multiple cores - to fix this, initialize the sweep cells after domain decomposition")
     }
     sim.write_output(true)
+        .add_plugin(SourcePlugin)
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_startup_system_to_stage(
             StartupStages::InsertDerivedComponents,
             initialize_sweep_components_system,
-        )
-        .add_startup_system_to_stage(
-            StartupStages::InsertComponentsAfterGrid,
-            set_source_terms_system,
         )
         .add_plugin(SweepPlugin);
     sim

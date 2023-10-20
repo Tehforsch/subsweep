@@ -13,10 +13,14 @@ use crate::components;
 use crate::components::Position;
 use crate::domain::DecompositionState;
 use crate::domain::IntoKey;
+use crate::io::time_series::TimeSeriesPlugin;
 use crate::prelude::Float;
 use crate::prelude::Particles;
 use crate::prelude::SimulationBox;
+use crate::prelude::StartupStages;
 use crate::prelude::WorldRank;
+use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 use crate::units::Length;
 use crate::units::SourceRate;
 use crate::units::VecLength;
@@ -39,7 +43,7 @@ pub struct Sources {
     pub sources: Vec<Source>,
 }
 
-pub fn set_source_terms_system(
+fn set_source_terms_system(
     mut particles: Particles<(&Position, &mut components::Source)>,
     sources: Res<Sources>,
     decomposition: Res<DecompositionState>,
@@ -75,4 +79,17 @@ fn pos_to_tree_coord(pos: &VecLength) -> [f64; 3] {
         pos.y().value_unchecked(),
         pos.z().value_unchecked(),
     ]
+}
+
+#[derive(Named)]
+pub struct SourcePlugin;
+
+impl SubsweepPlugin for SourcePlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.add_startup_system_to_stage(
+            StartupStages::InsertComponentsAfterGrid,
+            set_source_terms_system,
+        )
+        .add_plugin(TimeSeriesPlugin::<TotalLuminosity>::default());
+    }
 }

@@ -31,7 +31,7 @@ use subsweep::io::DatasetShape;
 use subsweep::io::InputDatasetDescriptor;
 use subsweep::prelude::*;
 use subsweep::simulation_plugin::remove_components_system;
-use subsweep::source_systems::set_source_terms_system;
+use subsweep::source_systems::SourcePlugin;
 use subsweep::source_systems::Sources;
 use subsweep::source_systems::TotalLuminosity;
 use subsweep::sweep::grid::Cell;
@@ -82,11 +82,8 @@ fn main() {
             },
         ));
     }
-    sim.add_parameter_type::<Parameters>()
-        .add_startup_system_to_stage(
-            StartupStages::InsertComponentsAfterGrid,
-            set_source_terms_system,
-        )
+    sim.add_plugin(SourcePlugin)
+        .add_parameter_type::<Parameters>()
         .add_startup_system_to_stage(
             StartupStages::ReadInput,
             insert_initial_ionized_fraction_system,
@@ -113,7 +110,6 @@ fn main() {
             StartupStages::InsertGrid,
             remove_components_system::<ElectronAbundance>,
         )
-        .add_plugin(TimeSeriesPlugin::<TotalLuminosity>::default())
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
             InputDatasetDescriptor::<Position>::new(
                 DatasetDescriptor {
