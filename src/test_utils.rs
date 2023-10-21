@@ -39,10 +39,6 @@ pub fn assert_float_is_close(x: Float, y: Float) {
     assert!((x - y).abs() < 10.0 * f64::EPSILON, "{} {}", x, y)
 }
 
-pub fn assert_float_is_close_high_error(x: Float, y: Float) {
-    assert!((x - y).abs() < 1e3 * f64::EPSILON, "{} {}", x, y)
-}
-
 #[cfg(not(feature = "2d"))]
 pub fn assert_vec_is_close<const U: Dimension>(
     x: Quantity<crate::prelude::MVec, U>,

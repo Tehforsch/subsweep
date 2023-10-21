@@ -178,6 +178,10 @@ where
         tetra.points().map(|p| self.get_remapped_point(p)).collect()
     }
 
+    fn get_original_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
+        tetra.points().map(|p| self.get_original_point(p)).collect()
+    }
+
     fn get_remapped_face_data(&self, face: &Face<D>) -> FaceData<D> {
         face.points().map(|p| self.get_remapped_point(p)).collect()
     }
@@ -190,11 +194,11 @@ where
         point_location::find_containing_tetra(self, point)
     }
 
-    pub(super) fn get_remapped_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
+    pub(super) fn get_original_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
         let tetra = &self.tetras.get(tetra).unwrap();
-        let tetra_data = self.get_remapped_tetra_data(tetra);
+        let tetra_data = self.get_original_tetra_data(tetra);
         let center = tetra_data.get_center_of_circumcircle();
-        let sample_point = self.get_remapped_point(tetra.points().next().unwrap());
+        let sample_point = self.get_original_point(tetra.points().next().unwrap());
         let radius = center.distance(sample_point);
         Circumcircle { center, radius }
     }
@@ -306,13 +310,6 @@ where
     fn circumcircle_contains_point(&self, tetra: &Tetra<D>, point: PointIndex) -> bool {
         let tetra_data = self.get_remapped_tetra_data(tetra);
         tetra_data.circumcircle_contains(self.get_remapped_point(point))
-    }
-
-    #[cfg(test)]
-    pub(super) fn iter_remapped_points(&self) -> impl Iterator<Item = (PointIndex, Point<D>)> + '_ {
-        self.points
-            .iter()
-            .map(|(p, _)| (p, self.get_remapped_point(p)))
     }
 
     pub fn iter_original_points(&self) -> impl Iterator<Item = (PointIndex, Point<D>)> + '_ {
