@@ -43,7 +43,7 @@ impl Dimension for TwoD {
     type WrapType = PeriodicWrapType2d;
     fn remap_point(point: Point<Self>, extent: &Extent<Point<Self>>) -> Point<Self> {
         debug_assert!(extent.contains(&point));
-        (point - extent.min) * (1.0 / extent.side_lengths())
+        MVec2::new(1.0, 1.0) + (point - extent.min) * (1.0 / extent.side_lengths())
     }
 }
 
@@ -55,7 +55,7 @@ impl Dimension for ThreeD {
     type WrapType = PeriodicWrapType3d;
     fn remap_point(point: Point<Self>, extent: &Extent<Point<Self>>) -> Point<Self> {
         debug_assert!(extent.contains(&point));
-        (point - extent.min) * (1.0 / extent.side_lengths())
+        MVec3::new(1.0, 1.0, 1.0) + (point - extent.min) * (1.0 / extent.side_lengths())
     }
 }
 
