@@ -190,7 +190,7 @@ where
                         .points()
                         .find(|p| self.triangulation.point_kinds[p] == PointKind::Inner)
                         .unwrap();
-                    self.triangulation.get_remapped_point(p_index)
+                    self.triangulation.get_original_point(p_index)
                 };
                 undecided.search_radius = Some(search_radius);
                 Some(SearchData::<D> {
@@ -222,7 +222,7 @@ where
         UndecidedTetraInfo {
             tetra,
             search_radius: None,
-            circumcircle: self.triangulation.get_remapped_tetra_circumcircle(tetra),
+            circumcircle: self.triangulation.get_original_tetra_circumcircle(tetra),
         }
     }
 
@@ -254,8 +254,8 @@ mod tests {
     use crate::dimension::Point;
     use crate::dimension::WrapType;
     use crate::extent::Extent;
+    use crate::prelude::Float;
     use crate::prelude::ParticleId;
-    use crate::test_utils::assert_float_is_close_high_error;
     use crate::voronoi::constructor::halo_cache::HaloCache;
     use crate::voronoi::constructor::Constructor;
     use crate::voronoi::delaunay::dimension::DTetra;
@@ -357,7 +357,7 @@ mod tests {
             }
             let c = sub_triangulation_data
                 .triangulation
-                .get_remapped_tetra_circumcircle(t);
+                .get_original_tetra_circumcircle(t);
             let search = SearchData::<D> {
                 point: c.center,
                 radius: c.radius,
@@ -368,7 +368,7 @@ mod tests {
             for (id, _) in points_in_radius {
                 assert!(sub_triangulation_data
                     .triangulation
-                    .iter_remapped_points()
+                    .iter_original_points()
                     .any(|(p_index, _)| {
                         sub_triangulation_data
                             .point_to_cell_map
@@ -384,6 +384,15 @@ mod tests {
                     }));
             }
         }
+    }
+
+    fn assert_float_is_close_high_error(x: Float, y: Float) {
+        assert!(
+            (x - y).abs() / (x + y).abs() < 1e5 * f64::EPSILON,
+            "{} {}",
+            x,
+            y
+        )
     }
 
     #[test]
