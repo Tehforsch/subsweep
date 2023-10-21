@@ -174,7 +174,7 @@ impl<V: Vector2d + Clone + Sub<Output = V> + std::fmt::Debug> TriangleData<V> {
             Ok(false)
         } else {
             for sign in signs() {
-                sign?.panic_if_zero("Degenerate case of point on edge of triangle");
+                sign?.panic_if_zero(|| "Degenerate case of point on edge of triangle");
             }
             Ok(true)
         }
@@ -249,7 +249,7 @@ impl DTetraData for TriangleData<Point2d> {
                 [d.x - a.x, d.y - a.y, (d.x - a.x).powi(2) + (d.y - a.y).powi(2)]
             ]
         );
-        sign.panic_if_zero("Degenerate case in circumcircle test.").is_negative()
+        sign.panic_if_zero(|| "Degenerate case in circumcircle test.").is_negative()
     }
 
     fn get_center_of_circumcircle(&self) -> Point2d {
@@ -304,9 +304,9 @@ impl<V: Vector3d + Clone + Add<Output = V> + Sub<Output = V>> TriangleData<V> {
                 .map(|x| {
                     let sign = Sign::try_from_val(&x);
                     if let Ok(sign) = sign {
-                        sign.panic_if_zero(
-                            "Degenerate case of point on line (implement 4-to-4 flip)",
-                        );
+                        sign.panic_if_zero(|| {
+                            "Degenerate case of point on line (implement 4-to-4 flip)"
+                        });
                     }
                     sign
                 })
