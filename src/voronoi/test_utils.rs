@@ -11,7 +11,6 @@ use super::Point3d;
 use crate::dimension::ThreeD;
 use crate::dimension::TwoD;
 use crate::extent::Extent;
-use crate::prelude::ParticleId;
 use crate::voronoi::Point2d;
 
 pub trait TestDimension: DDimension {
@@ -50,30 +49,6 @@ pub trait TestDimension: DDimension {
             .filter(|p| !Self::extent_contains(&extent, &p))
             .take(num)
             .collect()
-    }
-
-    fn get_combined_point_set() -> Vec<(ParticleId, Self::Point)> {
-        let (p1, p2) = Self::get_example_point_sets_with_ids();
-        p1.into_iter().chain(p2.into_iter()).collect()
-    }
-
-    fn get_example_point_sets_with_ids() -> (
-        Vec<(ParticleId, Self::Point)>,
-        Vec<(ParticleId, Self::Point)>,
-    ) {
-        let p1 = Self::get_example_point_set_num(100, 0);
-        let p2 = Self::get_surrounding_points(100);
-        let len_p1 = p1.len();
-        (
-            p1.into_iter()
-                .enumerate()
-                .map(|(i, p)| (ParticleId::test(i), p))
-                .collect(),
-            p2.into_iter()
-                .enumerate()
-                .map(|(i, p)| (ParticleId::test(len_p1 + i), p))
-                .collect(),
-        )
     }
 }
 
