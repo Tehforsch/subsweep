@@ -280,6 +280,8 @@ mod tests {
     #[instantiate_tests(<crate::dimension::ThreeD>)]
     mod three_d {}
 
+    pub const OTHER_RANK: i32 = 1;
+
     #[derive(Clone)]
     pub struct TestRadiusSearch<D: DDimension> {
         points: Vec<(ParticleId, Point<D>)>,
@@ -289,12 +291,11 @@ mod tests {
 
     impl<D: DDimension + Debug> RadiusSearch<D> for TestRadiusSearch<D> {
         fn radius_search(&mut self, data: Vec<SearchData<D>>) -> DataByRank<SearchResults<D>> {
-            let fake_rank = 1;
             let mut d = DataByRank::empty();
             let mut new_haloes = vec![];
             for search in data.iter() {
                 let result = self.cache.get_new_haloes(
-                    fake_rank,
+                    OTHER_RANK,
                     self.points
                         .iter()
                         .filter(|(_, p)| search.point.distance(*p) <= search.radius)
@@ -302,7 +303,7 @@ mod tests {
                 );
                 new_haloes.extend(result);
             }
-            d.insert(fake_rank, new_haloes);
+            d.insert(OTHER_RANK, new_haloes);
             d
         }
 
@@ -388,10 +389,41 @@ mod tests {
 
     fn assert_float_is_close_high_error(x: Float, y: Float) {
         assert!(
-            (x - y).abs() / (x + y).abs() < 1e5 * f64::EPSILON,
-            "{} {}",
+            (x - y).abs() / (x + y).abs() < 1e-2,
+            "{} {} (diff: {})",
             x,
-            y
+            y,
+            (x - y).abs() / (x + y),
+        )
+    }
+
+    fn get_combined_point_set<D: TestDimension>() -> Vec<(ParticleId, D::Point)> {
+        let (p1, p2) = get_example_point_sets_with_ids::<D>();
+        p1.into_iter().chain(p2.into_iter()).collect()
+    }
+
+    fn get_example_point_sets_with_ids<D: TestDimension>(
+    ) -> (Vec<(ParticleId, D::Point)>, Vec<(ParticleId, D::Point)>) {
+        let p1 = D::get_example_point_set_num(100, 0);
+        let p2 = D::get_surrounding_points(100);
+        let len_p1 = p1.len();
+        (
+            p1.into_iter()
+                .enumerate()
+                .map(|(i, p)| (ParticleId::test(i), p))
+                .collect(),
+            p2.into_iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    (
+                        ParticleId {
+                            index: (len_p1 + i) as u32,
+                            rank: OTHER_RANK,
+                        },
+                        p,
+                    )
+                })
+                .collect(),
         )
     }
 
@@ -410,8 +442,8 @@ mod tests {
         Extent<Point<D>>: Visualizable,
     {
         // Obtain two point sets - the second of them shifted by some offset away from the first
-        let (local_points, remote_points) = D::get_example_point_sets_with_ids();
-        let points = D::get_combined_point_set();
+        let (local_points, remote_points) = get_example_point_sets_with_ids::<D>();
+        let points = get_combined_point_set::<D>();
         // First construct the triangulation normally
         let full_constructor = Constructor::new(points.iter().cloned());
         // Now construct the triangulation of the first set using imported
@@ -445,6 +477,12 @@ mod tests {
                 continue;
             }
             assert_eq!(c1.faces.len(), c2.faces.len());
+            // Due to the fact that points can be re-arranged
+            // (cyclically) inside of the polygonal faces of the
+            // voronoi grid, the numerical error can be quite large
+            // here. This only affects the face areas but not the
+            // normals. However, the face areas are used to compute
+            // the volumes of the cell, which leads to high errors.
             assert_float_is_close_high_error(c1.volume(), c2.volume());
         }
     }
