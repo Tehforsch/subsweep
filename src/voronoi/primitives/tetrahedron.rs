@@ -283,4 +283,20 @@ mod tests {
         assert_float_is_close(d, tetra.p3.distance(circumsphere_center));
         assert_float_is_close(d, tetra.p4.distance(circumsphere_center));
     }
+
+    #[test]
+    fn circumcircle_contains_precision() {
+        let tetra = TetrahedronData {
+            p1: Point3d::new(0.19236904054484075, 0.1937984500812517, 0.18486863500429718),
+            p2: Point3d::new(0.192360756554688, 0.19400002939544703, 0.18517853170782586),
+            p3: Point3d::new(0.19232935691504563, 0.1938108287106263, 0.18504746257365087),
+            p4: Point3d::new(0.1926691416553181, 0.1940969382421931, 0.18488871435170906),
+        };
+        let p = Point3d::new(
+            0.19263782374657437,
+            0.19383462451181724,
+            0.18508570960956586,
+        );
+        assert!(!tetra.circumcircle_contains(p));
+    }
 }
