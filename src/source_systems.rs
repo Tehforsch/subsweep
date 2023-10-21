@@ -3,7 +3,7 @@ use bevy_ecs::prelude::Res;
 use bevy_ecs::prelude::Resource;
 use derive_custom::Named;
 use kiddo::distance::squared_euclidean;
-use kiddo::KdTree;
+use kiddo::float::kdtree::KdTree;
 use log::debug;
 use mpi::traits::Equivalence;
 use serde::Serialize;
@@ -54,7 +54,7 @@ fn set_source_terms_system(
     let mut source_comm = MpiWorld::<Source>::new();
     let all_sources = source_comm.all_gather_varcount(&sources.sources);
     let mut particles: Vec<_> = particles.iter_mut().collect();
-    let tree: KdTree<Float, 3> = (&particles
+    let tree: KdTree<f64, u32, 3, 11000, u32> = (&particles
         .iter()
         .map(|(pos, _)| pos_to_tree_coord(pos))
         .collect::<Vec<_>>())
@@ -64,7 +64,7 @@ fn set_source_terms_system(
         let rank = decomposition.get_owning_rank(key);
         if rank == **world_rank {
             let (_, index) = tree.nearest_one(&pos_to_tree_coord(&s.position), &squared_euclidean);
-            let (_, ref mut source_term) = &mut particles[index];
+            let (_, ref mut source_term) = &mut particles[index as usize];
             ***source_term += s.rate;
         }
     }
