@@ -100,7 +100,7 @@ impl TestDimension for TwoD {
                 [1.0, t.p3.x, t.p3.y],
             ]
         );
-        sign.panic_if_zero("Zero volume tetra encountered").is_positive()
+        sign.panic_if_zero(|| "Zero volume tetra encountered").is_positive()
     }
 }
 
@@ -155,6 +155,6 @@ impl TestDimension for ThreeD {
                 [1.0, t.p3.x, t.p3.y, t.p3.z],
                 [1.0, t.p4.x, t.p4.y, t.p4.z],
             ]
-        ).panic_if_zero("Zero volume tetra encountered").is_positive()
+        ).panic_if_zero(|| "Zero volume tetra encountered").is_positive()
     }
 }

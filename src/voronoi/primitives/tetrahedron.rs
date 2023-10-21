@@ -195,15 +195,15 @@ impl DTetraData for TetrahedronData {
         let c = self.p3;
         let d = self.p4;
         let e = point;
-        determinant5x5_sign(
-            [
+        let matrix = [
                 [1.0, a.x, a.y, a.z, a.x.powi(2) + a.y.powi(2) + a.z.powi(2)],
                 [1.0, b.x, b.y, b.z, b.x.powi(2) + b.y.powi(2) + b.z.powi(2)],
                 [1.0, c.x, c.y, c.z, c.x.powi(2) + c.y.powi(2) + c.z.powi(2)],
                 [1.0, d.x, d.y, d.z, d.x.powi(2) + d.y.powi(2) + d.z.powi(2)],
                 [1.0, e.x, e.y, e.z, e.x.powi(2) + e.y.powi(2) + e.z.powi(2)],
-            ]
-        ).panic_if_zero("Degenerate case in circumcircle test").is_negative()
+            ];
+        determinant5x5_sign(matrix
+        ).panic_if_zero(|| format!("Degenerate case in circumcircle test of tetrahedron: {:?}. {:?}", self, matrix)).is_negative()
     }
 
     #[rustfmt::skip]
@@ -258,7 +258,7 @@ fn points_are_on_same_side_of_triangle<P: Vector3d + Cross3d + Sub<Output = P> +
     let dot_1_sign = Sign::try_from_val(&(p1 - p_a.clone()).dot(normal.clone()))?;
     let dot_2_sign = Sign::try_from_val(&(p2 - p_a).dot(normal))?;
     Ok((dot_1_sign * dot_2_sign)
-        .panic_if_zero("Degenerate case: point on line of triangle.")
+        .panic_if_zero(|| "Degenerate case: point on line of triangle.")
         .is_positive())
 }
 

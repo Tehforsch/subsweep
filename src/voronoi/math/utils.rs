@@ -133,9 +133,9 @@ impl Sign {
         matches!(self, Sign::Negative)
     }
 
-    pub fn panic_if_zero(&self, arg: &'static str) -> &Self {
+    pub fn panic_if_zero<U: std::fmt::Display>(&self, arg: impl Fn() -> U) -> &Self {
         if let Self::Zero = self {
-            panic!("{}", arg)
+            panic!("{}", arg())
         }
         self
     }
