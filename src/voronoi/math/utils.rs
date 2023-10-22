@@ -1,4 +1,8 @@
 use std::cmp::Ordering;
+use std::fs;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::path::Path;
 
 use array_init::from_iter;
 use num::FromPrimitive;
@@ -14,6 +18,22 @@ use super::traits::Num;
 // internal storage is reversed, such that the order of indices is
 // as it would be in math, i.e. Matrix<M, N> has M rows and N columns.
 type Matrix<const M: usize, const N: usize, F> = [[F; N]; M];
+
+
+pub fn collect<const M: usize, const N: usize>(m: Matrix<M, N, f64>) {
+    let fname = format!("matrices/{}_{}", M, N);
+    let fname = Path::new(&fname);
+    if !fname.parent().unwrap().exists() {
+        fs::create_dir(fname.parent().unwrap()).unwrap();
+    }
+    let f = if !fname.exists() {
+        File::create(fname).unwrap()
+    } else {
+        OpenOptions::new().append(true).open(&fname).unwrap()
+    };
+    let vec: Vec<Vec<Vec<_>>> = vec![m.into_iter().map(|row| row.into_iter().collect()).collect()];
+    serde_yaml::to_writer(f, &vec).unwrap();
+}
 
 pub fn solve_system_of_equations<const M: usize, F: Num>(mut a: Matrix<M, { M + 1 }, F>) -> [F; M] {
     let n = M + 1;
@@ -161,13 +181,21 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
     f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
 ) -> Sign {
     let val = f(m);
-    match compare_result_against_entries(val, &m) {
-        Ok(val) => Sign::of(val),
-        Err(_) => {
-            let m = lift_matrix(m);
-            Sign::of(f_arbitrary_precision(m))
-        }
+    let arbitrary = {
+        let m = lift_matrix(m);
+        Sign::of(f_arbitrary_precision(m))
+    };
+    if Sign::of(val) != arbitrary {
+        collect(m);
     }
+    return arbitrary;
+    // match compare_result_against_entries(val, &m) {
+    //     Ok(val) => Sign::of(val),
+    //     Err(_) => {
+    //         let m = lift_matrix(m);
+    //         Sign::of(f_arbitrary_precision(m))
+    //     }
+    // }
 }
 
 pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
