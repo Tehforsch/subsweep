@@ -230,8 +230,12 @@ pub fn determinant5x5<F: Num>(
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::path::Path;
+
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::math::utils::determinant3x3_sign;
+    use crate::voronoi::math::utils::determinant5x5_sign;
     use crate::voronoi::math::utils::lift_matrix;
     use crate::voronoi::math::utils::Matrix;
     use crate::voronoi::math::utils::Sign;
@@ -361,5 +365,34 @@ mod tests {
             determinant3x3_sign(matrix),
             Sign::of(super::determinant3x3(lift_matrix(matrix)))
         );
+    }
+
+    #[test]
+    fn critical_matrices_precision_5x5() {
+        let matrices_file = Path::new(file!())
+            .parent()
+            .unwrap()
+            .join("../../../tests/data/critical_matrices_5x5");
+        let matrices_file = File::open(matrices_file).unwrap();
+        let matrices = serde_yaml::from_reader::<_, Vec<Vec<Vec<f64>>>>(matrices_file).unwrap();
+        let matrices = matrices.into_iter().map(|m| vec_as_matrix::<5, 5>(m));
+        for matrix in matrices {
+            assert_eq!(
+                determinant5x5_sign(matrix),
+                Sign::of(super::determinant5x5(lift_matrix(matrix)))
+            );
+        }
+    }
+
+    fn vec_as_matrix<const M: usize, const N: usize>(v: Vec<Vec<f64>>) -> Matrix<M, N, f64> {
+        let mut m: Matrix<M, N, f64> = [[0.0; N]; M];
+        assert_eq!(m.len(), M);
+        for i in 0..M {
+            assert_eq!(m[i].len(), N);
+            for j in 0..N {
+                m[i][j] = v[i][j];
+            }
+        }
+        m
     }
 }
