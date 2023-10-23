@@ -11,7 +11,6 @@ use bevy_ecs::prelude::NonSend;
 use bevy_ecs::prelude::Res;
 use serde::Serialize;
 
-use super::output::make_output_dirs_system;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
 use crate::named::Named;
@@ -59,14 +58,12 @@ impl<T: TimeSeries> SubsweepPlugin for TimeSeriesPlugin<T> {
     }
 
     fn build_once_on_main_rank(&self, sim: &mut Simulation) {
-        sim.add_startup_system(setup_time_series_output_system.after(make_output_dirs_system));
+        sim.add_startup_system(setup_time_series_output_system);
     }
 
     fn build_on_main_rank(&self, sim: &mut Simulation) {
         sim.add_startup_system(
-            initialize_output_files_system::<T>
-                .after(make_output_dirs_system)
-                .after(setup_time_series_output_system),
+            initialize_output_files_system::<T>.after(setup_time_series_output_system),
         )
         .add_system_to_stage(Stages::Output, output_time_series_system::<T>);
     }

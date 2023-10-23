@@ -8,6 +8,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use bevy_ecs::component::Component;
+use bevy_ecs::entity::Entity;
 use bevy_ecs::prelude::Res;
 use bevy_ecs::prelude::ResMut;
 use bevy_ecs::prelude::Resource;
@@ -17,24 +18,25 @@ use hdf5::Dataset;
 use hdf5::File;
 use log::info;
 use mpi::traits::CommunicatorCollectives;
+use mpi::traits::Equivalence;
 
 pub use self::attribute::Attribute;
 pub use self::attribute::ToAttribute;
 use self::parameters::OutputParameters;
 pub use self::plugin::OutputPlugin;
 use self::timer::Timer;
-use super::input::file_distribution::Region;
+use super::file_distribution::Region;
 use super::input::NumParticlesTotal;
 use super::to_dataset::ToDataset;
 use super::DatasetDescriptor;
 use super::OutputDatasetDescriptor;
+use crate::communication::communicator::Communicator;
 use crate::communication::MPI_UNIVERSE;
-use crate::io::input::file_distribution::get_rank_output_assignment_for_rank;
-use crate::io::input::file_distribution::RankAssignment;
+use crate::io::file_distribution::get_rank_output_assignment_for_rank;
+use crate::io::file_distribution::RankAssignment;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::prelude::Particles;
 use crate::prelude::WorldRank;
-use crate::prelude::WorldSize;
 use crate::units::Dimension;
 
 pub const SCALE_FACTOR_IDENTIFIER: &str = "scale_factor_si";
@@ -83,7 +85,7 @@ fn write_used_parameters_system(
     });
 }
 
-pub(super) fn make_output_dirs_system(parameters: Res<OutputParameters>) {
+pub fn make_output_dirs(parameters: &OutputParameters) {
     if parameters.output_dir.exists() {
         match parameters.handle_existing_output {
             parameters::HandleExistingOutput::Panic => panic!(
@@ -115,14 +117,23 @@ fn make_snapshot_dir(snapshot_dir: &Path) {
 pub fn compute_output_rank_assignment_system(
     mut commands: Commands,
     rank: Res<WorldRank>,
-    world_size: Res<WorldSize>,
     parameters: Res<OutputParameters>,
+    particles: Particles<Entity>,
     num_particles_total: Res<NumParticlesTotal>,
 ) {
+    #[derive(Equivalence, Clone)]
+    struct NumParticles(usize);
+    let num_particles_local = NumParticles(particles.iter().count());
+    let num_particles_per_rank =
+        Communicator::<NumParticles>::new().all_gather(&num_particles_local);
+    let num_particles_per_rank: Vec<_> = num_particles_per_rank.into_iter().map(|x| x.0).collect();
+    assert_eq!(
+        num_particles_per_rank.iter().sum::<usize>(),
+        num_particles_total.0
+    );
     let rank_assignment = get_rank_output_assignment_for_rank(
-        num_particles_total.0,
+        &num_particles_per_rank,
         parameters.num_output_files,
-        **world_size,
         **rank,
     );
     commands.insert_resource(rank_assignment);
@@ -177,9 +188,8 @@ fn create_file_system(
     // In order to know how large the datasets are that we need to create:
     // Compute rank assignment for one rank.
     let assignment = get_rank_output_assignment_for_rank(
-        num_particles_total.0,
+        &[num_particles_total.0],
         parameters.num_output_files,
-        1,
         0,
     );
     file.0 = Some(get_output_files(
@@ -358,7 +368,7 @@ pub fn finish_wait_for_other_ranks_system(mut perf: ResMut<crate::performance::P
 }
 
 #[cfg(not(feature = "parallel-hdf5"))]
-pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
+pub fn init_wait_for_other_ranks_system(world_size: Res<crate::prelude::WorldSize>, rank: Res<WorldRank>) {
     if **world_size > 10 {
         log::warn!("Serial hdf5 output is very slow on many ranks, try compiling with the parallel-hdf5 feature enabled")
     }
@@ -371,7 +381,7 @@ pub fn init_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<Wo
 }
 
 #[cfg(not(feature = "parallel-hdf5"))]
-pub fn finish_wait_for_other_ranks_system(world_size: Res<WorldSize>, rank: Res<WorldRank>) {
+pub fn finish_wait_for_other_ranks_system(world_size: Res<crate::prelude::WorldSize>, rank: Res<WorldRank>) {
     let world = MPI_UNIVERSE.world();
     for i in 0..**world_size {
         if i >= **rank as usize {

@@ -4,6 +4,7 @@ use bevy_ecs::prelude::*;
 use derive_custom::subsweep_parameters;
 use subsweep::components;
 use subsweep::components::Density;
+use subsweep::io::input::NumParticlesTotal;
 use subsweep::parameters::Cosmology;
 use subsweep::prelude::Extent;
 use subsweep::prelude::LocalParticle;
@@ -13,8 +14,8 @@ use subsweep::prelude::SimulationBuilder;
 use subsweep::prelude::StartupStages;
 use subsweep::prelude::WorldRank;
 use subsweep::prelude::WorldSize;
-use subsweep::source_systems::set_source_terms_system;
 use subsweep::source_systems::Source;
+use subsweep::source_systems::SourcePlugin;
 use subsweep::source_systems::Sources;
 use subsweep::sweep::grid::init_cartesian_grid_system;
 use subsweep::sweep::grid::NumCellsSpec;
@@ -66,18 +67,16 @@ fn setup_sweep_sim() -> Simulation {
     add_box_size(&mut sim, &params);
     add_grid(&mut sim, &params, &sweep_params);
     add_source(&mut sim, &params);
+    sim.insert_resource(NumParticlesTotal(params.num_particles));
     if **sim.get_resource::<WorldSize>().unwrap() > 1 {
         panic!("1d test not supported on multiple cores - to fix this, initialize the sweep cells after domain decomposition")
     }
     sim.write_output(true)
+        .add_plugin(SourcePlugin)
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_startup_system_to_stage(
             StartupStages::InsertDerivedComponents,
             initialize_sweep_components_system,
-        )
-        .add_startup_system_to_stage(
-            StartupStages::InsertComponentsAfterGrid,
-            set_source_terms_system,
         )
         .add_plugin(SweepPlugin);
     sim
@@ -148,6 +147,7 @@ fn initialize_sweep_components_system(
             components::Temperature(Temperature::kelvins(1000.0)),
             components::PhotonRate(PhotonRate::zero()),
             components::Source(PhotonRate::zero()),
+            components::Mass(mass_density * params.cell_size().powi::<3>()),
         ));
     }
 }

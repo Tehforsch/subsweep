@@ -2,9 +2,10 @@ use bevy_ecs::event::EventWriter;
 use bevy_ecs::prelude::Res;
 use bevy_ecs::prelude::Resource;
 use derive_custom::Named;
+use kiddo::distance::squared_euclidean;
+use kiddo::KdTree;
 use log::debug;
 use mpi::traits::Equivalence;
-use ordered_float::OrderedFloat;
 use serde::Serialize;
 
 use crate::communication::MpiWorld;
@@ -12,9 +13,14 @@ use crate::components;
 use crate::components::Position;
 use crate::domain::DecompositionState;
 use crate::domain::IntoKey;
+use crate::io::time_series::TimeSeriesPlugin;
+use crate::prelude::Float;
 use crate::prelude::Particles;
 use crate::prelude::SimulationBox;
+use crate::prelude::StartupStages;
 use crate::prelude::WorldRank;
+use crate::simulation::Simulation;
+use crate::simulation::SubsweepPlugin;
 use crate::units::Length;
 use crate::units::SourceRate;
 use crate::units::VecLength;
@@ -37,7 +43,7 @@ pub struct Sources {
     pub sources: Vec<Source>,
 }
 
-pub fn set_source_terms_system(
+fn set_source_terms_system(
     mut particles: Particles<(&Position, &mut components::Source)>,
     sources: Res<Sources>,
     decomposition: Res<DecompositionState>,
@@ -47,22 +53,43 @@ pub fn set_source_terms_system(
 ) {
     let mut source_comm = MpiWorld::<Source>::new();
     let all_sources = source_comm.all_gather_varcount(&sources.sources);
+    let mut particles: Vec<_> = particles.iter_mut().collect();
+    let tree: KdTree<Float, 3> = (&particles
+        .iter()
+        .map(|(pos, _)| pos_to_tree_coord(pos))
+        .collect::<Vec<_>>())
+        .into();
     for s in all_sources.iter() {
         let key = s.position.into_key(&*box_);
         let rank = decomposition.get_owning_rank(key);
         if rank == **world_rank {
-            let closest = particles
-                .iter_mut()
-                .map(|(pos, source)| {
-                    let dist = **pos - s.position;
-                    (OrderedFloat(dist.length().value_unchecked()), source)
-                })
-                .min_by_key(|(dist, _)| *dist);
-            let (_, mut source_term) = closest.unwrap();
-            **source_term += s.rate;
+            let (_, index) = tree.nearest_one(&pos_to_tree_coord(&s.position), &squared_euclidean);
+            let (_, ref mut source_term) = &mut particles[index];
+            ***source_term += s.rate;
         }
     }
     let total: SourceRate = all_sources.iter().map(|source| source.rate).sum();
     writer.send(TotalLuminosity(total));
     debug!("Total luminosity: {:+.2e}", total.in_photons_per_second());
+}
+
+fn pos_to_tree_coord(pos: &VecLength) -> [f64; 3] {
+    [
+        pos.x().value_unchecked(),
+        pos.y().value_unchecked(),
+        pos.z().value_unchecked(),
+    ]
+}
+
+#[derive(Named)]
+pub struct SourcePlugin;
+
+impl SubsweepPlugin for SourcePlugin {
+    fn build_everywhere(&self, sim: &mut Simulation) {
+        sim.add_startup_system_to_stage(
+            StartupStages::InsertComponentsAfterGrid,
+            set_source_terms_system,
+        )
+        .add_plugin(TimeSeriesPlugin::<TotalLuminosity>::default());
+    }
 }

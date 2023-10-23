@@ -21,8 +21,12 @@ use super::command_line_options::CommandLineOptions;
 use super::domain::DomainPlugin;
 use super::simulation_plugin::SimulationPlugin;
 use crate::communication::BaseCommunicationPlugin;
+use crate::communication::MPI_UNIVERSE;
+use crate::io::output::make_output_dirs;
+use crate::io::output::parameters::OutputParameters;
 use crate::parameter_plugin::parameter_file_contents::Override;
 use crate::prelude::WorldRank;
+use crate::prelude::WorldSize;
 use crate::simulation::Simulation;
 
 pub struct SimulationBuilder {
@@ -157,10 +161,13 @@ impl SimulationBuilder {
         sim.read_initial_conditions(self.read_initial_conditions)
             .write_output(self.write_output)
             .maybe_add_plugin(self.base_communication.clone());
-        let log_params = sim
-            .add_parameter_type_and_get_result::<LogParameters>()
+        let rank = **sim.get_resource::<WorldRank>().unwrap();
+        let world_size = **sim.get_resource::<WorldSize>().unwrap();
+        let output_params = sim
+            .add_parameter_type_and_get_result::<OutputParameters>()
             .clone();
-        self.log_setup(**sim.get_resource::<WorldRank>().unwrap(), &log_params);
+        self.make_output_dir(rank, &output_params);
+        self.log_setup(sim, rank, world_size, &output_params);
         sim.add_plugin(SimulationPlugin)
             .add_plugin(DomainPlugin)
             .insert_resource(ReportExecutionOrderAmbiguities);
@@ -189,12 +196,20 @@ impl SimulationBuilder {
         }
     }
 
-    fn log_setup(&self, rank: i32, log_params: &LogParameters) {
+    fn log_setup(
+        &self,
+        sim: &mut Simulation,
+        rank: i32,
+        num_ranks: usize,
+        output_params: &OutputParameters,
+    ) {
         if !self.log {
             return;
         }
-        let output_file = format!("logs/rank_{}.log", rank);
-        let output_file = Path::new(&output_file);
+        let log_params = sim
+            .add_parameter_type_and_get_result::<LogParameters>()
+            .clone();
+        let output_file = self.get_output_file(output_params, rank, num_ranks);
         let parent_folder = output_file.parent().unwrap();
         fs::create_dir_all(parent_folder)
             .unwrap_or_else(|_| panic!("Failed to create log directory at {:?}", parent_folder));
@@ -217,7 +232,7 @@ impl SimulationBuilder {
                 WriteLogger::new(level, config, File::create(output_file).unwrap()),
             ])
             .unwrap();
-        } else if !log_params.only_main_rank.unwrap_or(true) {
+        } else if !log_params.only_main_rank.unwrap_or(false) {
             WriteLogger::init(level, config, File::create(output_file).unwrap()).unwrap();
         }
     }
@@ -232,5 +247,25 @@ impl SimulationBuilder {
             2 => LevelFilter::Trace,
             v => unimplemented!("Unsupported verbosity level: {}", v),
         }
+    }
+
+    fn get_output_file(
+        &self,
+        output_params: &OutputParameters,
+        rank: i32,
+        num_ranks: usize,
+    ) -> PathBuf {
+        let padding = ((num_ranks as f64).log10().floor() as usize) + 1;
+        let output_file = format!("logs/rank_{:0padding$}.log", rank, padding = padding);
+        output_params.output_dir.join(&output_file).into()
+    }
+
+    fn make_output_dir(&self, rank: i32, output_params: &OutputParameters) {
+        if rank == 0 {
+            make_output_dirs(output_params);
+        }
+        // We will need the output dir immediately for the log files,
+        // so make sure everyone waits for it to be created.
+        MPI_UNIVERSE.barrier();
     }
 }

@@ -8,7 +8,6 @@ use super::compute_output_rank_assignment_system;
 use super::create_file_system;
 use super::finish_wait_for_other_ranks_system;
 use super::init_wait_for_other_ranks_system;
-use super::make_output_dirs_system;
 use super::open_file_system;
 use super::parameters::is_desired_field;
 use super::parameters::Fields;
@@ -159,8 +158,7 @@ where
 
     fn build_once_on_main_rank(&self, sim: &mut Simulation) {
         sim.insert_resource(RegisteredFields::default());
-        sim.add_startup_system(make_output_dirs_system)
-            .add_startup_system(write_used_parameters_system.after(make_output_dirs_system))
+        sim.add_startup_system(write_used_parameters_system)
             .add_startup_system(verify_output_fields_system);
         #[cfg(not(feature = "parallel-hdf5"))]
         add_file_creation_systems(sim);

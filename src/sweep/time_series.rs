@@ -115,8 +115,6 @@ pub fn compute_time_series_system(
             .iter()
             .map(|(rate, cell)| **rate * cell.volume()),
     );
-    let total_volume =
-        compute_global_sum(photoionization_rate.iter().map(|(_, cell)| cell.volume()));
     let average = volume_weighted_rate / total_volume * box_.volume();
     debug!(
         "{:<41}: {:.5e} s^-1",
@@ -130,8 +128,6 @@ pub fn compute_time_series_system(
             .iter()
             .map(|(rate, ion_frac, cell)| **rate * **ion_frac * cell.volume()),
     );
-    let total_volume =
-        compute_global_sum(photoionization_rate.iter().map(|(_, cell)| cell.volume()));
     let average = volume_weighted_rate / total_volume * box_.volume();
     debug!(
         "{:<41}: {:.5e} s^-1",

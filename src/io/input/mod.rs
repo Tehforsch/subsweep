@@ -1,5 +1,4 @@
 pub mod attribute;
-pub mod file_distribution;
 #[cfg(test)]
 mod tests;
 
@@ -31,9 +30,9 @@ use ndarray::ArrayBase;
 use ndarray::Dim;
 use ndarray::OwnedRepr;
 
-use self::file_distribution::get_rank_input_assignment_for_rank;
-use self::file_distribution::RankAssignment;
-use self::file_distribution::Region;
+use super::file_distribution::get_rank_input_assignment_for_rank;
+use super::file_distribution::RankAssignment;
+use super::file_distribution::Region;
 use super::to_dataset::ToDataset;
 use super::InputDatasetDescriptor;
 use crate::communication::communicator::Communicator;
@@ -440,7 +439,7 @@ fn read_chunk_fallible<T: ToDataset>(
 
 #[cfg(test)]
 mod unit_tests {
-    use crate::io::input::file_distribution::Region;
+    use crate::io::file_distribution::Region;
 
     #[test]
     fn get_chunk_sizes() {

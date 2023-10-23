@@ -54,7 +54,7 @@ use super::unit_reader::ArepoUnitReader;
 use super::Parameters;
 use crate::arepo_postprocess::GridParameters;
 
-const CHUNK_SIZE: usize = 10000;
+const CHUNK_SIZE: usize = 1000000;
 
 #[derive(Named)]
 pub struct ReadSweepGridPlugin;
