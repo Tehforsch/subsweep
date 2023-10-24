@@ -44,6 +44,7 @@ use self::time_series::HydrogenIonizationVolumeAverage;
 use self::time_series::NumParticlesAtTimestepLevels;
 use self::time_series::PhotoionizationRateVolumeAverage;
 use self::time_series::TemperatureMassAverage;
+use self::time_series::TemperatureVolumeAverage;
 use self::time_series::WeightedPhotoionizationRateVolumeAverage;
 use self::timestep_level::TimestepLevel;
 use self::timestep_state::TimestepState;
@@ -125,6 +126,7 @@ impl SubsweepPlugin for SweepPlugin {
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<TemperatureMassAverage>::default())
+            .add_plugin(TimeSeriesPlugin::<TemperatureVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<PhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<WeightedPhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<NumParticlesAtTimestepLevels>::default())

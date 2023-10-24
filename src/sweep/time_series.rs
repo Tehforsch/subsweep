@@ -37,6 +37,10 @@ pub struct HydrogenIonizationVolumeAverage(pub Dimensionless);
 pub struct TemperatureMassAverage(pub Temperature);
 
 #[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
+#[name = "temperature_volume_average"]
+pub struct TemperatureVolumeAverage(pub Temperature);
+
+#[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
 #[name = "photoionization_rate_volume_average"]
 pub struct PhotoionizationRateVolumeAverage(pub PhotonRate);
 
@@ -62,6 +66,8 @@ pub fn compute_time_series_system(
     mut volume_av_frac_writer: EventWriter<HydrogenIonizationVolumeAverage>,
     temperature_mass_av: Particles<(&components::Temperature, &Mass)>,
     mut temperature_mass_av_writer: EventWriter<TemperatureMassAverage>,
+    temperature_volume_av: Particles<(&components::Temperature, &Cell)>,
+    mut temperature_volume_av_writer: EventWriter<TemperatureVolumeAverage>,
     photoionization_rate: Particles<(&components::PhotoionizationRate, &Cell)>,
     mut photoionization_rate_writer: EventWriter<PhotoionizationRateVolumeAverage>,
     weighted_photoionization_rate: Particles<(
@@ -109,6 +115,19 @@ pub fn compute_time_series_system(
         average.in_kelvins()
     );
     temperature_mass_av_writer.send(TemperatureMassAverage(average));
+
+    let volume_weighted_temperature = compute_global_sum(
+        temperature_volume_av
+            .iter()
+            .map(|(temp, cell)| **temp * cell.volume()),
+    );
+    let average = volume_weighted_temperature / total_volume;
+    debug!(
+        "{:<41}: {:.5} K",
+        "Volume av. temperature",
+        average.in_kelvins()
+    );
+    temperature_volume_av_writer.send(TemperatureVolumeAverage(average));
 
     let volume_weighted_rate = compute_global_sum(
         photoionization_rate
