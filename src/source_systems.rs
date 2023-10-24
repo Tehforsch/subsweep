@@ -70,7 +70,11 @@ fn set_source_terms_system(
     }
     let total: SourceRate = all_sources.iter().map(|source| source.rate).sum();
     writer.send(TotalLuminosity(total));
-    debug!("Total luminosity: {:+.2e}", total.in_photons_per_second());
+    debug!(
+        "{} sources with total luminosity: {:+.2e}",
+        all_sources.len(),
+        total.in_photons_per_second()
+    );
 }
 
 fn pos_to_tree_coord(pos: &VecLength) -> [f64; 3] {
