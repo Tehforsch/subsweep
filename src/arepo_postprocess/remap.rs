@@ -102,8 +102,9 @@ fn read_remap_data(
         DatasetShape::OneDimensional,
     );
     let temperature = last_snap_reader.read_dataset(descriptor);
-    let scale_factor = read_attribute::<ScaleFactor>(&last_snap_files[0]);
-    let little_h = read_attribute::<LittleH>(&last_snap_files[0]);
+    // The position is written to the first snap, so we should remap it using the cosmology from that
+    let scale_factor = read_attribute::<ScaleFactor>(&first_snap_files[0]);
+    let little_h = read_attribute::<LittleH>(&first_snap_files[0]);
     let remap_cosmology = Cosmology::Cosmological {
         a: *scale_factor.0,
         h: *little_h.0,
