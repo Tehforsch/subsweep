@@ -669,6 +669,7 @@ fn run_sweep_system(
     mut time: ResMut<SimulationTime>,
     mut timers: NonSendMut<Performance>,
     mut is_first: ResMut<IsFirstTime>,
+    parameters: Res<SweepParameters>,
 ) {
     // This is a slightly hacky way of making sure that we can output
     // the ICS. The first time this system would run, it doesn't run so that
@@ -682,8 +683,13 @@ fn run_sweep_system(
     **time += time_elapsed;
     for (id, mut fraction, mut temperature) in sites.iter_mut() {
         let site = solver.sites.get(*id);
-        **fraction = site.species.ionized_hydrogen_fraction;
-        **temperature = site.species.temperature;
+        if parameters.prevent_cooling {
+            **fraction = fraction.max(site.species.ionized_hydrogen_fraction);
+            **temperature = temperature.max(site.species.temperature);
+        } else {
+            **fraction = site.species.ionized_hydrogen_fraction;
+            **temperature = site.species.temperature;
+        }
     }
     for (id, mut heating_rate) in heating_rates.iter_mut() {
         let site = solver.sites.get(*id);
