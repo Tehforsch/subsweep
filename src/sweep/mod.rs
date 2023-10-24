@@ -682,10 +682,12 @@ fn run_sweep_system(
     let time_elapsed = solver.run_sweeps(&mut timers);
     **time += time_elapsed;
     for (id, mut fraction, mut temperature) in sites.iter_mut() {
-        let site = solver.sites.get(*id);
+        let site = solver.sites.get_mut(*id);
         if parameters.prevent_cooling {
             **fraction = fraction.max(site.species.ionized_hydrogen_fraction);
+            site.species.ionized_hydrogen_fraction = **fraction;
             **temperature = temperature.max(site.species.temperature);
+            site.species.temperature = **temperature;
         } else {
             **fraction = site.species.ionized_hydrogen_fraction;
             **temperature = site.species.temperature;
