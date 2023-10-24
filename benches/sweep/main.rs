@@ -55,6 +55,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             max_timestep: Time::seconds(1e-3),
             check_deadlock: false,
             periodic: false,
+            prevent_cooling: false,
         })
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_parameters_explicitly(SimulationParameters { final_time: None })
