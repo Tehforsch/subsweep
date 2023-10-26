@@ -1,6 +1,10 @@
 use std::array::IntoIter;
 use std::ops::Sub;
 
+use num::FromPrimitive;
+use num::One;
+use num::ToPrimitive;
+
 use super::super::delaunay::face_info::FaceInfo;
 use super::super::math::traits::Dot;
 use super::super::math::traits::Vector3d;
@@ -13,12 +17,14 @@ use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::Point;
 use crate::voronoi::math::precision_types::PrecisionError;
+use crate::voronoi::math::precision_types::PrecisionFloat;
 use crate::voronoi::math::precision_types::PrecisionPoint3d;
 use crate::voronoi::math::precision_types::TETRAHEDRON_POINTS_ON_SAME_SIDE_EPSILON;
 use crate::voronoi::math::traits::Cross3d;
 use crate::voronoi::math::utils::determinant4x4;
 use crate::voronoi::math::utils::determinant5x5;
 use crate::voronoi::math::utils::lift_matrix;
+use crate::voronoi::math::utils::solve_3x4_system_of_equations_error;
 use crate::voronoi::math::utils::Sign;
 use crate::voronoi::PointIndex;
 
@@ -214,45 +220,50 @@ impl DTetraData for TetrahedronData {
         })
     }
 
-    #[rustfmt::skip]
     fn get_center_of_circumcircle(&self) -> Point3d {
-        let v1 = self.p1.x.powi(2) + self.p1.y.powi(2) + self.p1.z.powi(2);
-        let v2 = self.p2.x.powi(2) + self.p2.y.powi(2) + self.p2.z.powi(2);
-        let v3 = self.p3.x.powi(2) + self.p3.y.powi(2) + self.p3.z.powi(2);
-        let v4 = self.p4.x.powi(2) + self.p4.y.powi(2) + self.p4.z.powi(2);
-        let dx = determinant4x4(
-            [
-                [v1, self.p1.y, self.p1.z, 1.0],
-                [v2, self.p2.y, self.p2.z, 1.0],
-                [v3, self.p3.y, self.p3.z, 1.0],
-                [v4, self.p4.y, self.p4.z, 1.0],
-            ]
-        );
-        let dy = -determinant4x4(
-            [
-                [v1, self.p1.x, self.p1.z, 1.0],
-                [v2, self.p2.x, self.p2.z, 1.0],
-                [v3, self.p3.x, self.p3.z, 1.0],
-                [v4, self.p4.x, self.p4.z, 1.0],
-            ]
-        );
-        let dz = determinant4x4(
-            [
-                [v1, self.p1.x, self.p1.y, 1.0],
-                [v2, self.p2.x, self.p2.y, 1.0],
-                [v3, self.p3.x, self.p3.y, 1.0],
-                [v4, self.p4.x, self.p4.y, 1.0],
-            ]
-        );
-        let a = determinant4x4(
-            [
-                [self.p1.x, self.p1.y, self.p1.z, 1.0],
-                [self.p2.x, self.p2.y, self.p2.z, 1.0],
-                [self.p3.x, self.p3.y, self.p3.z, 1.0],
-                [self.p4.x, self.p4.y, self.p4.z, 1.0],
-            ]
-        );
-        Point3d::new(dx,dy,dz) / (2.0 * a)
+        self.get_center_of_circumcircle_float().unwrap_or_else(|_| {
+            let p1 = PrecisionPoint3d::new(self.p1);
+            let p2 = PrecisionPoint3d::new(self.p2);
+            let p3 = PrecisionPoint3d::new(self.p3);
+            let p4 = PrecisionPoint3d::new(self.p4);
+
+            let v1 = p1.x.pow(2) + p1.y.pow(2) + p1.z.pow(2);
+            let v2 = p2.x.pow(2) + p2.y.pow(2) + p2.z.pow(2);
+            let v3 = p3.x.pow(2) + p3.y.pow(2) + p3.z.pow(2);
+            let v4 = p4.x.pow(2) + p4.y.pow(2) + p4.z.pow(2);
+            let one = || PrecisionFloat::one();
+            let dx = determinant4x4([
+                [v1.clone(), p1.y.clone(), p1.z.clone(), one()],
+                [v2.clone(), p2.y.clone(), p2.z.clone(), one()],
+                [v3.clone(), p3.y.clone(), p3.z.clone(), one()],
+                [v4.clone(), p4.y.clone(), p4.z.clone(), one()],
+            ]);
+            let dy = -determinant4x4([
+                [v1.clone(), p1.x.clone(), p1.z.clone(), one()],
+                [v2.clone(), p2.x.clone(), p2.z.clone(), one()],
+                [v3.clone(), p3.x.clone(), p3.z.clone(), one()],
+                [v4.clone(), p4.x.clone(), p4.z.clone(), one()],
+            ]);
+            let dz = determinant4x4([
+                [v1, p1.x.clone(), p1.y.clone(), one()],
+                [v2, p2.x.clone(), p2.y.clone(), one()],
+                [v3, p3.x.clone(), p3.y.clone(), one()],
+                [v4, p4.x.clone(), p4.y.clone(), one()],
+            ]);
+            let a = determinant4x4([
+                [p1.x, p1.y, p1.z, one()],
+                [p2.x, p2.y, p2.z, one()],
+                [p3.x, p3.y, p3.z, one()],
+                [p4.x, p4.y, p4.z, one()],
+            ]);
+            let two = PrecisionFloat::from_f64(2.0).unwrap();
+            let factor = one() / (two * a);
+            Point3d::new(
+                (dx * factor.clone()).to_f64().unwrap(),
+                (dy * factor.clone()).to_f64().unwrap(),
+                (dz * factor).to_f64().unwrap(),
+            )
+        })
     }
 }
 
@@ -307,8 +318,6 @@ impl TetrahedronData {
 
         let x = (c2 * dab - d2 * abc) + (a2 * bcd - b2 * cda);
 
-        /* calculate absolute maximum size */
-
         let ab = axby.abs() + bxay.abs();
         let bc = bxcy.abs() + cxby.abs();
         let cd = cxdy.abs() + dxcy.abs();
@@ -329,6 +338,33 @@ impl TetrahedronData {
         let size_limit = (c2 * dab + d2 * abc) + (a2 * bcd + b2 * cda);
         let error_bound = 1.0e-14 * size_limit;
         Ok(Sign::try_from_val(&x, error_bound)?.is_positive())
+    }
+
+    #[rustfmt::skip]
+    fn get_center_of_circumcircle_float(&self) -> Result<Point3d, PrecisionError> {
+        let p0 = self.p1;
+        let p1 = self.p2;
+        let p2 = self.p3;
+        let p3 = self.p4;
+        // Taken from Arepo - update_circumcircle
+        let ax = p1.x - p0.x;
+        let ay = p1.y - p0.y;
+        let az = p1.z - p0.z;
+
+        let bx = p2.x - p0.x;
+        let by = p2.y - p0.y;
+        let bz = p2.z - p0.z;
+
+        let cx = p3.x - p0.x;
+        let cy = p3.y - p0.y;
+        let cz = p3.z - p0.z;
+
+        let x = Point3d::from(solve_3x4_system_of_equations_error([[
+            p1.x - p0.x, p1.y - p0.y, p1.z - p0.z, 0.5 * (ax * ax + ay * ay + az * az),
+            p2.x - p0.x, p2.y - p0.y, p2.z - p0.z, 0.5 * (bx * bx + by * by + bz * bz),
+            p3.x - p0.x, p3.y - p0.y, p3.z - p0.z, 0.5 * (cx * cx + cy * cy + cz * cz),
+        ]])?);
+        Ok(x + p0)
     }
 }
 

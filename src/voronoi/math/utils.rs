@@ -13,6 +13,8 @@ use super::precision_types::DETERMINANT_4X4_EPSILON;
 use super::precision_types::DETERMINANT_5X5_EPSILON;
 use super::traits::Num;
 
+pub const GAUSS_3X4_EPSILON: f64 = 1.0e-8;
+
 // MxN matrix: This type is just here for clarity, because the
 // internal storage is reversed, such that the order of indices is
 // as it would be in math, i.e. Matrix<M, N> has M rows and N columns.
@@ -42,6 +44,55 @@ pub fn solve_system_of_equations<const M: usize, F: Num>(mut a: Matrix<M, { M + 
         }
     }
     backward_substitution(a)
+}
+
+fn add_row_to_another(m: &mut [f64; 12], r1: usize, r2: usize, factor: f64) {
+    for k in 0..4 {
+        m[r1 * 4 + k] += factor * m[r2 * 4 + k];
+    }
+}
+
+pub fn solve_3x4_system_of_equations_error(
+    mut m: Matrix<1, 12, f64>,
+) -> Result<[f64; 3], PrecisionError> {
+    let m = &mut m[0];
+    let (mut ix, mut iy, mut iz) = if m[4].abs() > m[0].abs() {
+        (1, 0, 2)
+    } else {
+        (0, 1, 2)
+    };
+    if m[8].abs() > m[ix * 4].abs() {
+        (ix, iy, iz) = (2, 0, 1)
+    };
+
+    add_row_to_another(m, iy, ix, -m[iy * 4] / m[ix * 4]);
+    add_row_to_another(m, iz, ix, -m[iz * 4] / m[ix * 4]);
+
+    if (m[iz * 4 + 1]).abs() > (m[iy * 4 + 1]).abs() {
+        (iy, iz) = (iz, iy)
+    }
+
+    if (m[iy * 4 + 1]).abs() < GAUSS_3X4_EPSILON {
+        return Err(PrecisionError);
+    }
+
+    add_row_to_another(m, iz, iy, -m[iz * 4 + 1] / m[iy * 4 + 1]);
+
+    if (m[iz * 4 + 2]).abs() < GAUSS_3X4_EPSILON {
+        return Err(PrecisionError);
+    }
+    if (m[iy * 4 + 1]).abs() < GAUSS_3X4_EPSILON {
+        return Err(PrecisionError);
+    }
+    if (m[ix * 4]).abs() < GAUSS_3X4_EPSILON {
+        return Err(PrecisionError);
+    }
+
+    let x3 = m[iz * 4 + 3] / m[iz * 4 + 2];
+    let x2 = (m[iy * 4 + 3] - x3 * m[iy * 4 + 2]) / m[iy * 4 + 1];
+    let x1 = (m[ix * 4 + 3] - x3 * m[ix * 4 + 2] - x2 * m[ix * 4 + 1]) / m[ix * 4];
+
+    Ok([x1, x2, x3])
 }
 
 fn swap_rows<const M: usize, const N: usize, F: Clone>(
@@ -377,6 +428,56 @@ mod tests {
                 [5.0, 6.0, 7.0, 10.0],
                 [8.0, 9.0, 10.0, 15.0]
             ]);
+        assert_float_is_close(res[0], 5.0 / 3.0);
+        assert_float_is_close(res[1], -5.0 / 3.0);
+        assert_float_is_close(res[2], 5.0 / 3.0);
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn solve_system_of_equations_3x4() {
+        let res = super::solve_3x4_system_of_equations_error(
+            [[
+                2.0, 0.0, 0.0, 2.0,
+                0.0, 3.0, 0.0, 3.0,
+                0.0, 0.0, 4.0, 4.0,
+            ]]).unwrap();
+        assert_float_is_close(res[0], 1.0);
+        assert_float_is_close(res[1], 1.0);
+        assert_float_is_close(res[2], 1.0);
+        let res = super::solve_3x4_system_of_equations_error(
+            [[
+                1.0, 0.0, 0.0, 1.0,
+                0.0, 0.0, 1.0, 1.0,
+                0.0, 1.0, 0.0, 1.0,
+            ]]).unwrap();
+        assert_float_is_close(res[0], 1.0);
+        assert_float_is_close(res[1], 1.0);
+        assert_float_is_close(res[2], 1.0);
+        let res = super::solve_3x4_system_of_equations_error(
+            [[
+                2.0, 0.0, 0.0, 9.0,
+                0.0, 0.0, 3.0, -5.0,
+                0.0, 9.0, 0.0, -18.0,
+            ]]).unwrap();
+        assert_float_is_close(res[0], 4.5);
+        assert_float_is_close(res[1], -2.0);
+        assert_float_is_close(res[2], -5.0 / 3.0);
+        let res = super::solve_3x4_system_of_equations_error(
+            [[
+                1.0, 2.0, 4.0, 5.0,
+                5.0, 6.0, 7.0, 10.0,
+                8.0, 9.0, 10.0, 15.0
+            ]]).unwrap();
+        assert_float_is_close(res[0], 5.0 / 3.0);
+        assert_float_is_close(res[1], -5.0 / 3.0);
+        assert_float_is_close(res[2], 5.0 / 3.0);
+        let res = super::solve_3x4_system_of_equations_error(
+            [[
+                5.0, 6.0, 7.0, 10.0,
+                1.0, 2.0, 4.0, 5.0,
+                8.0, 9.0, 10.0, 15.0
+            ]]).unwrap();
         assert_float_is_close(res[0], 5.0 / 3.0);
         assert_float_is_close(res[1], -5.0 / 3.0);
         assert_float_is_close(res[2], 5.0 / 3.0);
