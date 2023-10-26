@@ -158,6 +158,23 @@ fn compare_result_against_entries<const D: usize>(
     Ok(val)
 }
 
+/// Contains information about whether an operation succeeded using
+/// normal float operations or whether it required arbitrary precision
+/// computations.
+enum OperationResult<T> {
+    Float(T),
+    ArbitraryPrecision(T),
+}
+
+impl<T> OperationResult<T> {
+    fn unpack(self) -> T {
+        match self {
+            Self::Float(sign) => sign,
+            Self::ArbitraryPrecision(sign) => sign,
+        }
+    }
+}
+
 // I would use a HRTB here, but these arent stable for non-lifetime bindings
 // as far as I can tell.
 fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
@@ -165,43 +182,55 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
     f: fn(Matrix<D, D, f64>) -> f64,
     f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
     epsilon: f64,
-) -> Sign {
+) -> OperationResult<Sign> {
     let val = f(m);
     match compare_result_against_entries(val, &m, epsilon) {
-        Ok(val) => Sign::of(val),
+        Ok(val) => OperationResult::Float(Sign::of(val)),
         Err(_) => {
             let m = lift_matrix(m);
-            Sign::of(f_arbitrary_precision(m))
+            OperationResult::ArbitraryPrecision(Sign::of(f_arbitrary_precision(m)))
         }
     }
 }
 
-pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
-    determine_sign_with_arbitrary_precision_if_necessary(
-        a,
-        determinant3x3::<f64>,
-        determinant3x3::<PrecisionFloat>,
-        DETERMINANT_3X3_EPSILON,
-    )
+macro_rules! determinant_impl {
+    ($result_fn_name: ident, $sign_fn_name: ident, $base_fn: ident, $epsilon: expr, $num: literal) => {
+        fn $result_fn_name(a: Matrix<$num, $num, f64>) -> OperationResult<Sign> {
+            determine_sign_with_arbitrary_precision_if_necessary(
+                a,
+                $base_fn::<f64>,
+                $base_fn::<PrecisionFloat>,
+                $epsilon,
+            )
+        }
+
+        pub fn $sign_fn_name(a: Matrix<$num, $num, f64>) -> Sign {
+            $result_fn_name(a).unpack()
+        }
+    };
 }
 
-pub fn determinant4x4_sign(a: Matrix<4, 4, f64>) -> Sign {
-    determine_sign_with_arbitrary_precision_if_necessary(
-        a,
-        determinant4x4::<f64>,
-        determinant4x4::<PrecisionFloat>,
-        DETERMINANT_4X4_EPSILON,
-    )
-}
-
-pub fn determinant5x5_sign(a: Matrix<5, 5, f64>) -> Sign {
-    determine_sign_with_arbitrary_precision_if_necessary(
-        a,
-        determinant5x5::<f64>,
-        determinant5x5::<PrecisionFloat>,
-        DETERMINANT_5X5_EPSILON,
-    )
-}
+determinant_impl!(
+    determinant3x3_sign_result,
+    determinant3x3_sign,
+    determinant3x3,
+    DETERMINANT_3X3_EPSILON,
+    3
+);
+determinant_impl!(
+    determinant4x4_sign_result,
+    determinant4x4_sign,
+    determinant4x4,
+    DETERMINANT_4X4_EPSILON,
+    4
+);
+determinant_impl!(
+    determinant5x5_sign_result,
+    determinant5x5_sign,
+    determinant5x5,
+    DETERMINANT_5X5_EPSILON,
+    5
+);
 
 #[rustfmt::skip]
 pub fn determinant3x3<F: Num>(
@@ -242,6 +271,8 @@ mod tests {
     use std::fs::File;
     use std::path::Path;
 
+    use super::determinant5x5_sign_result;
+    use super::OperationResult;
     use crate::test_utils::assert_float_is_close;
     use crate::voronoi::math::utils::determinant3x3_sign;
     use crate::voronoi::math::utils::determinant5x5_sign;
@@ -376,23 +407,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn critical_matrices_precision_5x5() {
-        let matrices_file = Path::new(file!())
-            .parent()
-            .unwrap()
-            .join("../../../tests/data/critical_matrices_5x5");
-        let matrices_file = File::open(matrices_file).unwrap();
-        let matrices = serde_yaml::from_reader::<_, Vec<Vec<Vec<f64>>>>(matrices_file).unwrap();
-        let matrices = matrices.into_iter().map(|m| vec_as_matrix::<5, 5>(m));
-        for matrix in matrices {
-            assert_eq!(
-                determinant5x5_sign(matrix),
-                Sign::of(super::determinant5x5(lift_matrix(matrix)))
-            );
-        }
-    }
-
     fn vec_as_matrix<const M: usize, const N: usize>(v: Vec<Vec<f64>>) -> Matrix<M, N, f64> {
         let mut m: Matrix<M, N, f64> = [[0.0; N]; M];
         assert_eq!(m.len(), M);
@@ -403,5 +417,45 @@ mod tests {
             }
         }
         m
+    }
+
+    fn get_matrices_from_file<const N: usize>(relative_file_path: &str) -> Vec<Matrix<N, N, f64>> {
+        let matrices_file = Path::new(file!())
+            .parent()
+            .unwrap()
+            .join(relative_file_path);
+        let matrices_file = File::open(matrices_file).unwrap();
+        let matrices = serde_yaml::from_reader::<_, Vec<Vec<Vec<f64>>>>(matrices_file).unwrap();
+        matrices.into_iter().map(|m| vec_as_matrix(m)).collect()
+    }
+
+    #[test]
+    fn critical_matrices_precision_5x5() {
+        for matrix in get_matrices_from_file("../../../tests/data/critical_matrices_5x5") {
+            assert_eq!(
+                determinant5x5_sign(matrix),
+                Sign::of(super::determinant5x5(lift_matrix(matrix)))
+            );
+        }
+    }
+
+    #[test]
+    fn normal_matrices_precision_5x5_correct_result() {
+        for matrix in get_matrices_from_file("../../../tests/data/normal_matrices_5x5") {
+            assert_eq!(
+                determinant5x5_sign(matrix),
+                Sign::of(super::determinant5x5(lift_matrix(matrix)))
+            );
+        }
+    }
+
+    #[test]
+    fn normal_matrices_precision_5x5_no_arbitrary_precision_needed() {
+        for matrix in get_matrices_from_file("../../../tests/data/normal_matrices_5x5").iter() {
+            assert!(matches!(
+                determinant5x5_sign_result(*matrix),
+                OperationResult::Float(_)
+            ));
+        }
     }
 }
