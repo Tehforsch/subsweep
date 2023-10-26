@@ -21,6 +21,8 @@ use crate::voronoi::delaunay::Point;
 use crate::voronoi::math::precision_types::PrecisionError;
 use crate::voronoi::math::precision_types::PrecisionPoint2d;
 use crate::voronoi::math::precision_types::PrecisionPoint3d;
+use crate::voronoi::math::precision_types::TRIANGLE_CONTAINS_EPSILON;
+use crate::voronoi::math::precision_types::TRIANGLE_INTERSECTION_TYPE_EPSILON;
 use crate::voronoi::math::utils::determinant3x3_sign;
 use crate::voronoi::math::utils::solve_system_of_equations;
 use crate::voronoi::math::utils::Sign;
@@ -162,7 +164,11 @@ impl<V: Vector2d + Clone + Sub<Output = V> + std::fmt::Debug> TriangleData<V> {
     fn generic_contains(&self, p: V) -> Result<bool, PrecisionError> {
         let (r, s) = self.transform_point_to_canonical_coordinates(p);
         let values = [r.clone(), s.clone(), V::Float::one() - (r + s)];
-        let signs = || values.iter().map(|value| Sign::try_from_val(value));
+        let signs = || {
+            values
+                .iter()
+                .map(|value| Sign::try_from_val(value, TRIANGLE_CONTAINS_EPSILON))
+        };
         let is_definitely_outside = signs().any(|sign| {
             if let Ok(sign) = sign {
                 sign.is_negative()
@@ -302,7 +308,7 @@ impl<V: Vector3d + Clone + Add<Output = V> + Sub<Output = V>> TriangleData<V> {
             [r.clone(), s.clone(), V::Float::one() - (r + s)]
                 .into_iter()
                 .map(|x| {
-                    let sign = Sign::try_from_val(&x);
+                    let sign = Sign::try_from_val(&x, TRIANGLE_INTERSECTION_TYPE_EPSILON);
                     if let Ok(sign) = sign {
                         sign.panic_if_zero(|| {
                             "Degenerate case of point on line (implement 4-to-4 flip)"

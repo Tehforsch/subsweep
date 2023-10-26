@@ -8,6 +8,9 @@ use num::Zero;
 use super::precision_types::FloatError;
 use super::precision_types::PrecisionError;
 use super::precision_types::PrecisionFloat;
+use super::precision_types::DETERMINANT_3X3_EPSILON;
+use super::precision_types::DETERMINANT_4X4_EPSILON;
+use super::precision_types::DETERMINANT_5X5_EPSILON;
 use super::traits::Num;
 
 // MxN matrix: This type is just here for clarity, because the
@@ -116,8 +119,9 @@ impl Sign {
 
     pub fn try_from_val<T: Zero + PartialOrd + Signed + FloatError>(
         val: &T,
+        epsilon: f64,
     ) -> Result<Self, PrecisionError> {
-        PrecisionError::check(val)?;
+        PrecisionError::check(val, epsilon)?;
         Ok(match val.partial_cmp(&T::zero()).unwrap() {
             Ordering::Less => Sign::Negative,
             Ordering::Equal => Sign::Zero,
@@ -144,10 +148,11 @@ impl Sign {
 fn compare_result_against_entries<const D: usize>(
     val: f64,
     m: &Matrix<D, D, f64>,
+    epsilon: f64,
 ) -> Result<f64, PrecisionError> {
     for row in m.iter() {
         for entry in row.iter() {
-            PrecisionError::check(&(val / entry))?;
+            PrecisionError::check(&(val / entry), epsilon)?;
         }
     }
     Ok(val)
@@ -159,9 +164,10 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
     m: Matrix<D, D, f64>,
     f: fn(Matrix<D, D, f64>) -> f64,
     f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
+    epsilon: f64,
 ) -> Sign {
     let val = f(m);
-    match compare_result_against_entries(val, &m) {
+    match compare_result_against_entries(val, &m, epsilon) {
         Ok(val) => Sign::of(val),
         Err(_) => {
             let m = lift_matrix(m);
@@ -175,6 +181,7 @@ pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
         a,
         determinant3x3::<f64>,
         determinant3x3::<PrecisionFloat>,
+        DETERMINANT_3X3_EPSILON,
     )
 }
 
@@ -183,6 +190,7 @@ pub fn determinant4x4_sign(a: Matrix<4, 4, f64>) -> Sign {
         a,
         determinant4x4::<f64>,
         determinant4x4::<PrecisionFloat>,
+        DETERMINANT_4X4_EPSILON,
     )
 }
 
@@ -191,6 +199,7 @@ pub fn determinant5x5_sign(a: Matrix<5, 5, f64>) -> Sign {
         a,
         determinant5x5::<f64>,
         determinant5x5::<PrecisionFloat>,
+        DETERMINANT_5X5_EPSILON,
     )
 }
 

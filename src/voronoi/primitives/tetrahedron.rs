@@ -14,6 +14,7 @@ use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::Point;
 use crate::voronoi::math::precision_types::PrecisionError;
 use crate::voronoi::math::precision_types::PrecisionPoint3d;
+use crate::voronoi::math::precision_types::TETRAHEDRON_POINTS_ON_SAME_SIDE_EPSILON;
 use crate::voronoi::math::traits::Cross3d;
 use crate::voronoi::math::utils::determinant4x4;
 use crate::voronoi::math::utils::determinant5x5_sign;
@@ -255,8 +256,14 @@ fn points_are_on_same_side_of_triangle<P: Vector3d + Cross3d + Sub<Output = P> +
 ) -> Result<bool, PrecisionError> {
     let (p_a, p_b, p_c) = triangle;
     let normal = (p_b - p_a.clone()).cross(&(p_c - p_a.clone()));
-    let dot_1_sign = Sign::try_from_val(&(p1 - p_a.clone()).dot(normal.clone()))?;
-    let dot_2_sign = Sign::try_from_val(&(p2 - p_a).dot(normal))?;
+    let dot_1_sign = Sign::try_from_val(
+        &(p1 - p_a.clone()).dot(normal.clone()),
+        TETRAHEDRON_POINTS_ON_SAME_SIDE_EPSILON,
+    )?;
+    let dot_2_sign = Sign::try_from_val(
+        &(p2 - p_a).dot(normal),
+        TETRAHEDRON_POINTS_ON_SAME_SIDE_EPSILON,
+    )?;
     Ok((dot_1_sign * dot_2_sign)
         .panic_if_zero(|| "Degenerate case: point on line of triangle.")
         .is_positive())
