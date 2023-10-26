@@ -552,9 +552,16 @@ impl<C: Chemistry> Sweep<C> {
             };
             site.previous_incoming_total_rate = rate.clone();
             let rate_timescale = Timescale::photon_rate(timestep / relative_change);
-            let chemistry_timescale =
-                self.chemistry
-                    .update_abundances(site, rate, timestep, cell.volume, cell.size);
+            let trace_ids = vec![1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
+            let trace = Some(id.index).filter(|_| id.rank == 0 && trace_ids.contains(&id.index));
+            let chemistry_timescale = self.chemistry.update_abundances(
+                site,
+                rate,
+                timestep,
+                cell.volume,
+                cell.size,
+                trace,
+            );
             let change_timescale = rate_timescale.min(chemistry_timescale);
             site.change_timescale = change_timescale.time;
             self.timescale_counter.count(change_timescale);

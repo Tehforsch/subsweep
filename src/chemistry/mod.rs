@@ -39,6 +39,7 @@ pub trait Chemistry: Sized + 'static {
         timestep: Time,
         volume: Volume,
         length: Length,
+        trace: Option<u32>,
     ) -> Timescale;
 }
 
