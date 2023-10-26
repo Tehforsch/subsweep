@@ -46,55 +46,6 @@ pub fn solve_system_of_equations<const M: usize, F: Num>(mut a: Matrix<M, { M + 
     backward_substitution(a)
 }
 
-fn add_row_to_another(m: &mut [f64; 12], r1: usize, r2: usize, factor: f64) {
-    for k in 0..4 {
-        m[r1 * 4 + k] += factor * m[r2 * 4 + k];
-    }
-}
-
-pub fn solve_3x4_system_of_equations_error(
-    mut m: Matrix<1, 12, f64>,
-) -> Result<[f64; 3], PrecisionError> {
-    let m = &mut m[0];
-    let (mut ix, mut iy, mut iz) = if m[4].abs() > m[0].abs() {
-        (1, 0, 2)
-    } else {
-        (0, 1, 2)
-    };
-    if m[8].abs() > m[ix * 4].abs() {
-        (ix, iy, iz) = (2, 0, 1)
-    };
-
-    add_row_to_another(m, iy, ix, -m[iy * 4] / m[ix * 4]);
-    add_row_to_another(m, iz, ix, -m[iz * 4] / m[ix * 4]);
-
-    if (m[iz * 4 + 1]).abs() > (m[iy * 4 + 1]).abs() {
-        (iy, iz) = (iz, iy)
-    }
-
-    if (m[iy * 4 + 1]).abs() < GAUSS_3X4_EPSILON {
-        return Err(PrecisionError);
-    }
-
-    add_row_to_another(m, iz, iy, -m[iz * 4 + 1] / m[iy * 4 + 1]);
-
-    if (m[iz * 4 + 2]).abs() < GAUSS_3X4_EPSILON {
-        return Err(PrecisionError);
-    }
-    if (m[iy * 4 + 1]).abs() < GAUSS_3X4_EPSILON {
-        return Err(PrecisionError);
-    }
-    if (m[ix * 4]).abs() < GAUSS_3X4_EPSILON {
-        return Err(PrecisionError);
-    }
-
-    let x3 = m[iz * 4 + 3] / m[iz * 4 + 2];
-    let x2 = (m[iy * 4 + 3] - x3 * m[iy * 4 + 2]) / m[iy * 4 + 1];
-    let x1 = (m[ix * 4 + 3] - x3 * m[ix * 4 + 2] - x2 * m[ix * 4 + 1]) / m[ix * 4];
-
-    Ok([x1, x2, x3])
-}
-
 fn swap_rows<const M: usize, const N: usize, F: Clone>(
     a: &mut Matrix<M, N, F>,
     r1: usize,
@@ -117,6 +68,49 @@ fn backward_substitution<const M: usize, F: Num>(a: Matrix<M, { M + 1 }, F>) -> 
         result[i] = result[i].clone() / a[i][i].clone();
     }
     result
+}
+
+pub fn solve_3x4_system_of_equations_error(
+    mut m: Matrix<3, 4, f64>,
+) -> Result<[f64; 3], PrecisionError> {
+    let (mut ix, mut iy, mut iz) = if m[1][0].abs() > m[0][0].abs() {
+        (1, 0, 2)
+    } else {
+        (0, 1, 2)
+    };
+    if m[2][0].abs() > m[ix][0].abs() {
+        (ix, iy, iz) = (2, 0, 1)
+    };
+
+    let factor = -m[iy][0] / m[ix][0];
+    add_row_to_another(&mut m, iy, ix, factor);
+    let factor = -m[iz][0] / m[ix][0];
+    add_row_to_another(&mut m, iz, ix, factor);
+
+    if m[iz][1].abs() > m[iy][1].abs() {
+        (iy, iz) = (iz, iy)
+    }
+
+    PrecisionError::check(&m[iy][1], GAUSS_3X4_EPSILON)?;
+
+    let factor = -m[iz][1] / m[iy][1];
+    add_row_to_another(&mut m, iz, iy, factor);
+
+    PrecisionError::check(&m[iz][2], GAUSS_3X4_EPSILON)?;
+    PrecisionError::check(&m[iy][1], GAUSS_3X4_EPSILON)?;
+    PrecisionError::check(&m[ix][0], GAUSS_3X4_EPSILON)?;
+
+    let x3 = m[iz][3] / m[iz][2];
+    let x2 = (m[iy][3] - x3 * m[iy][2]) / m[iy][1];
+    let x1 = (m[ix][3] - x3 * m[ix][2] - x2 * m[ix][1]) / m[ix][0];
+
+    Ok([x1, x2, x3])
+}
+
+fn add_row_to_another(m: &mut Matrix<3, 4, f64>, r1: usize, r2: usize, factor: f64) {
+    for k in 0..4 {
+        m[r1][k] += factor * m[r2][k];
+    }
 }
 
 pub fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFloat> {
@@ -392,10 +386,9 @@ mod tests {
         );
     }
 
-    #[test]
     #[rustfmt::skip]
-    fn solve_system_of_equations() {
-        let res = super::solve_system_of_equations(
+    fn solve_system_of_equations_fn(f: impl Fn(Matrix<3, 4, f64>) -> [f64; 3]) {
+        let res = f(
             [
                 [2.0, 0.0, 0.0, 2.0],
                 [0.0, 3.0, 0.0, 3.0],
@@ -431,56 +424,26 @@ mod tests {
         assert_float_is_close(res[0], 5.0 / 3.0);
         assert_float_is_close(res[1], -5.0 / 3.0);
         assert_float_is_close(res[2], 5.0 / 3.0);
+        let res = super::solve_system_of_equations(
+            [
+                [5.0, 6.0, 7.0, 10.0],
+                [1.0, 2.0, 4.0, 5.0],
+                [8.0, 9.0, 10.0, 15.0]
+            ]);
+        assert_float_is_close(res[0], 5.0 / 3.0);
+        assert_float_is_close(res[1], -5.0 / 3.0);
+        assert_float_is_close(res[2], 5.0 / 3.0);
+    }
+
+    #[test]
+    fn solve_system_of_equations() {
+        solve_system_of_equations_fn(super::solve_system_of_equations);
     }
 
     #[test]
     #[rustfmt::skip]
     fn solve_system_of_equations_3x4() {
-        let res = super::solve_3x4_system_of_equations_error(
-            [[
-                2.0, 0.0, 0.0, 2.0,
-                0.0, 3.0, 0.0, 3.0,
-                0.0, 0.0, 4.0, 4.0,
-            ]]).unwrap();
-        assert_float_is_close(res[0], 1.0);
-        assert_float_is_close(res[1], 1.0);
-        assert_float_is_close(res[2], 1.0);
-        let res = super::solve_3x4_system_of_equations_error(
-            [[
-                1.0, 0.0, 0.0, 1.0,
-                0.0, 0.0, 1.0, 1.0,
-                0.0, 1.0, 0.0, 1.0,
-            ]]).unwrap();
-        assert_float_is_close(res[0], 1.0);
-        assert_float_is_close(res[1], 1.0);
-        assert_float_is_close(res[2], 1.0);
-        let res = super::solve_3x4_system_of_equations_error(
-            [[
-                2.0, 0.0, 0.0, 9.0,
-                0.0, 0.0, 3.0, -5.0,
-                0.0, 9.0, 0.0, -18.0,
-            ]]).unwrap();
-        assert_float_is_close(res[0], 4.5);
-        assert_float_is_close(res[1], -2.0);
-        assert_float_is_close(res[2], -5.0 / 3.0);
-        let res = super::solve_3x4_system_of_equations_error(
-            [[
-                1.0, 2.0, 4.0, 5.0,
-                5.0, 6.0, 7.0, 10.0,
-                8.0, 9.0, 10.0, 15.0
-            ]]).unwrap();
-        assert_float_is_close(res[0], 5.0 / 3.0);
-        assert_float_is_close(res[1], -5.0 / 3.0);
-        assert_float_is_close(res[2], 5.0 / 3.0);
-        let res = super::solve_3x4_system_of_equations_error(
-            [[
-                5.0, 6.0, 7.0, 10.0,
-                1.0, 2.0, 4.0, 5.0,
-                8.0, 9.0, 10.0, 15.0
-            ]]).unwrap();
-        assert_float_is_close(res[0], 5.0 / 3.0);
-        assert_float_is_close(res[1], -5.0 / 3.0);
-        assert_float_is_close(res[2], 5.0 / 3.0);
+        solve_system_of_equations_fn(|m| super::solve_3x4_system_of_equations_error(m).unwrap())
     }
 
     #[test]

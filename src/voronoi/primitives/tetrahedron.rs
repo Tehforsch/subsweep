@@ -359,11 +359,11 @@ impl TetrahedronData {
         let cy = p3.y - p0.y;
         let cz = p3.z - p0.z;
 
-        let x = Point3d::from(solve_3x4_system_of_equations_error([[
-            p1.x - p0.x, p1.y - p0.y, p1.z - p0.z, 0.5 * (ax * ax + ay * ay + az * az),
-            p2.x - p0.x, p2.y - p0.y, p2.z - p0.z, 0.5 * (bx * bx + by * by + bz * bz),
-            p3.x - p0.x, p3.y - p0.y, p3.z - p0.z, 0.5 * (cx * cx + cy * cy + cz * cz),
-        ]])?);
+        let x = Point3d::from(solve_3x4_system_of_equations_error([
+            [p1.x - p0.x, p1.y - p0.y, p1.z - p0.z, 0.5 * (ax * ax + ay * ay + az * az)],
+            [p2.x - p0.x, p2.y - p0.y, p2.z - p0.z, 0.5 * (bx * bx + by * by + bz * bz)],
+            [p3.x - p0.x, p3.y - p0.y, p3.z - p0.z, 0.5 * (cx * cx + cy * cy + cz * cz)],
+        ])?);
         Ok(x + p0)
     }
 }
