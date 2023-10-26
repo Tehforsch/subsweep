@@ -9,6 +9,7 @@ use bevy_ecs::prelude::Resource;
 use derive_more::Deref;
 use derive_more::DerefMut;
 use mpi::traits::Equivalence;
+use ordered_float::OrderedFloat;
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
@@ -18,6 +19,7 @@ use serde::Serialize;
 use super::parameters::DirectionsSpecification;
 use super::Sweep;
 use crate::chemistry::hydrogen_only::HydrogenOnly;
+use crate::chemistry::Chemistry;
 use crate::prelude::Simulation;
 use crate::units::Dimensionless;
 use crate::units::MVec;
@@ -159,10 +161,47 @@ pub(super) fn rotate_directions_system(
 ) {
     let solver = (*solver).as_mut().unwrap();
     let matrix = get_random_rotation_matrix(&mut rng);
+    let old_dirs = solver.directions.directions.clone();
     for dir in solver.directions.directions.iter_mut() {
         multiply_by_matrix(&mut dir.0 .0, &matrix)
     }
-    panic!("Rotations currently mess up results in substepping runs.");
+    let new_dirs = solver.directions.directions.clone();
+    for site in solver.sites.iter_mut() {
+        remap(&mut site.incoming_total_rate, &old_dirs, &new_dirs);
+        remap(&mut site.outgoing_total_rate, &old_dirs, &new_dirs);
+        remap(&mut site.periodic_source, &old_dirs, &new_dirs);
+    }
+}
+
+fn kernel_f(d1: &Direction, dirs: &[Direction]) -> Vec<f64> {
+    let maximally_aligned = dirs
+        .iter()
+        .map(|d2| OrderedFloat(1.0 + *d1.dot(**d2)))
+        .enumerate()
+        .max_by_key(|(_, val)| *val)
+        .unwrap()
+        .0;
+    dirs.iter()
+        .enumerate()
+        .map(|(i, _)| if i == maximally_aligned { 1.0 } else { 0.0 })
+        .collect()
+}
+
+fn remap(
+    values: &mut [<HydrogenOnly as Chemistry>::Photons],
+    old_dirs: &[Direction],
+    new_dirs: &[Direction],
+) {
+    let num_dirs = old_dirs.len();
+    let kernel = (0..num_dirs)
+        .map(|i| kernel_f(&old_dirs[i], &new_dirs))
+        .collect::<Vec<_>>();
+    let old_values = values.iter().cloned().collect::<Vec<_>>();
+    for i in 0..num_dirs {
+        for j in 0..num_dirs {
+            values[i] = old_values[j] * kernel[i][j];
+        }
+    }
 }
 
 pub(super) fn init_directions_rng(sim: &mut Simulation) {
