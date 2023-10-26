@@ -1,9 +1,11 @@
+use std::fs::OpenOptions;
 use std::ops::Div;
 
 use diman::Quotient;
 
 use super::Chemistry;
 use super::Timescale;
+use crate::hash_map::HashMap;
 use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
 use crate::units::Density;
@@ -49,6 +51,7 @@ pub struct HydrogenOnlySpecies {
     pub ionized_hydrogen_fraction: Dimensionless,
     pub temperature: Temperature,
     pub timestep: Time,
+    pub integrated_time: Time,
 }
 
 impl HydrogenOnlySpecies {
@@ -60,6 +63,7 @@ impl HydrogenOnlySpecies {
             ionized_hydrogen_fraction,
             temperature,
             timestep: Time::zero(),
+            integrated_time: Time::zero(),
         }
     }
 }
@@ -93,6 +97,7 @@ impl Chemistry for HydrogenOnly {
         timestep: Time,
         volume: Volume,
         length: Length,
+        trace: Option<u32>,
     ) -> Timescale {
         let mut solver = Solver {
             ionized_hydrogen_fraction: site.species.ionized_hydrogen_fraction,
@@ -103,6 +108,21 @@ impl Chemistry for HydrogenOnly {
             rate,
             scale_factor: self.scale_factor,
         };
+        site.species.integrated_time += timestep;
+        if let Some(part_id) = trace {
+            let f = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(format!("trace_{:06}.yml", part_id))
+                .unwrap();
+            let mut map = HashMap::default();
+            map.insert("solver", serde_yaml::to_string(&solver).unwrap());
+            map.insert(
+                "time",
+                serde_yaml::to_string(&site.species.integrated_time).unwrap(),
+            );
+            serde_yaml::to_writer(f, &vec![&map]).unwrap();
+        }
         let timestep_used = solver.perform_timestep(timestep, self.timestep_safety_factor);
         site.species.temperature = solver.temperature;
         site.species.ionized_hydrogen_fraction = solver.ionized_hydrogen_fraction;
@@ -115,7 +135,7 @@ impl Chemistry for HydrogenOnly {
 struct TimestepCriterionViolated;
 struct TimestepConvergenceFailed;
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub(crate) struct Solver {
     pub ionized_hydrogen_fraction: Dimensionless,
     pub temperature: Temperature,

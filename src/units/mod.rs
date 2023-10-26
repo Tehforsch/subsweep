@@ -76,6 +76,7 @@ unit_system!(
         unit (cubic_centimeters, "cm^3") = 1e-6 * cubic_meters,
         def Density = Mass / Volume3D,
         unit (grams_per_cubic_centimeters, "g/cm^3") = grams / cubic_centimeters,
+        unit (kilograms_per_cubic_centimeters, "kg/m^3") = kilograms / cubic_meters,
         def Rate = Dimensionless / Time,
         unit (per_second, "s^-1") = 1.0 / seconds,
         def PhotonRate = Rate,
@@ -95,6 +96,7 @@ unit_system!(
         unit (ergs_centimeters_cubed_per_s, "ergs cm^3/s") = ergs * centimeters_cubed_per_s,
         def HeatingRate = Energy / (Volume3D * Time),
         unit (ergs_per_centimeters_cubed_per_s, "ergs cm^-3 s^-1") = ergs / (cubic_centimeters * seconds),
+        unit (joules_per_meters_cubed_per_s, "J m^-3 s^-1") = joules / (cubic_meters * seconds),
         def NumberDensity = Dimensionless / Volume3D,
         unit per_centimeters_cubed = 1.0 / cubic_centimeters,
 
