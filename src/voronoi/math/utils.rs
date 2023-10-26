@@ -68,7 +68,7 @@ fn backward_substitution<const M: usize, F: Num>(a: Matrix<M, { M + 1 }, F>) -> 
     result
 }
 
-fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFloat> {
+pub fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFloat> {
     let iter = m.into_iter().map(|row| {
         let x: [PrecisionFloat; D] = from_iter(
             row.into_iter()

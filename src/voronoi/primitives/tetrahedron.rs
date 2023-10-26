@@ -17,7 +17,8 @@ use crate::voronoi::math::precision_types::PrecisionPoint3d;
 use crate::voronoi::math::precision_types::TETRAHEDRON_POINTS_ON_SAME_SIDE_EPSILON;
 use crate::voronoi::math::traits::Cross3d;
 use crate::voronoi::math::utils::determinant4x4;
-use crate::voronoi::math::utils::determinant5x5_sign;
+use crate::voronoi::math::utils::determinant5x5;
+use crate::voronoi::math::utils::lift_matrix;
 use crate::voronoi::math::utils::Sign;
 use crate::voronoi::PointIndex;
 
@@ -188,23 +189,29 @@ impl DTetraData for TetrahedronData {
         a1.min(a2).min(a3).min(a4)
     }
 
-    #[rustfmt::skip]
     fn circumcircle_contains(&self, point: Point3d) -> bool {
-        // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
-        let a = self.p1;
-        let b = self.p2;
-        let c = self.p3;
-        let d = self.p4;
-        let e = point;
-        let matrix = [
+        self.circumcircle_contains_float(point).unwrap_or_else(|_| {
+            let a = self.p1;
+            let b = self.p2;
+            let c = self.p3;
+            let d = self.p4;
+            let e = point;
+            let matrix = [
                 [1.0, a.x, a.y, a.z, a.x.powi(2) + a.y.powi(2) + a.z.powi(2)],
                 [1.0, b.x, b.y, b.z, b.x.powi(2) + b.y.powi(2) + b.z.powi(2)],
                 [1.0, c.x, c.y, c.z, c.x.powi(2) + c.y.powi(2) + c.z.powi(2)],
                 [1.0, d.x, d.y, d.z, d.x.powi(2) + d.y.powi(2) + d.z.powi(2)],
                 [1.0, e.x, e.y, e.z, e.x.powi(2) + e.y.powi(2) + e.z.powi(2)],
             ];
-        determinant5x5_sign(matrix
-        ).panic_if_zero(|| format!("Degenerate case in circumcircle test of tetrahedron: {:?}. {:?}", self, matrix)).is_negative()
+            Sign::of(determinant5x5(lift_matrix(matrix)))
+                .panic_if_zero(|| {
+                    format!(
+                        "Degenerate case in circumcircle test of tetrahedron: {:?}. {:?}",
+                        self, matrix
+                    )
+                })
+                .is_negative()
+        })
     }
 
     #[rustfmt::skip]
@@ -246,6 +253,82 @@ impl DTetraData for TetrahedronData {
             ]
         );
         Point3d::new(dx,dy,dz) / (2.0 * a)
+    }
+}
+
+impl TetrahedronData {
+    fn circumcircle_contains_float(&self, point: Point3d) -> Result<bool, PrecisionError> {
+        // Taken from Arepo - InSphere_Errorbound
+        let ax = self.p1.x - point.x;
+        let ay = self.p1.y - point.y;
+        let az = self.p1.z - point.z;
+
+        let bx = self.p2.x - point.x;
+        let by = self.p2.y - point.y;
+        let bz = self.p2.z - point.z;
+
+        let cx = self.p3.x - point.x;
+        let cy = self.p3.y - point.y;
+        let cz = self.p3.z - point.z;
+
+        let dx = self.p4.x - point.x;
+        let dy = self.p4.y - point.y;
+        let dz = self.p4.z - point.z;
+
+        let axby = ax * by;
+        let bxay = bx * ay;
+        let bxcy = bx * cy;
+        let cxby = cx * by;
+        let cxdy = cx * dy;
+        let dxcy = dx * cy;
+        let dxay = dx * ay;
+        let axdy = ax * dy;
+        let axcy = ax * cy;
+        let cxay = cx * ay;
+        let bxdy = bx * dy;
+        let dxby = dx * by;
+
+        let ab = axby - bxay;
+        let bc = bxcy - cxby;
+        let cd = cxdy - dxcy;
+        let da = dxay - axdy;
+        let ac = axcy - cxay;
+        let bd = bxdy - dxby;
+
+        let abc = az * bc - bz * ac + cz * ab;
+        let bcd = bz * cd - cz * bd + dz * bc;
+        let cda = cz * da + dz * ac + az * cd;
+        let dab = dz * ab + az * bd + bz * da;
+
+        let a2 = ax * ax + ay * ay + az * az;
+        let b2 = bx * bx + by * by + bz * bz;
+        let c2 = cx * cx + cy * cy + cz * cz;
+        let d2 = dx * dx + dy * dy + dz * dz;
+
+        let x = (c2 * dab - d2 * abc) + (a2 * bcd - b2 * cda);
+
+        /* calculate absolute maximum size */
+
+        let ab = axby.abs() + bxay.abs();
+        let bc = bxcy.abs() + cxby.abs();
+        let cd = cxdy.abs() + dxcy.abs();
+        let da = dxay.abs() + axdy.abs();
+        let ac = axcy.abs() + cxay.abs();
+        let bd = bxdy.abs() + dxby.abs();
+
+        let az = az.abs();
+        let bz = bz.abs();
+        let cz = cz.abs();
+        let dz = dz.abs();
+
+        let abc = az * bc + bz * ac + cz * ab;
+        let bcd = bz * cd + cz * bd + dz * bc;
+        let cda = cz * da + dz * ac + az * cd;
+        let dab = dz * ab + az * bd + bz * da;
+
+        let size_limit = (c2 * dab + d2 * abc) + (a2 * bcd + b2 * cda);
+        let error_bound = 1.0e-14 * size_limit;
+        Ok(Sign::try_from_val(&x, error_bound)?.is_positive())
     }
 }
 
