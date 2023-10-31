@@ -14,7 +14,6 @@ use subsweep::impl_to_dataset;
 use subsweep::io::input::Reader;
 use subsweep::io::DatasetShape;
 use subsweep::parameters::InputParameters;
-use subsweep::prelude::SimulationBox;
 use subsweep::source_systems::Source;
 use subsweep::source_systems::Sources;
 use subsweep::units;
@@ -28,7 +27,6 @@ use super::unit_reader::make_descriptor;
 use super::unit_reader::read_vec;
 use super::unit_reader::ArepoUnitReader;
 use super::Parameters;
-use super::SourceType;
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "metallicity"]
@@ -43,22 +41,6 @@ pub struct StellarFormationTime(pub Dimensionless);
 
 impl_to_dataset!(StellarFormationTime, units::Dimensionless, true);
 impl_to_dataset!(Metallicity, units::Dimensionless, true);
-
-pub fn add_single_source_system(
-    box_size: Res<SimulationBox>,
-    parameters: Res<Parameters>,
-    mut commands: Commands,
-) {
-    let center = box_size.center;
-    if let SourceType::SingleSource(rate) = parameters.sources {
-        commands.insert_resource(Sources {
-            sources: vec![Source {
-                position: center,
-                rate,
-            }],
-        })
-    }
-}
 
 pub fn read_sources_system(
     mut commands: Commands,
@@ -82,7 +64,7 @@ fn new_bpass_source(
 ) -> Source {
     let age = formation_scale_factor_to_age(cosmology, formation_scale_factor);
     Source {
-        position,
+        pos: position,
         rate: bpass_lookup(age, metallicity, mass) * escape_fraction,
     }
 }

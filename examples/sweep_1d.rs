@@ -87,7 +87,7 @@ fn add_source(sim: &mut Simulation, params: &Params) {
     if sim.on_main_rank() {
         sim.insert_resource(Sources {
             sources: vec![Source {
-                position: VecLength::new(params.source_pos, Length::zero(), Length::zero()),
+                pos: VecLength::new(params.source_pos, Length::zero(), Length::zero()),
                 rate: params.photon_flux * area,
             }],
         });

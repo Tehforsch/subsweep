@@ -5,7 +5,6 @@ mod arepo_postprocess;
 
 use arepo_postprocess::read_grid::ReadSweepGridPlugin;
 use arepo_postprocess::remap::remap_abundances_and_energies_system;
-use arepo_postprocess::sources::add_single_source_system;
 use arepo_postprocess::sources::read_sources_system;
 use arepo_postprocess::unit_reader::read_vec;
 use arepo_postprocess::unit_reader::ArepoUnitReader;
@@ -57,9 +56,9 @@ fn main() {
         SourceType::FromIcs(_) => {
             sim.add_startup_system(read_sources_system);
         }
-        SourceType::SingleSource(_) => {
+        SourceType::Explicit(sources) => {
             if rank.is_main() {
-                sim.add_startup_system(add_single_source_system);
+                sim.insert_resource(Sources { sources });
             } else {
                 sim.insert_resource(Sources::default());
             }
