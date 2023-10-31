@@ -65,8 +65,8 @@ fn get_normal<D: DDimension>(
     p1: PointIndex,
     p2: PointIndex,
 ) -> Point<D> {
-    let p1 = data.triangulation.points[p1];
-    let p2 = data.triangulation.points[p2];
+    let p1 = data.triangulation.get_original_point(p1);
+    let p2 = data.triangulation.get_original_point(p2);
     (p2 - p1).normalize()
 }
 
@@ -145,7 +145,7 @@ impl DCell for Cell<TwoD> {
             is_infinite: data.is_infinite_cell(p),
             index: *data.point_to_cell_map.get_by_right(&p).unwrap(),
             faces: Self::get_faces(data, p),
-            center: data.triangulation.points[p],
+            center: data.triangulation.get_original_point(p),
         }
     }
 }
@@ -207,7 +207,7 @@ impl DCell for Cell<ThreeD> {
             is_infinite: data.is_infinite_cell(p),
             index: *data.point_to_cell_map.get_by_right(&p).unwrap(),
             faces: Self::get_faces(data, p),
-            center: data.triangulation.points[p],
+            center: data.triangulation.get_original_point(p),
         }
     }
 }

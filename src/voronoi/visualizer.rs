@@ -55,9 +55,50 @@ impl Visualizable for f64 {
     }
 }
 
+fn project_2d(p: Point3d) -> Point2d {
+    Point2d::new(p.y, p.z)
+}
+
 impl Visualizable for TetrahedronData {
     fn get_statements(&self) -> Vec<String> {
-        vec![]
+        vec![
+            format!(
+                "Polygon {} {} {} {} {} {}",
+                project_2d(self.p1).x,
+                project_2d(self.p1).y,
+                project_2d(self.p2).x,
+                project_2d(self.p2).y,
+                project_2d(self.p3).x,
+                project_2d(self.p3).y,
+            ),
+            format!(
+                "Polygon {} {} {} {} {} {}",
+                project_2d(self.p1).x,
+                project_2d(self.p1).y,
+                project_2d(self.p2).x,
+                project_2d(self.p2).y,
+                project_2d(self.p4).x,
+                project_2d(self.p4).y,
+            ),
+            format!(
+                "Polygon {} {} {} {} {} {}",
+                project_2d(self.p1).x,
+                project_2d(self.p1).y,
+                project_2d(self.p3).x,
+                project_2d(self.p3).y,
+                project_2d(self.p4).x,
+                project_2d(self.p4).y,
+            ),
+            format!(
+                "Polygon {} {} {} {} {} {}",
+                project_2d(self.p2).x,
+                project_2d(self.p2).y,
+                project_2d(self.p3).x,
+                project_2d(self.p3).y,
+                project_2d(self.p4).x,
+                project_2d(self.p4).y,
+            ),
+        ]
     }
 }
 
@@ -105,13 +146,13 @@ where
 {
     fn get_statements(&self) -> Vec<String> {
         let mut s = vec![];
-        for (index, point) in self.points.iter() {
+        for (index, point) in self.iter_original_points() {
             let color = match self.point_kinds[&index] {
                 PointKind::Inner => (1.0, 0.0, 0.0),
                 PointKind::Outer => (0.0, 1.0, 0.0),
                 PointKind::Halo(_) => (0.0, 0.0, 1.0),
             };
-            s.extend(Color { x: *point, color }.get_statements());
+            s.extend(Color { x: point, color }.get_statements());
         }
         for (_, tetra) in self.tetras.iter() {
             s.extend(self.get_tetra_data(tetra).get_statements());
@@ -128,7 +169,11 @@ impl Visualizable for Point2d {
 
 impl Visualizable for Point3d {
     fn get_statements(&self) -> Vec<String> {
-        vec![format!("Point {} {}", self.x, self.y)]
+        vec![format!(
+            "Point {} {}",
+            project_2d(*self).x,
+            project_2d(*self).y
+        )]
     }
 }
 

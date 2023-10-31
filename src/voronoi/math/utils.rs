@@ -8,7 +8,12 @@ use num::Zero;
 use super::precision_types::FloatError;
 use super::precision_types::PrecisionError;
 use super::precision_types::PrecisionFloat;
+use super::precision_types::DETERMINANT_3X3_EPSILON;
+use super::precision_types::DETERMINANT_4X4_EPSILON;
+use super::precision_types::DETERMINANT_5X5_EPSILON;
 use super::traits::Num;
+
+pub const GAUSS_3X4_EPSILON: f64 = 1.0e-8;
 
 // MxN matrix: This type is just here for clarity, because the
 // internal storage is reversed, such that the order of indices is
@@ -65,7 +70,50 @@ fn backward_substitution<const M: usize, F: Num>(a: Matrix<M, { M + 1 }, F>) -> 
     result
 }
 
-fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFloat> {
+pub fn solve_3x4_system_of_equations_error(
+    mut m: Matrix<3, 4, f64>,
+) -> Result<[f64; 3], PrecisionError> {
+    let (mut ix, mut iy, mut iz) = if m[1][0].abs() > m[0][0].abs() {
+        (1, 0, 2)
+    } else {
+        (0, 1, 2)
+    };
+    if m[2][0].abs() > m[ix][0].abs() {
+        (ix, iy, iz) = (2, 0, 1)
+    };
+
+    let factor = -m[iy][0] / m[ix][0];
+    add_row_to_another(&mut m, iy, ix, factor);
+    let factor = -m[iz][0] / m[ix][0];
+    add_row_to_another(&mut m, iz, ix, factor);
+
+    if m[iz][1].abs() > m[iy][1].abs() {
+        (iy, iz) = (iz, iy)
+    }
+
+    PrecisionError::check(&m[iy][1], GAUSS_3X4_EPSILON)?;
+
+    let factor = -m[iz][1] / m[iy][1];
+    add_row_to_another(&mut m, iz, iy, factor);
+
+    PrecisionError::check(&m[iz][2], GAUSS_3X4_EPSILON)?;
+    PrecisionError::check(&m[iy][1], GAUSS_3X4_EPSILON)?;
+    PrecisionError::check(&m[ix][0], GAUSS_3X4_EPSILON)?;
+
+    let x3 = m[iz][3] / m[iz][2];
+    let x2 = (m[iy][3] - x3 * m[iy][2]) / m[iy][1];
+    let x1 = (m[ix][3] - x3 * m[ix][2] - x2 * m[ix][1]) / m[ix][0];
+
+    Ok([x1, x2, x3])
+}
+
+fn add_row_to_another(m: &mut Matrix<3, 4, f64>, r1: usize, r2: usize, factor: f64) {
+    for k in 0..4 {
+        m[r1][k] += factor * m[r2][k];
+    }
+}
+
+pub fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFloat> {
     let iter = m.into_iter().map(|row| {
         let x: [PrecisionFloat; D] = from_iter(
             row.into_iter()
@@ -78,7 +126,7 @@ fn lift_matrix<const D: usize>(m: Matrix<D, D, f64>) -> Matrix<D, D, PrecisionFl
     arr
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Sign {
     Positive,
     Negative,
@@ -116,8 +164,9 @@ impl Sign {
 
     pub fn try_from_val<T: Zero + PartialOrd + Signed + FloatError>(
         val: &T,
+        epsilon: f64,
     ) -> Result<Self, PrecisionError> {
-        PrecisionError::check(val)?;
+        PrecisionError::check(val, epsilon)?;
         Ok(match val.partial_cmp(&T::zero()).unwrap() {
             Ordering::Less => Sign::Negative,
             Ordering::Equal => Sign::Zero,
@@ -133,11 +182,41 @@ impl Sign {
         matches!(self, Sign::Negative)
     }
 
-    pub fn panic_if_zero(&self, arg: &'static str) -> &Self {
+    pub fn panic_if_zero<U: std::fmt::Display>(&self, arg: impl Fn() -> U) -> &Self {
         if let Self::Zero = self {
-            panic!("{}", arg)
+            panic!("{}", arg())
         }
         self
+    }
+}
+
+fn compare_result_against_entries<const D: usize>(
+    val: f64,
+    m: &Matrix<D, D, f64>,
+    epsilon: f64,
+) -> Result<f64, PrecisionError> {
+    for row in m.iter() {
+        for entry in row.iter() {
+            PrecisionError::check(&(val / entry), epsilon)?;
+        }
+    }
+    Ok(val)
+}
+
+/// Contains information about whether an operation succeeded using
+/// normal float operations or whether it required arbitrary precision
+/// computations.
+enum OperationResult<T> {
+    Float(T),
+    ArbitraryPrecision(T),
+}
+
+impl<T> OperationResult<T> {
+    fn unpack(self) -> T {
+        match self {
+            Self::Float(sign) => sign,
+            Self::ArbitraryPrecision(sign) => sign,
+        }
     }
 }
 
@@ -147,37 +226,56 @@ fn determine_sign_with_arbitrary_precision_if_necessary<const D: usize>(
     m: Matrix<D, D, f64>,
     f: fn(Matrix<D, D, f64>) -> f64,
     f_arbitrary_precision: fn(Matrix<D, D, PrecisionFloat>) -> PrecisionFloat,
-) -> Sign {
+    epsilon: f64,
+) -> OperationResult<Sign> {
     let val = f(m);
-    Sign::try_from_val(&val).unwrap_or_else(|_| {
-        let m = lift_matrix(m);
-        Sign::of(f_arbitrary_precision(m))
-    })
+    match compare_result_against_entries(val, &m, epsilon) {
+        Ok(val) => OperationResult::Float(Sign::of(val)),
+        Err(_) => {
+            let m = lift_matrix(m);
+            OperationResult::ArbitraryPrecision(Sign::of(f_arbitrary_precision(m)))
+        }
+    }
 }
 
-pub fn determinant3x3_sign(a: Matrix<3, 3, f64>) -> Sign {
-    determine_sign_with_arbitrary_precision_if_necessary(
-        a,
-        determinant3x3::<f64>,
-        determinant3x3::<PrecisionFloat>,
-    )
+macro_rules! determinant_impl {
+    ($result_fn_name: ident, $sign_fn_name: ident, $base_fn: ident, $epsilon: expr, $num: literal) => {
+        fn $result_fn_name(a: Matrix<$num, $num, f64>) -> OperationResult<Sign> {
+            determine_sign_with_arbitrary_precision_if_necessary(
+                a,
+                $base_fn::<f64>,
+                $base_fn::<PrecisionFloat>,
+                $epsilon,
+            )
+        }
+
+        pub fn $sign_fn_name(a: Matrix<$num, $num, f64>) -> Sign {
+            $result_fn_name(a).unpack()
+        }
+    };
 }
 
-pub fn determinant4x4_sign(a: Matrix<4, 4, f64>) -> Sign {
-    determine_sign_with_arbitrary_precision_if_necessary(
-        a,
-        determinant4x4::<f64>,
-        determinant4x4::<PrecisionFloat>,
-    )
-}
-
-pub fn determinant5x5_sign(a: Matrix<5, 5, f64>) -> Sign {
-    determine_sign_with_arbitrary_precision_if_necessary(
-        a,
-        determinant5x5::<f64>,
-        determinant5x5::<PrecisionFloat>,
-    )
-}
+determinant_impl!(
+    determinant3x3_sign_result,
+    determinant3x3_sign,
+    determinant3x3,
+    DETERMINANT_3X3_EPSILON,
+    3
+);
+determinant_impl!(
+    determinant4x4_sign_result,
+    determinant4x4_sign,
+    determinant4x4,
+    DETERMINANT_4X4_EPSILON,
+    4
+);
+determinant_impl!(
+    determinant5x5_sign_result,
+    determinant5x5_sign,
+    determinant5x5,
+    DETERMINANT_5X5_EPSILON,
+    5
+);
 
 #[rustfmt::skip]
 pub fn determinant3x3<F: Num>(
@@ -215,7 +313,17 @@ pub fn determinant5x5<F: Num>(
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::path::Path;
+
+    use super::determinant5x5_sign_result;
+    use super::OperationResult;
     use crate::test_utils::assert_float_is_close;
+    use crate::voronoi::math::utils::determinant3x3_sign;
+    use crate::voronoi::math::utils::determinant5x5_sign;
+    use crate::voronoi::math::utils::lift_matrix;
+    use crate::voronoi::math::utils::Matrix;
+    use crate::voronoi::math::utils::Sign;
 
     // All of the following are completely made up matrices selected purely by the criteria of
     // not having zero determinant (I felt like that tested the code more somehow)
@@ -278,10 +386,9 @@ mod tests {
         );
     }
 
-    #[test]
     #[rustfmt::skip]
-    fn solve_system_of_equations() {
-        let res = super::solve_system_of_equations(
+    fn solve_system_of_equations_fn(f: impl Fn(Matrix<3, 4, f64>) -> [f64; 3]) {
+        let res = f(
             [
                 [2.0, 0.0, 0.0, 2.0],
                 [0.0, 3.0, 0.0, 3.0],
@@ -317,5 +424,102 @@ mod tests {
         assert_float_is_close(res[0], 5.0 / 3.0);
         assert_float_is_close(res[1], -5.0 / 3.0);
         assert_float_is_close(res[2], 5.0 / 3.0);
+        let res = super::solve_system_of_equations(
+            [
+                [5.0, 6.0, 7.0, 10.0],
+                [1.0, 2.0, 4.0, 5.0],
+                [8.0, 9.0, 10.0, 15.0]
+            ]);
+        assert_float_is_close(res[0], 5.0 / 3.0);
+        assert_float_is_close(res[1], -5.0 / 3.0);
+        assert_float_is_close(res[2], 5.0 / 3.0);
+    }
+
+    #[test]
+    fn solve_system_of_equations() {
+        solve_system_of_equations_fn(super::solve_system_of_equations);
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn solve_system_of_equations_3x4() {
+        solve_system_of_equations_fn(|m| super::solve_3x4_system_of_equations_error(m).unwrap())
+    }
+
+    #[test]
+    fn matrix_with_zero_determinant_precision() {
+        let matrix: Matrix<3, 3, f64> = [
+            [
+                7.041529113171147e-9,
+                7.041529113171147e-9,
+                7.041529113171147e-9,
+            ],
+            [
+                -0.013275610231885723,
+                -4.576711463239629e-246,
+                7.041529113212176e-9,
+            ],
+            [
+                7.041529113171147e-9,
+                7.041529113171147e-9,
+                7.041529113171147e-9,
+            ],
+        ];
+        assert_eq!(
+            determinant3x3_sign(matrix),
+            Sign::of(super::determinant3x3(lift_matrix(matrix)))
+        );
+    }
+
+    fn vec_as_matrix<const M: usize, const N: usize>(v: Vec<Vec<f64>>) -> Matrix<M, N, f64> {
+        let mut m: Matrix<M, N, f64> = [[0.0; N]; M];
+        assert_eq!(m.len(), M);
+        for i in 0..M {
+            assert_eq!(m[i].len(), N);
+            for j in 0..N {
+                m[i][j] = v[i][j];
+            }
+        }
+        m
+    }
+
+    fn get_matrices_from_file<const N: usize>(relative_file_path: &str) -> Vec<Matrix<N, N, f64>> {
+        let matrices_file = Path::new(file!())
+            .parent()
+            .unwrap()
+            .join(relative_file_path);
+        let matrices_file = File::open(matrices_file).unwrap();
+        let matrices = serde_yaml::from_reader::<_, Vec<Vec<Vec<f64>>>>(matrices_file).unwrap();
+        matrices.into_iter().map(|m| vec_as_matrix(m)).collect()
+    }
+
+    #[test]
+    fn critical_matrices_precision_5x5() {
+        for matrix in get_matrices_from_file("../../../tests/data/critical_matrices_5x5") {
+            assert_eq!(
+                determinant5x5_sign(matrix),
+                Sign::of(super::determinant5x5(lift_matrix(matrix)))
+            );
+        }
+    }
+
+    #[test]
+    fn normal_matrices_precision_5x5_correct_result() {
+        for matrix in get_matrices_from_file("../../../tests/data/normal_matrices_5x5") {
+            assert_eq!(
+                determinant5x5_sign(matrix),
+                Sign::of(super::determinant5x5(lift_matrix(matrix)))
+            );
+        }
+    }
+
+    #[test]
+    fn normal_matrices_precision_5x5_no_arbitrary_precision_needed() {
+        for matrix in get_matrices_from_file("../../../tests/data/normal_matrices_5x5").iter() {
+            assert!(matches!(
+                determinant5x5_sign_result(*matrix),
+                OperationResult::Float(_)
+            ));
+        }
     }
 }

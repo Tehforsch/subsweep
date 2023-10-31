@@ -81,8 +81,7 @@ mod tests {
     {
         perform_triangulation_check_on_each_level_of_construction(|t, num| {
             let map: BiMap<_, _> = t
-                .points
-                .iter()
+                .iter_original_points()
                 .enumerate()
                 .map(|(i, (p, _))| (ParticleType::Local(ParticleId::test(i)), p))
                 .collect();
@@ -113,7 +112,8 @@ mod tests {
                     .cells
                     .iter()
                     .min_by_key(|cell| {
-                        let p: D::Point = data.triangulation.points[cell.delaunay_point];
+                        let p: D::Point =
+                            data.triangulation.get_original_point(cell.delaunay_point);
                         OrderedFloat(p.distance_squared(lookup_point))
                     })
                     .unwrap();
