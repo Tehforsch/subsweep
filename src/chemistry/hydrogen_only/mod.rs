@@ -370,21 +370,26 @@ impl Solver {
         timestep: Time,
         timestep_safety_factor: Dimensionless,
     ) -> Result<Timescale, TimestepCriterionViolated> {
-        let temperature_change = self.temperature_change(timestep);
+        self.temperature = Temperature::kelvins(1000.0);
+        let temperature_change = Temperature::kelvins(0.0);
         let ideal_temperature_timestep = Timescale::temperature(update(
             &mut self.temperature,
             temperature_change,
             timestep_safety_factor,
             timestep,
         )?);
+        self.temperature = Temperature::kelvins(1000.0);
         let ionized_fraction_change = self.ionized_fraction_change(timestep);
+        self.temperature = Temperature::kelvins(1000.0);
         let ideal_ionized_fraction_timestep = Timescale::ionization_fraction(update(
             &mut self.ionized_hydrogen_fraction,
             ionized_fraction_change,
             timestep_safety_factor,
             timestep,
         )?);
+        self.temperature = Temperature::kelvins(1000.0);
         self.clamp_ionized_hydrogen_fraction();
+        self.temperature = Temperature::kelvins(1000.0);
         Ok(ideal_temperature_timestep.min(ideal_ionized_fraction_timestep))
     }
 
