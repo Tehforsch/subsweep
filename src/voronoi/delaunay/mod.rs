@@ -570,4 +570,20 @@ pub(super) mod tests {
             }
         });
     }
+
+    #[test]
+    fn no_faces_leaked<D>()
+    where
+        D: DDimension + TestDimension,
+        Triangulation<D>: Delaunay<D>,
+    {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
+            for (f, _) in triangulation.faces.iter() {
+                assert!(triangulation
+                    .tetras
+                    .iter()
+                    .any(|(_, t)| { t.faces().any(|f2| f2.face == f) }))
+            }
+        });
+    }
 }
