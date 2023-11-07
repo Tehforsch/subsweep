@@ -17,6 +17,7 @@ use self::dimension::DTetra;
 use self::dimension::DTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
+use super::indexed_arena::IndexedVec;
 use super::math::traits::DVector;
 use super::primitives::Float;
 use crate::communication::Rank;
@@ -30,8 +31,8 @@ use crate::hash_map::HashMap;
 pub struct TetraIndex(pub Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct FaceIndex(pub Index);
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
-pub struct PointIndex(pub Index);
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct PointIndex(pub usize);
 
 pub type Point<D> = <D as Dimension>::Point;
 pub type Face<D> = <D as DDimension>::Face;
@@ -41,7 +42,7 @@ pub type TetraData<D> = <D as DDimension>::TetraData;
 
 type TetraList<D> = IndexedArena<TetraIndex, Tetra<D>>;
 type FaceList<D> = IndexedArena<FaceIndex, Face<D>>;
-type PointList<D> = IndexedArena<PointIndex, Point<D>>;
+type PointList<D> = IndexedVec<PointIndex, Point<D>>;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum PointKind {
