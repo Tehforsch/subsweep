@@ -1,6 +1,6 @@
 use bevy_ecs::event::EventWriter;
 use bevy_ecs::prelude::Res;
-use bevy_ecs::prelude::Resource;
+use derive_custom::subsweep_parameters;
 use derive_custom::Named;
 use kiddo::distance::squared_euclidean;
 use kiddo::KdTree;
@@ -32,13 +32,15 @@ pub struct TotalLuminosity(pub SourceRate);
 #[derive(Debug, Equivalence, Clone, PartialOrd, PartialEq)]
 pub struct DistanceToSourceData(Length);
 
-#[derive(Clone, Debug, Equivalence)]
+#[derive(Debug, Equivalence)]
+#[subsweep_parameters]
 pub struct Source {
-    pub position: VecLength,
+    pub pos: VecLength,
     pub rate: SourceRate,
 }
 
-#[derive(Resource, Default, Debug)]
+#[derive(Default, Debug)]
+#[subsweep_parameters]
 pub struct Sources {
     pub sources: Vec<Source>,
 }
@@ -60,10 +62,10 @@ fn set_source_terms_system(
         .collect::<Vec<_>>())
         .into();
     for s in all_sources.iter() {
-        let key = s.position.into_key(&*box_);
+        let key = s.pos.into_key(&*box_);
         let rank = decomposition.get_owning_rank(key);
         if rank == **world_rank {
-            let (_, index) = tree.nearest_one(&pos_to_tree_coord(&s.position), &squared_euclidean);
+            let (_, index) = tree.nearest_one(&pos_to_tree_coord(&s.pos), &squared_euclidean);
             let (_, ref mut source_term) = &mut particles[index];
             ***source_term += s.rate;
         }

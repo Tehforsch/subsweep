@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use derive_custom::subsweep_parameters;
+use subsweep::source_systems::Source;
 use subsweep::units::Dimensionless;
-use subsweep::units::SourceRate;
 
 pub mod bpass;
 pub mod read_grid;
@@ -31,7 +31,7 @@ pub enum GridParameters {
 #[subsweep_parameters]
 pub enum SourceType {
     FromIcs(FromIcs),
-    SingleSource(SourceRate),
+    Explicit(Vec<Source>),
 }
 
 impl SourceType {
