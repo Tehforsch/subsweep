@@ -70,6 +70,7 @@ use crate::components::Source;
 use crate::components::Timestep;
 use crate::cosmology::Cosmology;
 use crate::hash_map::HashMap;
+use crate::hash_map::HashSet;
 use crate::io::output::parameters::is_desired_field;
 use crate::io::output::parameters::OutputParameters;
 use crate::io::time_series::TimeSeriesPlugin;
@@ -123,6 +124,8 @@ impl SubsweepPlugin for SweepPlugin {
             .add_derived_component::<components::PhotonRate>()
             .add_derived_component::<components::Temperature>()
             .add_derived_component::<PhotoionizationRate>()
+            .add_derived_component::<components::Rank>()
+            .add_derived_component::<components::Index>()
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<TemperatureMassAverage>::default())
@@ -136,6 +139,10 @@ impl SubsweepPlugin for SweepPlugin {
             .add_startup_system_to_stage(
                 StartupStages::InsertDerivedComponents,
                 initialize_optional_component_system::<PhotoionizationRate>,
+            )
+            .add_startup_system_to_stage(
+                StartupStages::InsertComponentsAfterGrid,
+                init_rank_and_id_component_system,
             )
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
             .add_parameter_type_and_get_result::<SweepParameters>();
@@ -769,4 +776,21 @@ fn show_num_directions_system(
     mut performance_data: ResMut<Performance>,
 ) {
     performance_data.record_number("num_sweep_directions", parameters.directions.num());
+}
+
+fn init_rank_and_id_component_system(
+    mut commands: Commands,
+    particles: Particles<(Entity, &ParticleId)>,
+    rank: Res<WorldRank>,
+) {
+    dbg!(particles.iter().count());
+    let mut s = HashSet::default();
+    for (entity, id) in particles.iter() {
+        assert!(**rank == id.rank);
+        commands
+            .entity(entity)
+            .insert((components::Rank(**rank), components::Index(id.index)));
+        s.insert(id.index);
+    }
+    assert_eq!(s.len(), particles.iter().count());
 }

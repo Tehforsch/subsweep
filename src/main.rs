@@ -167,6 +167,8 @@ fn insert_missing_components_system(
             components::Temperature(temperature),
             // Will be computed later
             components::Mass(Mass::zero()),
+            components::Rank(-1),
+            components::Index(u32::MAX),
         ));
     }
 }

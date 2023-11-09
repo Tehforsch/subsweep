@@ -6,9 +6,11 @@ use diman::Quotient;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
+use crate::io::to_dataset::ToDataset;
 use crate::named::Named;
 use crate::prelude::Float;
 use crate::units;
+use crate::units::Dimension;
 use crate::units::EnergyDensity;
 use crate::units::Time;
 use crate::units::VecLength;
@@ -67,6 +69,35 @@ pub struct Timestep(pub Time);
 #[name = "ionization_time"]
 #[repr(transparent)]
 pub struct IonizationTime(pub Time);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "rank"]
+#[repr(transparent)]
+pub struct Rank(pub i32);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "index"]
+#[repr(transparent)]
+pub struct Index(pub u32);
+
+impl ToDataset for Rank {
+    fn dimension() -> units::Dimension {
+        Dimension::none()
+    }
+
+    fn convert_base_units(self, _: f64) -> Self {
+        self
+    }
+}
+impl ToDataset for Index {
+    fn dimension() -> units::Dimension {
+        Dimension::none()
+    }
+
+    fn convert_base_units(self, _: f64) -> Self {
+        self
+    }
+}
 
 impl Default for IonizationTime {
     fn default() -> Self {

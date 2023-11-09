@@ -28,6 +28,7 @@ use crate::communication::WorldRank;
 use crate::components::Position;
 use crate::named::Named;
 use crate::parameters::SimulationBox;
+use crate::prelude::LocalParticle;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
 use crate::prelude::StartupStages;
@@ -131,7 +132,13 @@ fn determine_particle_ids_system(
     commands.insert_resource(IdEntityMap(map))
 }
 
-fn update_id_entity_map_system(query: Query<(&ParticleId, Entity)>, mut map: ResMut<IdEntityMap>) {
+fn update_id_entity_map_system(
+    query: Query<(&ParticleId, Entity), With<LocalParticle>>,
+    mut map: ResMut<IdEntityMap>,
+) {
+    for (i, (p, _)) in query.iter().enumerate() {
+        assert!(i == p.index as usize);
+    }
     map.0 = query.iter().map(|(id, entity)| (*id, entity)).collect();
 }
 
