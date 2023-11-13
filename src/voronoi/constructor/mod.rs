@@ -24,7 +24,6 @@ use super::VoronoiGrid;
 use crate::dimension::ActiveDimension;
 use crate::dimension::ActiveWrapType;
 use crate::dimension::Point;
-use crate::extent::get_extent;
 use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::prelude::ParticleId;
@@ -60,7 +59,7 @@ where
         let points: Vec<_> = iter.collect();
         let extent = search
             .determine_global_extent()
-            .unwrap_or_else(|| get_extent(points.iter().map(|p| p.1)).unwrap());
+            .unwrap_or_else(|| Extent::from_points(points.iter().map(|p| p.1)).unwrap());
         let characteristic_length =
             get_characteristic_length::<D>(extent.max_side_length(), search.num_points());
         let extent = extent.including_periodic_images();
@@ -114,7 +113,9 @@ where
     }
 
     pub fn get_position_for_cell(&self, cell_index: CellIndex) -> Point<D> {
-        self.data.triangulation.points[self.get_point_by_cell(cell_index).unwrap()]
+        self.data
+            .triangulation
+            .get_original_point(self.get_point_by_cell(cell_index).unwrap())
     }
 }
 

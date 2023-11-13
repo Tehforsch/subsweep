@@ -17,8 +17,8 @@ use crate::impl_vector3d;
 pub struct PrecisionError;
 
 impl PrecisionError {
-    pub fn check<F: Signed + FloatError>(a: &F) -> Result<(), PrecisionError> {
-        if FloatError::is_too_close_to_zero(a) {
+    pub fn check<F: Signed + FloatError>(a: &F, epsilon: f64) -> Result<(), PrecisionError> {
+        if FloatError::is_too_close_to_zero(a, epsilon) {
             Err(PrecisionError)
         } else {
             Ok(())
@@ -26,22 +26,27 @@ impl PrecisionError {
     }
 }
 
-pub const ERROR_THRESHOLD: f64 = 1e-9;
+pub const TRIANGLE_CONTAINS_EPSILON: f64 = 1e-15;
+pub const TRIANGLE_INTERSECTION_TYPE_EPSILON: f64 = 1e-15;
+pub const TETRAHEDRON_POINTS_ON_SAME_SIDE_EPSILON: f64 = 1e-15;
+pub const DETERMINANT_3X3_EPSILON: f64 = 1e-15;
+pub const DETERMINANT_4X4_EPSILON: f64 = 1e-15;
+pub const DETERMINANT_5X5_EPSILON: f64 = 1e-15;
 
 pub trait FloatError {
-    fn is_too_close_to_zero(&self) -> bool;
+    fn is_too_close_to_zero(&self, epsilon: f64) -> bool;
 }
 
 impl FloatError for f64 {
-    fn is_too_close_to_zero(&self) -> bool {
-        self.abs() < ERROR_THRESHOLD
+    fn is_too_close_to_zero(&self, epsilon: f64) -> bool {
+        self.abs() < epsilon
     }
 }
 
 pub type PrecisionFloat = num::BigRational;
 
 impl FloatError for PrecisionFloat {
-    fn is_too_close_to_zero(&self) -> bool {
+    fn is_too_close_to_zero(&self, _epsilon: f64) -> bool {
         false
     }
 }

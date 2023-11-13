@@ -17,9 +17,12 @@ use crate::voronoi::delaunay::dimension::DFaceData;
 use crate::voronoi::delaunay::dimension::DTetra;
 use crate::voronoi::delaunay::dimension::DTetraData;
 use crate::voronoi::delaunay::face_info::FaceInfo;
+use crate::voronoi::delaunay::Point;
 use crate::voronoi::math::precision_types::PrecisionError;
 use crate::voronoi::math::precision_types::PrecisionPoint2d;
 use crate::voronoi::math::precision_types::PrecisionPoint3d;
+use crate::voronoi::math::precision_types::TRIANGLE_CONTAINS_EPSILON;
+use crate::voronoi::math::precision_types::TRIANGLE_INTERSECTION_TYPE_EPSILON;
 use crate::voronoi::math::utils::determinant3x3_sign;
 use crate::voronoi::math::utils::solve_system_of_equations;
 use crate::voronoi::math::utils::Sign;
@@ -161,19 +164,23 @@ impl<V: Vector2d + Clone + Sub<Output = V> + std::fmt::Debug> TriangleData<V> {
     fn generic_contains(&self, p: V) -> Result<bool, PrecisionError> {
         let (r, s) = self.transform_point_to_canonical_coordinates(p);
         let values = [r.clone(), s.clone(), V::Float::one() - (r + s)];
-        let is_definitely_outside = values.iter().any(|value| {
-            Sign::try_from_val(value)
-                .map(|sign| {
-                    sign.panic_if_zero("Degenerate case of point on edge of triangle")
-                        .is_negative()
-                })
-                .unwrap_or(false)
+        let signs = || {
+            values
+                .iter()
+                .map(|value| Sign::try_from_val(value, TRIANGLE_CONTAINS_EPSILON))
+        };
+        let is_definitely_outside = signs().any(|sign| {
+            if let Ok(sign) = sign {
+                sign.is_negative()
+            } else {
+                false
+            }
         });
         if is_definitely_outside {
             Ok(false)
         } else {
-            for value in values {
-                PrecisionError::check(&value)?;
+            for sign in signs() {
+                sign?.panic_if_zero(|| "Degenerate case of point on edge of triangle");
             }
             Ok(true)
         }
@@ -201,13 +208,22 @@ impl DTetraData for TriangleData<Point2d> {
         // An overshooting factor for numerical safety
         let alpha = 1.00;
         let (min, max) = (extent.min, extent.max);
-        let p1 = min - (max - min) * alpha;
-        let p2 = Point2d::new(min.x, max.y + (max.y - min.y) * (1.0 + alpha));
-        let p3 = Point2d::new(max.x + (max.x - min.x) * (1.0 + alpha), min.y);
-        Self { p1, p2, p3 }
+        let pa = min - (max - min) * alpha;
+        let pb = Point2d::new(min.x, max.y + (max.y - min.y) * (1.0 + alpha));
+        let pc = Point2d::new(max.x + (max.x - min.x) * (1.0 + alpha), min.y);
+        // Flip pa and pb so that the triangle is positively oriented
+        Self {
+            p1: pb,
+            p2: pa,
+            p3: pc,
+        }
     }
 
-    fn contains(&self, p: Point2d) -> bool {
+    fn extent(&self) -> Extent<Point<Self::Dimension>> {
+        Extent::from_points([self.p1, self.p2, self.p3].into_iter()).unwrap()
+    }
+
+    fn contains(&self, p: Point<Self::Dimension>) -> bool {
         self.f64_contains(p)
             .unwrap_or_else(|_| self.arbitrary_precision_contains(p))
     }
@@ -228,7 +244,6 @@ impl DTetraData for TriangleData<Point2d> {
     #[rustfmt::skip]
     fn circumcircle_contains(&self, point: Point2d) -> bool {
         // See for example Springel (2009), doi:10.1111/j.1365-2966.2009.15715.x
-        debug_assert!(self.is_positively_oriented());
         let a = self.p1;
         let b = self.p2;
         let c = self.p3;
@@ -240,19 +255,7 @@ impl DTetraData for TriangleData<Point2d> {
                 [d.x - a.x, d.y - a.y, (d.x - a.x).powi(2) + (d.y - a.y).powi(2)]
             ]
         );
-        sign.panic_if_zero("Degenerate case in circumcircle test.").is_negative()
-    }
-
-    #[rustfmt::skip]
-    fn is_positively_oriented(&self) -> bool {
-        let sign = determinant3x3_sign(
-            [
-                [1.0, self.p1.x, self.p1.y],
-                [1.0, self.p2.x, self.p2.y],
-                [1.0, self.p3.x, self.p3.y],
-            ]
-        );
-        sign.panic_if_zero("Zero volume tetra encountered").is_positive()
+        sign.panic_if_zero(|| "Degenerate case in circumcircle test.").is_negative()
     }
 
     fn get_center_of_circumcircle(&self) -> Point2d {
@@ -305,11 +308,11 @@ impl<V: Vector3d + Clone + Add<Output = V> + Sub<Output = V>> TriangleData<V> {
             [r.clone(), s.clone(), V::Float::one() - (r + s)]
                 .into_iter()
                 .map(|x| {
-                    let sign = Sign::try_from_val(&x);
+                    let sign = Sign::try_from_val(&x, TRIANGLE_INTERSECTION_TYPE_EPSILON);
                     if let Ok(sign) = sign {
-                        sign.panic_if_zero(
-                            "Degenerate case of point on line (implement 4-to-4 flip)",
-                        );
+                        sign.panic_if_zero(|| {
+                            "Degenerate case of point on line (implement 4-to-4 flip)"
+                        });
                     }
                     sign
                 })

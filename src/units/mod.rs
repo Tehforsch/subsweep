@@ -101,9 +101,9 @@ unit_system!(
         constant PROTON_MASS = 1.67262192369e-27 * kilograms,
         constant SPEED_OF_LIGHT = 299792458.0 * meters_per_second,
         constant GAMMA = 5.0 / 3.0,
-        constant NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION = 1.6437820340825549e-18 * centimeters_squared,
-        constant ENERGY_WEIGHTED_AVERAGE_CROSS_SECTION = 1.180171754359821e-18 * centimeters_squared,
-        constant PHOTON_AVERAGE_ENERGY = 100.6910475508583 * electron_volts,
+        constant NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION = 2.9580524545305314e-18 * centimeters_squared,
+        constant ENERGY_WEIGHTED_AVERAGE_CROSS_SECTION = 2.7352520425024469e-18 * centimeters_squared,
+        constant PHOTON_AVERAGE_ENERGY = 18.028356312818811 * electron_volts,
         constant RYDBERG_CONSTANT = 13.65693 * electron_volts,
     ]
 );

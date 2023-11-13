@@ -44,6 +44,7 @@ use self::time_series::HydrogenIonizationVolumeAverage;
 use self::time_series::NumParticlesAtTimestepLevels;
 use self::time_series::PhotoionizationRateVolumeAverage;
 use self::time_series::TemperatureMassAverage;
+use self::time_series::TemperatureVolumeAverage;
 use self::time_series::WeightedPhotoionizationRateVolumeAverage;
 use self::timestep_level::TimestepLevel;
 use self::timestep_state::TimestepState;
@@ -125,6 +126,7 @@ impl SubsweepPlugin for SweepPlugin {
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<TemperatureMassAverage>::default())
+            .add_plugin(TimeSeriesPlugin::<TemperatureVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<PhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<WeightedPhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<NumParticlesAtTimestepLevels>::default())
@@ -669,6 +671,7 @@ fn run_sweep_system(
     mut time: ResMut<SimulationTime>,
     mut timers: NonSendMut<Performance>,
     mut is_first: ResMut<IsFirstTime>,
+    parameters: Res<SweepParameters>,
 ) {
     // This is a slightly hacky way of making sure that we can output
     // the ICS. The first time this system would run, it doesn't run so that
@@ -681,9 +684,16 @@ fn run_sweep_system(
     let time_elapsed = solver.run_sweeps(&mut timers);
     **time += time_elapsed;
     for (id, mut fraction, mut temperature) in sites.iter_mut() {
-        let site = solver.sites.get(*id);
-        **fraction = site.species.ionized_hydrogen_fraction;
-        **temperature = site.species.temperature;
+        let site = solver.sites.get_mut(*id);
+        if parameters.prevent_cooling {
+            **fraction = fraction.max(site.species.ionized_hydrogen_fraction);
+            site.species.ionized_hydrogen_fraction = **fraction;
+            **temperature = temperature.max(site.species.temperature);
+            site.species.temperature = **temperature;
+        } else {
+            **fraction = site.species.ionized_hydrogen_fraction;
+            **temperature = site.species.temperature;
+        }
     }
     for (id, mut heating_rate) in heating_rates.iter_mut() {
         let site = solver.sites.get(*id);

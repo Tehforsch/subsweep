@@ -31,6 +31,11 @@ pub struct SweepParameters {
     /// debugging.
     #[serde(default)]
     pub check_deadlock: bool,
+    /// If true, temperatures and ionization fractions will always be kept above the
+    /// values in the ICS (which makes sense for overdense regions which would be kept
+    /// ionized and heated by feedback processes which are not modelled in subsweep).
+    #[serde(default = "default_prevent_cooling")]
+    pub prevent_cooling: bool,
 }
 
 #[subsweep_parameters]
@@ -55,4 +60,8 @@ fn default_rotate_directions() -> bool {
 
 fn default_timestep_factor() -> Dimensionless {
     Dimensionless::percent(10.0)
+}
+
+fn default_prevent_cooling() -> bool {
+    true
 }

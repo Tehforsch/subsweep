@@ -12,4 +12,16 @@ pub struct ConnectionData {
 pub struct FaceInfo {
     pub face: FaceIndex,
     pub opposing: Option<ConnectionData>,
+    /// Whether the normal of the face points into the tetrahedron or not.
+    pub flipped: bool,
+}
+
+impl FaceInfo {
+    pub fn flipped(self) -> Self {
+        Self {
+            face: self.face,
+            opposing: self.opposing,
+            flipped: !self.flipped,
+        }
+    }
 }

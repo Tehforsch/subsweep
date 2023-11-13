@@ -5,7 +5,6 @@ mod arepo_postprocess;
 
 use arepo_postprocess::read_grid::ReadSweepGridPlugin;
 use arepo_postprocess::remap::remap_abundances_and_energies_system;
-use arepo_postprocess::sources::add_single_source_system;
 use arepo_postprocess::sources::read_sources_system;
 use arepo_postprocess::unit_reader::read_vec;
 use arepo_postprocess::unit_reader::ArepoUnitReader;
@@ -57,9 +56,9 @@ fn main() {
         SourceType::FromIcs(_) => {
             sim.add_startup_system(read_sources_system);
         }
-        SourceType::SingleSource(_) => {
+        SourceType::Explicit(sources) => {
             if rank.is_main() {
-                sim.add_startup_system(add_single_source_system);
+                sim.insert_resource(Sources { sources });
             } else {
                 sim.insert_resource(Sources::default());
             }
@@ -200,12 +199,15 @@ fn compute_cell_mass_system(
 }
 
 fn set_initial_ionized_fraction_from_electron_abundance_system(
-    mut _particles: Particles<(&ElectronAbundance, &mut IonizedHydrogenFraction)>,
+    mut particles: Particles<(&ElectronAbundance, &mut IonizedHydrogenFraction)>,
     parameters: Res<Parameters>,
 ) {
     if parameters.initial_fraction_ionized_hydrogen.is_none() {
-        todo!("Fix the formula here - how exactly is xHII computed from ElectronAbundance? See TNG FAQ")
-        // for (e, mut xhi) in particles.iter_mut() {
-        // }
+        // Assume this everywhere, to simplify matters. The initial ionization fractions here don't need
+        // to be super accurate, since we remap them anyways.
+        let xh = Dimensionless::dimensionless(0.76);
+        for (xe, mut xhi) in particles.iter_mut() {
+            **xhi = (xh * **xe).clamp(0.0, 1.0);
+        }
     }
 }

@@ -2,7 +2,6 @@ use glam::DVec3;
 
 use super::dimension::DDimension;
 use super::dimension::DTetra;
-use super::dimension::DTetraData;
 use super::face_info::ConnectionData;
 use super::face_info::FaceInfo;
 use super::Delaunay;
@@ -13,7 +12,6 @@ use super::TetraIndex;
 use super::TetrasRequiringCheck;
 use super::Triangulation;
 use crate::dimension::ThreeD;
-use crate::voronoi::delaunay::dimension::DFace;
 use crate::voronoi::delaunay::PointKind;
 use crate::voronoi::primitives::polygon3d::Polygon3d;
 use crate::voronoi::primitives::tetrahedron::Tetrahedron;
@@ -43,14 +41,17 @@ impl Triangulation<ThreeD> {
         p_c: PointIndex,
         p: PointIndex,
         f_a: FaceIndex,
+        f_a_split: bool,
         f_b: FaceIndex,
+        f_b_split: bool,
         f_c: FaceIndex,
+        f_c_split: bool,
         old_face: FaceInfo,
     ) -> TetraIndex {
         // Leave opposing data of the newly created faces
         // uninitialized for now, since we do not know the indices of
         // the other tetras before we have inserted them.
-        self.insert_positively_oriented_tetra(Tetra {
+        self.insert_tetra(Tetra {
             p1: p_a,
             p2: p_b,
             p3: p_c,
@@ -58,14 +59,17 @@ impl Triangulation<ThreeD> {
             f1: FaceInfo {
                 face: f_a,
                 opposing: None,
+                flipped: f_a_split,
             },
             f2: FaceInfo {
                 face: f_b,
                 opposing: None,
+                flipped: f_b_split,
             },
             f3: FaceInfo {
                 face: f_c,
                 opposing: None,
+                flipped: f_c_split,
             },
             f4: old_face,
         })
@@ -81,6 +85,7 @@ impl Triangulation<ThreeD> {
     ) -> TetrasRequiringCheck {
         let ta = self.tetras.remove(ta_index).unwrap();
         let tb = self.tetras.remove(tb_index).unwrap();
+        let flipped = ta.find_face(shared_face).flipped;
         let shared_face = self.faces.remove(shared_face).unwrap();
         let f1 = self.faces.insert(Face {
             p1,
@@ -100,7 +105,12 @@ impl Triangulation<ThreeD> {
         let mut make_tetra = |pa, pb, fa, fb, other_point| {
             let f1 = *ta.find_face_opposite(other_point);
             let f2 = *tb.find_face_opposite(other_point);
-            self.insert_positively_oriented_tetra(Tetra {
+            let (p1, p2, f1, f2) = if !flipped {
+                (p2, p1, f2, f1)
+            } else {
+                (p1, p2, f1, f2)
+            };
+            self.insert_tetra(Tetra {
                 p1,
                 p2,
                 p3: pa,
@@ -111,10 +121,12 @@ impl Triangulation<ThreeD> {
                 f3: FaceInfo {
                     face: fb,
                     opposing: None,
+                    flipped: flipped,
                 },
                 f4: FaceInfo {
                     face: fa,
                     opposing: None,
+                    flipped: !flipped,
                 },
             })
         };
@@ -165,35 +177,44 @@ impl Triangulation<ThreeD> {
         let t3 = self.tetras.remove(t3_index).unwrap();
         // We need to remove the 3 inner faces shared by (t1, t2), (t2, t3) and (t3, t1) respectively
         // and then add a new face
-        let f1 = t3.find_face_opposite(p1).face;
-        let f2 = t3.find_face_opposite(p2).face;
-        let f3 = t1.find_face_opposite(p1).face;
-        debug_assert_eq!(f3, t2.find_face_opposite(p2).face);
+        let f1 = t3.find_face_opposite(p2).face;
+        let f2 = t1.find_face_opposite(p3).face;
+        let f3 = t2.find_face_opposite(p1).face;
+        debug_assert_eq!(t2.find_face_opposite(p3).face, f1);
+        debug_assert_eq!(t1.find_face_opposite(p3).face, f2);
+        debug_assert_eq!(t2.find_face_opposite(p1).face, f3);
+        let f3_flipped = t2.find_face_opposite(p1).flipped;
         self.faces.remove(f1);
         self.faces.remove(f2);
         self.faces.remove(f3);
         let new_face = self.faces.insert(Face { p1, p2, p3 });
 
-        let mut make_new_tetra = |contained_point, opposite_point| {
-            let f1 = *t2.find_face_opposite(opposite_point);
-            let f2 = *t1.find_face_opposite(opposite_point);
+        let mut make_new_tetra = |contained_point, opposite_point, flip: bool| {
+            let f1 = *t1.find_face_opposite(opposite_point);
+            let f2 = *t2.find_face_opposite(opposite_point);
             let f3 = *t3.find_face_opposite(opposite_point);
-            self.insert_positively_oriented_tetra(Tetra {
-                p1,
-                p2,
+            let (p1, p2, f1, f2) = if flip {
+                (p2, p1, f2, f1)
+            } else {
+                (p1, p2, f1, f2)
+            };
+            self.insert_tetra(Tetra {
+                p1: p1,
+                p2: p2,
                 p3,
                 p4: contained_point,
-                f1,
-                f2,
+                f1: f1,
+                f2: f2,
                 f3,
                 f4: FaceInfo {
                     face: new_face,
                     opposing: None,
+                    flipped: flip,
                 },
             })
         };
-        let ta = make_new_tetra(shared_edge_p1, shared_edge_p2);
-        let tb = make_new_tetra(shared_edge_p2, shared_edge_p1);
+        let ta = make_new_tetra(shared_edge_p1, shared_edge_p2, !f3_flipped);
+        let tb = make_new_tetra(shared_edge_p2, shared_edge_p1, f3_flipped);
         // Fix the connection data in the newly created tetra
         self.tetras[ta].find_face_mut(new_face).opposing = Some(ConnectionData {
             tetra: tb,
@@ -208,79 +229,49 @@ impl Triangulation<ThreeD> {
 }
 
 impl Delaunay<ThreeD> for Triangulation<ThreeD> {
-    fn make_positively_oriented_tetra(&mut self, tetra: Tetra) -> Tetra {
-        let tetra_data = TetraData {
-            p1: self.points[tetra.p1],
-            p2: self.points[tetra.p2],
-            p3: self.points[tetra.p3],
-            p4: self.points[tetra.p4],
-        };
-        for (f, (pa, pb, pc)) in [
-            (tetra.f1.face, (tetra.p2, tetra.p3, tetra.p4)),
-            (tetra.f2.face, (tetra.p1, tetra.p3, tetra.p4)),
-            (tetra.f3.face, (tetra.p1, tetra.p2, tetra.p4)),
-            (tetra.f4.face, (tetra.p1, tetra.p2, tetra.p3)),
-        ] {
-            debug_assert!(self.faces[f].contains_point(pa));
-            debug_assert!(self.faces[f].contains_point(pb));
-            debug_assert!(self.faces[f].contains_point(pc));
-        }
-        if tetra_data.is_positively_oriented() {
-            tetra
-        } else {
-            Tetra {
-                p1: tetra.p2,
-                p2: tetra.p1,
-                p3: tetra.p3,
-                p4: tetra.p4,
-                f1: tetra.f2,
-                f2: tetra.f1,
-                f3: tetra.f3,
-                f4: tetra.f4,
-            }
-        }
-    }
-
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> Vec<TetraIndex> {
         let old_tetra = self.tetras.remove(old_tetra_index).unwrap();
-        let f1 = self.faces.insert(Face {
+        let f12 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p1,
             p3: old_tetra.p2,
         });
-        let f2 = self.faces.insert(Face {
+        let f13 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p1,
             p3: old_tetra.p3,
         });
-        let f3 = self.faces.insert(Face {
+        let f14 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p1,
             p3: old_tetra.p4,
         });
-        let f4 = self.faces.insert(Face {
+        let f23 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p2,
             p3: old_tetra.p3,
         });
-        let f5 = self.faces.insert(Face {
+        let f24 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p2,
             p3: old_tetra.p4,
         });
-        let f6 = self.faces.insert(Face {
+        let f34 = self.faces.insert(Face {
             p1: point,
             p2: old_tetra.p3,
             p3: old_tetra.p4,
         });
         let t1 = self.insert_split_tetra(
-            old_tetra.p2,
             old_tetra.p3,
+            old_tetra.p2,
             old_tetra.p4,
             point,
-            f6,
-            f5,
-            f4,
+            f24,
+            true,
+            f34,
+            false,
+            f23,
+            false,
             old_tetra.f1,
         );
         let t2 = self.insert_split_tetra(
@@ -288,19 +279,25 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             old_tetra.p3,
             old_tetra.p4,
             point,
-            f6,
-            f3,
-            f2,
+            f34,
+            true,
+            f14,
+            false,
+            f13,
+            true,
             old_tetra.f2,
         );
         let t3 = self.insert_split_tetra(
-            old_tetra.p1,
             old_tetra.p2,
+            old_tetra.p1,
             old_tetra.p4,
             point,
-            f5,
-            f3,
-            f1,
+            f14,
+            true,
+            f24,
+            false,
+            f12,
+            false,
             old_tetra.f3,
         );
         let t4 = self.insert_split_tetra(
@@ -308,26 +305,29 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
             old_tetra.p2,
             old_tetra.p3,
             point,
-            f4,
-            f2,
-            f1,
+            f23,
+            true,
+            f13,
+            false,
+            f12,
+            true,
             old_tetra.f4,
         );
-        self.set_opposing_in_new_tetra(t1, f6, t2, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t1, f5, t3, old_tetra.p1);
-        self.set_opposing_in_new_tetra(t1, f4, t4, old_tetra.p1);
+        self.set_opposing_in_new_tetra(t1, f34, t2, old_tetra.p1);
+        self.set_opposing_in_new_tetra(t1, f24, t3, old_tetra.p1);
+        self.set_opposing_in_new_tetra(t1, f23, t4, old_tetra.p1);
 
-        self.set_opposing_in_new_tetra(t2, f6, t1, old_tetra.p2);
-        self.set_opposing_in_new_tetra(t2, f3, t3, old_tetra.p2);
-        self.set_opposing_in_new_tetra(t2, f2, t4, old_tetra.p2);
+        self.set_opposing_in_new_tetra(t2, f34, t1, old_tetra.p2);
+        self.set_opposing_in_new_tetra(t2, f14, t3, old_tetra.p2);
+        self.set_opposing_in_new_tetra(t2, f13, t4, old_tetra.p2);
 
-        self.set_opposing_in_new_tetra(t3, f5, t1, old_tetra.p3);
-        self.set_opposing_in_new_tetra(t3, f3, t2, old_tetra.p3);
-        self.set_opposing_in_new_tetra(t3, f1, t4, old_tetra.p3);
+        self.set_opposing_in_new_tetra(t3, f24, t1, old_tetra.p3);
+        self.set_opposing_in_new_tetra(t3, f14, t2, old_tetra.p3);
+        self.set_opposing_in_new_tetra(t3, f12, t4, old_tetra.p3);
 
-        self.set_opposing_in_new_tetra(t4, f4, t1, old_tetra.p4);
-        self.set_opposing_in_new_tetra(t4, f2, t2, old_tetra.p4);
-        self.set_opposing_in_new_tetra(t4, f1, t3, old_tetra.p4);
+        self.set_opposing_in_new_tetra(t4, f23, t1, old_tetra.p4);
+        self.set_opposing_in_new_tetra(t4, f13, t2, old_tetra.p4);
+        self.set_opposing_in_new_tetra(t4, f12, t3, old_tetra.p4);
 
         [t1, t2, t3, t4].into()
     }
@@ -349,8 +349,8 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
         let p1 = t1.find_point_opposite(check.face);
         let p2 = t2.find_point_opposite(check.face);
         let intersection_type = self
-            .get_face_data(shared_face)
-            .get_line_intersection_type(self.points[p1], self.points[p2]);
+            .get_remapped_face_data(shared_face)
+            .get_line_intersection_type(self.get_remapped_point(p1), self.get_remapped_point(p2));
         match intersection_type {
             IntersectionType::Inside => {
                 self.two_to_three_flip(check.tetra, opposing.tetra, p1, p2, check.face)
@@ -374,8 +374,8 @@ impl Delaunay<ThreeD> for Triangulation<ThreeD> {
                         check.tetra,
                         opposing.tetra,
                         t3,
-                        p1,
                         p2,
+                        p1,
                         opposite_point,
                         shared_face_p1,
                         shared_face_p2,
@@ -413,26 +413,26 @@ impl Triangulation<ThreeD> {
         pd: PointIndex,
     ) -> TetraIndex {
         let fa = self.faces.insert(Face {
-            p1: pb,
-            p2: pc,
+            p1: pc,
+            p2: pb,
             p3: pd,
         });
         let fb = self.faces.insert(Face {
-            p1: pa,
-            p2: pc,
-            p3: pd,
+            p1: pc,
+            p2: pd,
+            p3: pa,
         });
         let fc = self.faces.insert(Face {
             p1: pa,
-            p2: pb,
-            p3: pd,
+            p2: pd,
+            p3: pb,
         });
         let fd = self.faces.insert(Face {
             p1: pa,
             p2: pb,
             p3: pc,
         });
-        self.insert_positively_oriented_tetra(Tetra {
+        self.insert_tetra(Tetra {
             p1: pa,
             p2: pb,
             p3: pc,
@@ -440,18 +440,22 @@ impl Triangulation<ThreeD> {
             f1: FaceInfo {
                 face: fa,
                 opposing: None,
+                flipped: false,
             },
             f2: FaceInfo {
                 face: fb,
                 opposing: None,
+                flipped: false,
             },
             f3: FaceInfo {
                 face: fc,
                 opposing: None,
+                flipped: false,
             },
             f4: FaceInfo {
                 face: fd,
                 opposing: None,
+                flipped: false,
             },
         })
     }
@@ -461,6 +465,7 @@ impl Triangulation<ThreeD> {
 mod tests {
     use super::Tetra;
     use crate::dimension::ThreeD;
+    use crate::extent::Extent;
     use crate::hash_map::HashMap;
     use crate::voronoi::delaunay::dimension::DFace;
     use crate::voronoi::delaunay::dimension::DTetra;
@@ -491,7 +496,7 @@ mod tests {
                 .iter()
                 .map(|(tetra, point)| {
                     (
-                        t.tetras[*tetra].find_face_opposite(*point).face,
+                        t.tetras[*tetra].find_face_opposite(*point),
                         ConnectionData {
                             tetra: *tetra,
                             point: *point,
@@ -499,19 +504,22 @@ mod tests {
                     )
                 })
                 .find(|(neighbour_face, _)| {
-                    t.faces[*neighbour_face]
+                    t.faces[neighbour_face.face]
                         .points()
                         .all(|p| face.contains_point(p))
                 });
+
             if let Some((face, connection_data)) = corresponding_neighbour {
                 FaceInfo {
-                    face,
+                    face: face.face,
                     opposing: Some(connection_data),
+                    flipped: !face.flipped,
                 }
             } else {
                 FaceInfo {
                     face: t.faces.insert(face),
                     opposing: None,
+                    flipped: true,
                 }
             }
         };
@@ -521,8 +529,8 @@ mod tests {
             p3: p4,
         });
         let f2 = insert_face(Triangle {
-            p1: p1,
-            p2: p3,
+            p1: p3,
+            p2: p1,
             p3: p4,
         });
         let f3 = insert_face(Triangle {
@@ -531,11 +539,11 @@ mod tests {
             p3: p4,
         });
         let f4 = insert_face(Triangle {
-            p1: p1,
-            p2: p2,
+            p1: p2,
+            p2: p1,
             p3: p3,
         });
-        t.insert_positively_oriented_tetra(Tetra {
+        t.insert_tetra(Tetra {
             p1,
             p2,
             p3,
@@ -557,6 +565,7 @@ mod tests {
             Point3d::new(1.0, -1.0, 0.0),
             Point3d::new(-0.3, -0.3, 1.0),
         ];
+        let extent = Extent::from_points(points.iter().cloned()).unwrap();
         let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
 
         let mut triangulation = Triangulation::<ThreeD> {
@@ -565,25 +574,26 @@ mod tests {
             points: point_list,
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
+            extent,
         };
-        let t1 = insert_tetra_with_neighbours(
+        let t0 = insert_tetra_with_neighbours(
             &mut triangulation,
             &[],
-            points[0],
             points[1],
+            points[0],
             points[2],
             points[3],
         );
-        let t2 = insert_tetra_with_neighbours(
+        let t4 = insert_tetra_with_neighbours(
             &mut triangulation,
-            &[(t1, points[0])],
-            points[1],
+            &[(t0, points[0])],
             points[2],
+            points[1],
             points[3],
             points[4],
         );
-        let shared_face = triangulation.tetras[t1].find_face_opposite(points[0]).face;
-        let tetras = triangulation.two_to_three_flip(t1, t2, points[0], points[4], shared_face);
+        let shared_face = triangulation.tetras[t0].find_face_opposite(points[0]).face;
+        let tetras = triangulation.two_to_three_flip(t0, t4, points[0], points[4], shared_face);
         assert_eq!(triangulation.tetras.len(), 3);
         assert_eq!(triangulation.points.len(), 5);
         assert_eq!(triangulation.faces.len(), 9);
@@ -672,6 +682,7 @@ mod tests {
             Point3d::new(1.0, -1.0, 0.0),
             Point3d::new(-0.3, -0.3, 1.0),
         ];
+        let extent = Extent::from_points(points.iter().cloned()).unwrap();
         let points: Vec<_> = points.into_iter().map(|p| point_list.insert(p)).collect();
 
         let mut triangulation = Triangulation::<ThreeD> {
@@ -680,33 +691,34 @@ mod tests {
             points: point_list,
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
+            extent,
         };
         let t1 = insert_tetra_with_neighbours(
             &mut triangulation,
             &[],
-            points[0],
             points[4],
-            points[1],
+            points[0],
             points[2],
+            points[3],
         );
         let t2 = insert_tetra_with_neighbours(
             &mut triangulation,
-            &[(t1, points[1])],
-            points[0],
+            &[(t1, points[2])],
             points[4],
-            points[2],
-            points[3],
-        );
-        let t3 = insert_tetra_with_neighbours(
-            &mut triangulation,
-            &[(t1, points[2]), (t2, points[2])],
             points[0],
-            points[4],
             points[3],
             points[1],
         );
+        let t3 = insert_tetra_with_neighbours(
+            &mut triangulation,
+            &[(t1, points[3]), (t2, points[3])],
+            points[4],
+            points[0],
+            points[1],
+            points[2],
+        );
         let tetras = triangulation.three_to_two_flip(
-            t1, t2, t3, points[1], points[3], points[2], points[0], points[4],
+            t1, t3, t2, points[1], points[3], points[2], points[0], points[4],
         );
         let ta = tetras[0];
         let tb = tetras[1];

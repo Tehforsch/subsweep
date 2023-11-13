@@ -22,7 +22,6 @@ use super::primitives::Float;
 use crate::communication::Rank;
 use crate::dimension::Dimension;
 use crate::domain::IntoKey;
-use crate::extent::get_extent;
 use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashMap;
@@ -98,13 +97,19 @@ impl FlipCheckStack {
 pub struct Triangulation<D: DDimension> {
     pub tetras: TetraList<D>,
     pub faces: FaceList<D>,
-    pub points: PointList<D>,
+    points: PointList<D>,
     pub(super) point_kinds: HashMap<PointIndex, PointKind>,
     last_insertion_tetra: Option<TetraIndex>,
+    extent: Extent<Point<D>>,
+}
+
+impl<D: DDimension> Triangulation<D> {
+    pub fn get_original_point(&self, p: PointIndex) -> Point<D> {
+        self.points[p]
+    }
 }
 
 pub trait Delaunay<D: DDimension> {
-    fn make_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> Tetra<D>;
     fn split(&mut self, old_tetra_index: TetraIndex, point: PointIndex) -> TetrasRequiringCheck;
     fn flip(&mut self, check: FlipCheckData) -> TetrasRequiringCheck;
     fn insert_basic_tetra(&mut self, tetra: TetraData<D>);
@@ -139,7 +144,7 @@ where
         iter: impl Iterator<Item = (T, Point<D>)>,
     ) -> (Self, BiMap<T, PointIndex>) {
         let points: Vec<_> = iter.collect();
-        let extent = get_extent(points.iter().map(|(_, p)| *p)).unwrap();
+        let extent = Extent::from_points(points.iter().map(|(_, p)| *p)).unwrap();
         Self::construct(points, &extent)
     }
 
@@ -153,38 +158,47 @@ where
 
     fn all_encompassing(extent: &Extent<Point<D>>) -> Self {
         let initial_tetra_data = TetraData::<D>::all_encompassing(extent);
-        Triangulation::from_basic_tetra(initial_tetra_data)
-    }
-
-    fn from_basic_tetra(tetra: TetraData<D>) -> Self {
         let mut triangulation = Triangulation {
             tetras: TetraList::<D>::default(),
             faces: FaceList::<D>::default(),
             points: PointList::<D>::default(),
             last_insertion_tetra: None,
             point_kinds: HashMap::default(),
+            extent: initial_tetra_data.extent(),
         };
-        triangulation.insert_basic_tetra(tetra);
+        triangulation.insert_basic_tetra(initial_tetra_data);
         triangulation
     }
 
-    pub fn get_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
-        tetra.points().map(|p| self.points[p]).collect()
+    pub(super) fn get_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
+        tetra.points().map(|p| self.get_original_point(p)).collect()
     }
 
-    pub fn get_face_data(&self, face: &Face<D>) -> FaceData<D> {
-        face.points().map(|p| self.points[p]).collect()
+    fn get_remapped_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
+        tetra.points().map(|p| self.get_remapped_point(p)).collect()
     }
 
-    pub fn find_containing_tetra(&self, point: Point<D>) -> Option<TetraIndex> {
+    fn get_original_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
+        tetra.points().map(|p| self.get_original_point(p)).collect()
+    }
+
+    fn get_remapped_face_data(&self, face: &Face<D>) -> FaceData<D> {
+        face.points().map(|p| self.get_remapped_point(p)).collect()
+    }
+
+    pub(super) fn get_remapped_point(&self, point: PointIndex) -> Point<D> {
+        D::remap_point(self.points[point], &self.extent)
+    }
+
+    fn find_containing_tetra(&self, point: Point<D>) -> Option<TetraIndex> {
         point_location::find_containing_tetra(self, point)
     }
 
-    pub fn get_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
+    pub(super) fn get_original_tetra_circumcircle(&self, tetra: TetraIndex) -> Circumcircle<D> {
         let tetra = &self.tetras.get(tetra).unwrap();
-        let tetra_data = self.get_tetra_data(tetra);
+        let tetra_data = self.get_original_tetra_data(tetra);
         let center = tetra_data.get_center_of_circumcircle();
-        let sample_point = self.points[tetra.points().next().unwrap()];
+        let sample_point = self.get_original_point(tetra.points().next().unwrap());
         let radius = center.distance(sample_point);
         Circumcircle { center, radius }
     }
@@ -202,9 +216,11 @@ where
         })
     }
 
-    fn insert_positively_oriented_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
-        let tetra = self.make_positively_oriented_tetra(tetra);
-        debug_assert!(self.get_tetra_data(&tetra).is_positively_oriented());
+    fn insert_tetra(&mut self, tetra: Tetra<D>) -> TetraIndex {
+        debug_assert!(tetra
+            .points()
+            .zip(tetra.faces())
+            .all(|(p, f)| self.faces[f.face].points().all(|pp| pp != p)));
         let tetra_index = self.tetras.insert(tetra);
         self.update_connections_in_existing_tetra(tetra_index);
         tetra_index
@@ -240,10 +256,10 @@ where
     }
 
     pub fn insert(&mut self, point: Point<D>, kind: PointKind) -> (PointIndex, Vec<TetraIndex>) {
-        let t = self
-            .find_containing_tetra(point)
-            .unwrap_or_else(|| panic!("No tetra containing the point {point:?} found"));
         let new_point_index = self.points.insert(point);
+        let t = self
+            .find_containing_tetra(self.get_remapped_point(new_point_index))
+            .unwrap_or_else(|| panic!("No tetra containing the point {point:?} found"));
         self.point_kinds.insert(new_point_index, kind);
         let new_tetras = self.split(t, new_point_index);
         let new_tetras = self.perform_flip_checks(new_point_index, new_tetras);
@@ -292,8 +308,14 @@ where
     }
 
     fn circumcircle_contains_point(&self, tetra: &Tetra<D>, point: PointIndex) -> bool {
-        let tetra_data = self.get_tetra_data(tetra);
-        tetra_data.circumcircle_contains(self.points[point])
+        let tetra_data = self.get_remapped_tetra_data(tetra);
+        tetra_data.circumcircle_contains(self.get_remapped_point(point))
+    }
+
+    pub fn iter_original_points(&self) -> impl Iterator<Item = (PointIndex, Point<D>)> + '_ {
+        self.points
+            .iter()
+            .map(|(p, _)| (p, self.get_original_point(p)))
     }
 }
 
@@ -308,7 +330,7 @@ pub(super) mod tests {
     use super::Triangulation;
     use crate::dimension::ThreeD;
     use crate::dimension::TwoD;
-    use crate::extent::get_extent;
+    use crate::extent::Extent;
     use crate::voronoi::test_utils::TestDimension;
 
     #[instantiate_tests(<TwoD>)]
@@ -323,8 +345,8 @@ pub(super) mod tests {
         D: DDimension + TestDimension,
         Triangulation<D>: Delaunay<D>,
     {
-        let points = D::get_example_point_set(0);
-        let extent = get_extent(points.iter().copied()).unwrap();
+        let points = D::get_example_point_set_num(100, 0);
+        let extent = Extent::from_points(points.iter().copied()).unwrap();
         let mut triangulation = Triangulation::all_encompassing(&extent);
         for (num_points_inserted, point) in points.iter().enumerate() {
             check(&triangulation, num_points_inserted);
@@ -533,5 +555,35 @@ pub(super) mod tests {
                 assert_eq!(num_inner_points, num_inserted);
             },
         );
+    }
+
+    #[test]
+    fn all_tetras_positively_oriented<D>()
+    where
+        D: DDimension + TestDimension,
+        Triangulation<D>: Delaunay<D>,
+    {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
+            for (_, t) in triangulation.tetras.iter() {
+                let td = triangulation.get_remapped_tetra_data(t);
+                assert!(D::tetra_is_positively_oriented(&td));
+            }
+        });
+    }
+
+    #[test]
+    fn no_faces_leaked<D>()
+    where
+        D: DDimension + TestDimension,
+        Triangulation<D>: Delaunay<D>,
+    {
+        perform_triangulation_check_on_each_level_of_construction::<D>(|triangulation, _| {
+            for (f, _) in triangulation.faces.iter() {
+                assert!(triangulation
+                    .tetras
+                    .iter()
+                    .any(|(_, t)| { t.faces().any(|f2| f2.face == f) }))
+            }
+        });
     }
 }

@@ -69,7 +69,7 @@ pub fn get_extent_from_min_and_max_reduce<
     Some(Extent::from_min_max(min_v, max_v))
 }
 
-pub fn get_extent<P>(points: impl Iterator<Item = P>) -> Option<Extent<P>>
+impl<P> Extent<P>
 where
     P: MinMax
         + Clone
@@ -79,7 +79,9 @@ where
         + Clone
         + Copy,
 {
-    get_extent_from_min_and_max_reduce(points, |p1, p2| P::min(p1, p2), |p1, p2| P::max(p1, p2))
+    pub fn from_points(points: impl Iterator<Item = P>) -> Option<Extent<P>> {
+        get_extent_from_min_and_max_reduce(points, |p1, p2| P::min(p1, p2), |p1, p2| P::max(p1, p2))
+    }
 }
 
 unsafe impl<P> Equivalence for Extent<P>
