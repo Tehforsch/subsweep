@@ -31,6 +31,15 @@ impl DDimension for ThreeD {
     type Tetra = Tetra;
     type TetraData = TetraData;
     type VoronoiFaceData = Polygon3d;
+
+    fn estimate_num_faces(num_points: usize) -> usize {
+        // 15.54 is the expected number of neighbours of each cell in a 3D Voronoi grid (Meijering, J. L. (1953))
+        (15.54 * num_points as f64) as usize
+    }
+
+    fn estimate_num_tetras(num_points: usize) -> usize {
+        Self::estimate_num_faces(num_points) / 2
+    }
 }
 
 impl Triangulation<ThreeD> {
