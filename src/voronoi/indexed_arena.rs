@@ -111,6 +111,11 @@ impl<Id: Into<usize> + From<usize>, T> IndexedVec<Id, T> {
     pub fn reserve(&mut self, cap: usize) {
         self.values.reserve(cap)
     }
+
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
 }
 
 impl<Id: Into<usize> + From<usize>, T> IntoIterator for IndexedVec<Id, T> {
