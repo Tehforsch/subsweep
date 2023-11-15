@@ -15,6 +15,9 @@ pub trait DDimension: Dimension {
     type Tetra: Clone + DTetra<Dimension = Self>;
     type TetraData: DTetraData<Dimension = Self> + Clone + Visualizable;
     type VoronoiFaceData: std::fmt::Debug;
+
+    fn estimate_num_faces(num_points: usize) -> usize;
+    fn estimate_num_tetras(num_points: usize) -> usize;
 }
 
 pub trait DTetra: core::fmt::Debug {

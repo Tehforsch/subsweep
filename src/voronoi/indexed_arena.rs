@@ -46,6 +46,14 @@ impl<Id: Into<Index> + From<Index>, T> IndexedArena<Id, T> {
     pub fn len(&self) -> usize {
         self.arena.len()
     }
+
+    pub fn reserve(&mut self, cap: usize) {
+        self.arena.reserve(cap)
+    }
+
+    pub fn size(&self) -> usize {
+        self.arena.capacity()
+    }
 }
 
 impl<Id: Into<Index> + From<Index>, T> IntoIterator for IndexedArena<Id, T> {
@@ -100,16 +108,8 @@ impl<Id: Into<usize> + From<usize>, T> IndexedVec<Id, T> {
             .map(|(idx, t)| (idx.into(), t))
     }
 
-    pub fn len(&self) -> usize {
-        self.values.len()
-    }
-
     pub fn reserve(&mut self, cap: usize) {
         self.values.reserve(cap)
-    }
-
-    pub fn size(&self) -> usize {
-        self.values.capacity()
     }
 }
 
