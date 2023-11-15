@@ -6,6 +6,7 @@ resolver="2"
 authors = [
     "Toni Peter <mail@tonipeter.de>",
 ]
+build = "build.rs"
 
 [features]
 default = ["3d"]
@@ -50,6 +51,9 @@ time = { version = "0.3.29", default-features = false }
 
 derive_custom = { path = "crates/derive_custom" }
 derive_traits = { path = "crates/derive_traits" }
+
+[build-dependencies]
+vergen = { version = "8.0.0", features = ["build", "cargo", "git", "gitcl"] }
 
 [dev-dependencies]
 criterion = { version = "0.4.0", features = ["html_reports"] }

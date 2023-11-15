@@ -2,6 +2,7 @@
 #![feature(generic_const_exprs)]
 
 mod arepo_postprocess;
+mod emit_build_information;
 
 use arepo_postprocess::read_grid::ReadSweepGridPlugin;
 use arepo_postprocess::remap::remap_abundances_and_energies_system;
@@ -15,6 +16,7 @@ use bevy_ecs::prelude::*;
 use derive_more::Deref;
 use derive_more::DerefMut;
 use derive_more::From;
+use emit_build_information::emit_build_information;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 use subsweep::components;
@@ -27,6 +29,7 @@ use subsweep::io::input::DatasetInputPlugin;
 use subsweep::io::DatasetDescriptor;
 use subsweep::io::DatasetShape;
 use subsweep::io::InputDatasetDescriptor;
+use subsweep::parameters::OutputParameters;
 use subsweep::prelude::*;
 use subsweep::simulation_plugin::remove_components_system;
 use subsweep::source_systems::SourcePlugin;
@@ -46,6 +49,7 @@ fn main() {
         .require_parameter_file(true)
         .update_from_command_line_options()
         .build();
+    emit_build_information(&sim.get_resource::<OutputParameters>().unwrap());
     let cosmology = sim.add_parameter_type_and_get_result::<Cosmology>().clone();
     let unit_reader = Box::new(ArepoUnitReader::new(cosmology));
     let parameters = sim
