@@ -40,6 +40,8 @@ const SEARCH_RADIUS_INCREASE_FACTOR: f64 = 1.6;
 /// "cartesian" cell size of side_length / num_particles_per_dimension
 const INITIAL_SEARCH_RADIUS_GUESS_FACTOR: f64 = 1.5;
 
+const SEARCH_CHUNK_SIZE: usize = 50000;
+
 pub fn get_characteristic_length<D: Dimension>(max_side_length: f64, num_particles: usize) -> f64 {
     let num_particles_per_dim = (num_particles as f64).powf(1.0 / D::NUM as f64);
     (max_side_length / num_particles_per_dim) * INITIAL_SEARCH_RADIUS_GUESS_FACTOR
@@ -49,6 +51,37 @@ pub fn get_characteristic_length<D: Dimension>(max_side_length: f64, num_particl
 pub struct SearchData<D: Dimension> {
     pub point: Point<D>,
     pub radius: Float,
+}
+
+impl<D: Dimension + DDimension> SearchData<D> {
+    fn new(
+        undecided: &UndecidedTetraInfo<D>,
+        triangulation: &Triangulation<D>,
+        characteristic_length: f64,
+    ) -> Self {
+        let max_necessary_radius = undecided.circumcircle.radius * SEARCH_SAFETY_FACTOR;
+        let radius = match undecided.search_radius {
+            Some(radius) => (radius * SEARCH_RADIUS_INCREASE_FACTOR).min(max_necessary_radius),
+            None => max_necessary_radius.min(characteristic_length),
+        };
+        let point = if radius >= max_necessary_radius {
+            undecided.circumcircle.center
+        } else {
+            // If the radius is smaller than the circumcircle, we are really only
+            // looking to find any close-by points (remote/periodic) to add to the triangulation
+            // in order to show us that the tetra is not really as big as we currently think it is.
+            // However, if we search for points around the center of the circumcircle, we might import
+            // very far away points. As a slightly hacky way that seems to work in practice, we look
+            // for points around any of the inner points that are part of the tetra in this case.
+            let tetra = &triangulation.tetras[undecided.tetra];
+            let p_index = tetra
+                .points()
+                .find(|p| triangulation.point_kinds[p] == PointKind::Inner)
+                .unwrap();
+            triangulation.get_original_point(p_index)
+        };
+        Self { point, radius }
+    }
 }
 
 #[derive(Debug)]
@@ -162,49 +195,25 @@ where
     }
 
     fn get_radius_search_data(&mut self) -> Vec<SearchData<D>> {
-        let search_data: Vec<_> = self
+        let (search_data, new_undecided): (Vec<_>, Vec<_>) = self
             .undecided_tetras
-            .iter_mut()
-            .filter_map(|undecided| {
-                if !self.triangulation.tetras.contains(undecided.tetra) {
-                    return None;
-                }
-                let max_necessary_radius = undecided.circumcircle.radius * SEARCH_SAFETY_FACTOR;
-                let search_radius = match undecided.search_radius {
-                    Some(radius) => {
-                        (radius * SEARCH_RADIUS_INCREASE_FACTOR).min(max_necessary_radius)
-                    }
-                    None => max_necessary_radius.min(self.characteristic_length),
-                };
-                let point = if search_radius >= max_necessary_radius {
-                    undecided.circumcircle.center
-                } else {
-                    // If the radius is smaller than the circumcircle, we are really only
-                    // looking to find any close-by points (remote/periodic) to add to the triangulation
-                    // in order to show us that the tetra is not really as big as we currently think it is.
-                    // However, if we search for points around the center of the circumcircle, we might import
-                    // very far away points. As a slightly hacky way that seems to work in practice, we look
-                    // for points around any of the inner points that are part of the tetra in this case.
-                    let tetra = &self.triangulation.tetras[undecided.tetra];
-                    let p_index = tetra
-                        .points()
-                        .find(|p| self.triangulation.point_kinds[p] == PointKind::Inner)
-                        .unwrap();
-                    self.triangulation.get_original_point(p_index)
-                };
-                undecided.search_radius = Some(search_radius);
-                Some(SearchData::<D> {
-                    radius: search_radius,
-                    point,
-                })
+            .drain(..)
+            .take(SEARCH_CHUNK_SIZE)
+            .filter(|undecided| self.triangulation.tetras.contains(undecided.tetra))
+            .map(|mut undecided| {
+                let search_data =
+                    SearchData::new(&undecided, &self.triangulation, self.characteristic_length);
+                undecided.search_radius = Some(search_data.radius);
+                (search_data, undecided)
             })
-            .collect();
+            .unzip();
         // Every tetra that has a larger circumcircle than the corresponding search radius
         // will need to be checked again later.
-        let (undecided_tetras, _) = self.undecided_tetras.drain(..).partition(|t| {
-            self.triangulation.tetras.contains(t.tetra) && !t.search_radius_large_enough()
-        });
-        self.undecided_tetras = undecided_tetras;
+        self.undecided_tetras
+            .extend(new_undecided.into_iter().filter(|t| {
+                assert!(self.triangulation.tetras.contains(t.tetra));
+                !t.search_radius_large_enough()
+            }));
         search_data
     }
 
