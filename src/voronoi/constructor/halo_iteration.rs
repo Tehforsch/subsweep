@@ -53,19 +53,23 @@ pub struct SearchData<D: Dimension> {
     pub radius: Float,
 }
 
-impl<D: Dimension + DDimension> SearchData<D> {
+impl<D: Dimension + DDimension> SearchData<D>
+where
+    Triangulation<D>: Delaunay<D>,
+{
     fn new(
-        undecided: &UndecidedTetraInfo<D>,
+        undecided: &UndecidedTetraInfo,
+        circumcircle: &Circumcircle<D>,
         triangulation: &Triangulation<D>,
         characteristic_length: f64,
     ) -> Self {
-        let max_necessary_radius = undecided.circumcircle.radius * SEARCH_SAFETY_FACTOR;
+        let max_necessary_radius = circumcircle.radius * SEARCH_SAFETY_FACTOR;
         let radius = match undecided.search_radius {
             Some(radius) => (radius * SEARCH_RADIUS_INCREASE_FACTOR).min(max_necessary_radius),
             None => max_necessary_radius.min(characteristic_length),
         };
         let point = if radius >= max_necessary_radius {
-            undecided.circumcircle.center
+            circumcircle.center
         } else {
             // If the radius is smaller than the circumcircle, we are really only
             // looking to find any close-by points (remote/periodic) to add to the triangulation
@@ -101,15 +105,21 @@ pub trait RadiusSearch<D: Dimension> {
     fn rank(&self) -> Rank;
 }
 
-struct UndecidedTetraInfo<D: DDimension> {
+struct UndecidedTetraInfo {
     tetra: TetraIndex,
     search_radius: Option<Float>,
-    circumcircle: Circumcircle<D>,
 }
 
-impl<D: DDimension> UndecidedTetraInfo<D> {
-    fn search_radius_large_enough(&self) -> bool {
-        self.search_radius.unwrap() >= self.circumcircle.radius * SEARCH_SAFETY_FACTOR
+impl UndecidedTetraInfo {
+    fn search_radius_large_enough<D: DDimension>(&self, circumcircle: &Circumcircle<D>) -> bool {
+        self.search_radius.unwrap() >= circumcircle.radius * SEARCH_SAFETY_FACTOR
+    }
+
+    fn circumcircle<D: DDimension>(&self, triangulation: &Triangulation<D>) -> Circumcircle<D>
+    where
+        Triangulation<D>: Delaunay<D>,
+    {
+        triangulation.get_original_tetra_circumcircle(self.tetra)
     }
 }
 
@@ -117,7 +127,7 @@ pub(super) struct HaloIteration<D: DDimension, F> {
     pub triangulation: Triangulation<D>,
     search: F,
     pub haloes: BiMap<CellIndex, PointIndex>,
-    undecided_tetras: Vec<UndecidedTetraInfo<D>>,
+    undecided_tetras: Vec<UndecidedTetraInfo>,
     characteristic_length: Float,
 }
 
@@ -195,25 +205,35 @@ where
     }
 
     fn get_radius_search_data(&mut self) -> Vec<SearchData<D>> {
+        let chunk_size = SEARCH_CHUNK_SIZE.min(self.undecided_tetras.len());
         let (search_data, new_undecided): (Vec<_>, Vec<_>) = self
             .undecided_tetras
-            .drain(..)
-            .take(SEARCH_CHUNK_SIZE)
+            .drain(..chunk_size)
             .filter(|undecided| self.triangulation.tetras.contains(undecided.tetra))
             .map(|mut undecided| {
-                let search_data =
-                    SearchData::new(&undecided, &self.triangulation, self.characteristic_length);
+                let circumcircle = undecided.circumcircle(&self.triangulation);
+                let search_data = SearchData::new(
+                    &undecided,
+                    &circumcircle,
+                    &self.triangulation,
+                    self.characteristic_length,
+                );
                 undecided.search_radius = Some(search_data.radius);
-                (search_data, undecided)
+                let large_enough = undecided.search_radius_large_enough(&circumcircle);
+                (search_data, (undecided, large_enough))
             })
             .unzip();
         // Every tetra that has a larger circumcircle than the corresponding search radius
         // will need to be checked again later.
-        self.undecided_tetras
-            .extend(new_undecided.into_iter().filter(|t| {
-                assert!(self.triangulation.tetras.contains(t.tetra));
-                !t.search_radius_large_enough()
-            }));
+        self.undecided_tetras.extend(
+            new_undecided
+                .into_iter()
+                .filter(|(t, large_enough)| {
+                    assert!(self.triangulation.tetras.contains(t.tetra));
+                    !large_enough
+                })
+                .map(|(t, _)| t),
+        );
         search_data
     }
 
@@ -227,11 +247,10 @@ where
             .collect();
     }
 
-    fn get_undecided_tetra_info_for_new_tetra(&self, tetra: TetraIndex) -> UndecidedTetraInfo<D> {
+    fn get_undecided_tetra_info_for_new_tetra(&self, tetra: TetraIndex) -> UndecidedTetraInfo {
         UndecidedTetraInfo {
             tetra,
             search_radius: None,
-            circumcircle: self.triangulation.get_original_tetra_circumcircle(tetra),
         }
     }
 
