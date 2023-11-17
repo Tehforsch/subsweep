@@ -29,6 +29,14 @@ impl DDimension for TwoD {
     type Tetra = Tetra;
     type TetraData = TetraData;
     type VoronoiFaceData = ();
+
+    fn estimate_num_faces(num_points: usize) -> usize {
+        (6.0 * num_points as f64) as usize
+    }
+
+    fn estimate_num_tetras(num_points: usize) -> usize {
+        (3.0 * num_points as f64) as usize
+    }
 }
 
 impl Triangulation<TwoD> {

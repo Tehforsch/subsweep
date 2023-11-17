@@ -17,6 +17,7 @@ use self::dimension::DTetra;
 use self::dimension::DTetraData;
 use self::face_info::ConnectionData;
 use super::indexed_arena::IndexedArena;
+use super::indexed_arena::IndexedVec;
 use super::math::traits::DVector;
 use super::primitives::Float;
 use crate::communication::Rank;
@@ -26,12 +27,14 @@ use crate::extent::Extent;
 use crate::hash_map::BiMap;
 use crate::hash_map::HashMap;
 
+pub const HALO_FRACTION: f64 = 0.05;
+
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TetraIndex(pub Index);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct FaceIndex(pub Index);
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash)]
-pub struct PointIndex(pub Index);
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct PointIndex(pub usize);
 
 pub type Point<D> = <D as Dimension>::Point;
 pub type Face<D> = <D as DDimension>::Face;
@@ -41,7 +44,7 @@ pub type TetraData<D> = <D as DDimension>::TetraData;
 
 type TetraList<D> = IndexedArena<TetraIndex, Tetra<D>>;
 type FaceList<D> = IndexedArena<FaceIndex, Face<D>>;
-type PointList<D> = IndexedArena<PointIndex, Point<D>>;
+type PointList<D> = IndexedVec<PointIndex, Point<D>>;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum PointKind {
@@ -125,6 +128,7 @@ where
     ) -> (Self, BiMap<T, PointIndex>) {
         points.sort_by_key(|(_, p)| p.into_key(extent));
         let mut triangulation = Self::all_encompassing(extent);
+        triangulation.reserve_capacity(points.len());
         let indices = points
             .iter()
             .map(|(name, p)| (name.clone(), triangulation.insert(*p, PointKind::Inner).0))
@@ -168,6 +172,15 @@ where
         };
         triangulation.insert_basic_tetra(initial_tetra_data);
         triangulation
+    }
+
+    fn reserve_capacity(&mut self, num_points: usize) {
+        let num_points = ((1.0 + HALO_FRACTION) * num_points as f64) as usize;
+        let num_faces = D::estimate_num_faces(num_points);
+        let num_tetras = D::estimate_num_tetras(num_points);
+        self.points.reserve(num_points);
+        self.faces.reserve(num_faces);
+        self.tetras.reserve(num_tetras);
     }
 
     pub(super) fn get_tetra_data(&self, tetra: &Tetra<D>) -> TetraData<D> {
