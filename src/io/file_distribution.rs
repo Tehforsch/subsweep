@@ -32,6 +32,9 @@ fn get_regions_from(
     num_entries: usize,
 ) -> (Vec<Region>, Position) {
     let mut regions = vec![];
+    if num_entries == 0 {
+        return (regions, start);
+    }
     if start.pos == num_entries_per_file[start.file_index] {
         start.file_index += 1;
         start.pos = 0;
@@ -122,6 +125,7 @@ pub fn get_rank_output_assignment_for_rank(
 #[cfg(test)]
 mod tests {
     use crate::io::file_distribution::get_input_rank_assignment;
+    use crate::io::file_distribution::RankAssignment;
     use crate::io::file_distribution::Region;
 
     #[test]
@@ -270,5 +274,13 @@ mod tests {
                 end: 110,
             }
         );
+    }
+
+    #[test]
+    fn zero_entries_doesnt_panic() {
+        let assignment = super::get_input_rank_assignment(&[0], 6);
+        for assignment in assignment {
+            assert!(assignment.regions.is_empty());
+        }
     }
 }
