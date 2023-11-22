@@ -1,6 +1,8 @@
+use std::iter::Sum;
 use std::ops::Div;
 
 use diman::Quotient;
+use mpi::traits::Equivalence;
 
 use super::Chemistry;
 use super::Timescale;
@@ -69,8 +71,147 @@ impl HydrogenOnlySpecies {
     }
 }
 
+#[derive(Equivalence, PartialOrd, PartialEq, Debug, Clone)]
+pub struct Photons {
+    pub f1: PhotonRate,
+    pub f2: PhotonRate,
+    pub f3: PhotonRate,
+    pub f4: PhotonRate,
+    pub f5: PhotonRate,
+}
+
+impl std::ops::Mul<Dimensionless> for Photons {
+    type Output = Self;
+
+    fn mul(self, rhs: Dimensionless) -> Self::Output {
+        Self {
+            f1: rhs * self.f1,
+            f2: rhs * self.f2,
+            f3: rhs * self.f3,
+            f4: rhs * self.f4,
+            f5: rhs * self.f5,
+        }
+    }
+}
+
+impl std::ops::Mul<f64> for Photons {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self {
+            f1: rhs * self.f1,
+            f2: rhs * self.f2,
+            f3: rhs * self.f3,
+            f4: rhs * self.f4,
+            f5: rhs * self.f5,
+        }
+    }
+}
+
+impl std::ops::Div<f64> for Photons {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        Self {
+            f1: self.f1 / rhs,
+            f2: self.f2 / rhs,
+            f3: self.f3 / rhs,
+            f4: self.f4 / rhs,
+            f5: self.f5 / rhs,
+        }
+    }
+}
+
+impl std::ops::Add for Photons {
+    type Output = Self;
+
+    fn add(self, rhs: Photons) -> Self::Output {
+        Self {
+            f1: self.f1 + rhs.f1,
+            f2: self.f2 + rhs.f2,
+            f3: self.f3 + rhs.f3,
+            f4: self.f4 + rhs.f4,
+            f5: self.f5 + rhs.f5,
+        }
+    }
+}
+
+impl std::ops::Sub for Photons {
+    type Output = Self;
+
+    fn sub(self, rhs: Photons) -> Self::Output {
+        Self {
+            f1: self.f1 - rhs.f1,
+            f2: self.f2 - rhs.f2,
+            f3: self.f3 - rhs.f3,
+            f4: self.f4 - rhs.f4,
+            f5: self.f5 - rhs.f5,
+        }
+    }
+}
+
+impl std::ops::AddAssign for Photons {
+    fn add_assign(&mut self, rhs: Photons) {
+        self.f1 += rhs.f1;
+        self.f2 += rhs.f2;
+        self.f3 += rhs.f3;
+        self.f4 += rhs.f4;
+        self.f5 += rhs.f5;
+    }
+}
+
+impl Sum<Photons> for Photons {
+    fn sum<I: Iterator<Item = Photons>>(iter: I) -> Self {
+        let mut f1 = PhotonRate::zero();
+        let mut f2 = PhotonRate::zero();
+        let mut f3 = PhotonRate::zero();
+        let mut f4 = PhotonRate::zero();
+        let mut f5 = PhotonRate::zero();
+        for p in iter {
+            f1 += p.f1;
+            f2 += p.f2;
+            f3 += p.f3;
+            f4 += p.f4;
+            f5 += p.f5;
+        }
+        Self { f1, f2, f3, f4, f5 }
+    }
+}
+
+impl super::Photons for Photons {
+    fn zero() -> Self {
+        Self {
+            f1: PhotonRate::zero(),
+            f2: PhotonRate::zero(),
+            f3: PhotonRate::zero(),
+            f4: PhotonRate::zero(),
+            f5: PhotonRate::zero(),
+        }
+    }
+
+    fn relative_change_to(&self, other: &Self) -> Dimensionless {
+        <PhotonRate as super::Photons>::relative_change_to(&self.f1, &other.f1).max(
+            <PhotonRate as super::Photons>::relative_change_to(&self.f2, &other.f2).max(
+                <PhotonRate as super::Photons>::relative_change_to(&self.f3, &other.f3).max(
+                    <PhotonRate as super::Photons>::relative_change_to(&self.f4, &other.f4).max(
+                        <PhotonRate as super::Photons>::relative_change_to(&self.f5, &other.f5),
+                    ),
+                ),
+            ),
+        )
+    }
+
+    fn below_threshold(&self, threshold: PhotonRate) -> bool {
+        self.f1.below_threshold(threshold)
+            && self.f2.below_threshold(threshold)
+            && self.f3.below_threshold(threshold)
+            && self.f4.below_threshold(threshold)
+            && self.f5.below_threshold(threshold)
+    }
+}
+
 impl Chemistry for HydrogenOnly {
-    type Photons = PhotonRate;
+    type Photons = Photons;
     type Species = HydrogenOnlySpecies;
 
     fn get_outgoing_rate(
@@ -78,17 +219,12 @@ impl Chemistry for HydrogenOnly {
         cell: &Cell,
         site: &Site<Self>,
         incoming_rate: Self::Photons,
-    ) -> PhotonRate {
+    ) -> Photons {
         let neutral_hydrogen_number_density =
             site.density / PROTON_MASS * (1.0 - site.species.ionized_hydrogen_fraction);
         let sigma = NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
-        if incoming_rate < self.rate_threshold {
-            PhotonRate::zero()
-        } else {
-            let non_absorbed_fraction =
-                (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-            incoming_rate * non_absorbed_fraction
-        }
+        let non_absorbed_fraction = (-neutral_hydrogen_number_density * sigma * cell.size).exp();
+        incoming_rate * non_absorbed_fraction
     }
 
     fn update_abundances(
@@ -105,7 +241,7 @@ impl Chemistry for HydrogenOnly {
             density: site.density,
             volume,
             length,
-            rate,
+            rate: rate.f1,
             scale_factor: self.scale_factor,
             heating_rate: HeatingRate::zero(),
             photoionization_rate: PhotonRateDensity::zero(),

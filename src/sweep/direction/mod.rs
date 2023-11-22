@@ -199,7 +199,7 @@ fn remap(
     let old_values = values.iter().cloned().collect::<Vec<_>>();
     for i in 0..num_dirs {
         for j in 0..num_dirs {
-            values[i] = old_values[j] * kernel[i][j];
+            values[i] = old_values[j].clone() * kernel[i][j];
         }
     }
 }

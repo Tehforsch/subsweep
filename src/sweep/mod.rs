@@ -629,7 +629,13 @@ fn init_sweep_system(
                         &directions,
                         HydrogenOnlySpecies::new(**ionized_hydrogen_fraction, **temperature),
                         **density,
-                        **source,
+                        crate::chemistry::hydrogen_only::Photons {
+                            f1: **source,
+                            f2: units::PhotonRate::zero(),
+                            f3: units::PhotonRate::zero(),
+                            f4: units::PhotonRate::zero(),
+                            f5: units::PhotonRate::zero(),
+                        },
                     ),
                 )
             },
@@ -666,7 +672,6 @@ fn run_sweep_system(
     mut heating_rates: Particles<(&ParticleId, &mut HeatingRate)>,
     mut timesteps: Particles<(&ParticleId, &mut Timestep)>,
     mut ionization_times: Particles<(&ParticleId, &mut IonizationTime)>,
-    mut rates: Particles<(&ParticleId, &mut components::PhotonRate)>,
     mut photoionization_rates: Particles<(&ParticleId, &mut components::PhotoionizationRate)>,
     mut time: ResMut<SimulationTime>,
     mut timers: NonSendMut<Performance>,
@@ -707,10 +712,10 @@ fn run_sweep_system(
         let site = solver.sites.get(*id);
         **timestep = site.species.timestep;
     }
-    for (id, mut rate) in rates.iter_mut() {
-        let site = solver.sites.get(*id);
-        **rate = site.incoming_total_rate.iter().copied().sum();
-    }
+    // for (id, mut rate) in rates.iter_mut() {
+    // let site = solver.sites.get(*id);
+    // **rate = site.incoming_total_rate.iter().cloned().sum();
+    // }
     for (id, mut ionization_time) in ionization_times.iter_mut() {
         let site = solver.sites.get(*id);
         if site.species.ionized_hydrogen_fraction > 0.5
