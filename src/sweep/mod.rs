@@ -1,4 +1,5 @@
 mod active_list;
+mod chemistry_output;
 mod communicator;
 mod count_by_dir;
 mod deadlock_detection;
@@ -24,6 +25,8 @@ pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
 use self::active_list::ActiveList;
+use self::chemistry_output::sweep_optional_output_system;
+use self::chemistry_output::ChemistryOutputType;
 use self::count_by_dir::CountByDir;
 use self::direction::init_directions_rng;
 use self::direction::rotate_directions_system;
@@ -50,6 +53,7 @@ use self::timestep_level::TimestepLevel;
 use self::timestep_state::TimestepState;
 use crate::chemistry::hydrogen_only::HydrogenOnly;
 use crate::chemistry::hydrogen_only::HydrogenOnlySpecies;
+use crate::chemistry::hydrogen_only::Solver;
 use crate::chemistry::timescale::Timescale;
 use crate::chemistry::timescale::TimescaleCounter;
 use crate::chemistry::Chemistry;
@@ -138,6 +142,10 @@ impl SubsweepPlugin for SweepPlugin {
                 initialize_optional_component_system::<PhotoionizationRate>,
             )
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
+            .add_system_to_stage(
+                Stages::Sweep,
+                sweep_optional_output_system::<PhotoionizationRate>.after(run_sweep_system),
+            )
             .add_parameter_type_and_get_result::<SweepParameters>();
         if parameters.rotate_directions {
             init_directions_rng(sim);
@@ -158,7 +166,7 @@ impl SubsweepPlugin for SweepPlugin {
             )
             .add_startup_system_to_stage(StartupStages::InitSweep, show_num_directions_system);
         }
-        init_optional_component::<HeatingRate>(sim);
+        init_optional_chemistry_component::<HeatingRate>(sim);
         init_optional_component::<Timestep>(sim);
         init_optional_component::<IonizationTime>(sim);
     }
@@ -597,6 +605,27 @@ impl<C: Chemistry> Sweep<C> {
     }
 }
 
+impl Sweep<HydrogenOnly> {
+    pub fn get_solver(&self, id: ParticleId, scale_factor: Dimensionless) -> Solver {
+        let cell = self.cells.get(id);
+        let site = self.sites.get(id);
+        let rate: Rate<HydrogenOnly> = self
+            .directions
+            .enumerate()
+            .map(|(dir, _)| site.get_rate(self.directions.len(), dir))
+            .sum();
+        Solver {
+            ionized_hydrogen_fraction: site.species.ionized_hydrogen_fraction,
+            temperature: site.species.temperature,
+            density: site.density,
+            volume: cell.volume,
+            length: cell.size,
+            rate,
+            scale_factor: scale_factor,
+        }
+    }
+}
+
 fn init_sweep_system(
     mut solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
     cells_query: Particles<(&ParticleId, &Cell)>,
@@ -663,11 +692,9 @@ fn run_sweep_system(
         &mut IonizedHydrogenFraction,
         &mut components::Temperature,
     )>,
-    mut heating_rates: Particles<(&ParticleId, &mut HeatingRate)>,
     mut timesteps: Particles<(&ParticleId, &mut Timestep)>,
     mut ionization_times: Particles<(&ParticleId, &mut IonizationTime)>,
     mut rates: Particles<(&ParticleId, &mut components::PhotonRate)>,
-    mut photoionization_rates: Particles<(&ParticleId, &mut components::PhotoionizationRate)>,
     mut time: ResMut<SimulationTime>,
     mut timers: NonSendMut<Performance>,
     mut is_first: ResMut<IsFirstTime>,
@@ -694,14 +721,6 @@ fn run_sweep_system(
             **fraction = site.species.ionized_hydrogen_fraction;
             **temperature = site.species.temperature;
         }
-    }
-    for (id, mut heating_rate) in heating_rates.iter_mut() {
-        let site = solver.sites.get(*id);
-        **heating_rate = site.species.heating_rate;
-    }
-    for (id, mut photoionization_rate) in photoionization_rates.iter_mut() {
-        let site = solver.sites.get(*id);
-        **photoionization_rate = site.species.photoionization_rate;
     }
     for (id, mut timestep) in timesteps.iter_mut() {
         let site = solver.sites.get(*id);
@@ -730,20 +749,35 @@ fn initialize_optional_component_system<C: Component + Named + Default>(
     }
 }
 
-fn init_optional_component<C>(sim: &mut Simulation)
+fn init_optional_component<C>(sim: &mut Simulation) -> bool
 where
     C: Equivalence + ToDataset + H5Type + Clone + Component + Named + Default,
     <C as Equivalence>::Out: MatchesRaw,
 {
     // Happens in tests and benches
     if !sim.contains_resource::<OutputParameters>() {
-        return;
+        return false;
     }
-    if is_desired_field::<C>(sim) {
+    let is_desired = is_desired_field::<C>(sim);
+    if is_desired {
         sim.add_derived_component::<C>();
         sim.add_startup_system_to_stage(
             StartupStages::InsertDerivedComponents,
             initialize_optional_component_system::<C>,
+        );
+    }
+    is_desired
+}
+
+fn init_optional_chemistry_component<C>(sim: &mut Simulation)
+where
+    C: Equivalence + ToDataset + H5Type + Clone + Component + Named + Default + ChemistryOutputType,
+    <C as Equivalence>::Out: MatchesRaw,
+{
+    if init_optional_component::<C>(sim) {
+        sim.add_system_to_stage(
+            Stages::Sweep,
+            sweep_optional_output_system::<C>.after(run_sweep_system),
         );
     }
 }
