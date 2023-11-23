@@ -2,14 +2,12 @@ use bevy_ecs::prelude::Component;
 use derive_more::Deref;
 use derive_more::DerefMut;
 use derive_more::From;
-use diman::Quotient;
 use hdf5::H5Type;
 use mpi::traits::Equivalence;
 
 use crate::named::Named;
 use crate::prelude::Float;
 use crate::units;
-use crate::units::EnergyDensity;
 use crate::units::Time;
 use crate::units::VecLength;
 
@@ -51,12 +49,22 @@ pub struct PhotonRate(pub crate::units::PhotonRate);
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
 #[name = "photoionization_rate"]
 #[repr(transparent)]
-pub struct PhotoionizationRate(pub crate::units::PhotonRateDensity);
+pub struct PhotoionizationRate(pub crate::units::Rate);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
+#[name = "recombination_rate"]
+#[repr(transparent)]
+pub struct RecombinationRate(pub crate::units::Rate);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
+#[name = "collisional_ionization_rate"]
+#[repr(transparent)]
+pub struct CollisionalIonizationRate(pub crate::units::Rate);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
 #[name = "heating_rate"]
 #[repr(transparent)]
-pub struct HeatingRate(pub Quotient<EnergyDensity, Time>);
+pub struct HeatingRate(pub units::HeatingRate);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Default)]
 #[name = "timestep"]
@@ -103,7 +111,9 @@ impl_to_dataset!(Mass, units::Mass, true);
 impl_to_dataset!(IonizedHydrogenFraction, units::Dimensionless, false);
 impl_to_dataset!(Temperature, units::Temperature, false);
 impl_to_dataset!(PhotonRate, units::SourceRate, false);
-impl_to_dataset!(PhotoionizationRate, units::PhotonRateDensity, false);
+impl_to_dataset!(PhotoionizationRate, units::Rate, false);
+impl_to_dataset!(RecombinationRate, units::Rate, false);
+impl_to_dataset!(CollisionalIonizationRate, units::Rate, false);
 impl_to_dataset!(HeatingRate, units::HeatingRate, false);
 impl_to_dataset!(Timestep, units::Time, false);
 impl_to_dataset!(IonizationTime, units::Time, false);

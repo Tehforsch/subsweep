@@ -64,12 +64,14 @@ use crate::communication::MpiWorld;
 use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::components;
+use crate::components::CollisionalIonizationRate;
 use crate::components::Density;
 use crate::components::HeatingRate;
 use crate::components::IonizationTime;
 use crate::components::IonizedHydrogenFraction;
 use crate::components::PhotoionizationRate;
 use crate::components::PhotonRate;
+use crate::components::RecombinationRate;
 use crate::components::Source;
 use crate::components::Timestep;
 use crate::cosmology::Cosmology;
@@ -167,6 +169,8 @@ impl SubsweepPlugin for SweepPlugin {
             .add_startup_system_to_stage(StartupStages::InitSweep, show_num_directions_system);
         }
         init_optional_chemistry_component::<HeatingRate>(sim);
+        init_optional_chemistry_component::<RecombinationRate>(sim);
+        init_optional_chemistry_component::<CollisionalIonizationRate>(sim);
         init_optional_component::<Timestep>(sim);
         init_optional_component::<IonizationTime>(sim);
     }

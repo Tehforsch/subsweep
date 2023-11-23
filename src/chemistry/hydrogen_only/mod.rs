@@ -132,15 +132,15 @@ impl Solver {
         self.density / PROTON_MASS
     }
 
-    fn ionized_hydrogen_number_density(&self) -> NumberDensity {
+    pub fn ionized_hydrogen_number_density(&self) -> NumberDensity {
         self.hydrogen_number_density() * self.ionized_hydrogen_fraction
     }
 
-    fn neutral_hydrogen_number_density(&self) -> NumberDensity {
+    pub fn neutral_hydrogen_number_density(&self) -> NumberDensity {
         self.hydrogen_number_density() * (1.0 - self.ionized_hydrogen_fraction)
     }
 
-    fn electron_number_density(&self) -> NumberDensity {
+    pub fn electron_number_density(&self) -> NumberDensity {
         // Assumes zero helium
         self.ionized_hydrogen_number_density()
     }
@@ -164,7 +164,7 @@ impl Solver {
             / (t.powi(3).sqrt() * (const1 * t).sqrt() * ((const1 * t).sqrt() + 1.0).powi(2))
     }
 
-    fn case_b_recombination_rate(&self) -> VolumeRate {
+    pub fn case_b_recombination_rate(&self) -> VolumeRate {
         let lambda = Temperature::kelvins(315614.0) / self.temperature;
         VolumeRate::centimeters_cubed_per_s(
             2.753e-14 * lambda.powf(1.5) / (1.0 + (lambda / 2.74).powf(0.407)).powf(2.242),
@@ -207,7 +207,7 @@ impl Solver {
             / Temperature::kelvins(1.0)
     }
 
-    fn collisional_ionization_rate(&self) -> VolumeRate {
+    pub fn collisional_ionization_rate(&self) -> VolumeRate {
         VolumeRate::centimeters_cubed_per_s(5.85e-11 * self.collision_fit_function())
     }
 

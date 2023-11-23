@@ -3,8 +3,10 @@ use bevy_ecs::prelude::*;
 use super::Sweep;
 use crate::chemistry::hydrogen_only::HydrogenOnly;
 use crate::chemistry::hydrogen_only::Solver;
+use crate::components::CollisionalIonizationRate;
 use crate::components::HeatingRate;
 use crate::components::PhotoionizationRate;
+use crate::components::RecombinationRate;
 use crate::parameters::Cosmology;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
@@ -22,13 +24,33 @@ pub trait ChemistryOutputType {
 
 impl ChemistryOutputType for PhotoionizationRate {
     fn from_solver(solver: &Solver) -> Self {
-        PhotoionizationRate(solver.photoionization_rate(timestep()) / solver.volume)
+        PhotoionizationRate(solver.photoionization_rate(timestep()))
     }
 }
 
 impl ChemistryOutputType for HeatingRate {
     fn from_solver(solver: &Solver) -> Self {
         HeatingRate(solver.photoheating_rate(timestep()) - solver.cooling_rate())
+    }
+}
+
+impl ChemistryOutputType for RecombinationRate {
+    fn from_solver(solver: &Solver) -> Self {
+        RecombinationRate(
+            solver.case_b_recombination_rate()
+                * solver.electron_number_density()
+                * solver.ionized_hydrogen_fraction,
+        )
+    }
+}
+
+impl ChemistryOutputType for CollisionalIonizationRate {
+    fn from_solver(solver: &Solver) -> Self {
+        CollisionalIonizationRate(
+            solver.collisional_ionization_rate()
+                * solver.electron_number_density()
+                * (1.0 - solver.ionized_hydrogen_fraction),
+        )
     }
 }
 
