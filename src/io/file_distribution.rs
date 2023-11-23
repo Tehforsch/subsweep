@@ -125,7 +125,6 @@ pub fn get_rank_output_assignment_for_rank(
 #[cfg(test)]
 mod tests {
     use crate::io::file_distribution::get_input_rank_assignment;
-    use crate::io::file_distribution::RankAssignment;
     use crate::io::file_distribution::Region;
 
     #[test]
