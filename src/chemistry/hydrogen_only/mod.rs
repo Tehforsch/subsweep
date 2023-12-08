@@ -116,7 +116,10 @@ impl Chemistry for HydrogenOnly {
             let f = OpenOptions::new()
                 .append(true)
                 .create(true)
-                .open(format!("trace_{:03}_{:06}.yml", rank, part_id))
+                .open(format!(
+                    "output/traces/trace_{:03}_{:06}.yml",
+                    rank, part_id
+                ))
                 .unwrap();
             let mut map = HashMap::default();
             map.insert("solver", serde_yaml::to_string(&solver).unwrap());

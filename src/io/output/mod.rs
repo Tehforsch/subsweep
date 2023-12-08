@@ -101,6 +101,7 @@ pub fn make_output_dirs(parameters: &OutputParameters) {
     }
     fs::create_dir_all(&parameters.output_dir)
         .unwrap_or_else(|_| panic!("Failed to create output dir: {:?}", parameters.output_dir));
+    fs::create_dir_all(&parameters.output_dir.join("traces")).unwrap();
     fs::create_dir_all(parameters.snapshot_dir()).unwrap_or_else(|_| {
         panic!(
             "Failed to create snapshots dir: {:?}",

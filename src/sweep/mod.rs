@@ -555,28 +555,7 @@ impl<C: Chemistry> Sweep<C> {
             .map(|(id, _, site)| (id, site.density))
             .collect();
         ids_densities.sort_by_key(|(_, dens)| OrderedFloat(dens.value_unchecked()));
-        let indices = [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            ids_densities.len() - 1,
-            ids_densities.len() - 2,
-            ids_densities.len() - 3,
-            ids_densities.len() - 4,
-            ids_densities.len() - 5,
-            ids_densities.len() - 6,
-            ids_densities.len() - 7,
-            ids_densities.len() - 8,
-            ids_densities.len() - 9,
-            ids_densities.len() - 10,
-        ];
+        let indices = [0, ids_densities.len() - 1];
         let ids: Vec<_> = indices
             .into_iter()
             .map(|i| ids_densities[i].0.index)
