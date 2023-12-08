@@ -5,6 +5,8 @@ use diman::Quotient;
 
 use super::Chemistry;
 use super::Timescale;
+use crate::communication::MpiWorld;
+use crate::communication::SizedCommunicator;
 use crate::hash_map::HashMap;
 use crate::sweep::grid::Cell;
 use crate::sweep::site::Site;
@@ -110,16 +112,33 @@ impl Chemistry for HydrogenOnly {
         };
         site.species.integrated_time += timestep;
         if let Some(part_id) = trace {
+            let rank = MpiWorld::<usize>::new().rank() as usize;
             let f = OpenOptions::new()
                 .append(true)
                 .create(true)
-                .open(format!("trace_{:06}.yml", part_id))
+                .open(format!("trace_{:03}_{:06}.yml", rank, part_id))
                 .unwrap();
             let mut map = HashMap::default();
             map.insert("solver", serde_yaml::to_string(&solver).unwrap());
             map.insert(
                 "time",
                 serde_yaml::to_string(&site.species.integrated_time).unwrap(),
+            );
+            map.insert(
+                "recomb",
+                serde_yaml::to_string(&solver.case_b_recombination_rate()).unwrap(),
+            );
+            map.insert(
+                "coll_ion",
+                serde_yaml::to_string(&solver.collisional_ionization_rate()).unwrap(),
+            );
+            map.insert(
+                "recomb_cool",
+                serde_yaml::to_string(&solver.case_b_recombination_cooling_rate()).unwrap(),
+            );
+            map.insert(
+                "coll_ion_cool",
+                serde_yaml::to_string(&solver.collisional_ionization_cooling_rate()).unwrap(),
             );
             serde_yaml::to_writer(f, &vec![&map]).unwrap();
         }

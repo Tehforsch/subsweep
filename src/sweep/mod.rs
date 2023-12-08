@@ -21,6 +21,7 @@ use log::info;
 use log::trace;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
+use ordered_float::OrderedFloat;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
@@ -548,6 +549,38 @@ impl<C: Chemistry> Sweep<C> {
 
     fn update_chemistry(&mut self, timers: &mut Performance) {
         let _timer = timers.time("chemistry");
+        let mut ids_densities: Vec<_> = self
+            .sites
+            .enumerate_with_levels_mut()
+            .map(|(id, _, site)| (id, site.density))
+            .collect();
+        ids_densities.sort_by_key(|(_, dens)| OrderedFloat(dens.value_unchecked()));
+        let indices = [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            ids_densities.len() - 1,
+            ids_densities.len() - 2,
+            ids_densities.len() - 3,
+            ids_densities.len() - 4,
+            ids_densities.len() - 5,
+            ids_densities.len() - 6,
+            ids_densities.len() - 7,
+            ids_densities.len() - 8,
+            ids_densities.len() - 9,
+            ids_densities.len() - 10,
+        ];
+        let ids: Vec<_> = indices
+            .into_iter()
+            .map(|i| ids_densities[i].0.index)
+            .collect();
         for (id, cell) in self.cells.enumerate_active(self.current_level) {
             let (level, site) = self.sites.get_mut_with_level(id);
             let timestep = self.timestep_state.timestep_at_level(level);
@@ -564,8 +597,7 @@ impl<C: Chemistry> Sweep<C> {
             };
             site.previous_incoming_total_rate = rate.clone();
             let rate_timescale = Timescale::photon_rate(timestep / relative_change);
-            let trace_ids = vec![1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
-            let trace = Some(id.index).filter(|_| id.rank == 0 && trace_ids.contains(&id.index));
+            let trace = Some(id.index).filter(|_| ids.contains(&id.index));
             let chemistry_timescale = self.chemistry.update_abundances(
                 site,
                 rate,
