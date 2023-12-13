@@ -551,7 +551,7 @@ impl<C: Chemistry> Sweep<C> {
         let _timer = timers.time("chemistry");
         let mut ids_densities: Vec<_> = self
             .sites
-            .enumerate_with_levels_mut()
+            .enumerate_with_levels()
             .map(|(id, _, site)| (id, site.density))
             .collect();
         ids_densities.sort_by_key(|(_, dens)| OrderedFloat(dens.value_unchecked()));
