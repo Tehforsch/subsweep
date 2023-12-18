@@ -42,6 +42,7 @@ fn setup_sweep_sim(sim: &mut Simulation, setup: SweepSetup) -> &mut Simulation {
             periodic: false,
             max_timestep: Time::seconds(1e-3),
             prevent_cooling: false,
+            num_tasks_to_solve_before_send_receive: 10000,
         })
         .add_parameters_explicitly(SimulationParameters { final_time: None })
         .add_startup_system_to_stage(

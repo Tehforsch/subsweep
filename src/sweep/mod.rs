@@ -195,6 +195,7 @@ struct Sweep<C: Chemistry> {
     chemistry: C,
     rank: Rank,
     timescale_counter: TimescaleCounter,
+    num_tasks_to_solve_before_send_receive: usize,
 }
 
 impl<C: Chemistry> Sweep<C> {
@@ -233,6 +234,8 @@ impl<C: Chemistry> Sweep<C> {
             rank,
             significant_rate_threshold: parameters.significant_rate_threshold,
             timescale_counter: TimescaleCounter::new(parameters.max_timestep),
+            num_tasks_to_solve_before_send_receive: parameters
+                .num_tasks_to_solve_before_send_receive,
         }
     }
 
@@ -306,8 +309,13 @@ impl<C: Chemistry> Sweep<C> {
             if self.to_solve.is_empty() {
                 self.receive_all_messages();
             }
+            let mut num_solved = 0;
             while let Some(task) = self.to_solve.pop() {
                 self.solve_task(task);
+                num_solved += 1;
+                if num_solved > self.num_tasks_to_solve_before_send_receive {
+                    break;
+                }
             }
             self.send_all_messages();
         }

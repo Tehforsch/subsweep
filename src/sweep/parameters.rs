@@ -36,6 +36,13 @@ pub struct SweepParameters {
     /// ionized and heated by feedback processes which are not modelled in subsweep).
     #[serde(default = "default_prevent_cooling")]
     pub prevent_cooling: bool,
+    /// The number of tasks to solve before sending/receiving
+    /// outgoing/incoming fluxes.  Low numbers reduce serial
+    /// performance, high numbers can reduce parallel performance
+    /// because downstream cores (or central cores) will need to wait
+    /// for incoming tasks for too long.
+    #[serde(default = "default_num_tasks_to_solve_before_send_receive")]
+    pub num_tasks_to_solve_before_send_receive: usize,
 }
 
 #[subsweep_parameters]
@@ -64,4 +71,8 @@ fn default_timestep_factor() -> Dimensionless {
 
 fn default_prevent_cooling() -> bool {
     true
+}
+
+pub fn default_num_tasks_to_solve_before_send_receive() -> usize {
+    10000
 }
