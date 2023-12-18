@@ -12,6 +12,7 @@ def make_row(cont, name):
     return (name, [pq.Quantity(x["solver"][name]).value for x in cont])
 
 def getDf(f):
+    print(f)
     f = Path(f)
     cont = yaml.load(open(f, "r"), Loader=yaml.SafeLoader)
     cont = [{"time": e["time"], "solver": yaml.load(e["solver"], Loader=yaml.SafeLoader)} for e in cont]
@@ -22,9 +23,12 @@ def getDf(f):
     df = df.with_columns(pl.col("rate").log10().alias("rate_log10"))
     return df
 
-df = pl.concat([getDf(f) for f in sys.argv[1:]])
+df = pl.read_csv("out.df")
+# df = pl.concat([getDf(f) for f in sys.argv[1:]])
+# df.write_csv("out.df")
     
 print(df)
+print(df.bottom_k(by="density", k=5))
 
 g = sns.relplot(
     x=df["time"],
