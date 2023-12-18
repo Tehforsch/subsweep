@@ -24,17 +24,21 @@ def getDf(f):
     return df
 
 df = pl.read_csv("out.df")
+df = df.filter(pl.col("rate_log10") > 10)
 # df = pl.concat([getDf(f) for f in sys.argv[1:]])
 # df.write_csv("out.df")
     
-print(df)
-print(df.bottom_k(by="density", k=5))
+n = int(df.shape[0] / 2)
+print(df.top_k(by="density", k=1)["density"])
+print(df.bottom_k(by="density", k=1)["density"])
+df = df.top_k(by="density", k=n)
+print(df.mean())
 
 g = sns.relplot(
     x=df["time"],
-    y=df["temperature"],
+    y=df["ionized_hydrogen_fraction"],
     style=df["id"],
-    hue=df["ionized_hydrogen_fraction"],
+    hue=df["temperature"],
     # palette=sns.color_palette("tab10")
 )
 ax = g.ax
