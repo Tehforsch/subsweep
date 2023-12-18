@@ -634,6 +634,7 @@ impl Sweep<HydrogenOnly> {
             length: cell.size,
             rate,
             scale_factor: scale_factor,
+            floor: None,
         }
     }
 }
@@ -693,6 +694,7 @@ fn init_sweep_system(
             rate_threshold: sweep_parameters.significant_rate_threshold,
             scale_factor: cosmology.scale_factor(),
             timestep_safety_factor: sweep_parameters.chemistry_timestep_safety_factor,
+            prevent_cooling: sweep_parameters.prevent_cooling,
         },
     ));
 }
@@ -710,7 +712,6 @@ fn run_sweep_system(
     mut time: ResMut<SimulationTime>,
     mut timers: NonSendMut<Performance>,
     mut is_first: ResMut<IsFirstTime>,
-    parameters: Res<SweepParameters>,
 ) {
     // This is a slightly hacky way of making sure that we can output
     // the ICS. The first time this system would run, it doesn't run so that
@@ -724,15 +725,8 @@ fn run_sweep_system(
     **time += time_elapsed;
     for (id, mut fraction, mut temperature) in sites.iter_mut() {
         let site = solver.sites.get_mut(*id);
-        if parameters.prevent_cooling {
-            **fraction = fraction.max(site.species.ionized_hydrogen_fraction);
-            site.species.ionized_hydrogen_fraction = **fraction;
-            **temperature = temperature.max(site.species.temperature);
-            site.species.temperature = **temperature;
-        } else {
-            **fraction = site.species.ionized_hydrogen_fraction;
-            **temperature = site.species.temperature;
-        }
+        **fraction = site.species.ionized_hydrogen_fraction;
+        **temperature = site.species.temperature;
     }
     for (id, mut timestep) in timesteps.iter_mut() {
         let site = solver.sites.get(*id);

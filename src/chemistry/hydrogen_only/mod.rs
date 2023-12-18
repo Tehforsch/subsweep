@@ -42,6 +42,7 @@ pub struct HydrogenOnly {
     pub rate_threshold: PhotonRate,
     pub scale_factor: Dimensionless,
     pub timestep_safety_factor: Dimensionless,
+    pub prevent_cooling: bool,
 }
 
 #[derive(Debug)]
@@ -94,6 +95,11 @@ impl Chemistry for HydrogenOnly {
         volume: Volume,
         length: Length,
     ) -> Timescale {
+        let floor = Some((
+            site.species.temperature,
+            site.species.ionized_hydrogen_fraction,
+        ))
+        .filter(|_| self.prevent_cooling);
         let mut solver = Solver {
             ionized_hydrogen_fraction: site.species.ionized_hydrogen_fraction,
             temperature: site.species.temperature,
@@ -102,6 +108,7 @@ impl Chemistry for HydrogenOnly {
             length,
             rate,
             scale_factor: self.scale_factor,
+            floor,
         };
         let timestep_used = solver.perform_timestep(timestep, self.timestep_safety_factor);
         site.species.temperature = solver.temperature;
@@ -124,6 +131,7 @@ pub(crate) struct Solver {
     pub length: Length,
     pub rate: PhotonRate,
     pub scale_factor: Dimensionless,
+    pub floor: Option<(Temperature, Dimensionless)>,
 }
 
 // All numbers taken from Rosdahl et al (2015)
@@ -345,11 +353,19 @@ impl Solver {
         timestep * (c - xhii * (c + d)) / (1.0 - j * timestep)
     }
 
-    fn clamp_ionized_hydrogen_fraction(&mut self) {
-        self.ionized_hydrogen_fraction = self.ionized_hydrogen_fraction.clamp(
-            IONIZED_HYDROGEN_FRACTION_EPSILON,
-            1.0 - IONIZED_HYDROGEN_FRACTION_EPSILON,
-        );
+    fn clamp(&mut self) {
+        let xhii_floor = self
+            .floor
+            .map(|(_, xhii)| *xhii)
+            .unwrap_or(IONIZED_HYDROGEN_FRACTION_EPSILON);
+        self.ionized_hydrogen_fraction = self
+            .ionized_hydrogen_fraction
+            .clamp(xhii_floor, 1.0 - IONIZED_HYDROGEN_FRACTION_EPSILON);
+        if let Some((temp_floor, _)) = self.floor {
+            if self.temperature < temp_floor {
+                self.temperature = temp_floor;
+            }
+        }
     }
 
     fn try_timestep_update(
@@ -371,7 +387,7 @@ impl Solver {
             timestep_safety_factor,
             timestep,
         )?);
-        self.clamp_ionized_hydrogen_fraction();
+        self.clamp();
         Ok(ideal_temperature_timestep.min(ideal_ionized_fraction_timestep))
     }
 
@@ -382,7 +398,7 @@ impl Solver {
         depth: usize,
         max_depth: usize,
     ) -> Result<Timescale, TimestepConvergenceFailed> {
-        self.clamp_ionized_hydrogen_fraction();
+        self.clamp();
         let initial_state = (self.temperature, self.ionized_hydrogen_fraction);
         if depth > max_depth {
             return Err(TimestepConvergenceFailed);
@@ -414,10 +430,13 @@ impl Solver {
     ) -> Timescale {
         self.perform_timestep_internal(timestep, timestep_safety_factor, 0, MAX_DEPTH)
             .unwrap_or_else(|_| {
-                panic!(
+                log::error!(
                     "Failed to find timestep in chemistry. Solver state: {:?}",
                     self
-                )
+                );
+                // We don't panic here to make sure we can still run
+                // the process but lets return a pessimistic timescale
+                Timescale::temperature(timestep / 10.0)
             })
     }
 }
@@ -500,6 +519,7 @@ mod tests {
                 length: Length::zero(),
                 rate: Rate::zero(),
                 scale_factor: Dimensionless::dimensionless(1.0),
+                floor: None,
             };
             let analytical = derivative(&solver);
             let v1 = function(&solver);
@@ -637,6 +657,7 @@ mod tests {
                 length,
                 rate,
                 scale_factor: Dimensionless::dimensionless(1.0),
+                floor: None,
             }
         }
 
@@ -938,6 +959,7 @@ mod tests {
             length: Length::kiloparsec(6.709257125565072),
             rate: PhotonRate::photons_per_second(466103097665666700000000000000000000000000000.0),
             scale_factor: 8.35028211377591.into(),
+            floor: None,
         };
         s.perform_timestep(Time::megayears(1.0), 0.1.into());
     }
@@ -956,6 +978,7 @@ mod tests {
             length: Length::kiloparsec(6.709257125565072),
             rate: PhotonRate::photons_per_second(466103097665666700000000000000000000000000000.0),
             scale_factor: 8.35028211377591.into(),
+            floor: None,
         };
         s.perform_timestep(Time::megayears(1.0), 0.1.into());
     }
