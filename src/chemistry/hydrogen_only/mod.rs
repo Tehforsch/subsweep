@@ -12,7 +12,6 @@ use crate::units::Dimensionless;
 use crate::units::EnergyPerTime;
 use crate::units::HeatingRate;
 use crate::units::HeatingTerm;
-use crate::units::InverseTemperature;
 use crate::units::Length;
 use crate::units::NumberDensity;
 use crate::units::PhotonRate;
@@ -25,9 +24,7 @@ use crate::units::VolumeRate;
 use crate::units::BOLTZMANN_CONSTANT;
 use crate::units::GAMMA;
 use crate::units::NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
-use crate::units::PHOTON_AVERAGE_ENERGY;
 use crate::units::PROTON_MASS;
-use crate::units::RYDBERG_CONSTANT;
 
 const HYDROGEN_MASS_FRACTION: f64 = 1.0;
 
@@ -172,7 +169,7 @@ impl Solver {
             / (t.powi(3).sqrt() * (const1 * t).sqrt() * ((const1 * t).sqrt() + 1.0).powi(2))
     }
 
-    fn case_b_recombination_rate(&self) -> VolumeRate {
+    pub fn case_b_recombination_rate(&self) -> VolumeRate {
         // let lambda = Temperature::kelvins(315614.0) / self.temperature;
         // VolumeRate::centimeters_cubed_per_s(
         //     2.753e-14 * lambda.powf(1.5) / (1.0 + (lambda / 2.74).powf(0.407)).powf(2.242),
@@ -184,7 +181,7 @@ impl Solver {
         Quotient::<VolumeRate, Temperature>::zero()
     }
 
-    fn case_b_recombination_cooling_rate(&self) -> HeatingTerm {
+    pub fn case_b_recombination_cooling_rate(&self) -> HeatingTerm {
         HeatingTerm::zero()
     }
 
@@ -306,7 +303,7 @@ impl Solver {
         num_photons * absorbed_fraction
     }
 
-    fn photoheating_rate(&self, timestep: Time) -> HeatingRate {
+    pub fn photoheating_rate(&self, timestep: Time) -> HeatingRate {
         // let num_ionized_hydrogen_atoms = self.num_newly_ionized_hydrogen_atoms(timestep);
         // let ionization_density = num_ionized_hydrogen_atoms / self.volume;
         // ionization_density * (PHOTON_AVERAGE_ENERGY - RYDBERG_CONSTANT) / timestep
