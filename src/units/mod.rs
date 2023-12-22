@@ -81,6 +81,7 @@ unit_system!(
         def PhotonRate = Rate,
         def SourceRate = Rate,
         unit photons_per_second = 1.0 / seconds,
+        def RateDensity = Rate / Volume3D,
         def PhotonRateDensity = PhotonRate / Volume3D,
         unit (photons_per_second_per_cubic_meter, "s^-1 m^-3") = photons_per_second / cubic_meters,
         unit (photons_per_second_per_cubic_centimeter, "s^-1 cm^-3") = photons_per_second / cubic_centimeters,

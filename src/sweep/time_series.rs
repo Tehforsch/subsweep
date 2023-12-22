@@ -17,7 +17,6 @@ use crate::communication::communicator::Communicator;
 use crate::components;
 use crate::components::IonizedHydrogenFraction;
 use crate::components::Mass;
-use crate::parameters::SimulationBox;
 use crate::prelude::Particles;
 use crate::units::Dimensionless;
 use crate::units::PhotonRate;
@@ -76,7 +75,6 @@ pub fn compute_time_series_system(
         &Cell,
     )>,
     mut weighted_photoionization_rate_writer: EventWriter<WeightedPhotoionizationRateVolumeAverage>,
-    box_: Res<SimulationBox>,
 ) {
     let ionized_mass = compute_global_sum(mass_av_frac.iter().map(|(mass, frac)| **mass * **frac));
     let total_mass = compute_global_sum(mass_av_frac.iter().map(|(mass, _)| **mass));
@@ -134,7 +132,7 @@ pub fn compute_time_series_system(
             .iter()
             .map(|(rate, cell)| **rate * cell.volume()),
     );
-    let average = volume_weighted_rate / total_volume * box_.volume();
+    let average = volume_weighted_rate / total_volume;
     debug!(
         "{:<41}: {:.5e} s^-1",
         "Volume av. photoionization rate",
@@ -147,7 +145,7 @@ pub fn compute_time_series_system(
             .iter()
             .map(|(rate, ion_frac, cell)| **rate * **ion_frac * cell.volume()),
     );
-    let average = volume_weighted_rate / total_volume * box_.volume();
+    let average = volume_weighted_rate / total_volume;
     debug!(
         "{:<41}: {:.5e} s^-1",
         "Volume av. weighted photoionization rate",
