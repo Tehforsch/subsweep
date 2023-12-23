@@ -19,7 +19,7 @@ use mpi::request::Request;
 use mpi::request::Scope;
 use mpi::request::WaitGuard;
 use mpi::topology::Rank;
-use mpi::topology::SystemCommunicator;
+use mpi::topology::SimpleCommunicator;
 use mpi::traits::Communicator;
 use mpi::traits::CommunicatorCollectives;
 use mpi::traits::Destination;
@@ -41,7 +41,7 @@ use super::SizedCommunicator;
 pub struct StaticUniverse(Arc<Mutex<Option<Universe>>>);
 
 impl StaticUniverse {
-    pub fn world(&self) -> SystemCommunicator {
+    pub fn world(&self) -> SimpleCommunicator {
         self.0.lock().unwrap().as_ref().unwrap().world()
     }
 
@@ -82,9 +82,8 @@ fn get_tag_for_type<T: 'static>() -> Tag {
     (hash as i16).abs() as i32
 }
 
-#[derive(Clone)]
 pub struct MpiWorld<T> {
-    world: SystemCommunicator,
+    world: SimpleCommunicator,
     _marker: PhantomData<T>,
     tag: Tag,
 }
@@ -127,7 +126,7 @@ where
 
     fn unchecked_convert<S>(&self) -> MpiWorld<S> {
         MpiWorld::<S> {
-            world: self.world,
+            world: SimpleCommunicator::world(),
             _marker: PhantomData,
             tag: self.tag,
         }
@@ -192,7 +191,7 @@ where
         T: Sum<T> + From<S>,
     {
         self.verify_tag();
-        unchecked_all_gather(self.world, send)
+        unchecked_all_gather(&mut self.world, send)
             .into_iter()
             .map(|s| T::from(s))
             .sum()
@@ -204,7 +203,7 @@ where
         T: PartialOrd<T> + From<S>,
     {
         self.verify_tag();
-        unchecked_all_gather(self.world, send)
+        unchecked_all_gather(&mut self.world, send)
             .into_iter()
             .map(|s| T::from(s))
             .min_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal))
@@ -216,7 +215,7 @@ where
         T: PartialOrd<T> + From<S>,
     {
         self.verify_tag();
-        unchecked_all_gather(self.world, send)
+        unchecked_all_gather(&mut self.world, send)
             .into_iter()
             .map(|s| T::from(s))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal))
@@ -224,7 +223,7 @@ where
 
     pub fn all_gather(&mut self, send: &S) -> Vec<S> {
         self.verify_tag();
-        unchecked_all_gather(self.world, send)
+        unchecked_all_gather(&mut self.world, send)
     }
 
     pub fn all_reduce_sum(&mut self, send: &u64) -> u64 {
@@ -279,7 +278,7 @@ unsafe fn get_buffer<T>(num_elements: usize) -> Vec<T> {
 
 impl<S> MpiWorld<S> {
     pub fn all_ranks_have_same_value<T: Equivalence + PartialEq>(&mut self, value: &T) -> bool {
-        let values = unchecked_all_gather(self.world, value);
+        let values = unchecked_all_gather(&mut self.world, value);
         for other_value in values {
             if *value != other_value {
                 return false;
@@ -289,7 +288,7 @@ impl<S> MpiWorld<S> {
     }
 }
 
-fn unchecked_all_gather<T: Equivalence>(world: SystemCommunicator, send: &T) -> Vec<T> {
+fn unchecked_all_gather<T: Equivalence>(world: &mut SimpleCommunicator, send: &T) -> Vec<T> {
     let mut result_buffer = unsafe { get_buffer(world.size() as usize) };
     world.all_gather_into(send, &mut result_buffer[..]);
     result_buffer
