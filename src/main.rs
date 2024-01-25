@@ -211,7 +211,7 @@ fn set_initial_ionized_fraction_from_electron_abundance_system(
         // to be super accurate, since we remap them anyways.
         let xh = Dimensionless::dimensionless(0.76);
         for (xe, mut xhi) in particles.iter_mut() {
-            **xhi = (xh * **xe).clamp(0.0, 1.0);
+            **xhi = (xh * **xe).clamp(1e-10, 1.0 - 1e-10);
         }
     }
 }
