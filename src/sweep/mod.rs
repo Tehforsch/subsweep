@@ -128,7 +128,6 @@ impl SubsweepPlugin for SweepPlugin {
             .add_derived_component::<components::Mass>()
             .add_derived_component::<components::PhotonRate>()
             .add_derived_component::<components::Temperature>()
-            .add_derived_component::<PhotoionizationRate>()
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<TemperatureMassAverage>::default())
@@ -139,15 +138,7 @@ impl SubsweepPlugin for SweepPlugin {
             .insert_resource(IsFirstTime(true))
             .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
-            .add_startup_system_to_stage(
-                StartupStages::InsertDerivedComponents,
-                initialize_optional_component_system::<PhotoionizationRate>,
-            )
             .add_system_to_stage(Stages::Sweep, run_sweep_system)
-            .add_system_to_stage(
-                Stages::Sweep,
-                sweep_optional_output_system::<PhotoionizationRate>.after(run_sweep_system),
-            )
             .add_parameter_type_and_get_result::<SweepParameters>();
         if parameters.rotate_directions {
             init_directions_rng(sim);
@@ -171,6 +162,7 @@ impl SubsweepPlugin for SweepPlugin {
         init_optional_chemistry_component::<HeatingRate>(sim);
         init_optional_chemistry_component::<RecombinationRate>(sim);
         init_optional_chemistry_component::<CollisionalIonizationRate>(sim);
+        init_optional_chemistry_component::<PhotoionizationRate>(sim);
         init_optional_component::<Timestep>(sim);
         init_optional_component::<IonizationTime>(sim);
     }
