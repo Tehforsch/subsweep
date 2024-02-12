@@ -484,6 +484,7 @@ mod tests {
                 extent,
                 cache: HaloCache::default(),
             },
+            None,
         );
         let full_data = full_constructor.data;
         let sub_data = sub_constructor.data;
