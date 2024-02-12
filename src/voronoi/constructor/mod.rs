@@ -13,6 +13,7 @@ pub(super) use self::halo_iteration::SearchData;
 use self::local::Local;
 use super::delaunay::PointIndex;
 use super::delaunay::TetraIndex;
+use super::primitives::Float;
 use super::visualizer::Visualizable;
 use super::Cell;
 use super::CellIndex;
@@ -51,6 +52,7 @@ where
     pub fn construct_from_iter<'b, F>(
         iter: impl Iterator<Item = (ParticleId, Point<D>)> + 'b,
         mut search: F,
+        characteristic_length: Option<Float>,
     ) -> Self
     where
         F: RadiusSearch<D>,
@@ -60,8 +62,9 @@ where
         let extent = search
             .determine_global_extent()
             .unwrap_or_else(|| Extent::from_points(points.iter().map(|p| p.1)).unwrap());
-        let characteristic_length =
-            get_characteristic_length::<D>(extent.max_side_length(), search.num_points());
+        let characteristic_length = characteristic_length.unwrap_or_else(|| {
+            get_characteristic_length::<D>(extent.max_side_length(), search.num_points())
+        });
         let extent = extent.including_periodic_images();
         let (triangulation, map) =
             Triangulation::<D>::construct_from_iter_custom_extent(points.into_iter(), &extent);
@@ -79,7 +82,7 @@ where
     }
 
     pub fn new(points: impl Iterator<Item = (ParticleId, Point<D>)>) -> Self {
-        Self::construct_from_iter(points, Local)
+        Self::construct_from_iter(points, Local, None)
     }
 
     pub fn only_delaunay<'a>(iter: impl Iterator<Item = &'a Point<D>> + 'a) -> Triangulation<D>
