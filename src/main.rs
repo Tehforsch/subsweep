@@ -18,6 +18,7 @@ use derive_more::DerefMut;
 use derive_more::From;
 use emit_build_information::emit_build_information;
 use hdf5::H5Type;
+use log::info;
 use mpi::traits::Equivalence;
 use subsweep::components;
 use subsweep::components::Density;
@@ -37,9 +38,11 @@ use subsweep::source_systems::Sources;
 use subsweep::sweep::grid::Cell;
 use subsweep::units::Dimensionless;
 use subsweep::units::Mass;
+use subsweep::units::PROTON_MASS;
 use subsweep::units::PhotonRate;
 use subsweep::units::SourceRate;
 use subsweep::units::Temperature;
+use subsweep::units::Volume;
 
 fn main() {
     let mut sim = SimulationBuilder::new();
@@ -110,6 +113,10 @@ fn main() {
         .add_startup_system_to_stage(
             StartupStages::InsertGrid,
             remove_components_system::<ElectronAbundance>,
+        )
+        .add_startup_system_to_stage(
+            StartupStages::InsertGrid,
+            fix_tng_temperature_system,
         )
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
             InputDatasetDescriptor::<Position>::new(
@@ -210,8 +217,22 @@ fn set_initial_ionized_fraction_from_electron_abundance_system(
         // Assume this everywhere, to simplify matters. The initial ionization fractions here don't need
         // to be super accurate, since we remap them anyways.
         let xh = Dimensionless::dimensionless(0.76);
-        for (xe, mut xhi) in particles.iter_mut() {
-            **xhi = (xh * **xe).clamp(1e-10, 1.0 - 1e-10);
+        for (xe, mut xhii) in particles.iter_mut() {
+            **xhii = (xh * **xe).clamp(1e-10, 1.0 - 1e-10);
         }
     }
+}
+
+fn fix_tng_temperature_system(
+    mut particles: Particles<(&components::Density, &mut components::Temperature)>,
+) {
+    let mut count = 0;
+    for (dens, mut temp) in particles.iter_mut() {
+        let number_dens = **dens / PROTON_MASS;
+        if number_dens > 1.0 / Volume::cubic_centimeters(0.1) {
+            **temp = Temperature::kelvins(1e3);
+            count += 1;
+        }
+    }
+    info!("{:?} particles fixed.", count);
 }
