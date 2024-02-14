@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use derive_custom::subsweep_parameters;
 use subsweep::source_systems::Source;
 use subsweep::units::Dimensionless;
+use subsweep::units::NumberDensity;
+use subsweep::units::Temperature;
 
 pub mod bpass;
 pub mod read_grid;
@@ -18,6 +20,13 @@ pub struct Parameters {
     /// Folder containing the subsweep snapshots from which to remap abundances and energies.
     /// The remapping will be done using the latest (highest-numbered) subfolder in the folder.
     pub remap_from: Option<PathBuf>,
+    pub temperature_fix: Option<TemperatureFix>,
+}
+
+#[subsweep_parameters]
+pub struct TemperatureFix {
+    pub density_limit: NumberDensity,
+    pub temperature: Temperature,
 }
 
 #[derive(Default)]

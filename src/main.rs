@@ -20,6 +20,7 @@ use emit_build_information::emit_build_information;
 use hdf5::H5Type;
 use log::info;
 use mpi::traits::Equivalence;
+use subsweep::communication::MpiWorld;
 use subsweep::components;
 use subsweep::components::Density;
 use subsweep::components::IonizedHydrogenFraction;
@@ -38,11 +39,10 @@ use subsweep::source_systems::Sources;
 use subsweep::sweep::grid::Cell;
 use subsweep::units::Dimensionless;
 use subsweep::units::Mass;
-use subsweep::units::PROTON_MASS;
 use subsweep::units::PhotonRate;
 use subsweep::units::SourceRate;
 use subsweep::units::Temperature;
-use subsweep::units::Volume;
+use subsweep::units::PROTON_MASS;
 
 fn main() {
     let mut sim = SimulationBuilder::new();
@@ -107,16 +107,16 @@ fn main() {
         )
         .add_startup_system_to_stage(StartupStages::Remap, remap_abundances_and_energies_system)
         .add_startup_system_to_stage(
+            StartupStages::Remap,
+            fix_tng_temperature_system.after(remap_abundances_and_energies_system),
+        )
+        .add_startup_system_to_stage(
             StartupStages::InsertGrid,
             remove_components_system::<InternalEnergy>,
         )
         .add_startup_system_to_stage(
             StartupStages::InsertGrid,
             remove_components_system::<ElectronAbundance>,
-        )
-        .add_startup_system_to_stage(
-            StartupStages::InsertGrid,
-            fix_tng_temperature_system,
         )
         .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
             InputDatasetDescriptor::<Position>::new(
@@ -225,14 +225,22 @@ fn set_initial_ionized_fraction_from_electron_abundance_system(
 
 fn fix_tng_temperature_system(
     mut particles: Particles<(&components::Density, &mut components::Temperature)>,
+    parameters: Res<Parameters>,
 ) {
-    let mut count = 0;
-    for (dens, mut temp) in particles.iter_mut() {
-        let number_dens = **dens / PROTON_MASS;
-        if number_dens > 1.0 / Volume::cubic_centimeters(0.1) {
-            **temp = Temperature::kelvins(1e3);
-            count += 1;
+    if let Some(params) = &parameters.temperature_fix {
+        let mut count = 0;
+        for (dens, mut temp) in particles.iter_mut() {
+            let number_dens = **dens / PROTON_MASS;
+            if number_dens > params.density_limit {
+                **temp = params.temperature;
+                count += 1;
+            }
         }
+        let mut world = MpiWorld::<usize>::new();
+        let sum = world.all_reduce_sum(&count);
+        info!(
+            "{:?} particles above critical density: fixed temperatures.",
+            sum
+        );
     }
-    info!("{:?} particles fixed.", count);
 }
