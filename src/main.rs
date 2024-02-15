@@ -18,7 +18,9 @@ use derive_more::DerefMut;
 use derive_more::From;
 use emit_build_information::emit_build_information;
 use hdf5::H5Type;
+use log::info;
 use mpi::traits::Equivalence;
+use subsweep::communication::MpiWorld;
 use subsweep::components;
 use subsweep::components::Density;
 use subsweep::components::IonizedHydrogenFraction;
@@ -40,6 +42,7 @@ use subsweep::units::Mass;
 use subsweep::units::PhotonRate;
 use subsweep::units::SourceRate;
 use subsweep::units::Temperature;
+use subsweep::units::PROTON_MASS;
 
 fn main() {
     let mut sim = SimulationBuilder::new();
@@ -103,6 +106,10 @@ fn main() {
             compute_cell_mass_system,
         )
         .add_startup_system_to_stage(StartupStages::Remap, remap_abundances_and_energies_system)
+        .add_startup_system_to_stage(
+            StartupStages::Remap,
+            fix_tng_temperature_system.after(remap_abundances_and_energies_system),
+        )
         .add_startup_system_to_stage(
             StartupStages::InsertGrid,
             remove_components_system::<InternalEnergy>,
@@ -210,8 +217,30 @@ fn set_initial_ionized_fraction_from_electron_abundance_system(
         // Assume this everywhere, to simplify matters. The initial ionization fractions here don't need
         // to be super accurate, since we remap them anyways.
         let xh = Dimensionless::dimensionless(0.76);
-        for (xe, mut xhi) in particles.iter_mut() {
-            **xhi = (xh * **xe).clamp(0.0, 1.0);
+        for (xe, mut xhii) in particles.iter_mut() {
+            **xhii = (xh * **xe).clamp(1e-10, 1.0 - 1e-10);
         }
+    }
+}
+
+fn fix_tng_temperature_system(
+    mut particles: Particles<(&components::Density, &mut components::Temperature)>,
+    parameters: Res<Parameters>,
+) {
+    if let Some(params) = &parameters.temperature_fix {
+        let mut count = 0;
+        for (dens, mut temp) in particles.iter_mut() {
+            let number_dens = **dens / PROTON_MASS;
+            if number_dens > params.density_limit {
+                **temp = params.temperature;
+                count += 1;
+            }
+        }
+        let mut world = MpiWorld::<usize>::new();
+        let sum = world.all_reduce_sum(&count);
+        info!(
+            "{:?} particles above critical density: fixed temperatures.",
+            sum
+        );
     }
 }

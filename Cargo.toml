@@ -39,7 +39,7 @@ kiddo = "2.1.1"
 lazy_static = "1.4.0"
 linked-hash-map = { version = "0.5.6", features = ["serde", "serde_impl"] }
 log = "0.4.20"
-mpi = { version = "0.6", default-features = false, features = ["derive"] }
+mpi = { version = "0.7", default-features = false, features = ["derive"] }
 ndarray = "0.15.6"
 num = "0.4.1"
 once_cell = "1.18.0"
