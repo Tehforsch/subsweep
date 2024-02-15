@@ -21,7 +21,6 @@ use log::info;
 use log::trace;
 use mpi::traits::Equivalence;
 use mpi::traits::MatchesRaw;
-use ordered_float::OrderedFloat;
 pub use parameters::DirectionsSpecification;
 pub use parameters::SweepParameters;
 
@@ -93,6 +92,7 @@ use crate::units::SourceRate;
 use crate::units::Temperature;
 use crate::units::Time;
 use crate::units::Volume;
+use crate::units::PROTON_MASS;
 
 pub type Rate<C> = <C as Chemistry>::Photons;
 pub type Species<C> = <C as Chemistry>::Species;
@@ -549,16 +549,12 @@ impl<C: Chemistry> Sweep<C> {
 
     fn update_chemistry(&mut self, timers: &mut Performance) {
         let _timer = timers.time("chemistry");
-        let mut ids_densities: Vec<_> = self
+        let ids: Vec<_> = self
             .sites
             .enumerate_with_levels()
             .map(|(id, _, site)| (id, site.density))
-            .collect();
-        ids_densities.sort_by_key(|(_, dens)| OrderedFloat(dens.value_unchecked()));
-        let indices = [0, ids_densities.len() - 1];
-        let ids: Vec<_> = indices
-            .into_iter()
-            .map(|i| ids_densities[i].0.index)
+            .filter(|(_, density)| (*density / PROTON_MASS) > 1.0 / Volume::cubic_centimeters(1.0))
+            .map(|(id, _)| id)
             .collect();
         for (id, cell) in self.cells.enumerate_active(self.current_level) {
             let (level, site) = self.sites.get_mut_with_level(id);
@@ -576,7 +572,7 @@ impl<C: Chemistry> Sweep<C> {
             };
             site.previous_incoming_total_rate = rate.clone();
             let rate_timescale = Timescale::photon_rate(timestep / relative_change);
-            let trace = Some(id.index).filter(|_| ids.contains(&id.index));
+            let trace = Some(id).filter(|_| ids.contains(&id)).map(|id| id.index);
             let chemistry_timescale = self.chemistry.update_abundances(
                 site,
                 rate,
