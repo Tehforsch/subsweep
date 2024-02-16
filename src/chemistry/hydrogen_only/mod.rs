@@ -303,32 +303,31 @@ impl Solver {
 
     fn temperature_change(&mut self, timestep: Time) -> Temperature {
         let k = (GAMMA - 1.0) * PROTON_MASS / (self.density * BOLTZMANN_CONSTANT);
-        let lambda = self.photoheating_rate(timestep) - self.cooling_rate();
+        let lambda = self.photoheating_rate() - self.cooling_rate();
         let dlambdadt = -self.cooling_rate_derivative();
         let mu = self.mu();
         k * mu * lambda * timestep / (1.0 - k * mu * dlambdadt * timestep)
     }
 
-    fn num_newly_ionized_hydrogen_atoms(&self, timestep: Time) -> Dimensionless {
+    fn newly_ionized_hydrogen_atom_rate(&self) -> Rate {
         let neutral_hydrogen_number_density = self.neutral_hydrogen_number_density();
         let sigma = NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
         let absorbed_fraction =
             1.0 - (-neutral_hydrogen_number_density * sigma * self.length).exp();
-        let num_photons: Dimensionless = timestep * self.rate;
-        num_photons * absorbed_fraction
+        self.rate * absorbed_fraction
     }
 
-    pub fn photoheating_rate(&self, timestep: Time) -> HeatingRate {
-        let num_ionized_hydrogen_atoms = self.num_newly_ionized_hydrogen_atoms(timestep);
+    pub fn photoheating_rate(&self) -> HeatingRate {
+        let num_ionized_hydrogen_atoms = self.newly_ionized_hydrogen_atom_rate();
         let ionization_density = num_ionized_hydrogen_atoms / self.volume;
-        ionization_density * (PHOTON_AVERAGE_ENERGY - RYDBERG_CONSTANT) / timestep
+        ionization_density * (PHOTON_AVERAGE_ENERGY - RYDBERG_CONSTANT)
     }
 
-    pub fn photoionization_rate(&self, timestep: Time) -> Rate {
-        let num_ionized_hydrogen_atoms = self.num_newly_ionized_hydrogen_atoms(timestep);
+    pub fn photoionization_rate(&self) -> Rate {
+        let num_ionized_hydrogen_atoms = self.newly_ionized_hydrogen_atom_rate();
         let fraction_ionized_hydrogen_atoms =
             num_ionized_hydrogen_atoms / (self.neutral_hydrogen_number_density() * self.volume);
-        fraction_ionized_hydrogen_atoms / timestep
+        fraction_ionized_hydrogen_atoms
     }
 
     fn ionized_fraction_change(&mut self, timestep: Time) -> Dimensionless {
@@ -339,7 +338,7 @@ impl Solver {
         let dalpha = self.case_b_recombination_rate_derivative();
         let beta = self.collisional_ionization_rate();
         let dbeta = self.collisional_ionization_rate_derivative();
-        let photoionization_rate = self.photoionization_rate(timestep);
+        let photoionization_rate = self.photoionization_rate();
         let c: Rate = beta * ne + photoionization_rate;
         let mu = self.mu();
         let d: Rate = alpha * ne;

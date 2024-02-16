@@ -10,13 +10,6 @@ use crate::components::RecombinationRate;
 use crate::parameters::Cosmology;
 use crate::prelude::ParticleId;
 use crate::prelude::Particles;
-use crate::units::Time;
-
-const TIMESTEP_YRS: f64 = 1.0;
-
-fn timestep() -> Time {
-    Time::years(TIMESTEP_YRS)
-}
 
 pub trait ChemistryOutputType {
     fn from_solver(solver: &Solver) -> Self;
@@ -24,13 +17,13 @@ pub trait ChemistryOutputType {
 
 impl ChemistryOutputType for PhotoionizationRate {
     fn from_solver(solver: &Solver) -> Self {
-        PhotoionizationRate(solver.photoionization_rate(timestep()))
+        PhotoionizationRate(solver.photoionization_rate())
     }
 }
 
 impl ChemistryOutputType for HeatingRate {
     fn from_solver(solver: &Solver) -> Self {
-        HeatingRate(solver.photoheating_rate(timestep()) - solver.cooling_rate())
+        HeatingRate(solver.photoheating_rate() - solver.cooling_rate())
     }
 }
 
