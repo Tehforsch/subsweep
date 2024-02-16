@@ -18,14 +18,18 @@ impl TimeSpec {
         match cosmology {
             Cosmology::Cosmological { a, h, params } => {
                 if let Some(params) = params {
-                    TimeSpec::Cosmological(CosmologicalTime::new(
-                        time,
-                        params.get_scalefactor_from_scalefactor_and_time_difference(
-                            (*a).into(),
-                            (*h).into(),
+                    if *a == 1.0 {
+                        TimeSpec::Time(time)
+                    } else {
+                        TimeSpec::Cosmological(CosmologicalTime::new(
                             time,
-                        ),
-                    ))
+                            params.get_scalefactor_from_scalefactor_and_time_difference(
+                                (*a).into(),
+                                (*h).into(),
+                                time,
+                            ),
+                        ))
+                    }
                 } else {
                     error!("No cosmological parameters given. Cannot determine current redshift and scale factor for output.");
                     TimeSpec::Time(time)
