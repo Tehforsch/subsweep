@@ -143,6 +143,10 @@ impl Chemistry for HydrogenOnly {
                 serde_yaml::to_string(&solver.collisional_ionization_rate()).unwrap(),
             );
             map.insert(
+                "photo_ion",
+                serde_yaml::to_string(&solver.photoionization_rate()).unwrap(),
+            );
+            map.insert(
                 "recomb_cool",
                 serde_yaml::to_string(&solver.case_b_recombination_cooling_rate()).unwrap(),
             );
