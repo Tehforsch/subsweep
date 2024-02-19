@@ -17,14 +17,18 @@ use subsweep::parameters::InputParameters;
 use subsweep::source_systems::Source;
 use subsweep::source_systems::Sources;
 use subsweep::units;
+use subsweep::units::ArepoGarbageUnit;
+use subsweep::units::Dimension;
 use subsweep::units::Dimensionless;
 use subsweep::units::Mass;
+use subsweep::units::MassRate;
 use subsweep::units::Time;
 use subsweep::units::VecLength;
 
 use super::bpass::bpass_lookup;
 use super::unit_reader::make_descriptor;
 use super::unit_reader::read_vec;
+use super::unit_reader::ArepoGarbageUnitReader;
 use super::unit_reader::ArepoUnitReader;
 use super::Parameters;
 
@@ -39,8 +43,20 @@ pub struct Metallicity(pub Dimensionless);
 // This is dimensionless in the arepo outputs, since its the scale factor
 pub struct StellarFormationTime(pub Dimensionless);
 
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "accretion_rate"]
+#[repr(transparent)]
+pub struct AccretionRate(pub MassRate);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "mdot"]
+#[repr(transparent)]
+pub struct MDot(pub ArepoGarbageUnit);
+
 impl_to_dataset!(StellarFormationTime, units::Dimensionless, true);
 impl_to_dataset!(Metallicity, units::Dimensionless, true);
+impl_to_dataset!(AccretionRate, units::MassRate, true);
+impl_to_dataset!(MDot, units::ArepoGarbageUnit, true);
 
 pub fn read_sources_system(
     mut commands: Commands,
@@ -50,7 +66,13 @@ pub fn read_sources_system(
 ) {
     let reader = Reader::split_between_ranks(parameters.all_input_files());
     let from_ics = run_parameters.sources.unwrap_from_ics();
-    let sources = read_sources(&reader, &cosmology, from_ics.escape_fraction);
+    let mut sources = vec![];
+    if let Some(escape_frac) = from_ics.escape_fraction {
+        sources.extend(read_stellar_sources(&reader, &cosmology, escape_frac));
+    }
+    if let Some(escape_frac) = from_ics.escape_fraction_agn {
+        sources.extend(read_agn_sources(&reader, &cosmology, escape_frac));
+    }
     commands.insert_resource(Sources { sources });
 }
 
@@ -76,7 +98,7 @@ fn formation_scale_factor_to_age(
     cosmology.time_difference_between_scalefactors(formation_scale_factor, cosmology.scale_factor())
 }
 
-fn read_sources(
+fn read_stellar_sources(
     reader: &Reader,
     cosmology: &Cosmology,
     escape_fraction: Dimensionless,
@@ -125,4 +147,50 @@ fn read_sources(
             },
         )
         .collect()
+}
+
+fn read_agn_sources(
+    reader: &Reader,
+    cosmology: &Cosmology,
+    escape_fraction: Dimensionless,
+) -> Vec<Source> {
+    let unit_reader = ArepoUnitReader::new(cosmology.clone());
+    let descriptor = make_descriptor::<Position, _>(
+        &unit_reader,
+        "PartType5/Coordinates",
+        DatasetShape::TwoDimensional(read_vec),
+    );
+    let position = reader.read_dataset(descriptor);
+    let garbage_unit_reader = ArepoGarbageUnitReader(Dimension {
+        mass: -1,
+        length: 2,
+        time: -1,
+        ..Dimension::none()
+    });
+    let descriptor = make_descriptor::<MDot, _>(
+        &garbage_unit_reader,
+        "PartType5/BH_Mdot",
+        DatasetShape::OneDimensional,
+    );
+    let accretion_rate = reader.read_dataset(descriptor).into_iter().map(|acc| {
+        AccretionRate(acc.value_unchecked() * Mass::solar(1e10) / Time::gigayears(0.978))
+    });
+    position
+        .zip(accretion_rate)
+        .map(|(position, accretion_rate)| {
+            new_agn_source(cosmology, *position, accretion_rate, escape_fraction)
+        })
+        .collect()
+}
+
+fn new_agn_source(
+    cosmology: &Cosmology,
+    position: VecLength,
+    accretion_rate: AccretionRate,
+    escape_fraction: Dimensionless,
+) -> Source {
+    Source {
+        pos: position,
+        rate: todo!(),
+    }
 }

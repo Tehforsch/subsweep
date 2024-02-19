@@ -97,6 +97,10 @@ unit_system!(
         unit (ergs_per_centimeters_cubed_per_s, "ergs cm^-3 s^-1") = ergs / (cubic_centimeters * seconds),
         def NumberDensity = Dimensionless / Volume3D,
         unit per_centimeters_cubed = 1.0 / cubic_centimeters,
+        def MassRate = Mass / Time,
+        unit (kilograms_per_second, "kg s^-1") = kilograms / seconds,
+        unit (solar_mass_per_gigayear, "Msol Gyr^-1") = solar / gigayears,
+        def ArepoGarbageUnit = Length * Velocity / Mass,
 
         constant BOLTZMANN_CONSTANT = 1.380649e-23 * joules / kelvins,
         constant PROTON_MASS = 1.67262192369e-27 * kilograms,

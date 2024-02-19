@@ -30,8 +30,8 @@ pub enum GridParameters {
 
 #[subsweep_parameters]
 pub enum SourceType {
-    FromIcs(FromIcs),
     Explicit(Vec<Source>),
+    FromIcs(FromIcs),
 }
 
 impl SourceType {
@@ -46,5 +46,6 @@ impl SourceType {
 
 #[subsweep_parameters]
 pub struct FromIcs {
-    escape_fraction: Dimensionless,
+    escape_fraction: Option<Dimensionless>,
+    escape_fraction_agn: Option<Dimensionless>,
 }

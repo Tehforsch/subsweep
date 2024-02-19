@@ -127,3 +127,18 @@ impl UnitReader for ArepoUnitReader {
         }
     }
 }
+
+/// For those times when arepo unit specifications are wrong and you just want the raw results
+/// so you can compute units yourself like its 1999.
+#[derive(Clone)]
+pub struct ArepoGarbageUnitReader(pub Dimension);
+
+impl UnitReader for ArepoGarbageUnitReader {
+    fn read_scale_factor(&self, _: &Dataset) -> f64 {
+        1.0
+    }
+
+    fn read_dimension(&self, _: &Dataset) -> Dimension {
+        self.0.clone()
+    }
+}
