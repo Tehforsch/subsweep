@@ -22,6 +22,7 @@ use subsweep::units::Dimension;
 use subsweep::units::Dimensionless;
 use subsweep::units::Mass;
 use subsweep::units::MassRate;
+use subsweep::units::PhotonRate;
 use subsweep::units::Time;
 use subsweep::units::VecLength;
 
@@ -178,19 +179,20 @@ fn read_agn_sources(
     position
         .zip(accretion_rate)
         .map(|(position, accretion_rate)| {
-            new_agn_source(cosmology, *position, accretion_rate, escape_fraction)
+            new_agn_source(*position, accretion_rate, escape_fraction)
         })
         .collect()
 }
 
 fn new_agn_source(
-    cosmology: &Cosmology,
     position: VecLength,
-    accretion_rate: AccretionRate,
+    _accretion_rate: AccretionRate,
     escape_fraction: Dimensionless,
 ) -> Source {
     Source {
         pos: position,
-        rate: todo!(),
+        // Obtained by integrating the spectrum from Feltre et al 2016
+        // from 13.6eV to infinity
+        rate: PhotonRate::photons_per_second(4.8e54) * escape_fraction,
     }
 }
