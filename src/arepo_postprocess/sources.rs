@@ -6,6 +6,7 @@ use derive_more::Deref;
 use derive_more::DerefMut;
 use derive_more::From;
 use hdf5::H5Type;
+use log::info;
 use mpi::traits::Equivalence;
 use subsweep::components;
 use subsweep::components::Position;
@@ -20,9 +21,10 @@ use subsweep::units;
 use subsweep::units::ArepoGarbageUnit;
 use subsweep::units::Dimension;
 use subsweep::units::Dimensionless;
+use subsweep::units::InverseEnergy;
 use subsweep::units::Mass;
 use subsweep::units::MassRate;
-use subsweep::units::PhotonRate;
+use subsweep::units::SPEED_OF_LIGHT;
 use subsweep::units::Time;
 use subsweep::units::VecLength;
 
@@ -186,13 +188,21 @@ fn read_agn_sources(
 
 fn new_agn_source(
     position: VecLength,
-    _accretion_rate: AccretionRate,
+    accretion_rate: AccretionRate,
     escape_fraction: Dimensionless,
 ) -> Source {
+    let efficiency = 0.1;
+    // Obtained by integrating the spectrum from Feltre et al 2016
+    // from 13.6eV to infinity
+    let normalization = InverseEnergy::per_ergs(4445821918.0);
+    let agn_luminosity = efficiency * SPEED_OF_LIGHT.powi::<2>() * *accretion_rate;
+    info!("AGN Luminosity: {} ergs/s", agn_luminosity.in_ergs_per_s());
+    info!(
+        "Modified AGN Luminosity: {} / s",
+        (normalization * agn_luminosity * escape_fraction).in_photons_per_second()
+    );
     Source {
         pos: position,
-        // Obtained by integrating the spectrum from Feltre et al 2016
-        // from 13.6eV to infinity
-        rate: PhotonRate::photons_per_second(4.8e54) * escape_fraction,
+        rate: normalization * agn_luminosity * escape_fraction,
     }
 }

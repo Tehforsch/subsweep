@@ -59,6 +59,8 @@ unit_system!(
         unit (joules, "J") = 1.0 * Energy,
         unit (ergs, "J") = 1e-7 * joules,
         unit (electron_volts, "eV") = 1.602176634e-19 * joules,
+        def InverseEnergy = Dimensionless / Energy,
+        unit per_ergs = 1.0 / ergs,
         def Temperature = { temperature: 1 },
         def InverseTemperature = Dimensionless / Temperature,
         unit (kelvins, "K") = Temperature,
