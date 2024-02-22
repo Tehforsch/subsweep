@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use bevy_ecs::prelude::Commands;
 use bevy_ecs::prelude::Component;
 use bevy_ecs::prelude::Res;
@@ -24,11 +26,11 @@ use subsweep::units::Dimensionless;
 use subsweep::units::InverseEnergy;
 use subsweep::units::Mass;
 use subsweep::units::MassRate;
-use subsweep::units::SPEED_OF_LIGHT;
 use subsweep::units::Time;
 use subsweep::units::VecLength;
+use subsweep::units::SPEED_OF_LIGHT;
 
-use super::bpass::bpass_lookup;
+use super::luminosity_table::Table;
 use super::unit_reader::make_descriptor;
 use super::unit_reader::read_vec;
 use super::unit_reader::ArepoGarbageUnitReader;
@@ -71,7 +73,12 @@ pub fn read_sources_system(
     let from_ics = run_parameters.sources.unwrap_from_ics();
     let mut sources = vec![];
     if let Some(escape_frac) = from_ics.escape_fraction {
-        sources.extend(read_stellar_sources(&reader, &cosmology, escape_frac));
+        sources.extend(read_stellar_sources(
+            &reader,
+            &cosmology,
+            escape_frac,
+            &from_ics.stellar_table,
+        ));
     }
     if let Some(escape_frac) = from_ics.escape_fraction_agn {
         sources.extend(read_agn_sources(&reader, &cosmology, escape_frac));
@@ -80,6 +87,7 @@ pub fn read_sources_system(
 }
 
 fn new_bpass_source(
+    table: &Table,
     cosmology: &Cosmology,
     position: VecLength,
     metallicity: Dimensionless,
@@ -90,7 +98,7 @@ fn new_bpass_source(
     let age = formation_scale_factor_to_age(cosmology, formation_scale_factor);
     Source {
         pos: position,
-        rate: bpass_lookup(age, metallicity, mass) * escape_fraction,
+        rate: table.lookup(age, metallicity, mass) * escape_fraction,
     }
 }
 
@@ -105,6 +113,7 @@ fn read_stellar_sources(
     reader: &Reader,
     cosmology: &Cosmology,
     escape_fraction: Dimensionless,
+    table: &Option<PathBuf>,
 ) -> Vec<Source> {
     let unit_reader = ArepoUnitReader::new(cosmology.clone());
     let descriptor = make_descriptor::<Position, _>(
@@ -131,6 +140,10 @@ fn read_stellar_sources(
         DatasetShape::OneDimensional,
     );
     let mass = reader.read_dataset(descriptor);
+    let table = match table {
+        Some(f) => Table::from_file(f),
+        None => Table::bpass(),
+    };
     position
         .zip(metallicity)
         .zip(formation_scale_factor)
@@ -140,6 +153,7 @@ fn read_stellar_sources(
         .map(
             |(((position, metallicity), formation_scale_factor), mass)| {
                 new_bpass_source(
+                    &table,
                     cosmology,
                     *position,
                     *metallicity,

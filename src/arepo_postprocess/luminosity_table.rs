@@ -8,57 +8,85 @@ fn linear_interpolate(x1: f64, x2: f64, y1: f64, y2: f64, x: f64) -> f64 {
     y1 + (x - x1) / (x2 - x1) * (y2 - y1)
 }
 
-pub fn bpass_lookup(age: Time, metallicity: Dimensionless, mass: Mass) -> SourceRate {
-    let get_index = |bins: &[f64], value: f64| {
-        bins.binary_search_by_key(&OrderedFloat(value), |x| OrderedFloat(*x))
-            .map(|x| x + 1)
-            .unwrap_or_else(|e| e)
-    };
-    let metallicity = metallicity.value();
-    let age = age.in_years();
-
-    let safety = 1.00001;
-    let age = age.clamp(
-        BPASS_AGE_BINS[0] * safety,
-        BPASS_AGE_BINS[NUM_BPASS_AGES - 1] / safety,
-    );
-    let metallicity = metallicity.clamp(
-        BPASS_METALLICITY_BINS[0] * safety,
-        BPASS_METALLICITY_BINS[NUM_BPASS_METALLICITIES - 1] / safety,
-    );
-
-    let metallicity_index = get_index(&BPASS_METALLICITY_BINS, metallicity);
-    let age_index = get_index(&BPASS_AGE_BINS, age);
-
-    let l1 = linear_interpolate(
-        BPASS_AGE_BINS[age_index - 1],
-        BPASS_AGE_BINS[age_index],
-        BPASS_TABLE[age_index - 1][metallicity_index - 1],
-        BPASS_TABLE[age_index][metallicity_index - 1],
-        age,
-    );
-    let l2 = linear_interpolate(
-        BPASS_AGE_BINS[age_index - 1],
-        BPASS_AGE_BINS[age_index],
-        BPASS_TABLE[age_index - 1][metallicity_index],
-        BPASS_TABLE[age_index][metallicity_index],
-        age,
-    );
-
-    let source_rate_per_mass = linear_interpolate(
-        BPASS_METALLICITY_BINS[metallicity_index - 1],
-        BPASS_METALLICITY_BINS[metallicity_index],
-        l1,
-        l2,
-        metallicity,
-    );
-    SourceRate::photons_per_second(source_rate_per_mass * mass.in_solar())
+pub struct Table {
+    age_bins: Vec<f64>,
+    metallicity_bins: Vec<f64>,
+    table: Vec<Vec<f64>>,
 }
 
-const NUM_BPASS_AGES: usize = 51;
-const NUM_BPASS_METALLICITIES: usize = 13;
+impl Table {
+    fn num_ages(&self) -> usize {
+        self.age_bins.len()
+    }
 
-const BPASS_AGE_BINS: [f64; NUM_BPASS_AGES] = [
+    fn num_metallicities(&self) -> usize {
+        self.metallicity_bins.len()
+    }
+
+    pub fn lookup(&self, age: Time, metallicity: Dimensionless, mass: Mass) -> SourceRate {
+        let get_index = |bins: &[f64], value: f64| {
+            bins.binary_search_by_key(&OrderedFloat(value), |x| OrderedFloat(*x))
+                .map(|x| x + 1)
+                .unwrap_or_else(|e| e)
+        };
+        let metallicity = metallicity.value();
+        let age = age.in_years();
+
+        let safety = 1.00001;
+        let age = age.clamp(
+            self.age_bins[0] * safety,
+            self.age_bins[self.num_ages() - 1] / safety,
+        );
+        let metallicity = metallicity.clamp(
+            self.metallicity_bins[0] * safety,
+            self.metallicity_bins[self.num_metallicities() - 1] / safety,
+        );
+
+        let metallicity_index = get_index(&self.metallicity_bins, metallicity);
+        let age_index = get_index(&self.age_bins, age);
+
+        let l1 = linear_interpolate(
+            self.age_bins[age_index - 1],
+            self.age_bins[age_index],
+            self.table[age_index - 1][metallicity_index - 1],
+            self.table[age_index][metallicity_index - 1],
+            age,
+        );
+        let l2 = linear_interpolate(
+            self.age_bins[age_index - 1],
+            self.age_bins[age_index],
+            self.table[age_index - 1][metallicity_index],
+            self.table[age_index][metallicity_index],
+            age,
+        );
+
+        let source_rate_per_mass = linear_interpolate(
+            self.metallicity_bins[metallicity_index - 1],
+            self.metallicity_bins[metallicity_index],
+            l1,
+            l2,
+            metallicity,
+        );
+        SourceRate::photons_per_second(source_rate_per_mass * mass.in_solar())
+    }
+
+    pub fn bpass() -> Self {
+        Self {
+            age_bins: BPASS_AGE_BINS.into_iter().collect(),
+            metallicity_bins: BPASS_METALLICITY_BINS.into_iter().collect(),
+            table: BPASS_TABLE
+                .into_iter()
+                .map(|t| t.into_iter().collect())
+                .collect(),
+        }
+    }
+
+    pub fn from_file(f: &std::path::PathBuf) -> Table {
+        todo!()
+    }
+}
+
+const BPASS_AGE_BINS: [f64; 51] = [
     1.00000000e+06,
     1.25892541e+06,
     1.58489319e+06,
@@ -112,12 +140,12 @@ const BPASS_AGE_BINS: [f64; NUM_BPASS_AGES] = [
     1.00000000e+11,
 ];
 
-const BPASS_METALLICITY_BINS: [f64; NUM_BPASS_METALLICITIES] = [
+const BPASS_METALLICITY_BINS: [f64; 13] = [
     1.0e-05, 1.0e-04, 1.0e-03, 2.0e-03, 3.0e-03, 4.0e-03, 6.0e-03, 8.0e-03, 1.0e-02, 1.4e-02,
     2.0e-02, 3.0e-02, 4.0e-02,
 ];
 
-const BPASS_TABLE: [[f64; NUM_BPASS_METALLICITIES]; NUM_BPASS_AGES] = [
+const BPASS_TABLE: [[f64; 13]; 51] = [
     [
         4.22119750e+46,
         4.11037266e+46,
@@ -892,7 +920,7 @@ mod tests {
     use subsweep::units::Mass;
     use subsweep::units::Time;
 
-    use super::bpass_lookup;
+    use super::Table;
 
     pub fn assert_float_is_close(x: Float, y: Float) {
         assert!(((x - y) / (x.abs() + y.abs())).abs() < 1e-5, "{} {}", x, y)
@@ -900,8 +928,9 @@ mod tests {
 
     #[test]
     fn bpass() {
+        let table = Table::bpass();
         let check_is_close = |age_in_years, metallicity, desired_value_photons_per_s| {
-            let source = bpass_lookup(
+            let source = table.lookup(
                 Time::years(age_in_years),
                 Dimensionless::dimensionless(metallicity),
                 Mass::solar(1.0),

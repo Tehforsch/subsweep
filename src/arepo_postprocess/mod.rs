@@ -4,7 +4,7 @@ use derive_custom::subsweep_parameters;
 use subsweep::source_systems::Source;
 use subsweep::units::Dimensionless;
 
-pub mod bpass;
+pub mod luminosity_table;
 pub mod read_grid;
 pub mod remap;
 pub mod sources;
@@ -47,5 +47,6 @@ impl SourceType {
 #[subsweep_parameters]
 pub struct FromIcs {
     escape_fraction: Option<Dimensionless>,
+    stellar_table: Option<PathBuf>,
     escape_fraction_agn: Option<Dimensionless>,
 }
