@@ -1,3 +1,7 @@
+use std::fs;
+use std::path::PathBuf;
+
+use log::info;
 use ordered_float::OrderedFloat;
 use subsweep::units::Dimensionless;
 use subsweep::units::Mass;
@@ -81,9 +85,34 @@ impl Table {
         }
     }
 
-    pub fn from_file(f: &std::path::PathBuf) -> Table {
-        todo!()
+    pub fn from_file(f: &PathBuf) -> Table {
+        info!("Reading stellar source table from {:?}", f);
+        let content = fs::read_to_string(f).unwrap_or_else(|_| {
+            panic!("Failed to read in table at {:?}", f);
+        });
+        let mut lines = content.lines().filter(|line| !line.starts_with("#"));
+        let metallicity_bins = read_csv_line(lines.next().unwrap());
+        let age_bins = read_csv_line(lines.next().unwrap());
+        let num_rows = metallicity_bins.len();
+        let num_columns = age_bins.len();
+        let table: Vec<Vec<_>> = lines.map(|line| read_csv_line(line)).collect();
+        assert_eq!(table.len(), num_rows, "Trailing rows in table");
+        for row in table.iter() {
+            assert_eq!(row.len(), num_columns, "Trailing values in row.");
+        }
+        Table {
+            metallicity_bins,
+            age_bins,
+            table,
+        }
     }
+}
+
+fn read_csv_line(s: &str) -> Vec<f64> {
+    s.split(",")
+        .into_iter()
+        .map(|x| x.parse().unwrap())
+        .collect()
 }
 
 const BPASS_AGE_BINS: [f64; 51] = [

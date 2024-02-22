@@ -47,6 +47,11 @@ impl SourceType {
 #[subsweep_parameters]
 pub struct FromIcs {
     escape_fraction: Option<Dimensionless>,
+    /// A path to a table specifying the lookup table of ionizing photon rate
+    /// as a function of metallicity and age.
+    /// First non-comment line: M Metallicity bins in total metallicity
+    /// Second non-comment line: N Age bins in years
+    /// Remaining M lines: N entries with the ionizing photon rates in [s^-1 Msol^-1].
     stellar_table: Option<PathBuf>,
     escape_fraction_agn: Option<Dimensionless>,
 }
