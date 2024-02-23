@@ -224,15 +224,20 @@ fn set_initial_ionized_fraction_from_electron_abundance_system(
 }
 
 fn fix_tng_temperature_system(
-    mut particles: Particles<(&components::Density, &mut components::Temperature)>,
+    mut particles: Particles<(
+        &components::Density,
+        &mut components::Temperature,
+        &mut components::IonizedHydrogenFraction,
+    )>,
     parameters: Res<Parameters>,
 ) {
     if let Some(params) = &parameters.temperature_fix {
         let mut count = 0;
-        for (dens, mut temp) in particles.iter_mut() {
+        for (dens, mut temp, mut xhii) in particles.iter_mut() {
             let number_dens = **dens / PROTON_MASS;
             if number_dens > params.density_limit {
                 **temp = params.temperature;
+                **xhii = params.ionized_hydrogen_fraction;
                 count += 1;
             }
         }

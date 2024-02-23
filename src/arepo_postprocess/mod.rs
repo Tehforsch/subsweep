@@ -27,6 +27,7 @@ pub struct Parameters {
 pub struct TemperatureFix {
     pub density_limit: NumberDensity,
     pub temperature: Temperature,
+    pub ionized_hydrogen_fraction: Dimensionless,
 }
 
 #[derive(Default)]
