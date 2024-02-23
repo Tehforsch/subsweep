@@ -100,12 +100,28 @@ impl Table {
         for row in table.iter() {
             assert_eq!(row.len(), num_columns, "Trailing values in row.");
         }
+        let table = transpose(table);
         Table {
             metallicity_bins,
             age_bins,
             table,
         }
     }
+}
+
+fn transpose(matrix: Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+    if matrix.is_empty() {
+        return vec![];
+    }
+    let num_rows = matrix.len();
+    let num_cols = matrix[0].len();
+    let mut transposed = vec![vec![0.0; num_rows]; num_cols];
+    for i in 0..num_rows {
+        for j in 0..num_cols {
+            transposed[j][i] = matrix[i][j];
+        }
+    }
+    transposed
 }
 
 fn read_csv_line(s: &str) -> Vec<f64> {
