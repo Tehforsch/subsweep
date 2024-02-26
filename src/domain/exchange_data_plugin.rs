@@ -27,8 +27,6 @@ use crate::simulation::Simulation;
 use crate::simulation::SubsweepPlugin;
 
 #[derive(Named)]
-struct ExchangeDataOrder;
-#[derive(Named)]
 struct ExchangeDataStartupOrder;
 
 #[derive(Default, Deref, DerefMut, Resource)]

@@ -1,5 +1,6 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
+#![allow(non_local_definitions)]
 
 mod arepo_postprocess;
 mod emit_build_information;
