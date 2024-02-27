@@ -8,6 +8,7 @@ use mpi::traits::Equivalence;
 use crate::named::Named;
 use crate::prelude::Float;
 use crate::units;
+use crate::units::Opacity;
 use crate::units::Time;
 use crate::units::VecLength;
 
@@ -76,6 +77,11 @@ pub struct Timestep(pub Time);
 #[repr(transparent)]
 pub struct IonizationTime(pub Time);
 
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "dust_opacity"]
+#[repr(transparent)]
+pub struct DustOpacity(pub Opacity);
+
 impl Default for IonizationTime {
     fn default() -> Self {
         IonizationTime(Time::new_unchecked(Float::INFINITY))
@@ -106,6 +112,7 @@ impl_to_dataset!(Position, units::Length, true);
 impl_to_dataset!(Density, units::Density, true);
 impl_to_dataset!(Source, units::SourceRate, true);
 impl_to_dataset!(Mass, units::Mass, true);
+impl_to_dataset!(DustOpacity, units::Opacity, true);
 
 // Dynamic quantities
 impl_to_dataset!(IonizedHydrogenFraction, units::Dimensionless, false);

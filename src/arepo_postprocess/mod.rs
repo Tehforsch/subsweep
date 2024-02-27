@@ -21,6 +21,8 @@ pub struct Parameters {
     /// The remapping will be done using the latest (highest-numbered) subfolder in the folder.
     pub remap_from: Option<PathBuf>,
     pub temperature_fix: Option<TemperatureFix>,
+    #[serde(default)]
+    pub dust: bool,
 }
 
 #[subsweep_parameters]

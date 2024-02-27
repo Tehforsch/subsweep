@@ -15,6 +15,7 @@ use crate::units::HeatingTerm;
 use crate::units::InverseTemperature;
 use crate::units::Length;
 use crate::units::NumberDensity;
+use crate::units::Opacity;
 use crate::units::PhotonRate;
 use crate::units::Quantity;
 use crate::units::Rate;
@@ -50,17 +51,20 @@ pub struct HydrogenOnlySpecies {
     pub ionized_hydrogen_fraction: Dimensionless,
     pub temperature: Temperature,
     pub timestep: Time,
+    pub dust_opacity: Opacity,
 }
 
 impl HydrogenOnlySpecies {
     pub(crate) fn new(
         ionized_hydrogen_fraction: Dimensionless,
         temperature: Temperature,
+        dust_opacity: Opacity,
     ) -> HydrogenOnlySpecies {
         Self {
             ionized_hydrogen_fraction,
             temperature,
             timestep: Time::zero(),
+            dust_opacity,
         }
     }
 }
@@ -83,7 +87,9 @@ impl Chemistry for HydrogenOnly {
         } else {
             let non_absorbed_fraction =
                 (-neutral_hydrogen_number_density * sigma * cell.size).exp();
-            incoming_rate * non_absorbed_fraction
+            let dust_transmission_fraction =
+                (-site.density * site.species.dust_opacity * cell.size).exp();
+            incoming_rate * non_absorbed_fraction * dust_transmission_fraction
         }
     }
 

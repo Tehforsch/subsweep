@@ -103,6 +103,7 @@ unit_system!(
         unit (kilograms_per_second, "kg s^-1") = kilograms / seconds,
         unit (solar_mass_per_gigayear, "Msol Gyr^-1") = solar / gigayears,
         def ArepoGarbageUnit = Length * Velocity / Mass,
+        def Opacity = Dimensionless / (Density * Length),
 
         constant BOLTZMANN_CONSTANT = 1.380649e-23 * joules / kelvins,
         constant PROTON_MASS = 1.67262192369e-27 * kilograms,

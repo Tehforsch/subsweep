@@ -128,6 +128,7 @@ impl SubsweepPlugin for SweepPlugin {
             .add_derived_component::<components::Mass>()
             .add_derived_component::<components::PhotonRate>()
             .add_derived_component::<components::Temperature>()
+            .add_derived_component::<components::DustOpacity>()
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationMassAverage>::default())
             .add_plugin(TimeSeriesPlugin::<HydrogenIonizationVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<TemperatureMassAverage>::default())
@@ -641,6 +642,7 @@ fn init_sweep_system(
         &IonizedHydrogenFraction,
         &components::Temperature,
         &Source,
+        &components::DustOpacity,
     )>,
     haloes: HaloParticles<&ParticleId>,
     sweep_parameters: Res<SweepParameters>,
@@ -656,12 +658,16 @@ fn init_sweep_system(
     let sites: HashMap<_, _> = sites_query
         .iter()
         .map(
-            |(_, id, density, ionized_hydrogen_fraction, temperature, source)| {
+            |(_, id, density, ionized_hydrogen_fraction, temperature, source, dust_opacity)| {
                 (
                     *id,
                     Site::<HydrogenOnly>::new(
                         &directions,
-                        HydrogenOnlySpecies::new(**ionized_hydrogen_fraction, **temperature),
+                        HydrogenOnlySpecies::new(
+                            **ionized_hydrogen_fraction,
+                            **temperature,
+                            **dust_opacity,
+                        ),
                         **density,
                         **source,
                     ),

@@ -23,6 +23,7 @@ use mpi::traits::Equivalence;
 use subsweep::communication::MpiWorld;
 use subsweep::components;
 use subsweep::components::Density;
+use subsweep::components::DustOpacity;
 use subsweep::components::IonizedHydrogenFraction;
 use subsweep::components::Position;
 use subsweep::cosmology::Cosmology;
@@ -39,6 +40,7 @@ use subsweep::source_systems::Sources;
 use subsweep::sweep::grid::Cell;
 use subsweep::units::Dimensionless;
 use subsweep::units::Mass;
+use subsweep::units::Opacity;
 use subsweep::units::PhotonRate;
 use subsweep::units::SourceRate;
 use subsweep::units::Temperature;
@@ -85,6 +87,22 @@ fn main() {
                 ..Default::default()
             },
         ));
+    }
+    if parameters.dust {
+        sim.add_plugin(DatasetInputPlugin::<DustOpacity>::from_descriptor(
+            InputDatasetDescriptor::<DustOpacity> {
+                descriptor: DatasetDescriptor {
+                    dataset_name: "PartType0/DustOpacity".into(),
+                    unit_reader: unit_reader.clone(),
+                },
+                ..Default::default()
+            },
+        ));
+    } else {
+        sim.add_startup_system_to_stage(
+            StartupStages::InsertDerivedComponents,
+            set_dust_opacity_zero_system,
+        );
     }
     sim.add_plugin(SourcePlugin)
         .add_parameter_type::<Parameters>()
@@ -220,6 +238,14 @@ fn set_initial_ionized_fraction_from_electron_abundance_system(
         for (xe, mut xhii) in particles.iter_mut() {
             **xhii = (xh * **xe).clamp(1e-10, 1.0 - 1e-10);
         }
+    }
+}
+
+fn set_dust_opacity_zero_system(mut commands: Commands, particles: Particles<Entity>) {
+    for entity in particles.iter() {
+        commands
+            .entity(entity)
+            .insert((components::DustOpacity(Opacity::zero()),));
     }
 }
 
