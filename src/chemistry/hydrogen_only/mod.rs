@@ -627,9 +627,9 @@ mod tests {
             final_time: Time,
             modifier: fn(&mut Solver, &Configuration),
         ) -> Self {
-            let num_outputs = 1000;
+            let num_outputs = 5000;
             let output_min_exp = -1.0;
-            let output_max_exp = final_time.in_megayears().log10() + 0.01;
+            let output_max_exp = final_time.in_megayears().log10() + 0.25;
             let output_times: Vec<_> = (0..num_outputs)
                 .map(|i| {
                     let exp = output_min_exp
@@ -669,6 +669,9 @@ mod tests {
         fn perform_timestep(&self, solver: &mut Solver, timestep: Time, depth: usize) {
             let initial_state = (solver.temperature, solver.ionized_hydrogen_fraction);
             (self.modifier)(solver, self);
+            if depth == 100 {
+                panic!();
+            }
             if let Err(_) = solver.try_timestep_update(timestep, Dimensionless::dimensionless(0.1))
             {
                 (solver.temperature, solver.ionized_hydrogen_fraction) = initial_state;
@@ -709,13 +712,19 @@ mod tests {
             let mut states = vec![];
             let mut time = Time::zero();
 
-            let timestep = Time::years(10000.0);
+            let timestep = Time::megayears(100.0);
             let mut output_times = self.output_times.iter();
             let mut next_output_time = output_times.next().unwrap();
             while time < self.final_time {
-                self.perform_timestep(&mut solver, timestep, 0);
-                time += timestep;
-                if time > *next_output_time {
+                let (reached_output, timestep_now) = if time + timestep > *next_output_time {
+                    (true, *next_output_time - time)
+                }
+                else {
+                    (false, timestep)
+                };
+                self.perform_timestep(&mut solver, timestep_now, 0);
+                time += timestep_now;
+                if reached_output {
                     next_output_time = output_times.next().unwrap();
                     states.push(self.get_state(time, &solver));
                 }
@@ -901,7 +910,7 @@ mod tests {
                 name,
                 get_configurations(
                     flux,
-                    &[1e-10, 0.2, 0.5, 0.8, 0.999],
+                    &[1e-10, 0.2, 0.5, 0.8, 1.0 - 1e-10],
                     &[
                         Temperature::kelvins(1e3),
                         Temperature::kelvins(1.6e4),
@@ -917,7 +926,7 @@ mod tests {
                         as_density(1e0),
                         as_density(1e2),
                     ],
-                    Time::megayears(1e4),
+                    Time::megayears(1e9),
                     do_nothing,
                 ),
             );
