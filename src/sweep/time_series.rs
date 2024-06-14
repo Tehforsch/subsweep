@@ -18,10 +18,12 @@ use crate::components;
 use crate::components::IonizedHydrogenFraction;
 use crate::components::Mass;
 use crate::prelude::Particles;
+use crate::source_systems::Sources;
 use crate::units::Dimensionless;
 use crate::units::PhotonRate;
 use crate::units::Temperature;
 use crate::units::Time;
+use crate::units::PROTON_MASS;
 
 #[derive(Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named, Serialize)]
 #[name = "hydrogen_ionization_mass_average"]
@@ -51,6 +53,10 @@ pub struct WeightedPhotoionizationRateVolumeAverage(pub PhotonRate);
 #[name = "num_particles_at_timestep_levels"]
 pub struct NumParticlesAtTimestepLevels(Vec<NumAtLevel>);
 
+#[derive(Serialize, Clone, Named)]
+#[name = "lost_photons_fraction"]
+pub struct LostPhotonsFraction(pub Dimensionless);
+
 #[derive(Serialize, Clone)]
 struct NumAtLevel {
     level: usize,
@@ -75,6 +81,14 @@ pub fn compute_time_series_system(
         &Cell,
     )>,
     mut weighted_photoionization_rate_writer: EventWriter<WeightedPhotoionizationRateVolumeAverage>,
+    deltas: Particles<(
+        &components::DeltaIonizedHydrogenFraction,
+        &Cell,
+        &components::Density,
+    )>,
+    mut lost_photons: EventWriter<LostPhotonsFraction>,
+    sources: Res<Sources>,
+    params: Res<SweepParameters>,
 ) {
     let ionized_mass = compute_global_sum(mass_av_frac.iter().map(|(mass, frac)| **mass * **frac));
     let total_mass = compute_global_sum(mass_av_frac.iter().map(|(mass, _)| **mass));
@@ -152,6 +166,28 @@ pub fn compute_time_series_system(
         average.in_photons_per_second()
     );
     weighted_photoionization_rate_writer.send(WeightedPhotoionizationRateVolumeAverage(average));
+
+    let timestep = params.max_timestep;
+    let injected_photon_rate = compute_global_sum(sources.sources.iter().map(|source| source.rate));
+    let absorbed_photons: Dimensionless = compute_global_sum(
+        deltas
+            .iter()
+            .map(|(delta, cell, density)| **delta * cell.volume() * **density / PROTON_MASS),
+    );
+    let injected_photons = injected_photon_rate * timestep;
+    debug!(
+        "{:<41}: {:.5e} s^-1",
+        "Num photons injected",
+        injected_photons.value(),
+    );
+    debug!(
+        "{:<41}: {:.5e} s^-1",
+        "Num photons absorbed",
+        absorbed_photons.value(),
+    );
+    let ratio = (injected_photons - absorbed_photons) / injected_photons;
+    debug!("{:<41}: {:.5e} s^-1", "Ratio photons", ratio.value(),);
+    lost_photons.send(LostPhotonsFraction(ratio));
 }
 
 fn compute_global_sum<T>(i: impl Iterator<Item = T>) -> T

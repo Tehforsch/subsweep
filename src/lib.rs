@@ -13,6 +13,7 @@
 // MPI Equivalence derive.
 #![allow(clippy::unneeded_wildcard_pattern)]
 #![allow(clippy::new_without_default)]
+#![allow(non_local_definitions)]
 
 mod chemistry;
 mod command_line_options;

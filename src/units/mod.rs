@@ -91,6 +91,7 @@ unit_system!(
         unit (centimeters_squared, "cm^2") = centimeters * centimeters,
         def VolumeRate = Volume3D / Time,
         unit (centimeters_cubed_per_s, "cm^3/s") = cubic_centimeters / seconds,
+        def VolumeRateK = Volume3D / (Time * Temperature),
         def HeatingTerm = Energy * Volume3D / Time,
         unit (ergs_centimeters_cubed_per_s, "ergs cm^3/s") = ergs * centimeters_cubed_per_s,
         def HeatingRate = Energy / (Volume3D * Time),

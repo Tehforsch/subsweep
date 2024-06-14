@@ -32,6 +32,11 @@ pub struct Mass(pub crate::units::Mass);
 pub struct IonizedHydrogenFraction(pub crate::units::Dimensionless);
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
+#[name = "delta_ionized_hydrogen_fraction"]
+#[repr(transparent)]
+pub struct DeltaIonizedHydrogenFraction(pub crate::units::Dimensionless);
+
+#[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Named)]
 #[name = "temperature"]
 #[repr(transparent)]
 pub struct Temperature(pub crate::units::Temperature);
@@ -109,6 +114,7 @@ impl_to_dataset!(Mass, units::Mass, true);
 
 // Dynamic quantities
 impl_to_dataset!(IonizedHydrogenFraction, units::Dimensionless, false);
+impl_to_dataset!(DeltaIonizedHydrogenFraction, units::Dimensionless, false);
 impl_to_dataset!(Temperature, units::Temperature, false);
 impl_to_dataset!(PhotonRate, units::SourceRate, false);
 impl_to_dataset!(PhotoionizationRate, units::Rate, false);

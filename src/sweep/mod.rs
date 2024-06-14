@@ -44,6 +44,7 @@ use self::time_series::compute_time_series_system;
 use self::time_series::num_particles_at_timestep_levels_system;
 use self::time_series::HydrogenIonizationMassAverage;
 use self::time_series::HydrogenIonizationVolumeAverage;
+use self::time_series::LostPhotonsFraction;
 use self::time_series::NumParticlesAtTimestepLevels;
 use self::time_series::PhotoionizationRateVolumeAverage;
 use self::time_series::TemperatureMassAverage;
@@ -65,6 +66,7 @@ use crate::communication::Rank;
 use crate::communication::SizedCommunicator;
 use crate::components;
 use crate::components::CollisionalIonizationRate;
+use crate::components::DeltaIonizedHydrogenFraction;
 use crate::components::Density;
 use crate::components::HeatingRate;
 use crate::components::IonizationTime;
@@ -123,6 +125,7 @@ impl SubsweepPlugin for SweepPlugin {
     fn build_everywhere(&self, sim: &mut Simulation) {
         let parameters = sim
             .add_derived_component::<IonizedHydrogenFraction>()
+            .add_derived_component::<DeltaIonizedHydrogenFraction>()
             .add_derived_component::<Source>()
             .add_derived_component::<Density>()
             .add_derived_component::<components::Mass>()
@@ -135,6 +138,7 @@ impl SubsweepPlugin for SweepPlugin {
             .add_plugin(TimeSeriesPlugin::<PhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<WeightedPhotoionizationRateVolumeAverage>::default())
             .add_plugin(TimeSeriesPlugin::<NumParticlesAtTimestepLevels>::default())
+            .add_plugin(TimeSeriesPlugin::<LostPhotonsFraction>::default())
             .insert_resource(IsFirstTime(true))
             .insert_non_send_resource(Option::<Sweep<HydrogenOnly>>::None)
             .add_startup_system_to_stage(StartupStages::InitSweep, init_sweep_system)
@@ -696,6 +700,7 @@ fn run_sweep_system(
     mut sites: Particles<(
         &ParticleId,
         &mut IonizedHydrogenFraction,
+        &mut DeltaIonizedHydrogenFraction,
         &mut components::Temperature,
     )>,
     mut timesteps: Particles<(&ParticleId, &mut Timestep)>,
@@ -715,9 +720,11 @@ fn run_sweep_system(
     let solver = (*solver).as_mut().unwrap();
     let time_elapsed = solver.run_sweeps(&mut timers);
     **time += time_elapsed;
-    for (id, mut fraction, mut temperature) in sites.iter_mut() {
+    for (id, mut fraction, mut delta, mut temperature) in sites.iter_mut() {
         let site = solver.sites.get_mut(*id);
+        let old_fraction = **fraction;
         **fraction = site.species.ionized_hydrogen_fraction;
+        **delta = **fraction - old_fraction;
         **temperature = site.species.temperature;
     }
     for (id, mut timestep) in timesteps.iter_mut() {

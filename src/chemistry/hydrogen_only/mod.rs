@@ -22,6 +22,7 @@ use crate::units::Temperature;
 use crate::units::Time;
 use crate::units::Volume;
 use crate::units::VolumeRate;
+use crate::units::VolumeRateK;
 use crate::units::BOLTZMANN_CONSTANT;
 use crate::units::GAMMA;
 use crate::units::NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
@@ -273,40 +274,15 @@ impl Solver {
     }
 
     pub fn cooling_rate(&self) -> HeatingRate {
-        let ne = self.electron_number_density();
-        let nh_neutral = self.neutral_hydrogen_number_density();
-        let nh_ionized = self.ionized_hydrogen_number_density();
-        let collisional = (self.collisional_excitation_cooling_rate()
-            + self.collisional_ionization_cooling_rate())
-            * ne
-            * nh_neutral;
-        let recombination = self.case_b_recombination_cooling_rate() * ne * nh_ionized;
-        let bremsstrahlung = self.bremsstrahlung_cooling_rate() * ne * nh_ionized;
-        let compton: HeatingRate = self.compton_cooling_rate() * ne;
-        collisional + recombination + bremsstrahlung + compton
+        HeatingRate::zero()
     }
 
     fn cooling_rate_derivative(&self) -> Quotient<HeatingRate, Temperature> {
-        let ne = self.electron_number_density();
-        let nh_neutral = self.neutral_hydrogen_number_density();
-        let nh_ionized = self.ionized_hydrogen_number_density();
-        let collisional = (self.collisional_excitation_cooling_rate_derivative()
-            + self.collisional_ionization_cooling_rate_derivative())
-            * ne
-            * nh_neutral;
-        let recombination = self.case_b_recombination_cooling_rate_derivative() * ne * nh_ionized;
-        let bremsstrahlung = self.bremsstrahlung_cooling_rate_derivative() * ne * nh_ionized;
-        let compton: Quotient<HeatingRate, Temperature> =
-            self.compton_cooling_rate_derivative() * ne;
-        collisional + recombination + bremsstrahlung + compton
+        HeatingRate::zero() / Temperature::kelvins(1.0)
     }
 
     fn temperature_change(&mut self, timestep: Time) -> Temperature {
-        let k = (GAMMA - 1.0) * PROTON_MASS / (self.density * BOLTZMANN_CONSTANT);
-        let lambda = self.photoheating_rate(timestep) - self.cooling_rate();
-        let dlambdadt = -self.cooling_rate_derivative();
-        let mu = self.mu();
-        k * mu * lambda * timestep / (1.0 - k * mu * dlambdadt * timestep)
+        Temperature::zero()
     }
 
     fn num_newly_ionized_hydrogen_atoms(&self, timestep: Time) -> Dimensionless {
@@ -335,10 +311,10 @@ impl Solver {
         // See A23 of Rosdahl et al
         let nh = self.hydrogen_number_density();
         let ne = self.electron_number_density();
-        let alpha = self.case_b_recombination_rate();
-        let dalpha = self.case_b_recombination_rate_derivative();
-        let beta = self.collisional_ionization_rate();
-        let dbeta = self.collisional_ionization_rate_derivative();
+        let alpha: VolumeRate = VolumeRate::zero();
+        let dalpha: VolumeRateK = VolumeRate::zero() / Temperature::kelvins(1.0);
+        let beta: VolumeRate = VolumeRate::zero();
+        let dbeta: VolumeRateK = VolumeRate::zero() / Temperature::kelvins(1.0);
         let photoionization_rate = self.photoionization_rate(timestep);
         let c: Rate = beta * ne + photoionization_rate;
         let mu = self.mu();

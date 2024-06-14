@@ -187,6 +187,7 @@ fn insert_initial_ionized_fraction_system(
             .unwrap_or(Dimensionless::dimensionless(0.0));
         commands
             .entity(entity)
+            .insert((components::DeltaIonizedHydrogenFraction(0.0.into()),))
             .insert((components::IonizedHydrogenFraction(
                 ionized_hydrogen_fraction,
             ),));
