@@ -43,6 +43,8 @@ pub struct SweepParameters {
     /// for incoming tasks for too long.
     #[serde(default = "default_num_tasks_to_solve_before_send_receive")]
     pub num_tasks_to_solve_before_send_receive: usize,
+    #[serde(default = "default_limit_absorption")]
+    pub limit_absorption: bool,
 }
 
 #[subsweep_parameters]
@@ -75,4 +77,8 @@ fn default_prevent_cooling() -> bool {
 
 pub fn default_num_tasks_to_solve_before_send_receive() -> usize {
     10000
+}
+
+fn default_limit_absorption() -> bool {
+    true
 }

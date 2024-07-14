@@ -37,6 +37,7 @@ pub struct HydrogenOnly {
     pub scale_factor: Dimensionless,
     pub timestep_safety_factor: Dimensionless,
     pub prevent_cooling: bool,
+    pub limit_absorption: bool,
 }
 
 #[derive(Debug)]

@@ -703,6 +703,7 @@ fn init_sweep_system(
             scale_factor: cosmology.scale_factor(),
             timestep_safety_factor: sweep_parameters.chemistry_timestep_safety_factor,
             prevent_cooling: sweep_parameters.prevent_cooling,
+            limit_absorption: sweep_parameters.limit_absorption,
         },
     ));
 }

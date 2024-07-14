@@ -57,6 +57,7 @@ fn setup_sweep_sim(num_particles: usize) -> Simulation {
             periodic: false,
             prevent_cooling: false,
             num_tasks_to_solve_before_send_receive: 10000,
+            limit_absorption: true,
         })
         .add_parameters_explicitly(Cosmology::NonCosmological)
         .add_parameters_explicitly(SimulationParameters { final_time: None })
