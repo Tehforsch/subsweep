@@ -425,13 +425,16 @@ impl<C: Chemistry> Sweep<C> {
 
     fn get_outgoing_rate(&mut self, task: &Task) -> Rate<C> {
         let cell = &self.cells.get(task.id);
-        let site = self.sites.get_mut(task.id);
+        let (level, site) = self.sites.get_mut_with_level(task.id);
         // Negative rates can happen due to round off errors. It might
         // be fine, but I could also see this causing numerical
         // instability problems, so I'd rather prevent it.
         site.incoming_total_rate[task.dir.0].make_positive();
         let incoming_rate = site.get_rate(self.directions.len(), task.dir);
-        self.chemistry.get_outgoing_rate(cell, site, incoming_rate)
+
+        let timestep = self.timestep_state.timestep_at_level(level);
+        self.chemistry
+            .get_outgoing_rate(cell, site, incoming_rate, timestep)
     }
 
     fn solve_task(&mut self, task: Task) {
@@ -703,7 +706,7 @@ fn init_sweep_system(
             scale_factor: cosmology.scale_factor(),
             timestep_safety_factor: sweep_parameters.chemistry_timestep_safety_factor,
             prevent_cooling: sweep_parameters.prevent_cooling,
-            limit_absorption: sweep_parameters.limit_absorption,
+            absorption_fraction_limit: sweep_parameters.absorption_fraction_limit(),
         },
     ));
 }

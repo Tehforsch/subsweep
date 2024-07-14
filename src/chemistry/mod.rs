@@ -30,6 +30,7 @@ pub trait Chemistry: Sized + 'static {
         cell: &Cell,
         site: &Site<Self>,
         incoming_rate: Self::Photons,
+        timestep: Time,
     ) -> Self::Photons;
 
     fn update_abundances(

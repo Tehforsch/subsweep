@@ -37,7 +37,7 @@ pub struct HydrogenOnly {
     pub scale_factor: Dimensionless,
     pub timestep_safety_factor: Dimensionless,
     pub prevent_cooling: bool,
-    pub limit_absorption: bool,
+    pub absorption_fraction_limit: Option<Dimensionless>,
 }
 
 #[derive(Debug)]
@@ -69,15 +69,30 @@ impl Chemistry for HydrogenOnly {
         cell: &Cell,
         site: &Site<Self>,
         incoming_rate: Self::Photons,
+        timestep: Time,
     ) -> PhotonRate {
-        let neutral_hydrogen_number_density =
-            site.density / PROTON_MASS * (1.0 - site.species.ionized_hydrogen_fraction);
-        let sigma = NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
         if incoming_rate < self.rate_threshold {
             PhotonRate::zero()
         } else {
+            let neutral_hydrogen_number_density =
+                site.density / PROTON_MASS * (1.0 - site.species.ionized_hydrogen_fraction);
+            let sigma = NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
             let non_absorbed_fraction =
                 (-neutral_hydrogen_number_density * sigma * cell.size).exp();
+
+            let maximum_allowed_fraction = if let Some(absorption_fraction_limit) =
+                self.absorption_fraction_limit
+            {
+                let num_ionizing_photons = (1.0 - non_absorbed_fraction) * timestep * incoming_rate;
+                let num_available_atoms =
+                    neutral_hydrogen_number_density * cell.volume() * absorption_fraction_limit;
+                num_available_atoms / num_ionizing_photons
+            } else {
+                1.0.into()
+            };
+            let absorbed_fraction = (1.0 - non_absorbed_fraction).min(maximum_allowed_fraction);
+            let non_absorbed_fraction = 1.0 - absorbed_fraction;
+
             incoming_rate * non_absorbed_fraction
         }
     }
