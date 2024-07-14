@@ -269,6 +269,7 @@ impl<C: Chemistry> Sweep<C> {
     }
 
     pub fn run_sweeps(&mut self, timers: &mut Performance) -> Time {
+        self.photons_exited = units::PhotonRate::zero();
         let counts = self.get_cell_counts_per_level();
         self.print_cell_counts(&counts);
         for level in self.timestep_state.iter_levels_in_sweep_order() {
@@ -640,7 +641,7 @@ impl Sweep<HydrogenOnly> {
             volume: cell.volume,
             length: cell.size,
             rate,
-            scale_factor: scale_factor,
+            _scale_factor: scale_factor,
             floor: None,
         }
     }

@@ -183,26 +183,26 @@ pub fn compute_photons_system(
         compute_global_sum(std::iter::once((*solver).as_ref().unwrap().photons_exited)) * timestep;
     let injected_photons = injected_photon_rate * timestep;
     // Otherwise, we will assume we're in the first timestep where sweep didnt run
-    if absorbed_photons.is_positive() {
-        debug!(
-            "{:<41}: {:.5e}",
-            "Num photons injected",
-            injected_photons.value(),
-        );
-        debug!(
-            "{:<41}: {:.5e}",
-            "Num photons exited",
-            exited_photons.value(),
-        );
-        debug!(
-            "{:<41}: {:.5e}",
-            "Num photons absorbed",
-            absorbed_photons.value(),
-        );
-        let ratio = (injected_photons - absorbed_photons - exited_photons) / injected_photons;
-        debug!("{:<41}: {:.5e} s^-1", "Ratio photons", ratio.value(),);
-        lost_photons.send(LostPhotonsFraction(ratio));
-    }
+    // if absorbed_photons.is_positive() {
+    debug!(
+        "{:<41}: {:.5e}",
+        "Num photons injected",
+        injected_photons.value(),
+    );
+    debug!(
+        "{:<41}: {:.5e}",
+        "Num photons exited",
+        exited_photons.value(),
+    );
+    debug!(
+        "{:<41}: {:.5e}",
+        "Num photons absorbed",
+        absorbed_photons.value(),
+    );
+    let ratio = (injected_photons - absorbed_photons - exited_photons) / injected_photons;
+    debug!("{:<41}: {:.5e} s^-1", "Ratio photons", ratio.value(),);
+    lost_photons.send(LostPhotonsFraction(ratio));
+    // }
 }
 
 fn compute_global_sum<T>(i: impl Iterator<Item = T>) -> T
