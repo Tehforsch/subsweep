@@ -63,6 +63,7 @@ pub trait Photons:
             *self = Self::zero();
         }
     }
+    fn abs_value_fake(&self) -> PhotonRate;
 }
 
 impl Photons for PhotonRate {
@@ -78,5 +79,9 @@ impl Photons for PhotonRate {
 
     fn below_threshold(&self, threshold: PhotonRate) -> bool {
         self.abs() < threshold.abs()
+    }
+
+    fn abs_value_fake(&self) -> Self {
+        *self
     }
 }

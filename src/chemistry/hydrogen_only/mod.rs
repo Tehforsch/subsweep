@@ -23,8 +23,6 @@ use crate::units::Time;
 use crate::units::Volume;
 use crate::units::VolumeRate;
 use crate::units::VolumeRateK;
-use crate::units::BOLTZMANN_CONSTANT;
-use crate::units::GAMMA;
 use crate::units::NUMBER_WEIGHTED_AVERAGE_CROSS_SECTION;
 use crate::units::PHOTON_AVERAGE_ENERGY;
 use crate::units::PROTON_MASS;

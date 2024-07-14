@@ -12,6 +12,7 @@ use serde::Serialize;
 use super::grid::Cell;
 use super::Sweep;
 use super::SweepParameters;
+use crate::chemistry::hydrogen_only::HydrogenOnly;
 use crate::chemistry::Chemistry;
 use crate::communication::communicator::Communicator;
 use crate::components;
@@ -81,14 +82,6 @@ pub fn compute_time_series_system(
         &Cell,
     )>,
     mut weighted_photoionization_rate_writer: EventWriter<WeightedPhotoionizationRateVolumeAverage>,
-    deltas: Particles<(
-        &components::DeltaIonizedHydrogenFraction,
-        &Cell,
-        &components::Density,
-    )>,
-    mut lost_photons: EventWriter<LostPhotonsFraction>,
-    sources: Res<Sources>,
-    params: Res<SweepParameters>,
 ) {
     let ionized_mass = compute_global_sum(mass_av_frac.iter().map(|(mass, frac)| **mass * **frac));
     let total_mass = compute_global_sum(mass_av_frac.iter().map(|(mass, _)| **mass));
@@ -166,7 +159,19 @@ pub fn compute_time_series_system(
         average.in_photons_per_second()
     );
     weighted_photoionization_rate_writer.send(WeightedPhotoionizationRateVolumeAverage(average));
+}
 
+pub fn compute_photons_system(
+    deltas: Particles<(
+        &components::DeltaIonizedHydrogenFraction,
+        &Cell,
+        &components::Density,
+    )>,
+    mut lost_photons: EventWriter<LostPhotonsFraction>,
+    sources: Res<Sources>,
+    params: Res<SweepParameters>,
+    solver: NonSendMut<Option<Sweep<HydrogenOnly>>>,
+) {
     let timestep = params.max_timestep;
     let injected_photon_rate = compute_global_sum(sources.sources.iter().map(|source| source.rate));
     let absorbed_photons: Dimensionless = compute_global_sum(
@@ -174,20 +179,30 @@ pub fn compute_time_series_system(
             .iter()
             .map(|(delta, cell, density)| **delta * cell.volume() * **density / PROTON_MASS),
     );
+    let exited_photons =
+        compute_global_sum(std::iter::once((*solver).as_ref().unwrap().photons_exited)) * timestep;
     let injected_photons = injected_photon_rate * timestep;
-    debug!(
-        "{:<41}: {:.5e} s^-1",
-        "Num photons injected",
-        injected_photons.value(),
-    );
-    debug!(
-        "{:<41}: {:.5e} s^-1",
-        "Num photons absorbed",
-        absorbed_photons.value(),
-    );
-    let ratio = (injected_photons - absorbed_photons) / injected_photons;
-    debug!("{:<41}: {:.5e} s^-1", "Ratio photons", ratio.value(),);
-    lost_photons.send(LostPhotonsFraction(ratio));
+    // Otherwise, we will assume we're in the first timestep where sweep didnt run
+    if absorbed_photons.is_positive() {
+        debug!(
+            "{:<41}: {:.5e}",
+            "Num photons injected",
+            injected_photons.value(),
+        );
+        debug!(
+            "{:<41}: {:.5e}",
+            "Num photons exited",
+            exited_photons.value(),
+        );
+        debug!(
+            "{:<41}: {:.5e}",
+            "Num photons absorbed",
+            absorbed_photons.value(),
+        );
+        let ratio = (injected_photons - absorbed_photons - exited_photons) / injected_photons;
+        debug!("{:<41}: {:.5e} s^-1", "Ratio photons", ratio.value(),);
+        lost_photons.send(LostPhotonsFraction(ratio));
+    }
 }
 
 fn compute_global_sum<T>(i: impl Iterator<Item = T>) -> T

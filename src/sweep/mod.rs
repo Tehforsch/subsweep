@@ -40,6 +40,7 @@ use self::grid::RemotePeriodicNeighbour;
 use self::site::Site;
 pub use self::task::RateData;
 use self::task::Task;
+use self::time_series::compute_photons_system;
 use self::time_series::compute_time_series_system;
 use self::time_series::num_particles_at_timestep_levels_system;
 use self::time_series::HydrogenIonizationMassAverage;
@@ -159,6 +160,12 @@ impl SubsweepPlugin for SweepPlugin {
             )
             .add_system_to_stage(
                 Stages::AfterSweep,
+                compute_photons_system
+                    .before(compute_time_series_system)
+                    .before(num_particles_at_timestep_levels_system::<HydrogenOnly>),
+            )
+            .add_system_to_stage(
+                Stages::AfterSweep,
                 num_particles_at_timestep_levels_system::<HydrogenOnly>,
             )
             .add_startup_system_to_stage(StartupStages::InitSweep, show_num_directions_system);
@@ -192,6 +199,7 @@ struct Sweep<C: Chemistry> {
     rank: Rank,
     timescale_counter: TimescaleCounter,
     num_tasks_to_solve_before_send_receive: usize,
+    photons_exited: units::PhotonRate,
 }
 
 impl<C: Chemistry> Sweep<C> {
@@ -232,6 +240,7 @@ impl<C: Chemistry> Sweep<C> {
             timescale_counter: TimescaleCounter::new(parameters.max_timestep),
             num_tasks_to_solve_before_send_receive: parameters
                 .num_tasks_to_solve_before_send_receive,
+            photons_exited: units::PhotonRate::zero(),
         }
     }
 
@@ -472,7 +481,9 @@ impl<C: Chemistry> Sweep<C> {
                     ParticleType::Remote(remote) => {
                         this.handle_remote_neighbour(&task, rate_correction_this_cell, remote)
                     }
-                    ParticleType::Boundary => {}
+                    ParticleType::Boundary => {
+                        self.photons_exited += rate_correction_this_cell.abs_value_fake();
+                    }
                     ParticleType::LocalPeriodic(neighbour) => this.handle_local_periodic_neighbour(
                         rate_correction_this_cell,
                         task.dir,
@@ -720,6 +731,7 @@ fn run_sweep_system(
     let solver = (*solver).as_mut().unwrap();
     let time_elapsed = solver.run_sweeps(&mut timers);
     **time += time_elapsed;
+
     for (id, mut fraction, mut delta, mut temperature) in sites.iter_mut() {
         let site = solver.sites.get_mut(*id);
         let old_fraction = **fraction;

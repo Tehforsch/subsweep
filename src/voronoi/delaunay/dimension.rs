@@ -94,6 +94,11 @@ pub trait DFace {
 
     type PointsIter: Iterator<Item = PointIndex>;
     fn points(&self) -> Self::PointsIter;
+
+    #[cfg(test)]
+    fn contains_point(&self, point: PointIndex) -> bool {
+        self.points().any(|p| p == point)
+    }
 }
 
 pub trait DFaceData: FromIterator<Point<Self::Dimension>> {

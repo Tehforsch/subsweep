@@ -144,6 +144,7 @@ fn initialize_sweep_components_system(
         commands.entity(entity).insert((
             Density(mass_density),
             components::IonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
+            components::DeltaIonizedHydrogenFraction(Dimensionless::dimensionless(1e-10)),
             components::Temperature(Temperature::kelvins(1000.0)),
             components::PhotonRate(PhotonRate::zero()),
             components::Source(PhotonRate::zero()),
