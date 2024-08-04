@@ -18,6 +18,12 @@ pub struct Parameters {
     /// Folder containing the subsweep snapshots from which to remap abundances and energies.
     /// The remapping will be done using the latest (highest-numbered) subfolder in the folder.
     pub remap_from: Option<PathBuf>,
+    #[serde(default = "default_resume_from_subsweep")]
+    pub resume_from_subsweep: bool,
+}
+
+pub fn default_resume_from_subsweep() -> bool {
+    false
 }
 
 #[derive(Default)]

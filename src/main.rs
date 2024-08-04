@@ -26,10 +26,8 @@ use subsweep::components::IonizedHydrogenFraction;
 use subsweep::components::Position;
 use subsweep::cosmology::Cosmology;
 use subsweep::impl_to_dataset;
-use subsweep::io::input::DatasetInputPlugin;
-use subsweep::io::DatasetDescriptor;
 use subsweep::io::DatasetShape;
-use subsweep::io::InputDatasetDescriptor;
+use subsweep::io::DefaultUnitReader;
 use subsweep::parameters::OutputParameters;
 use subsweep::prelude::*;
 use subsweep::simulation_plugin::remove_components_system;
@@ -40,7 +38,6 @@ use subsweep::units::Dimensionless;
 use subsweep::units::Mass;
 use subsweep::units::PhotonRate;
 use subsweep::units::SourceRate;
-use subsweep::units::Temperature;
 
 fn main() {
     let mut sim = SimulationBuilder::new();
@@ -51,19 +48,20 @@ fn main() {
         .update_from_command_line_options()
         .build();
     emit_build_information(&sim.get_resource::<OutputParameters>().unwrap());
-    let cosmology = sim.add_parameter_type_and_get_result::<Cosmology>().clone();
-    let unit_reader = Box::new(ArepoUnitReader::new(cosmology));
     let parameters = sim
         .add_parameter_type_and_get_result::<Parameters>()
         .clone();
+    let cosmology = sim.add_parameter_type_and_get_result::<Cosmology>().clone();
     let rank = sim.get_resource::<WorldRank>().unwrap();
-    match parameters.sources {
+    match &parameters.sources {
         SourceType::FromIcs(_) => {
             sim.add_startup_system(read_sources_system);
         }
         SourceType::Explicit(sources) => {
             if rank.is_main() {
-                sim.insert_resource(Sources { sources });
+                sim.insert_resource(Sources {
+                    sources: sources.clone(),
+                });
             } else {
                 sim.insert_resource(Sources::default());
             }
@@ -73,20 +71,21 @@ fn main() {
         GridParameters::Construct => sim.add_plugin(ParallelVoronoiGridConstruction),
         GridParameters::Read(_) => sim.add_plugin(ReadSweepGridPlugin),
     };
-    if parameters.initial_fraction_ionized_hydrogen.is_none() {
-        sim.add_plugin(DatasetInputPlugin::<ElectronAbundance>::from_descriptor(
-            InputDatasetDescriptor::<ElectronAbundance> {
-                descriptor: DatasetDescriptor {
-                    dataset_name: "PartType0/ElectronAbundance".into(),
-                    unit_reader: unit_reader.clone(),
-                },
-                ..Default::default()
-            },
-        ));
-    }
+    add_inputs(&mut sim, &parameters, cosmology);
+
     sim.add_plugin(SourcePlugin)
-        .add_parameter_type::<Parameters>()
+        .add_parameter_type::<Parameters>();
+    if parameters.resume_from_subsweep {
+        sim.add_startup_system_to_stage(
+            StartupStages::ReadInput,
+            insert_initial_ionized_fraction_system_subsweep,
+        )
         .add_startup_system_to_stage(
+            StartupStages::InsertDerivedComponents,
+            insert_missing_components_system_subsweep,
+        );
+    } else {
+        sim.add_startup_system_to_stage(
             StartupStages::ReadInput,
             insert_initial_ionized_fraction_system,
         )
@@ -98,49 +97,55 @@ fn main() {
             StartupStages::InsertDerivedComponents,
             insert_missing_components_system
                 .after(set_initial_ionized_fraction_from_electron_abundance_system),
-        )
-        .add_startup_system_to_stage(
-            StartupStages::InsertComponentsAfterGrid,
-            compute_cell_mass_system,
-        )
-        .add_startup_system_to_stage(StartupStages::Remap, remap_abundances_and_energies_system)
-        .add_startup_system_to_stage(
-            StartupStages::InsertGrid,
-            remove_components_system::<InternalEnergy>,
-        )
-        .add_startup_system_to_stage(
-            StartupStages::InsertGrid,
-            remove_components_system::<ElectronAbundance>,
-        )
-        .add_plugin(DatasetInputPlugin::<Position>::from_descriptor(
-            InputDatasetDescriptor::<Position>::new(
-                DatasetDescriptor {
-                    dataset_name: "PartType0/Coordinates".into(),
-                    unit_reader: unit_reader.clone(),
-                },
-                DatasetShape::TwoDimensional(read_vec),
-            ),
-        ))
-        .add_plugin(DatasetInputPlugin::<Density>::from_descriptor(
-            InputDatasetDescriptor::<Density> {
-                descriptor: DatasetDescriptor {
-                    dataset_name: "PartType0/Density".into(),
-                    unit_reader: unit_reader.clone(),
-                },
-                ..Default::default()
-            },
-        ))
-        .add_plugin(DatasetInputPlugin::<InternalEnergy>::from_descriptor(
-            InputDatasetDescriptor::<InternalEnergy> {
-                descriptor: DatasetDescriptor {
-                    dataset_name: "PartType0/InternalEnergy".into(),
-                    unit_reader,
-                },
-                ..Default::default()
-            },
-        ))
-        .add_plugin(SweepPlugin)
-        .run();
+        );
+    }
+    sim.add_startup_system_to_stage(
+        StartupStages::InsertComponentsAfterGrid,
+        compute_cell_mass_system,
+    )
+    .add_startup_system_to_stage(StartupStages::Remap, remap_abundances_and_energies_system)
+    .add_startup_system_to_stage(
+        StartupStages::InsertGrid,
+        remove_components_system::<InternalEnergy>,
+    )
+    .add_startup_system_to_stage(
+        StartupStages::InsertGrid,
+        remove_components_system::<ElectronAbundance>,
+    )
+    .add_plugin(SweepPlugin)
+    .run();
+}
+
+fn add_inputs(sim: &mut Simulation, parameters: &Parameters, cosmology: Cosmology) {
+    if parameters.resume_from_subsweep {
+        let unit_reader = DefaultUnitReader;
+        sim.add_input_plugin::<IonizedHydrogenFraction>(
+            "ionized_hydrogen_fraction",
+            &unit_reader,
+            None,
+        );
+
+        sim.add_input_plugin::<Position>("position", &unit_reader, None);
+        sim.add_input_plugin::<Density>("density", &unit_reader, None);
+        sim.add_input_plugin::<components::Temperature>("temperature", &unit_reader, None);
+    } else {
+        let unit_reader = ArepoUnitReader::new(cosmology);
+        if parameters.initial_fraction_ionized_hydrogen.is_none() {
+            sim.add_input_plugin::<ElectronAbundance>(
+                "PartType0/ElectronAbundance",
+                &unit_reader,
+                None,
+            );
+        }
+
+        sim.add_input_plugin::<Position>(
+            "PartType0/Coordinates",
+            &unit_reader,
+            Some(DatasetShape::TwoDimensional(read_vec)),
+        );
+        sim.add_input_plugin::<Density>("PartType0/Density", &unit_reader, None);
+        sim.add_input_plugin::<InternalEnergy>("PartType0/InternalEnergy", &unit_reader, None);
+    }
 }
 
 #[derive(H5Type, Component, Debug, Clone, Equivalence, Deref, DerefMut, From, Default, Named)]
@@ -156,12 +161,23 @@ pub struct ElectronAbundance(pub crate::units::Dimensionless);
 impl_to_dataset!(InternalEnergy, crate::units::EnergyPerMass, false);
 impl_to_dataset!(ElectronAbundance, crate::units::Dimensionless, false);
 
+fn insert_missing_components_system_subsweep(mut commands: Commands, particles: Particles<Entity>) {
+    for entity in particles.iter() {
+        commands.entity(entity).insert((
+            components::PhotonRate(PhotonRate::zero()),
+            components::Source(SourceRate::zero()),
+            // Will be computed later
+            components::Mass(Mass::zero()),
+        ));
+    }
+}
+
 fn insert_missing_components_system(
     mut commands: Commands,
     particles: Particles<(Entity, &IonizedHydrogenFraction, &InternalEnergy, &Density)>,
 ) {
     for (entity, ionized_hydrogen_fraction, internal_energy, density) in particles.iter() {
-        let temperature = Temperature::from_internal_energy_density_hydrogen_only(
+        let temperature = units::Temperature::from_internal_energy_density_hydrogen_only(
             **internal_energy * **density,
             **ionized_hydrogen_fraction,
             **density,
@@ -173,6 +189,17 @@ fn insert_missing_components_system(
             // Will be computed later
             components::Mass(Mass::zero()),
         ));
+    }
+}
+
+fn insert_initial_ionized_fraction_system_subsweep(
+    mut commands: Commands,
+    particles: Particles<Entity>,
+) {
+    for entity in particles.iter() {
+        commands
+            .entity(entity)
+            .insert(components::DeltaIonizedHydrogenFraction(0.0.into()));
     }
 }
 

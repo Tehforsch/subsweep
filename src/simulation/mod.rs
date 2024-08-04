@@ -33,6 +33,7 @@ use crate::io::to_dataset::ToDataset;
 use crate::io::DatasetDescriptor;
 use crate::io::DatasetShape;
 use crate::io::InputDatasetDescriptor;
+use crate::io::UnitReader;
 use crate::named::Named;
 use crate::parameter_plugin::ParameterFileContents;
 use crate::parameter_plugin::ParameterPlugin;
@@ -120,6 +121,24 @@ impl Simulation {
             plugin.build_on_other_ranks(self);
         }
         self
+    }
+
+    pub fn add_input_plugin<T: Named + ToDataset + Component>(
+        &mut self,
+        name: &str,
+        unit_reader: &(impl UnitReader + Clone + 'static),
+        shape: Option<DatasetShape<T>>,
+    ) {
+        let shape = shape.unwrap_or(DatasetShape::OneDimensional);
+        self.add_plugin(DatasetInputPlugin::<T>::from_descriptor(
+            InputDatasetDescriptor::<T> {
+                descriptor: DatasetDescriptor {
+                    dataset_name: name.into(),
+                    unit_reader: Box::new(unit_reader.clone()),
+                },
+                shape,
+            },
+        ));
     }
 
     pub fn maybe_add_plugin<T: Sync + Send + 'static + SubsweepPlugin>(
