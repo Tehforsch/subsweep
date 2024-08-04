@@ -49,7 +49,7 @@ pub struct SweepParameters {
 
 impl SweepParameters {
     pub fn absorption_fraction_limit(&self) -> Option<Dimensionless> {
-        Some((1.0 / self.directions.num() as f64).into()).filter(|_| self.limit_absorption)
+        Some(1.0.into()).filter(|_| self.limit_absorption)
     }
 }
 
