@@ -1,6 +1,6 @@
 # About
 Subsweep is a code for postprocessing of astrophysical simulations using
-the [sweep method for radiative transfer](https://arxiv.org/abs/2207.12848).
+the [sweep method for radiative transfer](https://arxiv.org/abs/2412.00950).
 
 ![The ionization redshift in a slice through a cosmological simulation volume](pics/ionization_time.png)
 
